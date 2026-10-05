@@ -109,6 +109,16 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
     (ADR 0034 s1): LT-442 builds the subpath and moves `css` onto it. `asInteger` is not an
     inferable parser: LT-440 maps `number` → `asNumber`. An unresolvable scalar seed type is
     refused unless `harvest(value, parser)` declares it: LT-443 (S3).
+15. **LT-334 ruled (owner + Architect, 2026-10-06).** The boundary migration is LT-449
+    (pickable now): per-arm duplicated callout with `.danger` authored per arm (the
+    arms-span-parents machinery extension rejected), the ok arm a reactive `truc:html`
+    thunk, stale dimming as the `isPending` idiom, and the scroll side effect as a
+    beside-watch — a sanctioned escape hatch — with a required ordering probe. The
+    `allow-scripts` question is decoupled to LT-448 (design): the goal is partials bringing
+    *new* components to the page, build-unknown, same-origin or CSP-approved origins, with
+    code-splitting required. `shake-hands` stays broken until LT-448 rules; the three
+    script-execution spec legs and `mocks/module-with-type.html` move to its implementation
+    task. LT-390 is re-pointed at LT-449.
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
@@ -116,12 +126,14 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   ~~LT-387~~ (reviewed ✓).
 - **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
   ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). ~~LT-429~~ (ruled 2026-10-05 → ADR 0046
-  s7, ADR 0034 s1; ruling 14). **Next owner session:** LT-334 (lazyload's boundary; its implementation task pairs
-  with LT-390), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
+  s7, ADR 0034 s1; ruling 14). ~~LT-334~~ (ruled 2026-10-06 → LT-449; `allow-scripts`
+  decoupled to LT-448; ruling 15). **Next owner sessions:** LT-448 (partials that bring new
+  components; gates the `allow-scripts` follow-up), LT-409 (the shadow-root departures;
+  re-scopes LT-405/LT-407/LT-408).
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → LT-110 → LT-445 (cem-list, filed from LT-111's sweep) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → LT-110 → LT-449 (lazyload's boundary, ruled 2026-10-06 — folder-independent, runs parallel to the migrations; pairs with LT-390) → LT-445 (cem-list, filed from LT-111's sweep) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-449). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
   ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). **Next:** LT-443 (needs LT-429).
@@ -149,7 +161,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-448.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-450.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -159,24 +171,65 @@ recorded against the 30.4k opening measurement.
 
 ### Design gates
 
-- [ ] LT-334: An async boundary lazyload can be spelled in (LT-104 review). **Gated by LT-276 (ADR 0037's template-cloned arms).**
+- [ ] LT-448: Design session — fetched partials that bring new components to the page (script admission and loading; the compiled `allow-scripts` gap; LT-334 residue).
   **Area:** design
-  **Needs:** LT-276
-  **Context:** The owner kept lazyload's hand-written `watch(content, { ok, nil, stale, err })`
-  (2026-09-25), because the compiled `<truc:try>` misses its contract four ways:
-  1. an escaped `textContent` ok arm where lazyload needs sanitized HTML with `allow-scripts`;
-  2. fieldset-wrapped arm roots that page-authored instances do not carry;
-  3. three sibling roots where loading and error share one `card-callout` (`.danger` on error);
-  4. no ok-arm side effect (the scroll to the first heading on a later load).
-  ADR 0037's template-cloned arms retire (2) outright, and change what (3) means. So the design
-  waits for LT-276. **Design questions:** a `truc:html` ok arm (the value is the task's result,
-  routed through the same sanitizer and `allowScripts` config `dangerouslyBindInnerHTML` takes);
-  arms that share a wrapper element (named arm keys inside one parent, which ADR 0037's keyed
-  arms may already allow); and whether an ok-arm side effect belongs in the boundary at all or
-  stays a `watch` beside it (the `isPending` idiom's precedent says beside). Decide, then write
-  the implementation task. The exit clause "lazyload's boundary is spelled `<truc:try>`"
-  moves here.
-
+  **Area:** design
+  **Goal (owner, 2026-10-06):** allow a fetched HTML partial to bring *new* components to the
+  page — components the build did not know. The origin constraint: partials come from the
+  same origin, or from origins the page's CSP policy approves. Decouple-point: split out of
+  LT-334 so the boundary migration (LT-449) does not wait on a security design.
+  **Constraint the ruling must satisfy:** code-splitting for components. A rarely-used, huge
+  component (a video player) must not be pulled into the main JS bundle; whatever mechanism
+  rules must load component code lazily, on the partial's arrival.
+  **Ground truth established in the 2026-10-06 dive** (verify before ruling; facts may have moved):
+  1. The platform's free mechanism: `customElements` upgrades any matching element inserted
+     into the document — a partial carrying *known* component markup needs no script at all.
+     The script in `examples/module/lazyload/mocks/snippet.html` exists only because
+     `shake-hands` is not yet *registered* (a guarded `customElements.define` shim).
+  2. The runtime escape hatch (`dangerouslyBindInnerHTML({ allowScripts })`,
+     `src/bindings.ts`) re-creates script nodes naively: `SCRIPT_ATTRS` copied, inline text
+     re-created verbatim, appended after the content, **no dedup and no cleanup — every `ok`
+     update re-executes every script** (snippet's define-guard is what keeps the demo correct).
+  3. Sanitizer and `allowScripts` are mutually exclusive in the runtime: sanitization runs
+     first, so a configured sanitizer (DOMPurify) strips `<script>` before the re-creation
+     pass sees it; the escape hatch works only raw-passthrough. The compiled `truc:html`
+     path always passes `sanitizeHtml` (fail-closed, ADR 0010), so scripts never survive it.
+  4. `allowScripts` has exactly one consumer in the repo: `module-lazyload`. The demo page
+     authors `allow-scripts`; `mocks/module-with-type.html` is a pure script-execution fixture.
+  **Options discussed (no direction picked — rule, then record):**
+  - **A. Registry pattern.** Behavior in partials = custom elements; the page pre-registers
+    the tags its partials use; no script execution, no new mechanism. Fails the stated goal
+    for genuinely build-unknown components and strains the code-splitting constraint
+    (pre-registration means main-bundle weight).
+  - **A′. Lazy registry.** A tag→chunk manifest; after a partial inserts markup, a loader
+    fetches the unknown tags' component chunks and registers them — code-splitting native.
+    Tension: the manifest is build-known; a partial bringing an unknown component needs a way
+    to *declare* its components (a manifest beside the partial, fetched with it?) — that
+    softening is part of the question, not settled.
+  - **B. Policy-driven client loader.** The authored `allow-scripts` opt-in teaches the
+    compiled `truc:html` a script policy running *inside* the sanitize step (mends finding 3):
+    external-`src` re-created deduped by src, `type="application/json"` passthrough,
+    `type="importmap"` refused, inline per policy. CSP cost: re-created inline scripts need
+    `unsafe-inline` or a render-injected nonce.
+  - **C. Arm-lifecycle execution semantics.** Orthogonal to B (foldable into its policy):
+    scripts execute as arm effects — run on arm adoption, cleanup on arm exit, no
+    re-execution on re-render. The compiler knows the arm boundary; the runtime never could.
+  - **D. Build/serve-time extraction.** For same-origin partials the build can see, the
+    server strips scripts and ships them as proper external, hashed module URLs; the client
+    loads them as ordinary deferred scripts (CSP-clean, no `unsafe-inline`, browser-managed
+    order and dedup). Genuinely dynamic URLs fall back to B/C.
+  **Trust framing to carry:** no mechanism makes an untrusted script safe; sandboxing
+  untrusted code is origin isolation (iframes), a different product. `allow-scripts` stays a
+  page-author trust grant at the component boundary, origin-constrained per the goal. What a
+  full-stack design adds over the runtime is hygiene and defaults, not safety.
+  **Held state:** `shake-hands` stays broken until this rules (owner, 2026-10-06) — the
+  lazyload demo shows it inert; do not paper over it with pre-registration (that is option A,
+  and it strains the code-splitting constraint). `mocks/module-with-type.html` and the three
+  script-execution spec legs (LT-449 re-scoped them here) are this session's test input.
+  **Exit:** rule the direction (an option, a combination, or a new one); decide whether it
+  needs an ADR (ADR 0047 if so) or an `ARCHITECTURE.md`/`HOST_PROFILE.md` record; write the
+  implementation task, including the compiled-path wiring and the runtime binding's adoption
+  of the same policy function (one policy, two hosts, no drift).
 
 - [ ] LT-409: Design session — the departures of compiled CSS from a real shadow root (ADR 0033 s7 as a whole; re-scopes LT-405, LT-407, LT-408).
   **Area:** design
@@ -213,6 +266,61 @@ recorded against the 30.4k opening measurement.
   LT-165 step 7's corpus pin:** Simulated tier with its `Math.random()` expression suppressed
   and everything else simulated.
 
+
+- [ ] LT-449: Migrate `module-lazyload`'s async boundary to `<truc:try>` — per-arm callouts, `truc:html` ok arm, beside-watch scroll.
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
+  **Area:** examples
+  **Ruled (owner + Architect, design session 2026-10-06, in LT-334):** the 2026-09-25 refusal
+  is superseded on three of its four grounds by ADR 0037's template-cloned arms and the
+  reactive `truc:html` attribute (LT-025). The ruled shape, pinned so no contributor decision
+  is needed:
+  1. **Per-arm duplicated callout** (owner ruling): the loading and error callouts are
+     separate arms, not one shared wrapper toggled by hand —
+     - pending arm: `<card-callout><p class="loading" role="status">{loading}</p></card-callout>`
+     - catch arm: `<card-callout class="danger"><p class="error" role="alert">{e.message}</p></card-callout>`
+       — `.danger` is authored per arm, never a runtime `classList` mutation;
+     - ok arm (the children): `<div class="content" truc:html={() => content.get()}></div>`.
+     Three one-root sibling arms directly in the host — the exact shape the existing emission
+     supports. **Accepted DOM consequence:** when ok, no callout exists in the DOM at all
+     (today a hidden one remains). Spec legs asserting the toggling shape are reported with
+     evidence and re-ruled per ITERATION ruling 10, never matched silently. The no-JS story
+     holds: the server renders the pending arm live.
+  2. **`allow-scripts` is out of scope** — decoupled to LT-448 (design). The attribute stays
+     page-authorable on the host and documented, but the compiled `truc:html` path passes
+     `sanitize: sanitizeHtml` and strips scripts, so it is inert compiled. Leave
+     `shake-hands` (`mocks/snippet.html`) broken until LT-448 rules — do NOT fix it by
+     pre-registering the component. Re-scope the three script-execution spec legs to LT-448's
+     implementation task: 'executes JavaScript in loaded content when allow-scripts is
+     present', 'respects allow-scripts attribute for script execution control', 'preserves
+     script type attributes when recreating scripts' (`module-lazyload.spec.ts:419,451,490`),
+     plus the shake-hands assertions (~line 431). Keep `mocks/module-with-type.html` as
+     LT-448's test input.
+  3. **Stale dimming** stays the documented idiom: a reactive `style` (or `class`) thunk
+     reading `isPending(content)` on the ok arm root. It works because a re-fetching task
+     keeps its ok arm (LT-211), so the arm effect stays live across the dim. If it lands as
+     a class rule, the rule goes in the shared sheet — the variant set's byte-identical CSS
+     check then forces the same rule into the twin's sheet.
+  4. **The nil routing is free:** the twin's nil handler shows the loading callout, which is
+     what the pending arm already is.
+  5. **The scroll-to-first-heading side effect stays a beside-watch** (owner: a sanctioned
+     escape hatch — the `isPending` idiom's precedent): `watch(content, { ok: … })` in setup,
+     `hasLoaded` in a const record and the distinct `scrollTask` key, verbatim from the twin.
+     A boundary hook attribute is rejected by ADR 0041 condition 1, and arm-mounted effects
+     cannot hold it (they die with the arm; the guard is component-lifetime state).
+     **The task owes an ordering probe:** the side watch's ok fire and reconcile's arm
+     adoption are both driven by the same signal change, and the scroll queries into the
+     freshly adopted arm — prove the existing `schedule()` indirection orders it, by test,
+     not by assumption.
+  **Compiler work in scope** (recognition, no new diagnostic; census and warning baseline
+  unchanged): the boundary's signal identification currently looks for a bare reactive
+  identifier child of the ok root — it must read the task through the `truc:html` thunk; and
+  the reactive `truc:html` lowering must be probed in arm position — the watch mounts inside
+  `bindArm` (effects die with the arm) and the ok template bakes the html child empty
+  (LT-385c), the mount writing it on enter.
+  **Verification:** full gates; goldens/snapshots extend by design; the demo page and the
+  spec run in the browser/Playwright — name any leg left unrunnable. Pairs with LT-390, which
+  extends the equivalence audit to arm adoption on this component.
 
 - [ ] LT-445: Migrate `module-cem-list` to `.tsx` with same-commit cutover — the filter layer over `{% cem-list %}`'s page-authored cards.
   **Area:** examples
@@ -253,13 +361,13 @@ recorded against the 30.4k opening measurement.
 
 - [ ] LT-390: A corpus consumer for reactive conditions and the boundary, with audit coverage.
   **Area:** examples
-  **Needs:** LT-375, LT-334, LT-385
+  **Needs:** LT-375, LT-385, LT-449
   **Context:** LT-274/LT-276 landed with no corpus component using either, so their golden
   and equivalence-audit acceptance items pass vacuously; adoption's designed connect diff is
   pinned only by `reactive-conditions.test.ts`. Migrate one example that wants a reactive
-  `@if` (a disclosure or a tab-like switch) and pair the boundary with LT-334 (lazyload),
+  `@if` (a disclosure or a tab-like switch) and pair the boundary with LT-449 (lazyload),
   extend `equivalence-audit.test.ts` to the arm-adoption class.
-  **Depends on** LT-385.
+  **Depends on** LT-385 and LT-449 (lazyload's boundary migration, ruled 2026-10-06).
 
 
 - [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.

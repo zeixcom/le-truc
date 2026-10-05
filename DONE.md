@@ -388,6 +388,40 @@ Full entry text: `git log -p -- DONE.md`.
   **Check:** `bun run check:baseline` green; `test/baseline.test.ts` covers the 2024-API fixture failing, the year bump without a major failing, the syntax and CSS mapping, and allowlist staleness. Doubts for review: (1) the author/compiler split is my reading of REQUIREMENTS § Browser support. Judging corpus author code as-is fails on `cursor`, `user-select`, `:state()`, `light-dark()`, `backdrop-filter` and `getCoalescedEvents`. (2) Allowlisting the `CustomElementRegistry.get` data gap. (3) Coverage limits: `any` receivers, computed keys, Raw-folded CSS. No ARIA-on-internals key is detected because those writes use dynamic keys. Playwright not run (no example behavior change).
   **Review:** Approved (Architect, 2026-10-04). Ruling: only what the compiler adds is held to the pin. Author spans and the CSS features the authored sheet already uses are the author's baseline (REQUIREMENTS § Browser support): they are reported, not judged. The `CustomElementRegistry.get` allowlist entry is a BCD data gap, kept with its reason.
 
+- [x] LT-334: An async boundary lazyload can be spelled in (LT-104 review). **Ruled 2026-10-06 → LT-449; `allow-scripts` decoupled to LT-448.** — reviewed ✓
+  **Area:** design
+  **Needs:** LT-276
+  **Context:** The owner kept lazyload's hand-written `watch(content, { ok, nil, stale, err })`
+  (2026-09-25), because the compiled `<truc:try>` misses its contract four ways:
+  1. an escaped `textContent` ok arm where lazyload needs sanitized HTML with `allow-scripts`;
+  2. fieldset-wrapped arm roots that page-authored instances do not carry;
+  3. three sibling roots where loading and error share one `card-callout` (`.danger` on error);
+  4. no ok-arm side effect (the scroll to the first heading on a later load).
+  ADR 0037's template-cloned arms retire (2) outright, and change what (3) means. So the design
+  waits for LT-276. **Design questions:** a `truc:html` ok arm (the value is the task's result,
+  routed through the same sanitizer and `allowScripts` config `dangerouslyBindInnerHTML` takes);
+  arms that share a wrapper element (named arm keys inside one parent, which ADR 0037's keyed
+  arms may already allow); and whether an ok-arm side effect belongs in the boundary at all or
+  stays a `watch` beside it (the `isPending` idiom's precedent says beside). Decide, then write
+  the implementation task. The exit clause "lazyload's boundary is spelled `<truc:try>`"
+  moves here.
+
+  **Ruled (owner + Architect, design session 2026-10-06):** implementation task is LT-449,
+  which carries the pinned shape. The rulings: (1) per-arm duplicated callout — the loading
+  and error callouts are separate arms with `.danger` authored per arm; the arms-span-parents
+  machinery extension is rejected (template-cloned arms make duplication free). (2) The ok
+  arm is the reactive `truc:html` thunk on the content root; its `allow-scripts` question is
+  DECOUPLED to LT-448 (a design session on partials bringing new components — owner's goal:
+  build-unknown components, same-origin or CSP-approved origins, code-splitting required;
+  `shake-hands` stays broken until it rules). (3) The scroll side effect stays a beside-watch
+  (a sanctioned escape hatch, the `isPending` idiom's precedent) with a required ordering
+  probe. (4) Stale dimming is the `isPending` idiom on the ok arm root. Original gaps
+  re-scored: (2) retired by ADR 0037; (3) dissolved by arm cloning; (1) solved by `truc:html`
+  modulo the decoupled `allow-scripts`; (4) beside. Also verified in the dive: sanitizer and
+  `allowScripts` are mutually exclusive in the runtime (sanitization strips scripts before
+  the re-creation pass), and the re-creation re-executes every script on every `ok` update.
+
+
 - [x] LT-342: A `.tsx` spelling for the reactive-list key binding — capability parity (ADR 0032 s6), found by the LT-233 review. **Ruled 2026-10-04 with LT-280 → ADR 0046 s4; implemented by LT-425.** — reviewed ✓
   **Area:** design
   **Needs:** LT-280

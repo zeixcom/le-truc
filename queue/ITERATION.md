@@ -109,6 +109,16 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
     (ADR 0034 s1): LT-442 builds the subpath and moves `css` onto it. `asInteger` is not an
     inferable parser: LT-440 maps `number` → `asNumber`. An unresolvable scalar seed type is
     refused unless `harvest(value, parser)` declares it: LT-443 (S3).
+15. **LT-334 ruled (owner + Architect, 2026-10-06).** The boundary migration is LT-449
+    (pickable now): per-arm duplicated callout with `.danger` authored per arm (the
+    arms-span-parents machinery extension rejected), the ok arm a reactive `truc:html`
+    thunk, stale dimming as the `isPending` idiom, and the scroll side effect as a
+    beside-watch — a sanctioned escape hatch — with a required ordering probe. The
+    `allow-scripts` question is decoupled to LT-448 (design): the goal is partials bringing
+    *new* components to the page, build-unknown, same-origin or CSP-approved origins, with
+    code-splitting required. `shake-hands` stays broken until LT-448 rules; the three
+    script-execution spec legs and `mocks/module-with-type.html` move to its implementation
+    task. LT-390 is re-pointed at LT-449.
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
@@ -116,12 +126,14 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   ~~LT-387~~ (reviewed ✓).
 - **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
   ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). ~~LT-429~~ (ruled 2026-10-05 → ADR 0046
-  s7, ADR 0034 s1; ruling 14). **Next owner session:** LT-334 (lazyload's boundary; its implementation task pairs
-  with LT-390), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
+  s7, ADR 0034 s1; ruling 14). ~~LT-334~~ (ruled 2026-10-06 → LT-449; `allow-scripts`
+  decoupled to LT-448; ruling 15). **Next owner sessions:** LT-448 (partials that bring new
+  components; gates the `allow-scripts` follow-up), LT-409 (the shadow-root departures;
+  re-scopes LT-405/LT-407/LT-408).
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → LT-110 → LT-445 (cem-list, filed from LT-111's sweep) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → LT-110 → LT-449 (lazyload's boundary, ruled 2026-10-06 — folder-independent, runs parallel to the migrations; pairs with LT-390) → LT-445 (cem-list, filed from LT-111's sweep) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-449). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
   ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). **Next:** LT-443 (needs LT-429).
@@ -149,7 +161,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-448.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-450.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
