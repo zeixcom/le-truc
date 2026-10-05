@@ -588,7 +588,11 @@ key is the file name (`de.json`), not one `missing` per declared key, and
 manifest (`i18n/manifest.json`, per locale per key the source hash the
 translation was recorded against): a source-string edit is a source edit
 that silently invalidates that key's translations, so an override without a
-matching manifest hash reports `stale`. Literal prose inside a
+matching manifest hash reports `stale`. A manifest that exists but does
+not parse as a JSON object is one `malformed` record keyed `manifest.json`
+(locale `*`), no key reports `stale` until it is fixed, and `i18n:sync`
+refuses to write anything (LT-430); an absent manifest is the first-run
+empty state. Literal prose inside a
 catalog-using component IS author-fixable and warns (LTC047 — template
 text with two or more adjacent letters; single-letter fragments are page
 data). The build stays read-only: an explicit `i18n:sync` script — never

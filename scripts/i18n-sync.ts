@@ -35,6 +35,11 @@
  * it as empty would overwrite a translator's whole catalog with
  * placeholders.
  *
+ * An unreadable `<i18nDir>/manifest.json` (LT-430) refuses the WHOLE sync:
+ * every locale's confirmations depend on it, so sync names the file and
+ * the parse error, writes nothing — no catalog, no manifest — and exits
+ * non-zero. An absent manifest is the first-run state and syncs as empty.
+ *
  * The corpus scan is the CONFIGURED one (LT-273): `le-truc.config.json`
  * selects the sources, the output root and the catalog directory, exactly
  * as for the build — this was the last script that hard-coded the corpus
@@ -63,6 +68,19 @@ import { io } from '../server/runtimes'
 
 const config = loadCorpusConfig(REPO_ROOT)
 
+// The build's own reader (LT-356, LT-430): an unreadable catalog file or
+// manifest is reported, never read as empty. Read before the compile, so a
+// refusal costs nothing and writes nothing.
+const catalogs = await readCatalogs(config.i18nDir)
+const manifestPath = join(config.i18nDir, 'manifest.json')
+if (catalogs.unreadableManifest !== undefined) {
+	console.error(
+		`i18n:sync did not sync — ${manifestPath} does not read as a JSON object, so no catalog and no manifest entry was changed: ${catalogs.unreadableManifest}\n` +
+			'Fix the file by hand (look for a trailing comma or a merge-conflict marker), then re-run `bun run i18n:sync`.',
+	)
+	process.exit(1)
+}
+
 // The compile writes the generated artifacts (gitignored) and, as a side
 // effect, the freshest registry.json — the same corpus view the build sees.
 await compileCorpus(collectCorpusSources(config), config)
@@ -70,9 +88,6 @@ await compileCorpus(collectCorpusSources(config), config)
 const registry = JSON.parse(
 	readFileSync(join(config.outDir, 'registry.json'), 'utf8'),
 ) as ComponentRegistry
-// The build's own reader (LT-356): an unreadable catalog file is reported,
-// never read as empty.
-const catalogs = await readCatalogs(config.i18nDir)
 const collection = await collectI18n(
 	Object.values(registry),
 	catalogs,
@@ -89,14 +104,9 @@ if (collection.locales.length === 0) {
 	process.exit(0)
 }
 
-const manifestPath = join(config.i18nDir, 'manifest.json')
-const manifest: Record<string, Record<string, string>> = (() => {
-	try {
-		return JSON.parse(readFileSync(manifestPath, 'utf8'))
-	} catch {
-		return {}
-	}
-})()
+const manifest: Record<string, Record<string, string>> = Object.fromEntries(
+	catalogs.manifest,
+)
 
 let writtenKeys = 0
 let confirmedKeys = 0

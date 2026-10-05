@@ -14,7 +14,9 @@
  *   not enough: `i18n/manifest.json` (committed, maintained by
  *   `i18n:sync`) records the source hash each locale's translation was
  *   made against. Override present + manifest hash ≠ current source hash
- *   ⇒ `stale`; no override ⇒ `missing`.
+ *   ⇒ `stale`; no override ⇒ `missing`. A manifest that exists but does
+ *   not read as a JSON object is one `malformed` record on the file, and
+ *   no `stale` is reported until it is fixed (LT-430).
  * - the translation census (`translationCensus`, `compiler/census.ts`) and the
  *   gitignored machine-readable report (`writeI18nReport`). The census
  *   walks BOTH directions (LT-196): declared keys missing from a catalog
@@ -149,14 +151,14 @@ export type Catalogs = {
 	 * write the locale. Absent from injected test catalogs = none.
 	 */
 	unreadable?: Map<string, string>
-}
-
-const readJson = async (path: string): Promise<unknown> => {
-	try {
-		return JSON.parse(await readFile(path, 'utf8'))
-	} catch {
-		return undefined
-	}
+	/**
+	 * Why `manifest.json` exists but cannot be used — it does not parse as
+	 * JSON, or its top level is not an object (LT-430). `manifest` is then
+	 * empty. The census records the file once and skips the stale
+	 * comparison, and `i18n:sync` refuses to write anything. An ABSENT
+	 * manifest is the first-run empty state, not unreadable.
+	 */
+	unreadableManifest?: string
 }
 
 const asStringRecord = (value: unknown): Record<string, string> =>
@@ -181,6 +183,10 @@ const readCatalog = async (
 	try {
 		value = JSON.parse(await readFile(path, 'utf8'))
 	} catch (error) {
+		// An ABSENT file reads as empty: the manifest's first-run state
+		// (LT-430). A listed catalog file is absent only if it vanished.
+		if ((error as NodeJS.ErrnoException)?.code === 'ENOENT')
+			return { catalog: {} }
 		return { error: error instanceof Error ? error.message : String(error) }
 	}
 	return typeof value === 'object' && value !== null && !Array.isArray(value)
@@ -214,11 +220,22 @@ export const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
 	} catch {
 		// No i18n directory yet: zero locales, zero gaps.
 	}
+	// The manifest is read like a catalog file (LT-430): unreadable is
+	// reported, never read as "no recorded sources" — which would read
+	// every carried translation as stale, and let `i18n:sync` overwrite
+	// every locale's recorded source hashes.
 	const manifest = new Map<string, Record<string, string>>()
-	const rawManifest = await readJson(join(i18nDir, 'manifest.json'))
-	if (typeof rawManifest === 'object' && rawManifest !== null)
-		for (const [locale, entries] of Object.entries(rawManifest))
-			manifest.set(locale, asStringRecord(entries))
+	const readManifest = await readCatalog(join(i18nDir, 'manifest.json'))
+	if ('error' in readManifest)
+		return {
+			locales,
+			overrides,
+			manifest,
+			unreadable,
+			unreadableManifest: readManifest.error,
+		}
+	for (const [locale, entries] of Object.entries(readManifest.catalog))
+		manifest.set(locale, asStringRecord(entries))
 	return { locales, overrides, manifest, unreadable }
 }
 
@@ -258,6 +275,7 @@ export const collectI18n = async (
 		overrides: rawOverrides,
 		manifest,
 		unreadable = new Map<string, string>(),
+		unreadableManifest,
 	} = catalogs ?? (await readCatalogs(i18nDir))
 	const sources = new Map<string, Record<string, string>>()
 	// Split each catalog into its string entries and the rest (LT-249): a
@@ -268,6 +286,17 @@ export const collectI18n = async (
 	// do neither to an entry whose intended shape it cannot know.
 	const overrides = new Map<string, Record<string, string>>()
 	const malformed: TranslationGap[] = []
+	// An unreadable manifest (LT-430) is one record on the file, across
+	// every locale, and no `stale` anywhere: without recorded sources no
+	// translation can be compared, and reporting every carried key stale
+	// would blame the translations for a syntax error.
+	if (unreadableManifest !== undefined)
+		malformed.push({
+			key: 'manifest.json',
+			locale: '*',
+			status: 'malformed',
+			detail: `the staleness manifest is unreadable, so no translation is checked for staleness — ${unreadableManifest}`,
+		})
 	for (const locale of locales) {
 		// An unreadable catalog FILE (LT-356) is one `malformed` record on
 		// the file, not one `missing` per declared key — those would blame
@@ -329,7 +358,10 @@ export const collectI18n = async (
 					gaps.push({ key: compound, locale, status: 'missing' })
 					continue
 				}
-				if (localeManifest[compound] !== sourceHash(source))
+				if (
+					unreadableManifest === undefined &&
+					localeManifest[compound] !== sourceHash(source)
+				)
 					gaps.push({ key: compound, locale, status: 'stale' })
 				gaps.push(
 					...patternGaps(
