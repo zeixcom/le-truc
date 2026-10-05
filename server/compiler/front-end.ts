@@ -120,7 +120,6 @@ export const runFrontEnd = (
 
 	// Locate the single component function (by its body's node type).
 	let fn: AstNode | null = null
-	let fnStmt: AstNode | null = null
 	let fnStmtStart = 0
 	for (const stmt of asArray(ast.body)) {
 		const decl =
@@ -143,7 +142,6 @@ export const runFrontEnd = (
 			)
 		} else {
 			fn = decl
-			fnStmt = stmt
 			fnStmtStart = typeof stmt.start === 'number' ? stmt.start : 0
 		}
 	}
@@ -167,12 +165,17 @@ export const runFrontEnd = (
 	// outright rather than diagnosed per call site, since neither half of
 	// the isomorphic pair can honour it.
 	if (fn.async === true) {
-		// The whole statement, `export` included, so both surfaces cover the
-		// same text (the parsers disagree on where the declaration starts).
+		// The `async` token itself (LT-416), not the whole statement: one
+		// keyword, and when the file holds only the component the statement
+		// equals the file, so a line-label view would print no line. The
+		// parsers disagree on where the declaration starts but agree on the
+		// keyword's text, so the search from the statement start finds it on
+		// both; a miss falls back to the function node.
+		const at = ctx.source.indexOf('async', fnStmtStart)
 		ctx.diagnostics.push(
 			diagnostic.invalidSource(
 				ctx.source,
-				fnStmt ?? fn,
+				at === -1 ? fn : { start: at, end: at + 'async'.length },
 				`${filename}: the component function must not be \`async\` — setup runs synchronously on both halves (the server render function stringifies its result, and the client factory's effect collector is only active for the duration of the call). Await inside an event handler or a client-only setup statement instead.`,
 			),
 		)

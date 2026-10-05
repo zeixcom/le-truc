@@ -1076,9 +1076,10 @@ const FAMILIES: Case[] = [
 		pins: ['which holds a'],
 	},
 	{
+		// LT-416: both surfaces cover the `async` keyword itself, so the
+		// covered texts agree without a `spans` pair.
 		name: 'LTC008 async component function',
 		code: 'LTC008',
-		spans: [[ASYNC.tsrx.trim(), ASYNC.tsx.trim()]],
 		sources: ASYNC,
 	},
 	{
