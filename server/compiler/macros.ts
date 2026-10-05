@@ -12,6 +12,8 @@
  * authored `.tsx` sources.
  */
 
+import type { Parser } from '@zeix/le-truc'
+
 /** The message a marker stub throws when its source ran uncompiled. */
 const uncompiled = (name: string): Error =>
 	new Error(
@@ -34,4 +36,29 @@ export const css = (
 	..._substitutions: never[]
 ): string => {
 	throw uncompiled('css')
+}
+
+/**
+ * The per-field parsers of a list seeded from server args (ADR 0046 s7,
+ * LT-429): `createList(harvest(items, { due: asDate() }), …)`. The client
+ * rebuilds each server-rendered item field by field from the item's markup,
+ * and reads each field through a parser. The compiler infers a parser from
+ * a same-file item type (`string` → `asString`, `number` → `asNumber`,
+ * `boolean` → `asBoolean`); an entry here overrides that, and declares the
+ * parser of a field it cannot infer (a `Date`, a field of an imported
+ * type). For an item type the compiler cannot read, the map's keys are the
+ * field list. Recognized only as the seed argument of `createList`; the
+ * server reads `seed` through unchanged.
+ *
+ * @param seed - The server-side seed, an array of items from server args
+ * @param parsers - A parser per field, each typed against its field
+ * @returns `seed`, on the server
+ * @throws {Error} Always — reached only when the source was not compiled.
+ */
+export function harvest<T extends object>(
+	seed: T[],
+	parsers: { [K in keyof T]?: Parser<T[K] & {}> },
+): T[]
+export function harvest(_seed: unknown, _parsers: unknown): unknown {
+	throw uncompiled('harvest')
 }

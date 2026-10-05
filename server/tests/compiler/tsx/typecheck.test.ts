@@ -114,6 +114,11 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 			"discriminated-compose.tsx(27,4): error TS2322: Type '{ collapsed: true; }' is not assignable to type 'LibraryManagedAttributes<",
 		)
 		expect(output).not.toContain('discriminated-compose.tsx(26,')
+		// `harvest()` (LT-429): each entry is a `Parser` of its field, so a
+		// wrong parser type fails at the entry on the authored file.
+		expect(output).toContain(
+			"harvest-bad-parser.tsx(15,4): error TS2322: Type 'Parser<string>' is not assignable to type 'Parser<Date>'",
+		)
 		expect(status).not.toBe(0)
 	})
 

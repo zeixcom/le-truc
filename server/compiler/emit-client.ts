@@ -21,6 +21,7 @@ import type {
 	ClientPlan,
 	ForClientPlan,
 	KeyAttrPlan,
+	ListFieldPlan,
 	ReconcilePlan,
 	TopEffectPlan,
 } from './analysis/plan'
@@ -171,6 +172,93 @@ const listDeclaration = (
 		`[...${seed.container}.children].filter(el => el.hasAttribute('data-key')).map(el => ` +
 		`el.querySelector(${jsString(seed.valueSelector)})?.textContent ?? '')`
 	return spliceInit(signal, harvested)
+}
+
+/** One field's raw-value read in an adopted item `el` (ADR 0046 s7). */
+const fieldRead = (site: ListFieldPlan['site']): string => {
+	if (site.kind === 'key') return "el.getAttribute('data-key')"
+	const query = (typed: boolean): string => {
+		if (site.selector === null) return 'el'
+		const selector = jsString(site.selector)
+		return typed
+			? `el.querySelector<ElementFromSelector<${selector}>>(${selector})?`
+			: `el.querySelector(${selector})?`
+	}
+	if (site.kind === 'text') return `${query(false)}.textContent`
+	if (!site.property)
+		return `${query(false)}.getAttribute(${jsString(site.attr)})`
+	// A dirty-flag attribute reads the live property, as the scalar harvest
+	// does: the user may have changed it before the upgrade (CHECKLIST §6).
+	const element =
+		site.selector === null
+			? `(el as ElementFromSelector<${jsString(site.tag)}>)`
+			: query(true)
+	return site.attr === 'value'
+		? `${element}.value`
+		: `${element}.${site.attr}.toString()`
+}
+
+/**
+ * An arg-seeded List's per-field declaration (ADR 0046 s7, LT-429): the
+ * authored call with its seed — or its `harvest()` call — replaced by the
+ * adopted items, each rebuilt field by field through its parser. The
+ * rebuilt item is annotated with the item type, so a wrong parser type or a
+ * missing field is a tsc error at the field (or at the seed); the slices
+ * map both back to the authored entry and seed.
+ */
+const fieldListDeclaration = (
+	source: string,
+	signal: InitSignalIR,
+	seed: { container: string; fields: readonly ListFieldPlan[] },
+	imports: ClientImports,
+): { text: string; slices: SourceSlice[] } | null => {
+	if (signal.family !== 'declared') return null
+	const cut = signal.harvest?.call ?? signal.init
+	if (!cut || typeof cut.start !== 'number' || typeof cut.end !== 'number')
+		return null
+	const itemType =
+		signal.listItem?.shape.kind === 'fields' ||
+		signal.listItem?.shape.kind === 'opaque'
+			? signal.listItem.typeText
+			: null
+	const before = signal.text.slice(0, cut.start - signal.textStart)
+	const after = signal.text.slice(cut.end - signal.textStart)
+	// The rebuilt item's lines take the authored indentation of the line the
+	// seed sits on, so reindenting the statement keeps them nested under it.
+	const lineStart = source.lastIndexOf('\n', cut.start - 1) + 1
+	const indent = /^[ \t]*/.exec(source.slice(lineStart))?.[0] ?? ''
+	const children = `[...${seed.container}.children]`
+	const slices: SourceSlice[] = [
+		{ text: before, start: signal.textStart },
+		{ text: children, start: cut.start },
+		{ text: '({', start: cut.start },
+	]
+	const lines = [
+		`${children}.filter(el => el.hasAttribute('data-key')).map((el)${itemType ? `: ${itemType}` : ''} => ({`,
+	]
+	for (const { field, site, parser } of seed.fields) {
+		const read = fieldRead(site)
+		if (parser.kind === 'authored') {
+			const call = parser.wrap ? `(${parser.text})` : parser.text
+			lines.push(`${indent}\t${field}: ${call}(${read}),`)
+			slices.push(
+				{ text: `${field}: `, start: parser.keyStart },
+				{ text: parser.text, start: parser.start },
+			)
+		} else {
+			const call = `${imports.use(parser.name)}()(${read})`
+			lines.push(
+				`${indent}\t${field}: ${parser.cast ? `${call} as ${parser.cast}` : call},`,
+			)
+			slices.push({ text: `${field}: `, start: cut.start })
+		}
+	}
+	lines.push(`${indent}}))`)
+	slices.push({ text: after, start: cut.end })
+	return {
+		text: `${before}${lines.join('\n')}${after}`,
+		slices,
+	}
 }
 
 /** The declaring call with its first argument replaced by `init`. */
@@ -573,6 +661,8 @@ export const emitClientModule = (
 	// otherwise be a "Cannot find name" client-side (`form-textbox.tsrx`'s
 	// `validatable`).
 	const clientNeededNames = computeClientNeededNames(component)
+	// Set by any emission that types an element query by its selector.
+	let needsElementType = false
 	for (const stmt of component.plainSetup)
 		if (stmt.name && clientNeededNames.has(stmt.name))
 			push(stmt.text, sliceOf(stmt.text, stmt.range.start))
@@ -608,6 +698,22 @@ export const emitClientModule = (
 					`const ${signal.name} = ${signal.text}`,
 					sliceOf(signal.text, signal.textStart),
 				)
+			} else if ('fields' in harvest.seed) {
+				const declared = fieldListDeclaration(
+					component.source,
+					signal,
+					harvest.seed,
+					imports,
+				)
+				if (declared) {
+					push(`const ${signal.name} = ${declared.text}`, declared.slices)
+					if (
+						harvest.seed.fields.some(
+							field => field.site.kind === 'attr' && field.site.property,
+						)
+					)
+						needsElementType = true
+				}
 			} else {
 				const substituted = listDeclaration(signal, harvest.seed)
 				if (substituted) push(`const ${signal.name} = ${substituted}`)
@@ -662,7 +768,6 @@ export const emitClientModule = (
 	// A reactive conditional (ADR 0037): `reconcile()`'s arm form over the
 	// templates the server stamped `data-arms`, a key thunk over the test,
 	// and one branch of `bindArm` per arm with effects.
-	let needsElementType = false
 	const emitArms = (plan: ArmsPlan): void => {
 		imports.add('reconcile')
 		if (plan.boundary) {

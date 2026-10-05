@@ -73,6 +73,11 @@ export type ExtractContext = {
 	 */
 	markers: ReadonlyMap<string, MarkerName>
 	/**
+	 * The module's own `type` aliases and interfaces, by name — what a list
+	 * item type resolves through for the per-field harvest (ADR 0046 s7).
+	 */
+	moduleTypes: ReadonlyMap<string, AstNode>
+	/**
 	 * Setup-level `const name = init` initializers, by name — lets an event
 	 * attribute reference a hoisted handler by identifier (`{onInput}`)
 	 * instead of only accepting an inline function expression; the resolved
@@ -129,6 +134,7 @@ export const createExtractContext = (
 	parserFallbackRefsOf: () => EMPTY_NAMES,
 	composeImports: new Map<string, string>(),
 	markers: new Map<string, MarkerName>(),
+	moduleTypes: new Map<string, AstNode>(),
 	setupInits: new Map<string, AstNode>(),
 	loopBound: [],
 	loopReactive: [],

@@ -40,6 +40,13 @@ export type SetupStmt = {
 	node: AstNode
 	/** Declared const name (signals, plain consts), or `null` for `expose()`. */
 	name: string | null
+	/**
+	 * Source slices for a `text` that is not one verbatim slice: a
+	 * `harvest()` seed's statement, which the server emits with the marker
+	 * call read through to its seed (ADR 0046 s7). Absent, the whole text
+	 * maps from `range.start`.
+	 */
+	slices?: ReadonlyArray<{ text: string; start: number }>
 }
 
 /**
@@ -206,8 +213,72 @@ type SignalIRBase = {
 export type DeclaredSignalIR = SignalIRBase & {
 	family: 'declared'
 	constructor: 'createCell' | 'createState' | 'createList' | 'createStore'
-	/** The initializer expression node; `null` for an argument-less call. */
+	/**
+	 * The initializer expression node; `null` for an argument-less call. A
+	 * seed wrapped in the `harvest()` marker is the marker's own seed
+	 * argument: the server reads it through as identity (ADR 0046 s7).
+	 */
 	init: AstNode | null
+	/** A `createList` seed declared through `harvest()` (ADR 0046 s7, LT-429). */
+	harvest?: HarvestSeedIR
+	/** A `createList` declaration's item type, read syntactically (ADR 0046 s7). */
+	listItem?: ListItemIR
+}
+
+/** A harvest parser the compiler infers from a field's type (ADR 0046 s7). */
+export type InferredParserIR = {
+	name: 'asString' | 'asNumber' | 'asBoolean'
+	/**
+	 * The field's type text when the parser's result must narrow to it — a
+	 * string-literal union reads through `asString`, and the server rendered
+	 * one of its members.
+	 */
+	cast: string | null
+}
+
+/**
+ * A `createList(harvest(seed, { field: parser, … }), …)` seed (ADR 0046 s7,
+ * LT-429): `call` is the marker call the client splices the harvested array
+ * over; `entries` are the parser map's entries in source order, spliced
+ * into the client as authored.
+ */
+export type HarvestSeedIR = {
+	call: AstNode
+	entries: Array<{ field: string; key: AstNode; value: AstNode; text: string }>
+}
+
+/** One field of a resolved list item type (ADR 0046 s7). */
+export type ListItemFieldIR = {
+	name: string
+	/** The field's type annotation text, as authored. */
+	typeText: string
+	/** The parser its type infers, or null (an object, a `Date`, a union). */
+	parser: InferredParserIR | null
+}
+
+/**
+ * A `createList` item type, resolved without a type checker (ADR 0046 s7):
+ * the declaring call's first type argument, else the element type of the
+ * seed arg's annotation, followed through a same-file `type` alias or an
+ * `interface` without `extends`.
+ *
+ * - `scalar` — a `string`/`number`/`boolean` item, harvested whole from the
+ *   item's bare `{item}` hole;
+ * - `fields` — an object type whose fields the compiler can list;
+ * - `opaque` — a type it cannot read (imported, generic, a union): only a
+ *   `harvest()` map can list its fields;
+ * - `unknown` — no type argument and no annotation to read.
+ */
+export type ListItemIR = {
+	/** The item type's text; null for `unknown`. */
+	typeText: string | null
+	shape:
+		| { kind: 'scalar' }
+		| { kind: 'fields'; fields: ListItemFieldIR[] }
+		| { kind: 'opaque' }
+		| { kind: 'unknown' }
+	/** The field `keyConfig` returns verbatim (`item => item.id`), if any. */
+	keyField: string | null
 }
 
 /**

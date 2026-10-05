@@ -122,7 +122,7 @@ export const parseComposeImports = (
 export const MACROS_SPECIFIER = '@zeix/le-truc-compiler/macros'
 
 /** Every export of `MACROS_SPECIFIER` (`server/compiler/macros.ts`). */
-export const MARKER_NAMES = ['css'] as const
+export const MARKER_NAMES = ['css', 'harvest'] as const
 
 export type MarkerName = (typeof MARKER_NAMES)[number]
 
@@ -179,6 +179,20 @@ export const parseMarkerImports = (ast: AstNode): Map<string, MarkerName> => {
 	return markers
 }
 
+/** `markers` less every name in `declared`: what a scope's own declarations shadow. */
+const withoutShadowed = (
+	markers: ReadonlyMap<string, MarkerName>,
+	declared: Iterable<string>,
+): ReadonlyMap<string, MarkerName> => {
+	let scoped: Map<string, MarkerName> | null = null
+	for (const name of declared) {
+		if (!(scoped ?? markers).has(name)) continue
+		scoped ??= new Map(markers)
+		scoped.delete(name)
+	}
+	return scoped ?? markers
+}
+
 /**
  * Drop the marker bindings a component-scope declaration shadows: a
  * parameter or setup declaration of the same local name is what a read in
@@ -188,19 +202,24 @@ export const shadowMarkers = (
 	ctx: ExtractContext,
 	declared: ReadonlySet<string>,
 ): void => {
-	if (ctx.markers.size === 0) return
-	const markers = new Map(ctx.markers)
-	for (const name of declared) markers.delete(name)
-	ctx.markers = markers
+	ctx.markers = withoutShadowed(ctx.markers, declared)
 }
 
-/** The marker an identifier node resolves to, or null when it is none. */
+/**
+ * The marker an identifier node resolves to, or null when it is none.
+ * `enclosing` names what the scopes between the component function and the
+ * identifier declare — a reactive-list item's binding, key and setup names
+ * (ADR 0046 s5) — so a marker one of them shadows resolves to nothing there,
+ * as a component-scope declaration does through `shadowMarkers`.
+ */
 export const markerOf = (
 	ctx: ExtractContext,
 	node: unknown,
+	enclosing: Iterable<string> = [],
 ): MarkerName | null => {
 	const name = identifierName(node)
-	return name ? (ctx.markers.get(name) ?? null) : null
+	if (!name) return null
+	return withoutShadowed(ctx.markers, enclosing).get(name) ?? null
 }
 
 /**
@@ -716,6 +735,12 @@ export const computeClientNeededNames = (
 		for (const n of dependenciesOf(exprNode)) needed.add(n)
 	for (const stmt of component.clientSetup)
 		for (const n of dependenciesOf(stmt.node)) needed.add(n)
+	// A `harvest()` entry is spliced into the client's list declaration as
+	// authored (ADR 0046 s7); the server reads the seed through without it.
+	for (const signal of component.signals)
+		if (signal.family === 'declared')
+			for (const entry of signal.harvest?.entries ?? [])
+				for (const n of dependenciesOf(entry.value)) needed.add(n)
 	// Every item setup statement is client-emitted, in `bindItem` (ADR
 	// 0046 s5) — a ref through its selector alone.
 	for (const stmt of component.itemSetup)

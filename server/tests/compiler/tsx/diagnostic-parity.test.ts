@@ -397,6 +397,36 @@ const LIST_BODY: Case[] = [
 		pins: ['reads an ambient value'],
 	},
 	{
+		// Per-field harvest (ADR 0046 s7, LT-429): the key field comes from
+		// `data-key`, every other field needs a site in the item.
+		name: 'LTC072 a field of an arg-seeded list item rendered nowhere',
+		code: 'LTC072',
+		spec: {
+			pre: imports('createList'),
+			params: '{ rows = [] }: { rows?: Array<{ id: string; label: string }> }',
+			setup: 'const items = createList(rows, { keyConfig: row => row.id })',
+			body: '<ul data-container>@for (const row of items) { <li class="row">static</li> }</ul>',
+			tsx: '<ul data-container>{items.map(row => <li class="row">static</li>)}</ul>',
+		},
+		pins: ['Field `label` of list `items` renders nowhere', 'data-label'],
+		forbid: ['Field `id`'],
+	},
+	{
+		name: 'LTC076 a field of an arg-seeded list item with no parser',
+		code: 'LTC076',
+		spec: {
+			pre: imports('createList'),
+			params: '{ rows = [] }: { rows?: Array<{ id: string; due: Date }> }',
+			setup: 'const items = createList(rows, { keyConfig: row => row.id })',
+			body: '<ul data-container>@for (const row of items) { <li><time datetime={() => String(row.get().due)}></time></li> }</ul>',
+			tsx: '<ul data-container>{items.map(row => <li><time datetime={() => String(row.get().due)}></time></li>)}</ul>',
+		},
+		pins: [
+			'Field `due` of list `items` has type `Date`',
+			'`createList(harvest(rows, { due: … }), …)`',
+		],
+	},
+	{
 		// A composed child renders once into the extracted template, root
 		// `lang`/`i18n` included (ADR 0030 s9, LT-355): an arg over the item
 		// has no per-item render to reach.

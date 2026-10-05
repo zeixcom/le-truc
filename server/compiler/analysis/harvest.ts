@@ -36,6 +36,7 @@ import {
 	JS_GLOBALS,
 } from '../vocabulary'
 import { elseOf, isIf, thenOf, walkTemplate } from '../walk'
+import { harvestsPerField, planListFieldHarvest } from './list-harvest'
 import type {
 	HarvestPlan,
 	HarvestPlans,
@@ -963,7 +964,34 @@ const planHarvests = (
 		if (listPlan && signal.family === 'declared') {
 			const free = signal.init ? dependenciesOf(signal.init) : new Set<string>()
 			if ([...free].every(name => JS_GLOBALS.has(name))) {
-				harvests.push({ kind: 'list', signal: signal.name, seed: 'verbatim' })
+				// The client reuses a literal seed as written, so a `harvest()`
+				// map there declares parsers nothing reads (ADR 0046 s7).
+				if (signal.harvest) {
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							signal.harvest.call,
+							'A `harvest()` seed on a list seeded with a literal',
+							'The client reuses a literal seed as written and harvests nothing — pass the literal to `createList()` directly.',
+						),
+					)
+					rawSourceRefused.add(signal.name)
+				} else
+					harvests.push({ kind: 'list', signal: signal.name, seed: 'verbatim' })
+			} else if (
+				[...free].every(name => component.paramNames.includes(name)) &&
+				!listPlan.scoped &&
+				harvestsPerField(signal)
+			) {
+				// Per-field harvest (ADR 0046 s7, LT-429): each field from its
+				// canonical site in the adopted item, through its parser.
+				const loop = [...reconcilePlans.entries()].find(
+					([, plan]) => plan === listPlan,
+				)?.[0]
+				const plan = loop
+					? planListFieldHarvest(shared, signal, loop, listPlan.container)
+					: null
+				if (plan) harvests.push(plan)
 			} else if ([...free].every(name => component.paramNames.includes(name))) {
 				// The arg-seeded List harvests the container's adopted children
 				// through the item value's DOM site (the bare `{item}` hole's

@@ -31,6 +31,7 @@ import {
 	shadowMarkers,
 } from './imports'
 import type { ComponentIR, ForIR, SignalIR, TemplateNode } from './ir'
+import { collectModuleTypes } from './list-item'
 import {
 	reportDeferredCollectorCalls,
 	reportLeTrucImportMismatch,
@@ -140,6 +141,7 @@ export const runFrontEnd = (
 	reportMalformedSelectors(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
 	ctx.markers = parseMarkerImports(ast)
+	ctx.moduleTypes = collectModuleTypes(ast)
 	const plainImports = parsePlainImports(
 		ctx,
 		ast,
