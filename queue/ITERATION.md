@@ -115,7 +115,7 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  **next:** LT-424 → LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → **next:** LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
   ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types).

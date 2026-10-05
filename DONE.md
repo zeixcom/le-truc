@@ -890,6 +890,33 @@ Full entry text: `git log -p -- DONE.md`.
   state the insert-before-mount ordering contract (pinned by the unit test); the uncaught-throw
   containment gap on a re-run predates the task → LT-435.
 
+- [x] LT-424: Mount Scopes nest — arms and lists inside arms and items, scoped server-data loops, the cross-scope uniqueness proof (ADR 0046 s1–s2). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-423
+  **Gates:** check:sim
+  **Changed:** Mount Scopes nest (ADR 0046 s1–s2). Emission recurses: an arm set, a reactive list or
+  a server-data loop inside an arm or a list item plans into that scope's mount through its locals
+  (`MountScope`, `planNested`/`planNestedList`/`planNestedEach` in `analysis/effects.ts`). Lifted:
+  arm sets and lists inside arms; arm sets, lists, server-data loops and async boundaries inside
+  items. A condition over an item or key is reactive and folds per live item. Still refused: arm
+  sets in server-rendered branches, composed content and server-data loop bodies; LTC063. New
+  refusals (LTC005, parity-pinned): a list directly under an arm or item root, a list inside a
+  server-data loop body, a server-data loop over the item or key, an arg-seeded nested list. The
+  cross-scope proof is `resolveScopedSelector` (`analysis/selectors.ts`): proved on the materialized
+  probe, with a synthesized `:scope >` child path when no class, role or `data-*` separates; LTC007
+  otherwise. A scoped server-data loop is a static query, no `all()`. Nested templates ride inside
+  the outer one; `data-list` indices are pre-order. A reactive list's `@empty` arm binds reactive
+  attributes, maps, events and lazy text. Key-derived attributes generalize to every enclosing key,
+  set at the owning scope's mount, through server-rendered branches in both arm and item walks; a
+  key-only element in a server branch gets a non-throwing local (`ScopeLocal.optional`). Census 38
+  (30 folded / 8 simulated), warning baseline 0, goldens byte-identical.
+  **Review:** Approved after rework (8cfbced5): the dropped key-derived attribute in a nested arm's
+  server branch, and the new LTC005/LTC007 copy. Accepted without rework: host-level `first()` keeps
+  LTC007 without child-path synthesis; the child path skips the composed-children exclusion (a step
+  names the enclosing element's tag, so it can only match into a composed child that shares an own
+  element's tag); the `@empty` lift covers events and lazy text; `holderOf` looks through control
+  flow. Follow-up LT-439 (module-level `.tsrx` types).
+
 - [x] LT-425: The `.tsx` keyed `map` — `items.map((item, k) => …)` over `createList`/`deriveList`, Cause & Effect 1.6, a module-list `.tsx` variant (ADR 0046 s4; closes LT-342). — reviewed ✓
   **Area:** compiler
   **Needs:** LT-423

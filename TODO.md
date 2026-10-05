@@ -115,7 +115,7 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  **next:** LT-424 → LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → **next:** LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
   ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types).
@@ -217,52 +217,6 @@ recorded against the 30.4k opening measurement.
 
 
 ### C — corpus port
-
-- [ ] LT-424: Mount Scopes nest — arms and lists inside arms and items, scoped server-data loops, the cross-scope uniqueness proof (ADR 0046 s1–s2). — changes requested ↩
-  **Area:** compiler
-  **Needs:** LT-423
-  **Gates:** check:sim
-  **Context:** LT-423 makes an item one Mount Scope. This task makes emission recursive:
-  every construct emits into its nearest enclosing scope (host, arm, item).
-  1. **Lift the refusals** `unmountableInArm` and `validateArmSetPlacement`
-     (`analysis/effects.ts:1501-1660`) for arm sets and lists inside arms and items. What stays:
-     composed content and server-data loop bodies (ADR 0037 s5 as amended), and LTC063.
-  2. **Proof across scopes.** A selector bound in a scope must match nothing in any nested
-     scope's possible content (every arm of a nested set, each nested item shape) on the
-     materialized probe (ADR 0045). When classes, roles and `data-*` do not separate the
-     elements, synthesize a `:scope >` child path. Failure stays LTC007, and its fix names a
-     unique class.
-  3. **Server-data loops inside a scope** lower to a static query against the scope's root,
-     with no `all()`/MutationObserver. The host-level `each(all())` is unchanged.
-  4. **Nested templates** ride inside the outer template's content (one copy per outer item);
-     no hoisting.
-  5. **The `@empty` arm is a scope:** its reactive attributes emit like any other scope's
-     (module-ticker's placeholder height).
-  **Channel/tier:** compiler; parity cases on both surfaces for each lifted and remaining refusal.
-  **Check:** fixtures on both surfaces: a list in an arm, an arm in an item, a list in an item
-  (adopted, then cloned at both levels), a selector that would match into a nested item (proved
-  or synthesized), and an `@empty` arm with a reactive style. Corpus goldens byte-identical.
-  Full gates. **Impasse rule (iteration ruling 10).**
-
-  **Changed:** Mount Scopes nest (ADR 0046 s1–s2). Emission recurses: an arm set (reactive conditional or async boundary), a reactive list or a server-data loop inside an arm or a list item plans into that scope's mount through the scope's locals (`MountScope` in `analysis/effects.ts`; `planNested`/`planNestedList`/`planNestedEach`). Lifted refusals (parity-pinned on both surfaces): arm sets and lists inside arms, arm sets, lists, server-data loops and async boundaries inside items (`unmountableInArm`'s loop arm, `validateArmSetPlacement`'s item arm, `validateListBody`'s loop and async-boundary arms). A condition over a reactive-list item or key now classifies reactive (`loopReactive` in the extract context), and folds per live item (`initial-winner.ts`: `{ fold: true }`). Remaining refusals: arm sets in server-rendered branches, composed content and server-data loop bodies; LTC063; plus new, parity-pinned: a reactive list directly under an arm/item root, a reactive list inside a server-data loop body, a server-data loop over the item or key, an arg-seeded list nested in a scope (harvest). The proof across scopes is `resolveScopedSelector` (`analysis/selectors.ts`): the probe over the scope root already counts every nested arm and one copy of each nested item shape, so count 1 means "matches nothing in a nested scope"; when no class/role/`data-*` separates, a `:scope >` bare-tag child path is synthesized and proved on the probe; failure is LTC007 with the fix "give it a unique `class`" (arm and item local messages reworded to that). Server-data loops in a scope lower to `for (const x of root.querySelectorAll<ElementFromSelector<…>>(sel))`, no `all()`. Nested templates ride inside the outer template (`listTemplate`'s `nested()` renders through `emit` in template mode: no live arm, no items, enclosing item/key bindings unbound via `templateUnbound`); `data-list` indices are pre-order (`listIndexOf(root, fors, loop)`). The reactive list's `@empty` arm binds reactive attributes, class/style maps, events and lazy text in the scope that holds the list (`validateEmptyArm`); server-data empty arms stay inert. Key-derived attributes generalize to every enclosing item's key and are set at the mount of the scope owning the element (`ArmPlan.keyAttrs`). Docs: AGENTS.md, HOST_PROFILE.md, LE_TRUC_COMPILER.md, skills/le-truc/references/compiled.md.
-  **How:** `server/tests/compiler/mount-scopes.test.ts` (new): list in arm, arm in item, list in item with a reactive `@empty` style — each compiled on both surfaces to byte-identical modules, rendered, adopted with an empty connect diff, then cloned at both levels in the simulation realm; server-data loop in an arm; async boundary in an item; the cross-scope proof (class proved, child path synthesized, LTC007). `tsx/diagnostic-parity.test.ts`: `NESTED_SCOPES` cases and the lifted shapes compiling on both surfaces; the retired "arm set inside the body" and `.tsrx` nested-loop asymmetry cases replaced. Generated modules of the fixtures also typecheck under check:corpus's tsc flags (checked ad hoc).
-  **Check:** test:server 3050 pass / 0 fail; typecheck clean; check:contract green; check:corpus exit 0 (census 38: 30 folded / 8 simulated, warning baseline 0 — unchanged); build:docs green; check:links 724 green; check:sim bun+node identical, Deno leg unrunnable (sandbox network). Not run (untouched areas): Playwright, test:variants, check:size. Doubts: (1) the `:scope >` synthesis applies to nested-scope queries only — host-level `first()` keeps today's LTC007, though the ADR counts the host as a scope; (2) the synthesized child path skips the composed-children exclusion (`:not(child *)`) — sound only while no own element shares a composed child's tag; (3) the `@empty` lift admits events and lazy text besides reactive attributes; (4) LTC063's container test now looks through control flow (`holderOf`); (5) a key-derived attribute inside a server-rendered branch of a nested arm is not set on clone (arms walk elements only); (6) reworded LTC007 copy for arm/item locals — writer pass welcome.
-  **Review:** Changes requested. (1) **Silent drop:** a key-derived attribute inside a
-  server-rendered conditional branch of an arm nested in a list item is never set — the arm's
-  `visitDescendants` walks elements only, while the item walk (`collectKeySites`) descends into
-  server-rendered arms. A cloned arm therefore loses e.g. a key-derived `id`/`for`. Make the arm
-  walk descend into server-rendered conditional arms for `collectKeyAttrs` exactly as the item
-  walk does (client constructs there stay refused by `unmountableInArm`), and pin it on both
-  surfaces in `mount-scopes.test.ts` (adopted and cloned). (2) **Copy:** check the reworded LTC007
-  fix text and the four new LTC005 messages against `.claude/skills/writer/references/error-messages.md`.
-  Accepted as-is, no rework: doubts (1) host-level `first()` keeps LTC007 without `:scope >`
-  synthesis (conservative; the host keeps its current behavior); (2) the child path skips the
-  composed-children exclusion — sound because a path step names the enclosing element's tag, so it
-  matches into a composed child only when an own element shares that child's custom-element tag;
-  (3) the `@empty` lift admitting events and lazy text, the same construct family the entry named;
-  (4) `holderOf` looking through control flow for LTC063. Follow-up LT-439: doubt (8), a module-level
-  `type` in a `.tsrx` source not reaching the generated modules.
-
 
 - [ ] LT-355: A composed child inside a reactive-list template is silently dropped — render it, with its root `lang` and `i18n` (LT-351 ruling, ADR 0030 s9).
   **Area:** compiler
