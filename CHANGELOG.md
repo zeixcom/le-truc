@@ -148,6 +148,7 @@
 - **Type annotations counted as reads**: previously an annotation such as `(d: Date) => …` or `ro: ResizeObserver` counted as reading that global, which could keep a thunk from folding. Now type positions are skipped.
 - **A Parser-backed prop's server seed read the raw expression**: previously a folded test or thunk parsed the attribute's expression value, so `ordinal={false}` could render a different arm than the client picks. Now it parses the rendered attribute; a seed the render cannot resolve routes the component Simulated (`form-spinbutton`).
 - **`@if` roots with different binding sources shared one binding**: previously roots binding different props to one attribute, or differing in `truc:pass` entries or a reactive `truc:html` value, used the first root's source. Now each binds its own, or `LTC007` fires if they cannot be told apart.
+- **`reconcile()` duplicate-key removal misreported**: previously a second child carrying a `data-key` another child already held drew the "key not present in the source" warning (dev mode), pointing the author at a source where nothing is wrong. The warning now names the collision, and that the first occurrence wins (LT-187).
 
 ## 2.6.0
 

@@ -1014,13 +1014,17 @@ const reconcileList = <T extends {}>(
 				// here disappears at upgrade with no other signal — the shape
 				// that cost form-tokenbox its text input. After that the
 				// container is reconcile-owned and self-cleaning is the point,
-				// so only a keyed child whose key left the source still warrants
-				// a warning.
+				// so only a keyed child still warrants one: either its key left
+				// the source, or it duplicates a key another child already
+				// claimed (LT-187) — the first occurrence wins, so the duplicate
+				// is removed either way.
 				if (process.env.DEV_MODE === 'true' && (firstRun || harvested !== null))
 					console.warn(
-						harvested !== null
-							? `reconcile() removed child with data-key="${harvested}" from ${elementName(container)} — key not present in the source.`
-							: `reconcile() removed unkeyed <${child.localName}> from ${elementName(container)} during initial reconciliation — the source owns this container's children. Add data-unreconciled to exempt it.`,
+						harvested === null
+							? `reconcile() removed unkeyed <${child.localName}> from ${elementName(container)} during initial reconciliation — the source owns this container's children. Add data-unreconciled to exempt it.`
+							: keySet.has(harvested)
+								? `reconcile() removed duplicate child with data-key="${harvested}" from ${elementName(container)} — another child already holds that key, and the first occurrence wins.`
+								: `reconcile() removed child with data-key="${harvested}" from ${elementName(container)} — key not present in the source.`,
 					)
 				child.remove()
 			}
