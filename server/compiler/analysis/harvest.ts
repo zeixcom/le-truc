@@ -123,7 +123,7 @@ export const isDirectAttrThunk = (thunk: AstNode, signal: string): boolean =>
 export const parserForType = (type: string): ParserKind => {
 	switch (type) {
 		case 'number':
-			return 'asInteger'
+			return 'asNumber'
 		case 'boolean':
 			return 'asBoolean'
 		default:

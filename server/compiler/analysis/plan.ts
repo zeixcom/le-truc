@@ -44,7 +44,7 @@ import { composedShapesFor } from './selectors'
 /* === Types === */
 
 /** The harvest parser an attr/text seed reads through (from `parserForType`). */
-export type ParserKind = 'asInteger' | 'asBoolean' | 'asString'
+export type ParserKind = 'asNumber' | 'asBoolean' | 'asString'
 
 /** A generated element query. */
 export type QueryPlan = {

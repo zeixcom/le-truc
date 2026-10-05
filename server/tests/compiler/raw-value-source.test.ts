@@ -240,7 +240,7 @@ const passing: Array<{
 			setup: STATE,
 			body: `<data value={() => n.get()}>{() => n.get().toLocaleString('en-US')}</data>${BUTTON}`,
 		},
-		harvest: 'createState(asInteger()(String(data.value)))',
+		harvest: 'createState(asNumber()(String(data.value)))',
 		markup:
 			'<c-data><data value="1234">1,234</data><button type="button">+</button></c-data>',
 		text: /<data value="1234">1,234<\/data>/,

@@ -129,13 +129,13 @@ describe('client golden — convergence with the hand-written trio', () => {
 	test('basic-counter: same seed, handler, and binding as the hand-written component', () => {
 		const code = compiled[0]?.result.component?.clientCode ?? ''
 		expect(code).toContain(
-			"import { asInteger, bindText, defineComponent } from '@zeix/le-truc'",
+			"import { asNumber, bindText, defineComponent } from '@zeix/le-truc'",
 		)
 		// Sub-design 16: the authored import line re-emits alongside the
 		// synthesized one, which drops the names it provides.
 		expect(code).toContain("import { createCell } from '@zeix/le-truc'")
 		expect(code).toContain("first('span'")
-		expect(code).toContain('createCell(asInteger()(span.textContent))')
+		expect(code).toContain('createCell(asNumber()(span.textContent))')
 		expect(code).toContain(
 			"on(button, 'click', () => count.set(count.get() + 1))",
 		)
