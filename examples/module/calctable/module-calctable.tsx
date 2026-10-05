@@ -14,10 +14,9 @@
  * round-trips). The item is a Mount Scope (s1): a `MutableStore<CalcItem>`
  * whose fields are cells (s3), written by the row's own `onInput` handlers,
  * with the remove-on-zero commit going through the key (`items.remove(k)`).
- * The per-row price is a per-item signal derived per key
- * a per-item `createMemo` over the item's own fields (LT-426), whose raw
- * value the composed `basic-number` formats through the configured
- * `Intl.NumberFormat` options. The clamp bounds and helper live in setup,
+ * The per-row price is a per-item `createMemo` over the item's own
+ * fields (LT-426), whose raw value the composed `basic-number` formats
+ * through the configured `Intl.NumberFormat` options. The clamp bounds and helper live in setup,
  * where the client module binds them (module-scope names are not
  * client-known, LTC005 — the scrollarea rule).
  *

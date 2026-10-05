@@ -372,7 +372,7 @@ declare namespace JSX {
 		 * the composed children carry. */
 		lang?: string
 		/** JSON-encoded `Intl.NumberFormatOptions` (LT-142). */
-		options?: string | undefined
+		options?: string
 	}
 	type ModuleCarouselAttrs = CommonLightDom
 	type ModuleCatalogAttrs = CommonLightDom
