@@ -77,6 +77,19 @@ const captureWarnsAsync = async <T>(
 	}
 }
 
+const captureErrorsAsync = async <T>(
+	fn: () => Promise<T>,
+): Promise<{ calls: unknown[][]; result: T }> => {
+	const original = console.error
+	const calls: unknown[][] = []
+	console.error = (...args: unknown[]) => calls.push(args)
+	try {
+		return { calls, result: await fn() }
+	} finally {
+		console.error = original
+	}
+}
+
 const withDevMode = <T>(fn: () => T): T => {
 	const prev = process.env.DEV_MODE
 	process.env.DEV_MODE = 'true'
@@ -1067,11 +1080,13 @@ describe('reconcile — scoped first (ADR 0021)', () => {
 		dispose()
 	})
 
-	test('scoped first throws MissingElementError with "in item" wording when required and missing', () => {
+	test('scoped first throws MissingElementError with "in item" wording when required and missing', async () => {
 		const container = new FakeElement('ul')
 		const list = createList<string>(['a'], { keyConfig: 'item' })
 
-		expect(() =>
+		// The throw is contained to the item's Mount Scope and reported
+		// (LT-436); the reported error carries the scoped wording.
+		const { calls } = await captureErrorsAsync(async () => {
 			activate(() =>
 				reconcile(
 					container as unknown as Element,
@@ -1081,8 +1096,10 @@ describe('reconcile — scoped first (ADR 0021)', () => {
 						first('input', 'needed for label association')
 					},
 				),
-			),
-		).toThrow(/in item /)
+			)
+		})
+		expect(calls).toHaveLength(1)
+		expect(String(calls[0]?.[1])).toMatch(/in item /)
 	})
 
 	test('does not defer bindItem for an undefined custom element found via scoped first', () => {
@@ -1849,14 +1866,13 @@ describe('reconcile arm form — mountScope disposal on bind throw (LT-385f)', (
 
 		// The arm mounts, the watch fires once, then the throw disposes the
 		// partial scope — the watch is dead even though the arm stays. The
-		// throw surfaces through the synchronous effect run in this bare
-		// frame; the host's descriptor containment absorbs it live (ADR 0028).
-		try {
+		// throw is contained per arm and reported, never rethrown (LT-436).
+		const { calls } = await captureErrorsAsync(async () => {
 			open.set(true)
-		} catch {
-			// Expected: the pass() descriptor's validation error.
-		}
-		await tick()
+			await tick()
+		})
+		expect(calls).toHaveLength(1)
+		expect(String(calls[0]?.[0])).toContain('reconcile() arm "then"')
 		expect(seen).toEqual(['a'])
 
 		label.set('b')
@@ -1869,5 +1885,180 @@ describe('reconcile arm form — mountScope disposal on bind throw (LT-385f)', (
 		await tick()
 		expect(tags(container)).toEqual(['template:then'])
 		dispose()
+	})
+})
+
+describe('reconcile — a throwing Mount Scope is contained (LT-436)', () => {
+	// ADR 0028 s3 one level down: a bindItem/bindArm that throws costs only
+	// its own scope. Reported once through console.error, not DEV-gated; the
+	// element stays in place unbound and the rest of the list carries on.
+	const boom = new Error('boom')
+
+	test('list: a throw on the first run is reported once and the other items mount', async () => {
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a', 'bad', 'c'], {
+			keyConfig: item => item,
+		})
+		const mounted: string[] = []
+		const sibling = createState(0)
+		const seen: number[] = []
+		const stubHost = {} as unknown as HTMLElement & ComponentProps
+		const watch = makeWatch(stubHost)
+		let dispose: (() => void) | undefined
+
+		const { calls } = await captureErrorsAsync(async () => {
+			dispose = createScope(() =>
+				activate(() => {
+					reconcile(
+						container as unknown as Element,
+						makeTemplate(),
+						list,
+						(_element, _item, key) => {
+							if (key === 'bad') throw boom
+							mounted.push(key)
+						},
+					)
+					watch(sibling, value => {
+						seen.push(value)
+					})
+				}),
+			)
+			await tick()
+			// The structural effect keeps working after the failure, and the
+			// failed item is not retried while its key stays.
+			list.add('d')
+			await tick()
+		})
+
+		expect(calls).toHaveLength(1)
+		expect(String(calls[0]?.[0])).toContain('reconcile() item "bad"')
+		expect(String(calls[0]?.[0])).toContain('<ul>')
+		expect(calls[0]?.[1]).toBe(boom)
+		expect(childKeys(container)).toEqual(['a', 'bad', 'c', 'd'])
+		expect(mounted).toEqual(['a', 'c', 'd'])
+
+		// The sibling effect beside reconcile() survived the failure.
+		sibling.set(1)
+		await tick()
+		expect(seen).toEqual([0, 1])
+
+		// The unbound element leaves cleanly with its key.
+		list.remove('bad')
+		await tick()
+		expect(childKeys(container)).toEqual(['a', 'c', 'd'])
+		dispose?.()
+	})
+
+	test('list: a throw on a re-run is reported once and the element stays unbound in place', async () => {
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a'], { keyConfig: item => item })
+		const label = createState('x')
+		const stubHost = {} as unknown as HTMLElement & ComponentProps
+		const watch = makeWatch(stubHost)
+		const seen: string[] = []
+		const mounted: string[] = []
+		let dispose: (() => void) | undefined
+
+		const { calls } = await captureErrorsAsync(async () => {
+			dispose = createScope(() =>
+				activate(() =>
+					reconcile(
+						container as unknown as Element,
+						makeTemplate(),
+						list,
+						(_element, _item, key) => {
+							mounted.push(key)
+							// The watch descriptor is collected before the throw
+							// and never activates: the partial scope is disposed.
+							watch(label, value => {
+								seen.push(`${key}:${value}`)
+							})
+							if (key === 'bad') throw boom
+						},
+					),
+				),
+			)
+			list.add('bad')
+			await tick()
+			list.add('c')
+			await tick()
+		})
+
+		expect(calls).toHaveLength(1)
+		expect(String(calls[0]?.[0])).toContain('reconcile() item "bad"')
+		expect(childKeys(container)).toEqual(['a', 'bad', 'c'])
+		expect(mounted).toEqual(['a', 'bad', 'c'])
+
+		label.set('y')
+		await tick()
+		expect(seen).toEqual(['a:x', 'c:x', 'a:y', 'c:y'])
+		dispose?.()
+	})
+
+	test('arm: a throw on the first run and on a flip is reported once per scope', async () => {
+		const container = new FakeElement('div')
+		const templates = [
+			armTemplate(container, 'then', 'p'),
+			armTemplate(container, 'else', 'span'),
+		]
+		const open = createState(true)
+		const other = createState(0)
+		const mounted: string[] = []
+		let dispose: (() => void) | undefined
+
+		const { calls } = await captureErrorsAsync(async () => {
+			dispose = createScope(() =>
+				activate(() =>
+					reconcile(
+						container as unknown as Element,
+						asTemplates(templates),
+						() => {
+							other.get()
+							return open.get() ? 'then' : 'else'
+						},
+						(_element, key) => {
+							if (key === 'then') throw boom
+							mounted.push(key)
+						},
+					),
+				),
+			)
+			await tick()
+			// A re-run that resolves the same key does not retry the
+			// failed arm.
+			other.set(1)
+			await tick()
+		})
+
+		expect(calls).toHaveLength(1)
+		expect(String(calls[0]?.[0])).toContain('reconcile() arm "then"')
+		expect(String(calls[0]?.[0])).toContain('<div>')
+		// The failed arm stays in place, unbound.
+		expect(tags(container)).toEqual([
+			'p[then]',
+			'template:then',
+			'template:else',
+		])
+
+		const second = await captureErrorsAsync(async () => {
+			open.set(false)
+			await tick()
+			expect(tags(container)).toEqual([
+				'span[else]',
+				'template:then',
+				'template:else',
+			])
+			// Re-entry clones a fresh arm, a new scope: it is reported again.
+			open.set(true)
+			await tick()
+		})
+		expect(mounted).toEqual(['else'])
+		expect(second.calls).toHaveLength(1)
+		expect(tags(container)).toEqual([
+			'p[then]',
+			'template:then',
+			'template:else',
+		])
+		dispose?.()
 	})
 })

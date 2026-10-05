@@ -27,6 +27,7 @@ import {
 	InvalidPassPropertyError,
 	InvalidReactivesError,
 	InvalidTemplateError,
+	reportEffectFailure,
 } from '../errors'
 import { debugFire, markIfDebugging } from '../extensions/debug'
 import { getSignals, pushDescriptor, withCollector } from '../internal'
@@ -705,6 +706,20 @@ function each<E extends Element>(
  * `bindItem`'s 4th parameter, `first`, is a type-safe, throwing lookup
  * scoped to `element` instead of the host (see ADR 0021).
  *
+ * `bindItem` runs only after its element sits at its position in the
+ * container, never on a detached clone: a cloned item's composed children
+ * upgrade on insertion, so a `pass()` inside `bindItem` finds their exposed
+ * properties.
+ *
+ * A `bindItem` that throws costs only its own item (ADR 0028 containment, per
+ * Mount Scope), whether it mounts on the first run or on a later source
+ * change. The failure is reported once through `console.error`, naming the
+ * item's key and the container. Effects the item activated before the throw
+ * are disposed. The element stays in place, unbound, and is not mounted
+ * again while its key stays in the source. The other items and the list's
+ * own sync carry on. The arm form contains a throwing `bindArm` the same
+ * way, per arm.
+ *
  * See ADR 0017 for SSR adoption, unreconciled pinning, and keyed-relative
  * positioning.
  *
@@ -828,6 +843,27 @@ const mountScope = (bind: () => MaybeCleanup): Cleanup => {
 	return dispose
 }
 
+/**
+ * Mount one Mount Scope (an arm or a list item, ADR 0046) with activation
+ * contained to that scope (ADR 0028 s3, one level down — LT-436): a throwing
+ * `bindItem`/`bindArm` is reported once and costs only its own scope. The
+ * element stays in place unbound (ADR 0003), and the returned no-op stands
+ * in for the dispose, so the caller's bookkeeping treats the scope as mounted
+ * and never retries it.
+ */
+const mountContained = (
+	container: Element,
+	scope: string,
+	bind: () => MaybeCleanup,
+): Cleanup => {
+	try {
+		return mountScope(bind)
+	} catch (error) {
+		reportEffectFailure(container, `reconcile() ${scope}`, error)
+		return () => {}
+	}
+}
+
 /** The arm form of `reconcile()` (ADR 0037) — see its JSDoc. */
 const reconcileArms = (
 	container: Element,
@@ -917,7 +953,7 @@ const reconcileArms = (
 					const element = current
 					const armKey = currentKey
 					if (element && armKey !== null)
-						dispose = mountScope(() =>
+						dispose = mountContained(container, `arm "${armKey}"`, () =>
 							bindArm(element, armKey, bindFirst(element)),
 						)
 				})
@@ -1082,7 +1118,7 @@ const reconcileList = <T extends {}>(
 						// (LT-423).
 						disposers.set(
 							key,
-							mountScope(() =>
+							mountContained(container, `item "${key}"`, () =>
 								bindItem(element, item, key, bindFirst(element)),
 							),
 						)

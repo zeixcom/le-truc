@@ -22,12 +22,17 @@ declare const reportConnectFailure: (host: HTMLElement, phase: string, error: un
  * to name *which* effect failed, or a partially enhanced component is not
  * debuggable.
  *
+ * `reconcile()` reports through the same channel one level down: a Mount
+ * Scope (an arm or a list item, ADR 0046) whose `bindArm`/`bindItem` throws
+ * is contained to that scope and named by its key, e.g.
+ * `reconcile() item "a"` in the reconciled container.
+ *
  * @since 3.0.0
- * @param host - Component instance the descriptor belongs to
- * @param descriptor - Description of the failing effect, e.g. `"watch()"`
+ * @param host - Component instance the descriptor belongs to, or the container `reconcile()` reconciles
+ * @param descriptor - Description of the failing effect, e.g. `"watch()"` or `reconcile() arm "then"`
  * @param error - The thrown value
  */
-declare const reportEffectFailure: (host: HTMLElement, descriptor: string, error: unknown) => void;
+declare const reportEffectFailure: (host: Element, descriptor: string, error: unknown) => void;
 /**
  * Error thrown when component name violates rules for custom element names
  *
