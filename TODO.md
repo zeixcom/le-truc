@@ -121,7 +121,7 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → LT-109 → LT-110 → LT-445 (cem-list, filed from LT-111's sweep) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
   ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). **Next:** LT-443 (needs LT-429).
@@ -149,7 +149,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-445.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-447.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -223,6 +223,43 @@ recorded against the 30.4k opening measurement.
   LT-165 step 7's corpus pin:** Simulated tier with its `Math.random()` expression suppressed
   and everything else simulated.
 
+
+- [ ] LT-445: Migrate `module-cem-list` to `.tsx` with same-commit cutover — the filter layer over `{% cem-list %}`'s page-authored cards.
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
+  **Area:** examples
+  **Updated (Architect, 2026-10-05):** filed from LT-111's sweep report (ruling 5) — one of the
+  two corpus-port residues the iteration's exit criterion cannot close without.
+  **Context:** The component owns NO template: the `{% cem-list %}` Markdoc tag renders the full
+  `card-collapsible` markup into the page, and the hand-written client (39 lines) only wires the
+  `form-textbox` filter — an input State, and a per-card `hidden` write matching the card's text
+  content. The `.tsx` migration therefore takes the reserved `children` parameter (ADR 0024
+  sub-design 10; the `module-scrollarea` precedent) and wraps the page-authored cards.
+  **Shape (pinned so no decision is needed mid-task):**
+  1. `ModuleCemList({ children }: { children?: string })` renders `<module-cem-list>{children}</module-cem-list>` with the folder's sheet inline (`:host`-led per ADR 0033; check what `module-cem-list.css`'s selectors cross the `card-collapsible` boundary — those need `:global`, the codeblock precedent). Both `.tsx` and `.tsrx` members; the hand-written `.ts` stays as the twin (ruling 5).
+  2. The filter wiring stays ONE client-only effect over `all('card-collapsible')` — `all()` is an admitted compiled construct (form-listbox/form-radiogroup/module-catalog precedents) — whose handler writes `card.hidden` per filter value; do NOT port the per-card `each()` + haystack closure (the compiled per-card setup has no page-authored cards to mount into; the single watch re-reads `cards.get()` per run, which is the same behavior).
+  3. `module-cem-list.html` is authored page markup with Markdoc-tag-generated ids — it does NOT change (the occurrence stays authored; there is no server render to mirror, the component has no own markup). Swap `examples/main.css` to the generated stylesheet. Host profile: `ModuleCemListAttrs` per the wave-4 rule.
+  4. No `.spec.ts` exists in the folder — `test:variants` skips it; the demo page and the docs pages (which embed `{% cem-list %}`) are the live exercise; run them in the browser or name the leg unrunnable.
+  **Verification:** full gates; the cem-list demo filters live (type in the box, cards hide); goldens/snapshots extend for the new compiled members; tier census change recorded by design.
+  ---
+
+- [ ] LT-446: Scope the `section-menu` migration (site chrome: external toggle by document id, imperative backdrop, layout-wide registration) — decide, then write the implementation task.
+  **Area:** design
+  **Area:** design
+  **Updated (Architect, 2026-10-05):** filed from LT-111's sweep report (ruling 5) — the last
+  component folder the "every example folder served compiled" exit criterion cannot close
+  without, and NOT a mechanical migration: `section-menu` is the site's sidebar navigation,
+  rendered by `server/templates/menu.ts` into every page layout, with four shapes the compiled
+  surface has never carried together. A contributor who guesses at these is guessing wrong;
+  rule first.
+  **Design questions:**
+  1. **The external toggle.** The hand-written twin wires `document.getElementById('sidebar-toggle')` — an element OUTSIDE the host — with `on(toggle, 'click')` + `bindAria(toggle, 'ariaExpanded')`. Does that wiring belong in the compiled component (a client-only setup side effect reading `document`, which is JS_GLOBAL) or moves to the layout template beside the button? The component-coupling argument cuts both ways: the id is a documented contract (`TOGGLE_ID`'s docblock cites LT-001 and the layout).
+  2. **The imperative backdrop.** Created at connect (`createElement` + `prepend`) because it is meaningless without JS. Keep it imperative (a client-only setup side effect), or author it `hidden` in the template and let CSS/JS reveal it — the second changes the no-JS DOM shape, which the progressive-enhancement contract (no `.js` class → normal flow) currently keeps clean.
+  3. **`expose({ open })` of a live State.** The twin exposes a `createState(false)` as the public prop (the toggle handler returns `{ open: !open.get() }`). Pin which compiled expose form carries a writable State-backed prop (not a Parser), and what the generated tag-map entry types (`HTMLElement & SectionMenuProps` — the members' entries must not diverge, TS 2717).
+  4. **`.js`/`.ready` class sequencing.** `host.classList.add('js')` at connect, `.ready` one `requestAnimationFrame` later (gates the drawer's first-paint transition). Confirm both are client-only setup statements on the compiled path and that the rAF callback is a function-const/readable-client shape.
+  5. **Layout-wide registration.** The migration flips the tag every docs page serves onto the compiled client. Verify the page bundle registers it (it is in the registry like any other corpus tag) and that `section-menu.spec.ts` runs unchanged against the served surface — plus which surface the LAYOUT pages get (the canonical artifacts, not a variant route).
+  Decide each, then write the implementation task with the standard prerequisite set (LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429). The `.spec.ts` is unchanged; `test:variants` covers the folder once the set exists.
+  ---
 
 - [ ] LT-390: A corpus consumer for reactive conditions and the boundary, with audit coverage.
   **Area:** examples
