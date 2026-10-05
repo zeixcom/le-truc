@@ -483,7 +483,8 @@ describe('§4.4 synthetic shapes through the unmodified analysis', () => {
 	)
 
 	test('reactive createList .map lowers to the reconcile plan (unmodified analysis)', () => {
-		const source = `import { createList } from '@zeix/le-truc'
+		const source = `import { css } from '@zeix/le-truc-compiler/macros'
+import { createList } from '@zeix/le-truc'
 export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLabel: string })
 {
 	const items = createList<string>(initial, { keyConfig: 'item' })
@@ -731,7 +732,10 @@ describe('a boundary as a .map() body root is LTC053 (LT-358a)', () => {
 })
 
 describe('the args type annotation reaches the shared stages (LT-298)', () => {
-	const component = (params: string): string => `export function C(${params}) {
+	const component = (
+		params: string,
+	): string => `import { css } from '@zeix/le-truc-compiler/macros'
+export function C(${params}) {
 	expose({})
 	return (
 			<c-el>{label}
@@ -834,7 +838,8 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 	}</style>
 			</empty-each>
 	}`,
-			tsxx: `export function EmptyEach({ rows }: { rows: string[] }) {
+			tsxx: `import { css } from '@zeix/le-truc-compiler/macros'
+export function EmptyEach({ rows }: { rows: string[] }) {
 	return (
 			<empty-each>
 				<ul>
@@ -873,7 +878,8 @@ export function EmptyList({ initial }: { initial?: string[] })
 	}</style>
 			</empty-list>
 	}`,
-			tsxx: `import { createList } from '@zeix/le-truc'
+			tsxx: `import { css } from '@zeix/le-truc-compiler/macros'
+import { createList } from '@zeix/le-truc'
 export function EmptyList({ initial }: { initial?: string[] }) {
 	const items = createList<string>(initial, { keyConfig: 'item' })
 	return (

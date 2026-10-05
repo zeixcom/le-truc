@@ -66,7 +66,8 @@ const tsxSource = ({
 	params = '{}: {}',
 	css = DEFAULT_CSS,
 	async = false,
-}: Shape): string => `${head}export ${async ? 'async ' : ''}function C(${params}) {
+}: Shape): string => `import { css } from '@zeix/le-truc-compiler/macros'
+${head}export ${async ? 'async ' : ''}function C(${params}) {
 ${setup}
 	return (
 			<c-el>${template}
@@ -209,7 +210,8 @@ describe('each producer family covers the offending construct, on both surfaces'
 			],
 			[
 				'tsx',
-				`export function C({}: {}) {
+				`import { css } from '@zeix/le-truc-compiler/macros'
+export function C({}: {}) {
 	expose({})
 	return (
 		<>
@@ -799,7 +801,8 @@ describe('positions the parser or the file supplies (ADR 0044 s2)', () => {
 
 describe('routing signals take the same location shape', () => {
 	test('a Simulated-tier signal is located in the authored file', () => {
-		const source = `import { createCell } from '@zeix/le-truc'
+		const source = `import { css } from '@zeix/le-truc-compiler/macros'
+import { createCell } from '@zeix/le-truc'
 export function C({}: {}) {
 	const input = first('input', 'needed')
 	const w = createCell(input.value)

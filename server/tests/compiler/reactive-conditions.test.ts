@@ -52,7 +52,8 @@ export function Toggle({ label }: { label: string })
 	}
 `
 
-const TOGGLE_TSX = `import { createCell } from '@zeix/le-truc'
+const TOGGLE_TSX = `import { css } from '@zeix/le-truc-compiler/macros'
+import { createCell } from '@zeix/le-truc'
 import type { FactoryContext } from '@zeix/le-truc'
 
 export function Toggle(

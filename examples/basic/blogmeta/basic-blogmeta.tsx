@@ -25,6 +25,7 @@
  *   only. With no author, the author span is omitted;
  * - the byline's prose routes through `t`.
  */
+import { css } from '@zeix/le-truc-compiler/macros'
 
 export const i18n = {
 	avatarOf: 'Avatar of',

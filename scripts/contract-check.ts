@@ -56,7 +56,8 @@ import {
 	type CompileFileResult,
 } from '${ROOT}/server/compiler/contract'
 
-const BASE = \`import { asString, createCell } from '@zeix/le-truc'
+const BASE = \`import { css } from '@zeix/le-truc-compiler/macros'
+import { asString, createCell } from '@zeix/le-truc'
 
 export function ContractProbe({ name }: { name: string }) {
 	const labelId = \\\`\\\${name}-label\\\`

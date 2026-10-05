@@ -17,6 +17,7 @@ import {
 	bindProperty,
 	type FactoryContext,
 } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 export type ModulePaginationProps = {
 	/** Total number of pages. Read from the `max` attribute at connect time. */

@@ -64,7 +64,8 @@ const tsxSource = ({
 	setup,
 	body,
 	rootAttrs = '',
-}: Spec) => `${NAMES}
+}: Spec) => `import { css } from '@zeix/le-truc-compiler/macros'
+${NAMES}
 ${pre}
 export function C(${params}) {
 	${setup}

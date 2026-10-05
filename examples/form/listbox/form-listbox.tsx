@@ -14,6 +14,7 @@
 
 import type { FormFactoryContext } from '@zeix/le-truc'
 import { asString, defineMethod } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 /**
  * The filter input's placeholder and the clear button's aria-label are

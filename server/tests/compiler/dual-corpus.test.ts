@@ -68,7 +68,8 @@ const VAR_TSX = `${DIR}/var-el.tsx`
 const VAR_TSRX = `${DIR}/var-el.tsrx`
 
 const varTsx = (cssBody: string, extra = ''): string =>
-	`export function VarEl({ label = 'x' }: { label?: string })
+	`import { css } from '@zeix/le-truc-compiler/macros'
+export function VarEl({ label = 'x' }: { label?: string })
 {
 	expose({})
 
@@ -484,7 +485,8 @@ describe('basic-counter three-spelling variant set (LT-285, ADR 0039)', () => {
 // import. In memory, like the pins above.
 const PARENT_REL = 'examples/twin-parent-tmp/twin-parent.tsx'
 const twinParent = (prop: string): string =>
-	`import type { FactoryContext } from '@zeix/le-truc'
+	`import { css } from '@zeix/le-truc-compiler/macros'
+import type { FactoryContext } from '@zeix/le-truc'
 
 export type TwinParentProps = { total: number }
 

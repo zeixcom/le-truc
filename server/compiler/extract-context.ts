@@ -9,6 +9,7 @@
 
 import type { AstNode } from './ast-node'
 import type { LocalDiagnostic } from './diagnostics'
+import type { MarkerName } from './imports'
 import type { Surface } from './surface'
 import type { LocalRoutingSignal } from './tier'
 
@@ -66,6 +67,12 @@ export type ExtractContext = {
 	 */
 	composeImports: ReadonlyMap<string, string>
 	/**
+	 * Local name → the compile-time marker it binds (ADR 0034 s1, LT-442):
+	 * imports from `@zeix/le-truc-compiler/macros`, less the names a
+	 * component-scope declaration shadows. Read through `markerOf`.
+	 */
+	markers: ReadonlyMap<string, MarkerName>
+	/**
 	 * Setup-level `const name = init` initializers, by name — lets an event
 	 * attribute reference a hoisted handler by identifier (`{onInput}`)
 	 * instead of only accepting an inline function expression; the resolved
@@ -109,6 +116,7 @@ export const createExtractContext = (
 	parserFactoryOf: () => '',
 	parserFallbackRefsOf: () => EMPTY_NAMES,
 	composeImports: new Map<string, string>(),
+	markers: new Map<string, MarkerName>(),
 	setupInits: new Map<string, AstNode>(),
 	loopBound: [],
 	loopReactive: [],

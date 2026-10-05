@@ -50,7 +50,10 @@ const tsrxSource = (sheet: string) => `export function C({}: {})
 			</c-el>
 	}`
 
-const tsxSource = (sheet: string) => `export function C({}: {}) {
+const tsxSource = (
+	sheet: string,
+) => `import { css } from '@zeix/le-truc-compiler/macros'
+export function C({}: {}) {
 	return (
 			<c-el>text
 				<style>{css\`${sheet}\`}</style>

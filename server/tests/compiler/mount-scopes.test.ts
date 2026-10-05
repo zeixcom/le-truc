@@ -63,6 +63,7 @@ const tsx = (
 	body: string,
 	params = '{}: {}',
 ): string => `${pre}
+import { css } from '@zeix/le-truc-compiler/macros'
 import type { FactoryContext } from '@zeix/le-truc'
 
 export function C(${params}, { expose }: FactoryContext<${props}>) {

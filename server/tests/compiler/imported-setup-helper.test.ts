@@ -32,7 +32,8 @@ export function ReorderList({ initial }: { initial?: string[] })
 			</reorder-list>
 	}`
 
-const tsxx = `${IMPORTS}
+const tsxx = `import { css } from '@zeix/le-truc-compiler/macros'
+${IMPORTS}
 export function ReorderList({ initial }: { initial?: string[] }) {
 	const items = createList<string>(initial, { keyConfig: 'item' })
 	setupReorder(host, items)

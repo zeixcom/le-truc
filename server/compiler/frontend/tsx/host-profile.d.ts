@@ -100,20 +100,6 @@ interface I18n<M extends Record<string, string> = Record<string, string>> {
 	dir: 'ltr' | 'rtl'
 }
 
-/**
- * The CSS template tag (LT-202): `<style>{css`…`}</style>` is the default
- * spelling for a component's stylesheet — editors highlight a `css`-tagged
- * template literal as CSS out of the box. The tag is compile-consumed:
- * evaluated by nothing, and a `${}` substitution inside is rejected by the
- * compiler (typed `never` here so authored code hears the same thing from
- * tsc). A bare template literal still works, but `css` is what the profile
- * teaches.
- */
-declare function css(
-	source: TemplateStringsArray,
-	...substitutions: never[]
-): string
-
 // This file is a global SCRIPT (no top-level imports/exports), so the JSX
 // namespace is declared at top level — the classic global-JSX pattern.
 // (`declare global { … }` wrappers are only valid inside modules, which is

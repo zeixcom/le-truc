@@ -87,7 +87,7 @@ export const resolveTemplateOutput = (
 	filename: string,
 	extraction: SetupExtraction,
 	lowered: TemplateNode[],
-	stylesheetOf: (node: AstNode) => string,
+	stylesheetOf: (ctx: ExtractContext, node: AstNode) => string,
 	outputShapeLabel: string,
 	/** The lowered loops, for the host-level `first()`-into-an-item check. */
 	fors: ReadonlyMap<AstNode, ForIR> = new Map(),
@@ -288,7 +288,7 @@ export const resolveTemplateOutput = (
 	// spec-grammar faces of LTC064/LTC065 reported against the authored source.
 	let sheet: ComponentSheet | null = null
 	if (styleChild) {
-		const sheetText = stylesheetOf(styleChild.node)
+		const sheetText = stylesheetOf(ctx, styleChild.node)
 		if (sheetText.trim()) {
 			const parsed = parseComponentSheet(sheetText)
 			// The sheet text is a verbatim slice of the source (the template
@@ -342,8 +342,8 @@ export const resolveTemplateOutput = (
 			}
 		}
 	}
-	const css = styleChild ? dedentCss(stylesheetOf(styleChild.node)) : ''
-	const sheetText = styleChild ? stylesheetOf(styleChild.node) : ''
+	const css = styleChild ? dedentCss(stylesheetOf(ctx, styleChild.node)) : ''
+	const sheetText = styleChild ? stylesheetOf(ctx, styleChild.node) : ''
 	const hasSheet = sheetText.trim() !== '' && sheet !== null
 
 	return {

@@ -30,6 +30,7 @@ import {
 	createState,
 	type FactoryContext,
 } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 declare global {
 	interface HTMLElementTagNameMap {

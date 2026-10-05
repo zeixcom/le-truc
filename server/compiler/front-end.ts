@@ -18,7 +18,7 @@
 
 import { assembleComponentIR, readModuleDecls } from './assemble-ir'
 import type { AstNode } from './ast-node'
-import { asArray, identifierName, isNode } from './ast-utils'
+import { asArray, collectBoundNames, identifierName, isNode } from './ast-utils'
 import { diagnostic, type LocalDiagnostic } from './diagnostics'
 import type { EmitPaths } from './emit-paths'
 import type { ExtractContext } from './extract-context'
@@ -26,7 +26,9 @@ import { messageBindingsOf } from './i18n'
 import {
 	parseComposeImports,
 	parseLeTrucImports,
+	parseMarkerImports,
 	parsePlainImports,
+	shadowMarkers,
 } from './imports'
 import type { ComponentIR, ForIR, SignalIR, TemplateNode } from './ir'
 import {
@@ -71,14 +73,45 @@ export type SurfaceAdapter = {
 		fn: AstNode,
 		filename: string,
 	) => { setup: AstNode[]; output: AstNode | undefined } | null
-	/** The raw CSS of a `<style>` placeholder's source node. */
-	stylesheetOf: (node: AstNode) => string
+	/**
+	 * The raw CSS of a `<style>` placeholder's source node. `ctx` carries the
+	 * marker bindings (`markerOf`), for a surface that spells the sheet
+	 * through the `css` marker.
+	 */
+	stylesheetOf: (ctx: ExtractContext, node: AstNode) => string
 	lowerElement: (
 		ctx: ExtractContext,
 		element: AstNode,
 		signals: ReadonlyMap<string, SignalIR>,
 		fors: Map<AstNode, ForIR>,
 	) => TemplateNode & { kind: 'element' }
+}
+
+/* === Internal Functions === */
+
+/**
+ * Every name the component function's own scope declares: its args and its
+ * setup statements' declarations — what a template read resolves to before
+ * a module-level import.
+ */
+const componentScopeNames = (
+	paramNames: ReadonlySet<string>,
+	setup: readonly AstNode[],
+): Set<string> => {
+	const names = new Set(paramNames)
+	for (const stmt of setup) {
+		if (stmt.type === 'VariableDeclaration')
+			for (const decl of asArray(stmt.declarations))
+				collectBoundNames(decl.id, names)
+		else if (
+			stmt.type === 'FunctionDeclaration' ||
+			stmt.type === 'ClassDeclaration'
+		) {
+			const id = identifierName(stmt.id)
+			if (id) names.add(id)
+		}
+	}
+	return names
 }
 
 /* === Exported Functions === */
@@ -105,6 +138,7 @@ export const runFrontEnd = (
 	adapter.preScans?.(ctx, ast)
 	reportMalformedSelectors(ctx, ast)
 	ctx.composeImports = parseComposeImports(ast, filename)
+	ctx.markers = parseMarkerImports(ast)
 	const plainImports = parsePlainImports(
 		ctx,
 		ast,
@@ -188,6 +222,7 @@ export const runFrontEnd = (
 
 	const split = adapter.splitSetupAndOutput(ctx, fn, filename)
 	if (!split) return done()
+	shadowMarkers(ctx, componentScopeNames(params.paramNames, split.setup))
 	const name = identifierName(fn.id) ?? 'Component'
 	// Read before setup extraction: its client-only gate admits a static
 	// `t.<key>` read of a declared key (LT-349).

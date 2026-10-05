@@ -7,6 +7,7 @@
  * page rule.
  * Deliberately not styled for looks; every declaration is an assertion.
  */
+import { css } from '@zeix/le-truc-compiler/macros'
 import { BasicButton } from '../../basic/button/basic-button.tsrx'
 
 export type CssProbeProps = {}

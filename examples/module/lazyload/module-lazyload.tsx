@@ -27,6 +27,7 @@ import {
 	query,
 	schedule,
 } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 import {
 	fetchWithCache,
 	isRecursiveURL,

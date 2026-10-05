@@ -115,6 +115,116 @@ export const parseComposeImports = (
 	return imports
 }
 
+/* === Compile-time markers (ADR 0034 s1, LT-442) === */
+
+/** The module an authored source imports its compile-time markers from. */
+export const MACROS_SPECIFIER = '@zeix/le-truc-compiler/macros'
+
+/** Every export of `MACROS_SPECIFIER` (`server/compiler/macros.ts`). */
+export const MARKER_NAMES = ['css'] as const
+
+export type MarkerName = (typeof MARKER_NAMES)[number]
+
+const isMarkerName = (name: string | null): name is MarkerName =>
+	(MARKER_NAMES as readonly (string | null)[]).includes(name)
+
+/** The string value of an import declaration's specifier, if it has one. */
+const specifierOf = (stmt: AstNode): string | null => {
+	const node = stmt.source
+	return isNode(node) &&
+		node.type === 'Literal' &&
+		typeof node.value === 'string'
+		? node.value
+		: null
+}
+
+/**
+ * The name an import specifier imports (`css` in `{ css as style }`), or
+ * null for a default or namespace import.
+ */
+const importedNameOf = (spec: AstNode): string | null => {
+	if (spec.type !== 'ImportSpecifier') return null
+	const imported = spec.imported
+	if (!isNode(imported)) return null
+	return imported.type === 'Literal' && typeof imported.value === 'string'
+		? imported.value
+		: identifierName(imported)
+}
+
+/** A value specifier that imports a marker from `MACROS_SPECIFIER`. */
+const isMarkerSpecifier = (stmt: AstNode, spec: AstNode): boolean =>
+	specifierOf(stmt) === MACROS_SPECIFIER &&
+	(stmt as { importKind?: unknown }).importKind !== 'type' &&
+	(spec as { importKind?: unknown }).importKind !== 'type' &&
+	isMarkerName(importedNameOf(spec))
+
+/**
+ * The source's marker bindings: local name → the marker it imports. The
+ * compiler recognizes a marker by binding, never by bare name
+ * (`import { css as style }` binds `style`; a `css` that is not this import
+ * binds nothing). Both front ends read this table through `markerOf`.
+ */
+export const parseMarkerImports = (ast: AstNode): Map<string, MarkerName> => {
+	const markers = new Map<string, MarkerName>()
+	for (const stmt of asArray(ast.body)) {
+		if (stmt.type !== 'ImportDeclaration') continue
+		for (const spec of asArray(stmt.specifiers)) {
+			if (!isMarkerSpecifier(stmt, spec)) continue
+			const local = identifierName(spec.local)
+			const name = importedNameOf(spec)
+			if (local && isMarkerName(name)) markers.set(local, name)
+		}
+	}
+	return markers
+}
+
+/**
+ * Drop the marker bindings a component-scope declaration shadows: a
+ * parameter or setup declaration of the same local name is what a read in
+ * the template resolves to, so it is not the marker.
+ */
+export const shadowMarkers = (
+	ctx: ExtractContext,
+	declared: ReadonlySet<string>,
+): void => {
+	if (ctx.markers.size === 0) return
+	const markers = new Map(ctx.markers)
+	for (const name of declared) markers.delete(name)
+	ctx.markers = markers
+}
+
+/** The marker an identifier node resolves to, or null when it is none. */
+export const markerOf = (
+	ctx: ExtractContext,
+	node: unknown,
+): MarkerName | null => {
+	const name = identifierName(node)
+	return name ? (ctx.markers.get(name) ?? null) : null
+}
+
+/**
+ * An import declaration's text with its marker specifiers removed, or null
+ * when every specifier is a marker — a marker import never reaches a
+ * generated module (ADR 0034 s1). A declaration with no marker specifier
+ * returns its text unchanged.
+ */
+const withoutMarkers = (source: string, stmt: AstNode): string | null => {
+	const specs = asArray(stmt.specifiers)
+	const kept = specs.filter(spec => !isMarkerSpecifier(stmt, spec))
+	if (kept.length === specs.length) return text(source, stmt)
+	if (kept.length === 0) return null
+	const parts: string[] = []
+	const named: string[] = []
+	for (const spec of kept) {
+		if (spec.type === 'ImportSpecifier') named.push(text(source, spec))
+		else parts.push(text(source, spec))
+	}
+	if (named.length > 0) parts.push(`{ ${named.join(', ')} }`)
+	const kind =
+		(stmt as { importKind?: unknown }).importKind === 'type' ? 'type ' : ''
+	return `import ${kind}${parts.join(', ')} from ${text(source, stmt.source as AstNode)}`
+}
+
 /* === `@zeix/le-truc` authored imports (ADR 0024 sub-design 16, LT-082) === */
 
 /**
@@ -433,12 +543,17 @@ export const parsePlainImports = (
 			specifier === '@zeix/le-truc'
 		)
 			continue
+		// A marker specifier never reaches a generated module (ADR 0034 s1):
+		// the declaration drops whole when every specifier is a marker.
+		const stripped = withoutMarkers(ctx.source, stmt)
+		if (stripped === null) continue
 		const localNames: string[] = []
 		for (const spec of asArray(stmt.specifiers)) {
+			if (isMarkerSpecifier(stmt, spec)) continue
 			const local = identifierName(spec.local)
 			if (local) localNames.push(local)
 		}
-		let importText = text(ctx.source, stmt)
+		let importText = stripped
 		if (specifier.startsWith('.') && isNode(specifierNode)) {
 			const resolved = normalize(join(dir, specifier)).replace(/\.ts$/, '')
 			const rewritten = `${outDirPrefix}${resolved}`
