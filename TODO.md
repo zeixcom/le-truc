@@ -87,8 +87,8 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
     with the evidence and ruled by the Architect (fix the twin, or change the expectation);
     it is never matched silently.
 11. **LT-280 ruled (2026-10-04) → ADR 0046.** The chain's implementation tasks are LT-422–LT-429.
-    LT-425 waits on Cause & Effect 1.6.0 (handoff `CAUSE_EFFECT_LIST_MAP.md`). Without the
-    release it is `blocked`, and the track continues past it. LT-355 moves from track B into
+    LT-425 waited on Cause & Effect 1.6.0 (handoff `CAUSE_EFFECT_LIST_MAP.md`); 1.6.0 shipped and
+    the dependency moved to `^1.6.0` on 2026-10-05, so LT-425 is open again. LT-355 moves from track B into
     track C after LT-423, which makes its composed child renderable; LT-355 keeps the locale half.
 
 **The chain.**
@@ -208,14 +208,13 @@ recorded against the 30.4k opening measurement.
 
 ### C — corpus port
 
-- [ ] LT-425: The `.tsx` keyed `map` — `items.map((item, k) => …)` over `createList`/`deriveList`, Cause & Effect 1.6, a module-list `.tsx` variant (ADR 0046 s4; closes LT-342). — blocked ⛔
+- [ ] LT-425: The `.tsx` keyed `map` — `items.map((item, k) => …)` over `createList`/`deriveList`, Cause & Effect 1.6, a module-list `.tsx` variant (ADR 0046 s4; closes LT-342).
   **Area:** compiler
   **Needs:** LT-423
   **Context:** Cause & Effect 1.6.0 adds `map((item, key) => R): R[]` and `forEach` to both list
-  kinds (handoff: `CAUSE_EFFECT_LIST_MAP.md`; delete that file in this task once 1.6.0 is
-  consumed). **Precondition:** `@zeix/cause-effect` ≥ 1.6.0 is published. If it is not, annotate
-  `blocked` with a NOTES entry and stop.
-  1. Bump the dependency; regenerate `types/`.
+  kinds (handoff: `CAUSE_EFFECT_LIST_MAP.md`; delete that file in this task). The dependency is
+  already at `^1.6.0` (Architect, 2026-10-05; build, typecheck, unit, size and baseline gates green).
+  1. Confirm `items.map` typechecks on a `createList` receiver in a `.tsx` corpus file.
   2. `lowerFor` (`frontend/tsx/lower-tsx.ts:417-466`) binds the callback's second parameter as
      the key when the receiver is a declared list source. It no longer hard-codes `key: null`,
      and the "index binding" refusal over a List (`lower-shared.ts:1001-1013`) retires on
@@ -235,7 +234,7 @@ recorded against the 30.4k opening measurement.
   **Handoff (LT-423, 2026-10-05):** mirror the key-derived parity case — LT-423's
   `examples/test/listitem/` fixture pair carries the key-derived `id`/`for` on `.tsrx` only;
   the keyed `map` gives `.tsx` its half (the `.tsx` twin deliberately logs instead of
-  removing). Unblock by re-checking the Cause & Effect 1.6.0 release (see NOTES.md).
+  removing).
 
 - [ ] LT-424: Mount Scopes nest — arms and lists inside arms and items, scoped server-data loops, the cross-scope uniqueness proof (ADR 0046 s1–s2).
   **Area:** compiler

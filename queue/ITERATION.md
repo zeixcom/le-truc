@@ -87,8 +87,8 @@ the owner's calendar, not on contributor throughput. The sessions are scheduled 
     with the evidence and ruled by the Architect (fix the twin, or change the expectation);
     it is never matched silently.
 11. **LT-280 ruled (2026-10-04) → ADR 0046.** The chain's implementation tasks are LT-422–LT-429.
-    LT-425 waits on Cause & Effect 1.6.0 (handoff `CAUSE_EFFECT_LIST_MAP.md`). Without the
-    release it is `blocked`, and the track continues past it. LT-355 moves from track B into
+    LT-425 waited on Cause & Effect 1.6.0 (handoff `CAUSE_EFFECT_LIST_MAP.md`); 1.6.0 shipped and
+    the dependency moved to `^1.6.0` on 2026-10-05, so LT-425 is open again. LT-355 moves from track B into
     track C after LT-423, which makes its composed child renderable; LT-355 keeps the locale half.
 
 **The chain.**

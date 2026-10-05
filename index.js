@@ -743,11 +743,11 @@ function createComputed(callback, options) {
 }
 function deriveCell(input, options) {
   if (isFunction(input)) {
-    const { initial, watched: watched2, ...rest2 } = options ?? {};
+    const { initial, watched, ...rest } = options ?? {};
     const computedOptions = {
-      ...rest2,
+      ...rest,
       value: initial,
-      watched: watched2
+      watched
     };
     return isAsyncFunction(input) ? createTask(input, computedOptions) : createMemo(input, computedOptions);
   }
@@ -999,13 +999,31 @@ function createList(value, options) {
       subscribe();
       return keys.indexOf(key);
     },
-    add(value2) {
-      const key = generateKey(value2);
+    map(callbackfn) {
+      subscribe();
+      const result = [];
+      for (const key of keys.slice()) {
+        const signal = signals.get(key);
+        if (signal)
+          result.push(callbackfn(signal, key));
+      }
+      return result;
+    },
+    forEach(callbackfn) {
+      subscribe();
+      for (const key of keys.slice()) {
+        const signal = signals.get(key);
+        if (signal)
+          callbackfn(signal, key);
+      }
+    },
+    add(value) {
+      const key = generateKey(value);
       if (signals.has(key))
-        throw new DuplicateKeyError(TYPE_LIST, key, value2);
+        throw new DuplicateKeyError(TYPE_LIST, key, value);
       keys.push(key);
-      validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
-      signals.set(key, itemFactory(value2));
+      validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value);
+      signals.set(key, itemFactory(value));
       node.flags |= FLAG_DIRTY | FLAG_RELINK;
       for (let e = node.sinks;e; e = e.nextSink)
         propagate(e.sink);
@@ -1029,15 +1047,15 @@ function createList(value, options) {
           flush();
       }
     },
-    replace(key, value2) {
+    replace(key, value) {
       const signal = signals.get(key);
       if (!signal)
         return;
-      validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value2);
-      if (itemEquals(untrack(() => signal.get()), value2))
+      validateSignalValue(`${TYPE_LIST} item for key "${key}"`, value);
+      if (itemEquals(untrack(() => signal.get()), value))
         return;
       batch(() => {
-        signal.set(value2);
+        signal.set(value);
         node.flags |= FLAG_DIRTY;
         for (let e = node.sinks;e; e = e.nextSink)
           propagate(e.sink);
@@ -1076,8 +1094,8 @@ function createList(value, options) {
       let hasRemove = false;
       untrack(() => {
         for (let i = 0;i < actualDeleteCount; i++) {
-          const index2 = actualStart + i;
-          const key = keys[index2];
+          const index = actualStart + i;
+          const key = keys[index];
           if (key) {
             const signal = signals.get(key);
             if (signal) {
@@ -1236,6 +1254,24 @@ function collectionFacade(node, getKeys, signals, prepare, prepareValue) {
       prepare();
       return getKeys().indexOf(key);
     },
+    map(callbackfn) {
+      prepare();
+      const result = [];
+      for (const key of getKeys().slice()) {
+        const signal = signals.get(key);
+        if (signal)
+          result.push(callbackfn(signal, key));
+      }
+      return result;
+    },
+    forEach(callbackfn) {
+      prepare();
+      for (const key of getKeys().slice()) {
+        const signal = signals.get(key);
+        if (signal)
+          callbackfn(signal, key);
+      }
+    },
     deriveCollection(cb) {
       return deriveCollection(collection, cb);
     }
@@ -1256,15 +1292,15 @@ function deriveCollection(sourceInput, callback, options) {
         signals.set(key, passthrough);
       return;
     }
-    const signal = isAsync ? createTask(async (prev, abort2) => {
+    const signal = isAsync ? createTask(async (prev, abort) => {
       const itemSignal = untrack(() => source.byKey(key));
       if (!itemSignal)
         return prev;
       const sourceValue = itemSignal.get();
       if (sourceValue == null)
         return prev;
-      return callback(sourceValue, abort2);
-    }) : createMemo(() => {
+      return callback(sourceValue, abort);
+    }, { equals: DEEP_EQUALITY }) : createMemo(() => {
       const itemSignal = untrack(() => source.byKey(key));
       if (!itemSignal)
         return;
@@ -1272,7 +1308,7 @@ function deriveCollection(sourceInput, callback, options) {
       if (sourceValue == null)
         return;
       return callback(sourceValue);
-    });
+    }, { equals: DEEP_EQUALITY });
     signals.set(key, signal);
   };
   function syncKeys(nextKeys) {
@@ -1499,8 +1535,8 @@ function match(signalOrSignals, handlers) {
   const isSingle = !Array.isArray(signalOrSignals);
   const signals = isSingle ? [signalOrSignals] : signalOrSignals;
   const { nil, stale } = handlers;
-  const ok = isSingle ? (values2) => handlers.ok(values2[0]) : (values2) => handlers.ok(values2);
-  const err = isSingle && handlers.err ? (errors2) => handlers.err(errors2[0]) : handlers.err ?? console.error;
+  const ok = isSingle ? (values) => handlers.ok(values[0]) : (values) => handlers.ok(values);
+  const err = isSingle && handlers.err ? (errors) => handlers.err(errors[0]) : handlers.err ?? console.error;
   let errors;
   let pending = false;
   const values = new Array(signals.length);
@@ -1719,10 +1755,10 @@ function createStore(value, options) {
     update(fn) {
       store.set(fn(untrack(() => store.get())));
     },
-    add(key, value2) {
+    add(key, value) {
       if (signals.has(key))
-        throw new DuplicateKeyError(TYPE_STORE, key, value2);
-      addSignal(key, value2);
+        throw new DuplicateKeyError(TYPE_STORE, key, value);
+      addSignal(key, value);
       node.flags |= FLAG_DIRTY | FLAG_RELINK;
       for (let e = node.sinks;e; e = e.nextSink)
         propagate(e.sink);
