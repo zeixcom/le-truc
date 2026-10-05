@@ -1168,3 +1168,30 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   instances by class") names no per-arm shape. Nothing to do; the residual LTC042 advice
   stands on its own row in `errors.md`.
 
+
+- [ ] LT-447: A host-declared `deriveList` consumed only inside a reactive-list body compiles to a server `ReferenceError` with no diagnostic — emit the declaration or refuse the shape.
+  **Area:** compiler
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-109's review):** a contributor hit this live during the
+  `module-calctable` migration. Source shape: `const rowPrices = deriveList(items, item => …)`
+  declared at host level, whose ONLY consumer is an item-scope const inside the reactive-list
+  body (`const price = rowPrices.byKey(k)` in the `map` callback / `@for` body). The compiler
+  accepted the source on both surfaces with no diagnostic; the generated SERVER module emitted
+  the item const but omitted the `deriveList` declaration entirely — every render throws
+  `ReferenceError: rowPrices is not defined`. The sim realm caught it during `build:docs`
+  (before the fix, `module-calctable`'s build-docs connect reported exactly this); neither
+  `check:corpus` nor `tsc` sees it, because the generated module fails at RUNTIME, not
+  typecheck. The client module has the same hole (the declaration is emitted neither there).
+  **Design questions:** (1) Is a host-level `deriveList` whose only read is a list body's
+  `byKey` a supported shape? ADR 0046 s5 admits signal declarations in item setup, and
+  `deriveList` is a loop source (LT-425) — but the item-const route here reads it as a SIGNAL
+  MAP, not a loop source, and the both-phase classification (`extractItemSetup`) emits the item
+  const while the declaration walker never follows the dependency. (2) If supported: the
+  declaration must ride both modules whenever a list-body position reads it (the same
+  import-placement rule LT-426 applies to item setup). (3) If not: an LTC refusal (next free
+  code LTC079), tier 1 Prevented, statically decidable, naming the supported alternative (the
+  per-item `createMemo` over the item's own fields, which is what LT-109 shipped). The
+  evidence lives on `task/LT-109`'s pre-restructure state and in LT-109's handoff; the
+  equivalence-audit/sim snapshots on that branch carried the failing render.
+  **Channel/tier:** compiler; decided by the task per question (3). Parity cases on both
+  surfaces regardless.
