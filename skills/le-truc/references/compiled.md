@@ -47,7 +47,7 @@ export function MyToggle(
 
 - **A condition that reads a signal or `host` switches template-cloned arms.** That covers a ternary, `&&`, a `switch` IIFE (`.tsx`), and `@if`/`@switch` (`.tsrx`). Only the winning arm is live. Its root carries `data-key` (`then`/`else`/`case:<value>`/`default`), and every arm also ships as an inert `<template>`. Flipping the condition clones a fresh arm, so **uncommitted input in an arm is lost**, and arm effects die with the arm. Rules:
   - Each arm has exactly one root element.
-  - The condition sits directly in an element, not in another branch, a loop body or composed content (LTC005).
+  - The condition sits directly in an element of the host, an arm or a list item, not in a server-rendered branch, a server-data loop body or composed content (LTC005). Conditions and lists nest inside arms and list items.
   - Reactive `case` values are literals with distinct keys (LTC062).
   - A reactive list's container cannot hold a reactive condition or an async boundary (LTC063).
   - `first()` cannot target an element inside an arm, because the element is recreated on every flip.
@@ -60,7 +60,7 @@ export function MyToggle(
   - Over any other reactive source, it's not supported (LTC001 skips the file).
   - Hoist values derived from a loop variable into a `const` before a reactive read (LTC002).
   - A `.tsrx` `key` clause is meaningful only over a `createList` (LTC052).
-- **Empty state**: `{items.length === 0 ? <empty/> : items.map(…)}` in `.tsx`, `@for … @empty` in `.tsrx`. A `.map()` in any other conditional arm is LTC005.
+- **Empty state**: `{items.length === 0 ? <empty/> : items.map(…)}` in `.tsx`, `@for … @empty` in `.tsrx`. A `.map()` in any other conditional arm is LTC005. Over a list, the empty state may carry reactive attributes, class and style maps, events and lazy text.
 - **Async boundary**: `<truc:try pending={…} catch={e => …}>` in `.tsx`, `@try`/`@pending`/`@catch` in `.tsrx`. It has three arms (`ok`/`nil`/`err`) and **no `stale` arm**. A re-fetching task keeps its `ok` arm, whose content is not re-rendered. Show in-flight state with an `isPending(task)` arrow beside the boundary. `catch` receives an `Error`. With `catch` alone, it's an error boundary.
 - Authored `<template>` (LTC061) and `<script>` (LTC056) elements are refused. Dynamic tags are refused too (LTC053). Choose between static tags with a conditional.
 

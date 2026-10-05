@@ -54,6 +54,7 @@ import {
 	armSetOf,
 	type ConditionalNode,
 	elseOf,
+	hasArmSet,
 	isIf,
 	listIndexOf,
 	thenOf,
@@ -196,6 +197,14 @@ type EmitContext = {
 	 * this flag and keeps its values.
 	 */
 	inArmTemplate: boolean
+	/**
+	 * LT-424: the item and key names of the enclosing reactive lists whose
+	 * extracted `<template>` is rendering — bound in no template render,
+	 * because the template renders once, outside the loop. A `server`
+	 * attribute reading one (a key-derived attribute inside a nested arm or
+	 * list) bakes empty there; the owning scope's mount sets it.
+	 */
+	templateUnbound: ReadonlySet<string>
 	/**
 	 * The item names of the reactive lists whose server loop is open (ADR
 	 * 0046 s3): the loop binds each to the item CELL the list hands out, so
@@ -521,7 +530,42 @@ const listTemplate = (
 		out.line(`${ctx.buffer}.push(${expr})`)
 	}
 	pushTo(`'<template data-list="${listIndex}">'`)
+	// A nested arm set or loop (LT-424) renders through the main emitter in
+	// template mode — no live arm, no items, the enclosing items' bindings
+	// unbound — into this template, one copy per outer item.
+	const nested = (node: TemplateNode): void => {
+		const saved = {
+			out: ctx.out,
+			inArmTemplate: ctx.inArmTemplate,
+			templateUnbound: ctx.templateUnbound,
+		}
+		ctx.out = out
+		ctx.inArmTemplate = true
+		ctx.templateUnbound = new Set([
+			...saved.templateUnbound,
+			loop.itemName,
+			...(loop.keyName === null ? [] : [loop.keyName]),
+		])
+		try {
+			emit(ctx, node, scope)
+		} finally {
+			ctx.out = saved.out
+			ctx.inArmTemplate = saved.inArmTemplate
+			ctx.templateUnbound = saved.templateUnbound
+		}
+	}
 	const shape = (node: TemplateNode): void => {
+		// A nested list's `@empty` roots render from its own emission.
+		if (ctx.emptyArmNodes.has(node)) return
+		if (
+			hasArmSet(node) ||
+			(node.kind === 'element' &&
+				node !== loop.output &&
+				[...ctx.component.fors.values()].some(f => f.output === node))
+		) {
+			nested(node)
+			return
+		}
 		if (node.kind === 'text') {
 			pushTo(jsString(node.value, 'double'))
 			return
@@ -590,6 +634,9 @@ const listTemplate = (
 					reads.every(n => n === loop.keyName)
 				)
 					continue
+				// An enclosing list's key, while that list's own template renders
+				// (LT-424): unbound here, set by the owning mount.
+				if (reads.some(n => ctx.templateUnbound.has(n))) continue
 				// esc() escapes quotes too, so the value is safe inside the
 				// double-quoted attribute the static parts open and close.
 				ctx.used.add('esc')
@@ -600,8 +647,12 @@ const listTemplate = (
 			}
 		}
 		pushTo(`${html.static('>')}`)
+		// A nested list's template flushes after its container's close tag,
+		// inside this one (LT-424).
+		ctx.templateQueue.push([])
 		for (const child of node.children) shape(child)
 		if (!isVoidElement(node.tag)) pushTo(jsString(`</${node.tag}>`))
+		for (const template of ctx.templateQueue.pop() ?? []) out.append(template)
 	}
 	out.depth++
 	shape(loop.output)
@@ -627,25 +678,29 @@ const emitListFor = (
 	loopScope.add(loop.itemName)
 	if (loop.keyName) loopScope.add(keyVar)
 	const emptyFlag = openEmptyFlag(ctx, loop)
-	ctx.out.open(
-		`for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
-	)
-	if (emptyFlag) ctx.out.line(`${emptyFlag} = false`)
-	const added = !ctx.listItems.has(loop.itemName)
-	ctx.listItems.add(loop.itemName)
-	const dataKey: AttributeIR = {
-		kind: 'server',
-		name: 'data-key',
-		exprText: keyVar,
-		node: loop.node,
-		// Compiler-minted locals: no authored dependency.
-		deps: NO_DEPS,
+	// Inside a template (an arm's, an enclosing list's; LT-424) the list
+	// renders no items: the clone's mount reconciles them from the List.
+	if (!ctx.inArmTemplate) {
+		ctx.out.open(
+			`for (const [${keyVar}, ${loop.itemName}] of ${loop.listSignal}.entries()) {`,
+		)
+		if (emptyFlag) ctx.out.line(`${emptyFlag} = false`)
+		const added = !ctx.listItems.has(loop.itemName)
+		ctx.listItems.add(loop.itemName)
+		const dataKey: AttributeIR = {
+			kind: 'server',
+			name: 'data-key',
+			exprText: keyVar,
+			node: loop.node,
+			// Compiler-minted locals: no authored dependency.
+			deps: NO_DEPS,
+		}
+		emitElement(ctx, loop.output, loopScope, [dataKey])
+		for (const child of loop.output.children) emit(ctx, child, loopScope)
+		if (added) ctx.listItems.delete(loop.itemName)
+		pushClose(ctx, loop.output.tag)
+		ctx.out.close()
 	}
-	emitElement(ctx, loop.output, loopScope, [dataKey])
-	for (const child of loop.output.children) emit(ctx, child, loopScope)
-	if (added) ctx.listItems.delete(loop.itemName)
-	pushClose(ctx, loop.output.tag)
-	ctx.out.close()
 
 	// The empty arm stays in the container on the toggle path (ADR 0037
 	// s5): always rendered, exempt from reconciliation, hidden while the
@@ -675,7 +730,12 @@ const emitListFor = (
 	const queue = ctx.templateQueue.at(-1)
 	if (queue)
 		queue.push(
-			listTemplate(ctx, loop, listIndexOf(ctx.component.fors, loop), scope),
+			listTemplate(
+				ctx,
+				loop,
+				listIndexOf(ctx.component.root, ctx.component.fors, loop),
+				scope,
+			),
 		)
 }
 
@@ -762,6 +822,15 @@ const emitElement = (
 				else html.attr(attr.name, attr.value)
 				break
 			case 'server':
+				// LT-424: an authored attribute over an enclosing list's item or
+				// key bakes empty in that list's template — the mount sets it.
+				// (The emitter's own `extraAttrs` carry placeholder nodes.)
+				if (
+					ctx.templateUnbound.size > 0 &&
+					element.attrs.includes(attr) &&
+					[...freeIdentifiers(attr.node)].some(n => ctx.templateUnbound.has(n))
+				)
+					break
 				ctx.used.add('attr')
 				html.expr(attrCall(attr.name, attr.exprText))
 				break
@@ -960,7 +1029,6 @@ const emitAsyncBoundary = (
 	// arm exists).
 	const pendingChildren = node.pendingChildren
 	if (pendingChildren === null) return
-	ctx.used.add('isPending')
 	const asyncId = ++ctx.armCounter
 	const stateVar = ctx.mint(`__async${asyncId}`)
 	const errVar = ctx.mint(`__async${asyncId}Err`)
@@ -978,18 +1046,6 @@ const emitAsyncBoundary = (
 	const signalName = signalChild
 		? String((signalChild.expr as AstNode).name)
 		: ''
-	ctx.out
-		.line(`let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`)
-		.line(`let ${errVar}: unknown = undefined`)
-		.open(`if (!${ctx.h('isPending')}(${signalName})) {`)
-		.open('try {')
-		.line(`${signalName}.get()`)
-		.line(`${stateVar} = 'ok'`)
-		.between('} catch (e) {')
-		.line(`${errVar} = e`)
-		.line(`${stateVar} = 'err'`)
-		.close()
-		.close()
 	const errScope = new Set(scope)
 	if (node.catchParam) errScope.add(node.catchParam)
 	// An arm root, with its recognized lazy child (the guarded signal; the
@@ -1016,6 +1072,51 @@ const emitAsyncBoundary = (
 		}
 		pushClose(ctx, root.tag)
 	}
+	// The inert arm templates, one per arm.
+	const templates = (): void => {
+		const armSet = String(armSetOf(ctx.component.root, node))
+		for (const [key, root, armScope] of [
+			['ok', okRoot, scope],
+			['nil', pendingRoot, scope],
+			['err', errRoot, errScope],
+		] as const) {
+			push(
+				ctx,
+				`${new HtmlWriter()
+					.static('<template')
+					.attr('data-arms', armSet)
+					.attr('data-key', key)
+					.static('>')}`,
+			)
+			// LT-385c: same rule as the conditional's templates — client-written
+			// sites bake empty in the boundary's arms too (a pending task's
+			// `get()` would throw); the mounts write them on enter.
+			const wasInTemplate = ctx.inArmTemplate
+			ctx.inArmTemplate = true
+			emitArmRoot(root, armScope, null)
+			ctx.inArmTemplate = wasInTemplate
+			push(ctx, "'</template>'")
+		}
+	}
+	// Inside a template (an arm's, a list item's; LT-424) nothing is live:
+	// the arm templates only — the clone's mount picks the arm.
+	if (ctx.inArmTemplate) {
+		templates()
+		return
+	}
+	ctx.used.add('isPending')
+	ctx.out
+		.line(`let ${stateVar}: 'pending' | 'ok' | 'err' = 'pending'`)
+		.line(`let ${errVar}: unknown = undefined`)
+		.open(`if (!${ctx.h('isPending')}(${signalName})) {`)
+		.open('try {')
+		.line(`${signalName}.get()`)
+		.line(`${stateVar} = 'ok'`)
+		.between('} catch (e) {')
+		.line(`${errVar} = e`)
+		.line(`${stateVar} = 'err'`)
+		.close()
+		.close()
 	const keyed = (key: string): AttributeIR[] => [
 		{ kind: 'static', name: 'data-key', value: key },
 	]
@@ -1039,29 +1140,7 @@ const emitAsyncBoundary = (
 	ctx.out.between('} else {')
 	emitArmRoot(pendingRoot, scope, null, keyed('nil'))
 	ctx.out.close()
-	const armSet = String(armSetOf(ctx.component.root, node))
-	for (const [key, root, armScope] of [
-		['ok', okRoot, scope],
-		['nil', pendingRoot, scope],
-		['err', errRoot, errScope],
-	] as const) {
-		push(
-			ctx,
-			`${new HtmlWriter()
-				.static('<template')
-				.attr('data-arms', armSet)
-				.attr('data-key', key)
-				.static('>')}`,
-		)
-		// LT-385c: same rule as the conditional's templates — client-written
-		// sites bake empty in the boundary's arms too (a pending task's
-		// `get()` would throw); the mounts write them on enter.
-		const wasInTemplate = ctx.inArmTemplate
-		ctx.inArmTemplate = true
-		emitArmRoot(root, armScope, null)
-		ctx.inArmTemplate = wasInTemplate
-		push(ctx, "'</template>'")
-	}
+	templates()
 }
 
 /**
@@ -1125,7 +1204,11 @@ const emitReactiveConditional = (
 	}
 	const initial = node.initial
 	const test = 'constant' in initial ? null : serverTestExpr(ctx, node, scope)
-	if ('constant' in initial)
+	// Inside a template (an arm's, a list item's; LT-424) nothing is live:
+	// the clone's mount picks the arm.
+	if (ctx.inArmTemplate) {
+		// no live arm
+	} else if ('constant' in initial)
 		renderLive(node.arms.find(arm => arm.key === initial.constant))
 	else if (test !== null && isIf(node)) {
 		ctx.out.open(`if (${test}) {`)
@@ -1406,6 +1489,7 @@ export const emitServerModule = (
 		templateQueue: [],
 		foldScope: foldableRenderScope(component),
 		inArmTemplate: false,
+		templateUnbound: new Set(),
 		listItems: new Set(),
 		h: name => (renderScope.has(name) ? mint(`__${name}`) : name),
 		mint,

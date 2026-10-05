@@ -20,6 +20,7 @@ import type {
 	ArmsPlan,
 	ClientPlan,
 	ForClientPlan,
+	KeyAttrPlan,
 	ReconcilePlan,
 	TopEffectPlan,
 } from './analysis/plan'
@@ -212,13 +213,26 @@ const textSinkSlices = (
 	return slices
 }
 
+/** Emit one server-data loop; true when it typed a query `ElementFromSelector`. */
 const emitEachBlock = (
 	plan: ForClientPlan,
 	imports: ClientImports,
 	out: CodeBuilder,
-): void => {
-	imports.add('each')
-	out.open(`${imports.use('each')}(${plan.collection}, ${plan.itemParam} => {`)
+): boolean => {
+	// A loop nested in a Mount Scope (LT-424) iterates a static query against
+	// the scope root: its items are fixed for the life of the clone, and the
+	// effects below register in the enclosing mount, disposed with it.
+	if (plan.scoped) {
+		const selector = jsString(plan.scoped.selector)
+		out.open(
+			`for (const ${plan.itemParam} of ${plan.scoped.root}.querySelectorAll<ElementFromSelector<${selector}>>(${selector})) {`,
+		)
+	} else {
+		imports.add('each')
+		out.open(
+			`${imports.use('each')}(${plan.collection}, ${plan.itemParam} => {`,
+		)
+	}
 	for (const rebinding of plan.rebindings)
 		out.line(`const ${rebinding.name} = ${rebinding.expr}`)
 	// LT-037: constructs on descendants of the loop's output root (rather
@@ -297,7 +311,8 @@ const emitEachBlock = (
 			)
 		}
 	}
-	out.close('})')
+	out.close(plan.scoped ? '}' : '})')
+	return plan.scoped !== null
 }
 
 /**
@@ -676,7 +691,9 @@ export const emitClientModule = (
 			thunk = `() => { switch (${plan.testText}) { ${cases.join('; ')} }${fallback} }`
 		}
 		const templates = `${plan.container}.querySelectorAll<HTMLTemplateElement>(${jsString(`:scope > template[data-arms="${plan.armSet}"]`)})`
-		const mounted = plan.arms.filter(arm => arm.effects.length > 0)
+		const mounted = plan.arms.filter(
+			arm => arm.effects.length > 0 || arm.keyAttrs.length > 0,
+		)
 		if (mounted.length === 0) {
 			out.line(
 				`${imports.local('reconcile')}(${plan.container}, ${templates}, ${thunk}, () => {})`,
@@ -703,10 +720,21 @@ export const emitClientModule = (
 				out.line(
 					`const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
 				)
+			emitKeyAttrs(arm.keyAttrs)
 			for (const inner of arm.effects) emitTopEffect(inner)
 		})
 		out.close()
 		out.close('})')
+	}
+
+	// Key-derived attributes (ADR 0046 s1): set once at mount — a key never
+	// changes, so there is nothing to watch.
+	const emitKeyAttrs = (keyAttrs: readonly KeyAttrPlan[]): void => {
+		for (const keyAttr of keyAttrs)
+			out.line(
+				`${keyAttr.el}.setAttribute(${jsString(keyAttr.attr)}, ${keyAttr.exprText})`,
+				sliceOf(keyAttr.exprText, keyAttr.sourceStart),
+			)
 	}
 
 	// One reactive-list @for → reconcile()'s list form (ADR 0017), the item
@@ -744,11 +772,7 @@ export const emitClientModule = (
 				out.line(
 					`const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
 				)
-			for (const keyAttr of scope.keyAttrs)
-				out.line(
-					`${keyAttr.el}.setAttribute(${jsString(keyAttr.attr)}, ${keyAttr.exprText})`,
-					sliceOf(keyAttr.exprText, keyAttr.sourceStart),
-				)
+			emitKeyAttrs(scope.keyAttrs)
 			for (const inner of scope.effects) emitTopEffect(inner)
 			out.close('})')
 		}
@@ -820,7 +844,7 @@ export const emitClientModule = (
 	const emitTopEffect = (effect: TopEffectPlan): void => {
 		const at = push
 		if (effect.kind === 'each') {
-			emitEachBlock(effect.for, imports, out)
+			if (emitEachBlock(effect.for, imports, out)) needsElementType = true
 			return
 		}
 		if (effect.kind === 'reconcile') {

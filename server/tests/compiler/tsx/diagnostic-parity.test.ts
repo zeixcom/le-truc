@@ -90,6 +90,7 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 	framed('loop', l => `${l} over`, 'a loop over its iterable'),
 	framed('loop', l => `${l} body`, 'a loop body'),
 	framed('loop', l => `the ${l} body`, 'a server-data loop body'),
+	framed('loop', l => `the ${l} item`, 'a list item as a Mount Scope root'),
 	term('aLoop', 'a loop, sentence-initial'),
 	term('emptyArmFix', 'the empty arm as a fix-it'),
 	term('emptyArm', 'the empty arm'),
@@ -394,21 +395,18 @@ const LIST_BODY: Case[] = [
 		pins: ['reads an ambient value'],
 	},
 	{
-		// The arm set would switch inside the item's mount (ADR 0046 s1,
-		// LT-423) — nesting is LT-424.
-		name: 'an arm set inside the body',
+		// A server-data loop renders once into the extracted template, so
+		// one over the item has no lowering (LT-424); a loop over server
+		// data nests.
+		name: 'a server-data loop over the item',
 		code: 'LTC005',
-		spans: [['@if (open.get()) { <b>x</b> }', 'open.get() ? <b>x</b> : null']],
 		spec: {
-			...list(
-				'<li>{item}@if (open.get()) { <b>x</b> }</li>',
-				'<li>{item}{open.get() ? <b>x</b> : null}</li>',
-				'{ ok }: { ok: boolean }',
-			),
-			setup: `${LIST}\n\t\tconst open = createCell(false)`,
-			pre: imports('createCell', 'createList'),
+			pre: imports('createList'),
+			setup: `const items = createList<string[]>([], { keyConfig: 'item' })`,
+			body: '<ul data-container>@for (const item of items) { <li>@for (const part of item.get()) { <i>{part}</i> }</li> }</ul>',
+			tsx: '<ul data-container>{items.map(item => <li>{item.get().map(part => <i>{part}</i>)}</li>)}</ul>',
 		},
-		pins: ['inside a reactive-list'],
+		pins: ['inside a reactive-list', 'iterating `item`'],
 	},
 	{
 		// LT-349: the positive server-only rule, with the LT-348 tail. The
@@ -425,8 +423,8 @@ const LIST_BODY: Case[] = [
 		],
 	},
 	{
-		// The boundary has no lowering inside the item's mount (LT-423) —
-		// nesting is LT-424.
+		// A plain boundary has no lowering inside the item's mount (LT-423);
+		// an async boundary is an arm set and nests (LT-424).
 		name: 'a boundary inside the body',
 		code: 'LTC005',
 		spans: [
@@ -1728,21 +1726,130 @@ describe('grammar asymmetry — shapes with no counterpart', () => {
 			),
 		).toBe(true)
 	})
+})
 
-	test('.tsrx: a nested reactive loop inside the item is LTC005 (LT-424 owns nesting)', () => {
-		const source = tsrxSource({
+/* === Nested Mount Scopes (ADR 0046 s1–s2, LT-424) === */
+
+const LISTS = `${LIST}\n\t\tconst others = createList<string>([], { keyConfig: 'x' })`
+
+const NESTED_SCOPES: Case[] = [
+	{
+		// The item template sits after the container's close tag, which
+		// would put it outside the arm.
+		name: 'a reactive list directly under an arm root',
+		code: 'LTC005',
+		spec: {
+			pre: imports('createCell', 'createList'),
+			setup: `${LIST}\n\t\t${cell('open', 'true')}`,
+			body: '<div class="box">@if (open.get()) { <ul class="list">@for (const item of items) { <li>{item}</li> }</ul> }</div>',
+			tsx: '<div class="box">{open.get() ? <ul class="list">{items.map(item => <li>{item}</li>)}</ul> : null}</div>',
+		},
+		pins: ['directly under the arm root <ul>'],
+	},
+	{
+		name: 'a reactive list inside a server-data loop body',
+		code: 'LTC005',
+		spec: {
 			pre: imports('createList'),
-			setup: `${LIST}\n\t\tconst others = createList<string>([], { keyConfig: 'x' })`,
-			body: '<ul data-container>@for (const item of items; key k) { <li>@for (const x of others) { <i>{x}</i> }</li> }</ul>',
-		})
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(
-			diagnostics.some(
-				d =>
-					d.code === 'LTC005' &&
-					d.message.includes('A loop inside a reactive-list'),
-			),
-		).toBe(true)
+			params: '{ rows }: { rows: string[] }',
+			setup: LIST,
+			body: '<div class="rows">@for (const row of rows) { <section><b>{row}</b><ul class="list">@for (const item of items) { <li>{item}</li> }</ul></section> }</div>',
+			tsx: '<div class="rows">{rows.map(row => <section><b>{row}</b><ul class="list">{items.map(item => <li>{item}</li>)}</ul></section>)}</div>',
+		},
+		pins: ['inside a server-data'],
+	},
+	{
+		// A nested container may not exist at connect, so no harvest reads it.
+		name: 'an arg-seeded list nested in an arm',
+		code: 'LTC005',
+		spec: {
+			pre: imports('createCell', 'createList'),
+			params: '{ seed }: { seed: string[] }',
+			setup: `const items = createList<string>(seed, { keyConfig: 'item' })\n\t\t${cell('open', 'true')}`,
+			body: '<div class="box">@if (open.get()) { <section><ul class="list">@for (const item of items) { <li>{item}</li> }</ul></section> }</div>',
+			tsx: '<div class="box">{open.get() ? <section><ul class="list">{items.map(item => <li>{item}</li>)}</ul></section> : null}</div>',
+		},
+		pins: ['nested in an arm or a list item', 'seed the list with a literal'],
+	},
+	{
+		// Neither a class nor a child path tells the two spans apart, and
+		// each must match nothing in the nested items' content.
+		name: 'LTC007 an element no selector separates from a nested scope',
+		code: 'LTC007',
+		spec: {
+			pre: imports('createList'),
+			setup: LISTS,
+			body: '<ul data-container>@for (const item of items) { <li><b><span>{item}</span></b><b><span>{() => item.get()}</span></b><ol class="x">@for (const x of others) { <li><b><span>{x}</span></b></li> }</ol></li> }</ul>',
+			tsx: '<ul data-container>{items.map(item => <li><b><span>{item}</span></b><b><span>{() => item.get()}</span></b><ol class="x">{others.map(x => <li><b><span>{x}</span></b></li>)}</ol></li>)}</ul>',
+		},
+		pins: ['give it a unique `class`'],
+	},
+]
+
+describe('diagnostic parity — nested Mount Scopes (LT-424)', () => {
+	runCases(NESTED_SCOPES)
+	// The refusals ADR 0046 s1 lifts: arm sets and lists inside arms and
+	// items, server-data loops and async boundaries inside items.
+	test.each([
+		[
+			'an arm set inside a list item',
+			{
+				pre: imports('createCell', 'createList'),
+				setup: `${LIST}\n\t\t${cell('open', 'false')}`,
+				body: '<ul data-container>@for (const item of items) { <li><span>{item}</span>@if (open.get()) { <b>x</b> }</li> }</ul>',
+				tsx: '<ul data-container>{items.map(item => <li><span>{item}</span>{open.get() ? <b>x</b> : null}</li>)}</ul>',
+			},
+		],
+		[
+			'a reactive list inside a list item',
+			{
+				pre: imports('createList'),
+				setup: LISTS,
+				body: '<ul data-container>@for (const item of items; key k) { <li><span>{item}</span><ol class="x">@for (const x of others) { <li>{x}</li> }</ol></li> }</ul>',
+				tsx: '<ul data-container>{items.map((item, k) => <li><span>{item}</span><ol class="x">{others.map(x => <li>{x}</li>)}</ol></li>)}</ul>',
+			},
+		],
+		[
+			'a server-data loop inside a list item',
+			{
+				pre: imports('createList'),
+				params: '{ tags }: { tags: string[] }',
+				setup: LIST,
+				body: '<ul data-container>@for (const item of items) { <li><span>{item}</span><nav>@for (const tag of tags) { <button type="button" onClick={() => items.remove(0)}>{tag}</button> }</nav></li> }</ul>',
+				tsx: '<ul data-container>{items.map(item => <li><span>{item}</span><nav>{tags.map(tag => <button type="button" onClick={() => items.remove(0)}>{tag}</button>)}</nav></li>)}</ul>',
+			},
+		],
+		[
+			'an async boundary inside a list item',
+			{
+				pre: imports('createList', 'deriveCell'),
+				setup: `${LIST}\n\t\tconst data = deriveCell(async () => 'ok')`,
+				body: '<ul data-container>@for (const item of items) { <li><span>{item}</span>@try { <b>{data}</b> } @pending { <i>…</i> } @catch (e) { <i>{e.message}</i> }</li> }</ul>',
+				tsx: '<ul data-container>{items.map(item => <li><span>{item}</span><truc:try pending={<i>…</i>} catch={e => <i>{e.message}</i>}><b>{data}</b></truc:try></li>)}</ul>',
+			},
+		],
+		[
+			'a reactive list inside an arm',
+			{
+				pre: imports('createCell', 'createList'),
+				setup: `${LIST}\n\t\t${cell('open', 'true')}`,
+				body: '<div class="box">@if (open.get()) { <section><ul class="list">@for (const item of items) { <li>{item}</li> }</ul></section> }</div>',
+				tsx: '<div class="box">{open.get() ? <section><ul class="list">{items.map(item => <li>{item}</li>)}</ul></section> : null}</div>',
+			},
+		],
+		[
+			'an arm set inside an arm',
+			{
+				pre: imports('createCell'),
+				setup: `${cell('open', 'true')}\n\t\tconst more = createCell(false)`,
+				body: '<div class="box">@if (open.get()) { <section>@if (more.get()) { <b>more</b> }</section> }</div>',
+				tsx: '<div class="box">{open.get() ? <section>{more.get() ? <b>more</b> : null}</section> : null}</div>',
+			},
+		],
+	] as const)('%s compiles on both surfaces', (_, spec) => {
+		const { tsrx, tsx } = compileBoth({ name: 'clean', code: 'LTC005', spec })
+		for (const diagnostics of [tsrx, tsx])
+			expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
 	})
 })
 

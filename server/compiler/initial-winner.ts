@@ -301,7 +301,7 @@ export const initialFold = (
  * Resolve `initial` on every conditional in `component` (assembly's last
  * step: the rewrite needs the root's attributes and every signal). Each
  * conditional sees the server args plus the bindings of the server-data
- * loops enclosing it.
+ * loops enclosing it, and folds over the reactive lists' items enclosing it.
  */
 export const resolveInitialWinners = (component: ComponentIR): void => {
 	const hostProps = foldableHostProps(component)
@@ -324,6 +324,15 @@ export const resolveInitialWinners = (component: ComponentIR): void => {
 				new Set([...bound, ...loop.hoisted.map(h => h.name)]),
 			)
 		}
+		// A reactive list's item and key (LT-424): each live item renders
+		// with them in scope, so a conditional over the item folds per item
+		// in the harness. The item is a signal — `item.get()` is a call the
+		// portable grammar does not admit, so it is no hole.
+		if (loop?.kind === 'reconcile')
+			innerKnown = union(
+				serverKnown,
+				new Set([loop.itemName, ...(loop.keyName ? [loop.keyName] : [])]),
+			)
 		if (node.kind === 'conditional')
 			node.initial = winnerOf(
 				{ component, holes: innerHoles, hostProps },
