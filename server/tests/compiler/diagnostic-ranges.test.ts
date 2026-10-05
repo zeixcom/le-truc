@@ -24,6 +24,7 @@ import {
 } from '../../compiler/diagnostics'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
+import { walkTemplate } from '../../compiler/walk'
 import { textAt } from './located'
 
 /* === Helpers === */
@@ -477,6 +478,152 @@ describe('each producer family covers the offending construct, on both surfaces'
 		)
 	})
 
+	test('an authored data-key beside a reactive-list loop is no exemption (LTC074, LT-431)', () => {
+		expectCovers(
+			{
+				head: "import { createList } from '@zeix/le-truc'\n",
+				setup:
+					"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\texpose({})",
+				template:
+					'<ul data-container><li data-key="x">x</li>@for (const item of items) { <li>{item}</li> }</ul>',
+				tsxTemplate:
+					'<ul data-container><li data-key="x">x</li>{items.map(item => <li>{item}</li>)}</ul>',
+			},
+			'LTC074',
+			'<li data-key="x">x</li>',
+		)
+	})
+
+	test('a server-mode conditional arm root beside a reactive-list loop, in any arm (LTC074, LT-431)', () => {
+		const head = "import { createList } from '@zeix/le-truc'\n"
+		const setup =
+			"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\texpose({})"
+		const params = '{ open }: { open: boolean }'
+		// (a) the arm that wins on `open`, flagged on its root
+		expectCovers(
+			{
+				head,
+				setup,
+				params,
+				template:
+					'<ul data-container>@if (open) { <li class="head">x</li> }@for (const item of items) { <li>{item}</li> }</ul>',
+				tsxTemplate:
+					'<ul data-container>{open ? <li class="head">x</li> : null}{items.map(item => <li>{item}</li>)}</ul>',
+			},
+			'LTC074',
+			'<li class="head">x</li>',
+		)
+		// (b) the losing arm: a compile-time winner proves nothing, so the
+		// `else` root is flagged though the condition seeds `then`. Pinned
+		// non-vacuously: the seed is `then`, the winner's root is exempt,
+		// and the one LTC074 per surface covers the `else` root only.
+		const losing: Shape = {
+			head,
+			setup,
+			template:
+				'<ul data-container>@if (true) { <li class="drop" data-unreconciled>x</li> } @else { <li class="tail">y</li> }@for (const item of items) { <li>{item}</li> }</ul>',
+			tsxTemplate:
+				'<ul data-container>{true ? <li class="drop" data-unreconciled>x</li> : <li class="tail">y</li>}{items.map(item => <li>{item}</li>)}</ul>',
+		}
+		const { component: seeded } = compileSource(
+			tsrxSource(losing),
+			'examples/c/c-el.tsrx',
+		)
+		let initial: unknown = null
+		walkTemplate(seeded!.root, node => {
+			if (node.kind === 'conditional') initial = node.initial
+		})
+		expect(initial).toEqual({ constant: 'then' })
+		expectCovers(losing, 'LTC074', '<li class="tail">y</li>')
+		for (const surface of ['tsrx', 'tsx'] as const) {
+			const source = surface === 'tsx' ? tsxSource(losing) : tsrxSource(losing)
+			const file = `examples/c/c-el.${surface}`
+			const { diagnostics } =
+				surface === 'tsx'
+					? compileComponentTsx(source, file, new Set())
+					: compileComponent(source, file, new Set())
+			expect(diagnostics.filter(d => d.code === 'LTC074')).toHaveLength(1)
+		}
+		// a nested server-mode conditional recurses (`.tsx` has no nested
+		// conditional branch — a branch must be an element)
+		const nested = reportOn(
+			{
+				head,
+				setup,
+				params: '{ open, wide }: { open: boolean; wide: boolean }',
+				template:
+					'<ul data-container>@if (open) { @if (wide) { <li class="wide">w</li> } }@for (const item of items) { <li>{item}</li> }</ul>',
+			},
+			'LTC074',
+		).find(r => r.surface === 'tsrx')
+		expect(textAt(nested!.source, nested!.hit)).toBe('<li class="wide">w</li>')
+	})
+
+	test('a non-async try boundary root beside a reactive-list loop, body or catch (LTC074, LT-431)', () => {
+		const head = "import { createList } from '@zeix/le-truc'\n"
+		const setup =
+			"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\texpose({})"
+		const tryShape = (body: string, caught: string): Shape => ({
+			head,
+			setup,
+			template: `<ul data-container>@try { ${body} } @catch (e) { ${caught} }@for (const item of items) { <li>{item}</li> }</ul>`,
+			tsxTemplate: `<ul data-container><truc:try catch={e => ${caught}}>${body}</truc:try>{items.map(item => <li>{item}</li>)}</ul>`,
+		})
+		expectCovers(
+			tryShape(
+				'<li class="a">x</li>',
+				'<li class="b" data-unreconciled>y</li>',
+			),
+			'LTC074',
+			'<li class="a">x</li>',
+		)
+		expectCovers(
+			tryShape(
+				'<li class="a" data-unreconciled>x</li>',
+				'<li class="b">y</li>',
+			),
+			'LTC074',
+			'<li class="b">y</li>',
+		)
+		for (const { hit } of reportOn(
+			tryShape(
+				'<li class="a" data-unreconciled>x</li>',
+				'<li class="b" data-unreconciled>y</li>',
+			),
+			'LTC074',
+		)) {
+			expect(hit).toBeUndefined()
+		}
+	})
+
+	test('a server-mode arm root with data-unreconciled, and a text-only arm, stay legal (LTC074, LT-431)', () => {
+		const head = "import { createList } from '@zeix/le-truc'\n"
+		const setup =
+			"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\texpose({})"
+		const params = '{ open }: { open: boolean }'
+		for (const shape of [
+			{
+				template:
+					'<ul data-container>@if (open) { <li class="drop" data-unreconciled>x</li> } @else { <li class="none" data-unreconciled>y</li> }@for (const item of items) { <li>{item}</li> }</ul>',
+				tsxTemplate:
+					'<ul data-container>{open ? <li class="drop" data-unreconciled>x</li> : <li class="none" data-unreconciled>y</li>}{items.map(item => <li>{item}</li>)}</ul>',
+			},
+			{
+				template:
+					"<ul data-container>@if (open) { {'text'} }@for (const item of items) { <li>{item}</li> }</ul>",
+				tsxTemplate:
+					"<ul data-container>{open ? 'text' : null}{items.map(item => <li>{item}</li>)}</ul>",
+			},
+		] as const) {
+			for (const { hit } of reportOn(
+				{ head, setup, params, ...shape },
+				'LTC074',
+			)) {
+				expect(hit).toBeUndefined()
+			}
+		}
+	})
+
 	test('an unreconciled sibling, a bare container, and the @empty arm roots stay legal (LTC074)', () => {
 		const head = "import { createList } from '@zeix/le-truc'\n"
 		const setup =
@@ -530,6 +677,22 @@ describe('each producer family covers the offending construct, on both surfaces'
 					? compileComponentTsx(source, file, new Set())
 					: compileComponent(source, file, new Set())
 			expect(diagnostics.some(d => d.code === 'LTC074')).toBe(false)
+		}
+	})
+
+	test('an async boundary in the container is LTC063, not also LTC074 (LT-431)', () => {
+		const shape: Shape = {
+			head: "import { createList, deriveCell } from '@zeix/le-truc'\n",
+			setup:
+				"\t\tconst items = createList<string>([], { keyConfig: 'item' })\n\t\tconst data = deriveCell(async () => 'x')\n\t\texpose({})",
+			template:
+				'<ul data-container>@try { <li class="a">{data}</li> } @pending { <li class="p">p</li> } @catch (e) { <li class="b">{e.message}</li> }@for (const item of items) { <li>{item}</li> }</ul>',
+			tsxTemplate:
+				'<ul data-container><truc:try pending={<li class="p">p</li>} catch={e => <li class="b">{e.message}</li>}><li class="a">{data}</li></truc:try>{items.map(item => <li>{item}</li>)}</ul>',
+		}
+		for (const { hit } of reportOn(shape, 'LTC063')) expect(hit).toBeDefined()
+		for (const { hit } of reportOn(shape, 'LTC074')) {
+			expect(hit).toBeUndefined()
 		}
 	})
 
