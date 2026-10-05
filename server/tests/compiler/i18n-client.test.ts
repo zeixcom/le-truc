@@ -294,7 +294,7 @@ describe('client-only setup statements and list-item handlers (LT-349)', async (
 	const shapes = {
 		tsrx: compileComponent(
 			tsrxSource(
-				'<ul data-container>@for (const item of items) { <li><button onClick={() => console.log(t.folded)}>x</button>{item}</li> }</ul>',
+				'<ul data-container>@for (const item of items) { <li><button onClick={() => console.log(t.folded)}>x</button><span>{item}</span></li> }</ul>',
 				s,
 				params,
 				names,
@@ -304,7 +304,7 @@ describe('client-only setup statements and list-item handlers (LT-349)', async (
 		),
 		tsx: compileComponentTsx(
 			tsxSource(
-				'<ul data-container>{items.map(item => <li><button onClick={() => console.log(t.folded)}>x</button>{item}</li>)}</ul>',
+				'<ul data-container>{items.map(item => <li><button onClick={() => console.log(t.folded)}>x</button><span>{item}</span></li>)}</ul>',
 				s,
 				params,
 				names,

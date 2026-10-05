@@ -581,6 +581,17 @@ export const inReactiveArm = (
 }
 
 /**
+ * Does `target` sit inside a reactive-list item (ADR 0046 s1)? An item's
+ * elements exist once per item and are recreated on every reconcile —
+ * adopted, cloned, removed — so a connect-time reference from the host
+ * scope goes as stale as an arm's.
+ */
+export const inReconcileItem = (
+	outputs: readonly TemplateNode[],
+	target: TemplateNode,
+): boolean => outputs.some(output => someNode(output, n => n === target))
+
+/**
  * Every `first()` name a query may address, in source order — all but a
  * REQUIRED ref whose resolution was rejected. An optional ref stays
  * declared whatever its stage: setup code may read it.

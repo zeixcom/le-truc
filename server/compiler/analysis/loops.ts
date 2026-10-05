@@ -2,8 +2,9 @@
  * Loop planning (LT-022, regrouping move M5): Pass 1 — server-data `@for`
  * → `each()` plans (output selector, collection naming, hoisted-const
  * rebinding, loop-scoped effects); Pass 1b — reactive-list `@for` over a
- * declared `createList` → `reconcile()` plans (container/template
- * addressing, item hole, bindItem-scoped events).
+ * declared `createList` → `reconcile()` plans (container addressing, the
+ * `data-list` stamp, the item hole; the item's Mount Scope itself is planned
+ * in pass 4, analysis/effects.ts).
  */
 
 import type { AstNode } from '../ast-node'
@@ -18,7 +19,7 @@ import type {
 } from '../ir'
 import { wordingOf } from '../surface'
 import { isDirtyFlagControlAttr } from '../vocabulary'
-import { hasArmSet, isClientConstructAttr, someNode } from '../walk'
+import { isClientConstructAttr, listIndexOf } from '../walk'
 import { reportServerOnlyNames } from './effects'
 import { returnsNumber } from './harvest'
 import type {
@@ -27,7 +28,6 @@ import type {
 	LoopPlans,
 	PassShared,
 	RebindingPlan,
-	ReconcileItemEvents,
 	ReconcilePlan,
 } from './plan'
 import {
@@ -303,20 +303,16 @@ const runEachLoops = (shared: PassShared): Map<EachForIR, ForClientPlan> => {
 
 /**
  * Pass 1b: reactive-list `@for` over a declared `createList` →
- * `reconcile()` plans (container/template addressing, item hole,
- * bindItem-scoped events).
+ * `reconcile()` plans (container addressing, the `data-list` stamp, the
+ * item hole). The item's OWN effects — its Mount Scope (ADR 0046 s1) — are
+ * planned in pass 4 (`planReconcileItem`, analysis/effects.ts), which shares
+ * the arm machinery; this pass only pins what the plan table and the
+ * harvest need before it.
  */
 const runReconcileLoops = (
 	shared: PassShared,
 ): Map<ReconcileForIR, ReconcilePlan> => {
-	const {
-		component,
-		source,
-		diagnostics,
-		addQuery,
-		collectAmbient,
-		badListBodyNames,
-	} = shared
+	const { component, source, diagnostics, addQuery } = shared
 	const wording = wordingOf(component)
 	const resolveSelector = (el: ElementNode) => resolveSelectorIn(component, el)
 	const reconcilePlans = new Map<ReconcileForIR, ReconcilePlan>()
@@ -336,22 +332,6 @@ const runReconcileLoops = (
 
 	for (const loop of component.fors.values()) {
 		if (loop.kind !== 'reconcile') continue
-		// One reactive list per component: every extracted template would
-		// match the same `first('template')` query, and the second list's
-		// reconcile would clone the FIRST list's item shape with no
-		// diagnostic. Scoped template addressing (sibling selectors) is the
-		// follow-up if a corpus component ever needs two lists.
-		if (reconcilePlans.size > 0) {
-			diagnostics.push(
-				diagnostic.unsupported(
-					source,
-					loop.output.node,
-					`A second reactive-list ${wording.loop} in one component`,
-					'Both lists would share the selector of the extracted `<template>` — split the component, or render one list from server data.',
-				),
-			)
-			continue
-		}
 		const output = loop.output
 
 		// An authored <template> would collide with the compiler-extracted
@@ -387,6 +367,37 @@ const runReconcileLoops = (
 			containerSelector.selector,
 			'one',
 		)
+
+		// The extracted `<template>` sits OUTSIDE the container (after its
+		// close tag), stamped `data-list="N"` (ADR 0046 s2) and queried from
+		// the container's PARENT as `:scope > template[data-list="N"]` — the
+		// direct-child step keeps any other component's markup from answering,
+		// the stamp lifts the one-list-per-component limit. The parent is the
+		// host itself when the container is the root's child.
+		const containerParent = parentOf(container)
+		let parentName: string | null = null
+		if (containerParent === component.root) {
+			shared.ambient.add('host')
+			parentName = 'host'
+		} else if (containerParent) {
+			const resolved = resolveSelector(containerParent)
+			if (!resolved.unique) {
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						source,
+						containerParent.node,
+						`No unique selector for <${containerParent.tag}>, which holds the ${wording.loop}'s container — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
+					),
+				)
+			} else {
+				parentName = addQuery(
+					sanitizeVarName(containerParent.tag),
+					resolved.selector,
+					'one',
+				)
+			}
+		}
+		if (parentName === null) continue
 
 		// The list owns its container's children (ADR 0017): an authored
 		// element beside the loop that carries no `data-unreconciled` is
@@ -445,15 +456,12 @@ const runReconcileLoops = (
 		}
 		checkSiblings(container.children)
 
-		// Arm templates (ADR 0037) are `<template>`s too: beside an arm set
-		// the item template is the one without `data-arms`.
-		const templateName = addQuery(
-			'template',
-			someNode(component.root, hasArmSet)
-				? 'template:not([data-arms])'
-				: 'template',
-			'one',
-		)
+		// The extracted template is stamped `data-list="N"` (ADR 0046 s2) and
+		// queried from the container's parent inside the generated `reconcile`
+		// call — no factory query for the template itself, and no
+		// one-list-per-component limit: the stamp tells same-container and
+		// sibling lists apart.
+		const listIndex = listIndexOf(component.fors, loop)
 
 		// The @empty arm's roots (LT-212): server-rendered in the container,
 		// `hidden` toggled by the client — each root needs its own query.
@@ -474,21 +482,30 @@ const runReconcileLoops = (
 			emptyQueries.push(addQuery('empty', resolved.selector, 'one'))
 		}
 
-		// The item hole's parent element — the item value's DOM site, used by
-		// the arg-seeded harvest read.
-		let holeStart: number | undefined
+		// The FIRST bare `{item}` hole's parent element — the item value's
+		// DOM site, used by the arg-seeded List's harvest read (ADR 0003).
+		// The item may render through several holes now (each gets its own
+		// watch); the harvest reads the first in document order, the same
+		// canonical-site rule every harvest follows.
 		const findHoleParent = (node: TemplateNode): ElementNode | null => {
+			// A hole may sit inside a server-rendered conditional's arm — the
+			// item text is as per-item there as anywhere (ADR 0046 s1).
+			if (node.kind === 'conditional' && node.mode === 'server') {
+				for (const arm of node.arms)
+					for (const armChild of arm.children) {
+						const found = findHoleParent(armChild)
+						if (found) return found
+					}
+				return null
+			}
 			if (!isElement(node)) return null
 			for (const child of node.children) {
 				if (
 					child.kind === 'expr' &&
 					child.reactivity === 'reactive' &&
 					child.exprText === loop.itemName
-				) {
-					const start = child.expr.start
-					holeStart = typeof start === 'number' ? start : undefined
+				)
 					return node
-				}
 				const found = findHoleParent(child)
 				if (found) return found
 			}
@@ -498,112 +515,18 @@ const runReconcileLoops = (
 		const holeSelector = holeParent
 			? resolveSelectorScoped(output, holeParent, component.composedShapes)
 					.selector
-			: output.tag
-
-		// Per-item events, grouped per target element, bindItem-scoped.
-		const itemEvents: ReconcileItemEvents[] = []
-		const takenNames = new Set<string>([
-			loop.itemName,
-			...(loop.keyName ? [loop.keyName] : []),
-			'first',
-			'_element',
-		])
-		const checkItemHandler = (handler: AstNode, what: string): void => {
-			collectAmbient(handler)
-			const free = dependenciesOf(handler)
-			if (free.has(loop.itemName)) {
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						handler,
-						`${what} that reads the loop item \`${loop.itemName}\` in a reactive-list ${wording.loop} body`,
-						`Inside \`reconcile()\`'s \`bindItem\` the item is a signal, not the value, so a handler cannot read it.${wording.listItemHandlerFix}`,
-					),
-				)
-			}
-			reportServerOnlyNames(
-				shared,
-				handler,
-				`${what} inside a reactive-list ${wording.loop} body`,
-				badListBodyNames(handler).filter(
-					name => name !== loop.itemName && name !== loop.keyName,
-				),
-			)
-		}
-		const collectItemEvents = (
-			node: TemplateNode,
-			isItemRoot: boolean,
-		): void => {
-			if (!isElement(node)) return
-			const elementEvents = node.attrs.filter(a => a.kind === 'event') as Array<
-				Extract<AttributeIR, { kind: 'event' }>
-			>
-			if (elementEvents.length > 0) {
-				let target: ReconcileItemEvents | undefined
-				if (isItemRoot) {
-					target = itemEvents.find(e => e.selector === null)
-					if (!target) {
-						target = {
-							selector: null,
-							name: '_element',
-							message: '',
-							events: [],
-						}
-						itemEvents.push(target)
-					}
-				} else {
-					const scoped = resolveSelectorScoped(
-						output,
-						node,
-						component.composedShapes,
-					)
-					if (!scoped.unique) {
-						diagnostics.push(
-							diagnostic.unaddressableElement(
-								source,
-								node.node,
-								`No unique selector for <${node.tag}> inside the ${wording.loop} item template — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
-							),
-						)
-					}
-					target = itemEvents.find(e => e.selector === scoped.selector)
-					if (!target) {
-						let name = sanitizeVarName(node.tag)
-						while (takenNames.has(name)) name = `${name}El`
-						takenNames.add(name)
-						target = {
-							selector: scoped.selector,
-							name,
-							message: `${component.tag}: ${scoped.selector} missing`,
-							events: [],
-						}
-						itemEvents.push(target)
-					}
-				}
-				for (const attr of elementEvents) {
-					checkItemHandler(attr.handler, `Event handler \`${attr.name}\``)
-					target.events.push({
-						event: attr.event,
-						handlerText: attr.handlerText,
-						sourceStart: attr.handler.start,
-						sourceEnd: attr.handler.end,
-					})
-				}
-			}
-			for (const child of node.children) collectItemEvents(child, false)
-		}
-		collectItemEvents(output, true)
+			: null
 
 		reconcilePlans.set(loop, {
 			tag: component.tag,
 			container: containerName,
-			template: templateName,
+			listIndex,
+			parent: parentName,
 			signal: loop.listSignal,
 			itemParam: loop.itemName,
 			keyParam: loop.keyName,
 			holeSelector,
-			holeStart,
-			itemEvents,
+			itemScope: { root: null, locals: [], keyAttrs: [], effects: [] },
 			emptyQueries,
 		})
 	}

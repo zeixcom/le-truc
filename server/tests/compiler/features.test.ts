@@ -712,18 +712,21 @@ import { createList } from '@zeix/le-truc'`
 		)
 	})
 
-	test('a second reactive list in one component is LTC005', () => {
+	test('a second reactive list in one component compiles (LT-423)', () => {
+		// ADR 0046 s2: the extracted templates are stamped `data-list` and
+		// queried from their own container's parent, so the old
+		// one-list-per-component limit is lifted.
 		const source = `export function C({}: {})
 	@{
 		const a = createList<string>(['x'], { keyConfig: 'a' })
 		const b = createList<string>(['y'], { keyConfig: 'b' })
 			<c-el>
-				<ul data-a>
+				<ul class="a-list">
 					@for (const item of a; key k) {
 						<li><span>{item}</span></li>
 					}
 				</ul>
-				<ul data-b>
+				<ul class="b-list">
 					@for (const item of b; key k2) {
 						<li><span>{item}</span></li>
 					}
@@ -734,12 +737,16 @@ import { createList } from '@zeix/le-truc'`
 			</c-el>
 	}
 import { createList } from '@zeix/le-truc'`
-		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		expect(
-			diagnostics.some(d =>
-				d.message.includes('second reactive-list `@for` in one component'),
-			),
-		).toBe(true)
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.clientCode).toContain('data-list="0"')
+		expect(component?.clientCode).toContain('data-list="1"')
+		expect(component?.serverCode).toContain('<template data-list="0">')
+		expect(component?.serverCode).toContain('<template data-list="1">')
 	})
 
 	test('truc:html={dataRef} inside an @if branch is not a client construct', () => {

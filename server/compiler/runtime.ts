@@ -98,7 +98,17 @@ type KeyConfig<T> = string | ((item: T) => string | undefined)
 /** Options the harness honors on `createList`/`deriveList`. */
 type ServerListOptions<T, S> = {
 	keyConfig?: KeyConfig<T>
-	createItem?: (value: T) => S
+	/**
+	 * The authored factory's return is the CLIENT type the authored generic
+	 * pins (`MutableStore<T>`, ADR 0046 s3) — the harness cannot implement
+	 * the mutation half, so its own `createStore` is admitted through the
+	 * union and the iteration keeps the authored `S`. The server render
+	 * reads fields and never mutates, so the reduced stand-in carries every
+	 * read the render makes.
+	 */
+	createItem?: (
+		value: T,
+	) => S | (T extends Record<string, unknown> ? ServerStore<T> : never)
 }
 
 /* === Exported Functions === */

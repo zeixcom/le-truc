@@ -9,6 +9,7 @@
 
 import type { AstNode } from '../ast-node'
 import {
+	freeIdentifiers,
 	hostPropOf,
 	isNode,
 	nodeType,
@@ -30,6 +31,7 @@ import type {
 	ComponentIR,
 	ForIR,
 	PassEntryIR,
+	ReconcileForIR,
 	TemplateNode,
 } from '../ir'
 import type { RegistryEntry } from '../registry'
@@ -67,6 +69,7 @@ import type {
 	LoopPlans,
 	PassShared,
 	QueryPlan,
+	ReconcilePlan,
 	TopEffectPlan,
 } from './plan'
 import {
@@ -158,6 +161,23 @@ type EffectsContext = {
 	collectAmbient: (node: AstNode | null | undefined) => void
 	badFreeNames: (node: AstNode) => string[]
 	/**
+	 * `badFreeNames` for a list-body position (`analysis/plan.ts`, LT-349):
+	 * the setup consts and authored imports no client-need walk reaches.
+	 * Item-scoped planning (ADR 0046 s1) reports through this — a setup const
+	 * read only inside an item is still never emitted client-side.
+	 */
+	badListBodyNames: (node: AstNode) => string[]
+	/** Registry-child tags addressed (type-flow imports), from `PassShared`. */
+	childTags: Set<string>
+	/**
+	 * The item and key bindings of the reactive-list item currently being
+	 * planned (ADR 0046 s1), empty outside one. Item-scoped sites are
+	 * per-item state the server deliberately omits in every tier — never a
+	 * routing signal, and never a suppression record (the revert would
+	 * undo per-item truth the mount re-establishes on every clone).
+	 */
+	itemNames: ReadonlySet<string>
+	/**
 	 * Registry entries by TAG (LT-158). The compose registry is keyed by source
 	 * path because composition resolves through import specifiers; a
 	 * `pass={{ }}` on a raw dashed tag has only the tag, so it needs the
@@ -209,6 +229,11 @@ const loopFor = (fx: EffectsContext, node: TemplateNode): ForIR | null =>
  * recorded — see {@link SuppressedSite}.
  */
 const suppresses = (fx: EffectsContext, node: AstNode): boolean => {
+	// An item-scoped site (ADR 0046 s1) is per-item state the mount
+	// re-establishes on every clone — never a build-machine answer to
+	// revert.
+	if ([...dependenciesOf(node)].some(name => fx.itemNames.has(name)))
+		return false
 	const resolution = resolutionOf(node, fx.component.serverKnown)
 	return resolution.by === 'none' && resolution.limb === 'not-a-server-fact'
 }
@@ -325,6 +350,7 @@ const emitLazyTextChildren = (
 	targetLabel: string,
 	suppressedSelector: string,
 	addressHost: boolean,
+	badNames: (node: AstNode) => string[] = fx.badFreeNames,
 ): void => {
 	const lazyChildren = el.children.filter(
 		(c): c is ExprNode => c.kind === 'expr' && c.reactivity === 'reactive',
@@ -344,7 +370,12 @@ const emitLazyTextChildren = (
 		// The LT-122 form's source is synthesized (`() => host.<prop>`);
 		// its `exprText` is the server arg by design.
 		if (!child.bindsProp)
-			reportServerOnlyNames(fx, child.expr, `Reactive text on ${targetLabel}`)
+			reportServerOnlyNames(
+				fx,
+				child.expr,
+				`Reactive text on ${targetLabel}`,
+				badNames(child.expr),
+			)
 	}
 	// The gate itself: one lazy child, alone.
 	const contentSiblings = el.children.filter(
@@ -569,17 +600,24 @@ const emitPassEntries = (
 	entries: PassEntryIR[],
 	query: string,
 	sink: TopEffectPlan[] = fx.effects,
+	badNames: (node: AstNode) => string[] = fx.badFreeNames,
 ): void => {
 	const { collectAmbient } = fx
 	for (const entry of entries) {
 		collectAmbient(entry.thunk)
-		reportServerOnlyNames(fx, entry.thunk, `Pass entry \`${entry.prop}\``)
+		reportServerOnlyNames(
+			fx,
+			entry.thunk,
+			`Pass entry \`${entry.prop}\``,
+			badNames(entry.thunk),
+		)
 		if (entry.setThunk) {
 			collectAmbient(entry.setThunk)
 			reportServerOnlyNames(
 				fx,
 				entry.setThunk,
 				`The setter of pass entry \`${entry.prop}\``,
+				badNames(entry.setThunk),
 			)
 		}
 		sink.push({
@@ -605,6 +643,7 @@ const emitConstructEffects = (
 	el: ElementNode,
 	query: string,
 	sink: TopEffectPlan[] = fx.effects,
+	badNames: (node: AstNode) => string[] = fx.badFreeNames,
 ): void => {
 	const {
 		component,
@@ -678,6 +717,7 @@ const emitConstructEffects = (
 				fx,
 				attr.thunk,
 				`Reactive attribute \`${attr.name}\``,
+				badNames(attr.thunk),
 			)
 			// CHECKLIST §5 / LTC034: omission is not neutral for these
 			// attribute names — `hidden` omitted means visible, `disabled`
@@ -719,12 +759,19 @@ const emitConstructEffects = (
 				)
 			) {
 				const resolution = resolutionOf(attr.thunk, component.serverKnown)
-				routingSignals.push({
-					origin: 'LTC034',
-					detail: `\`${attr.name}\` on <${el.tag}> has no server-renderable value`,
-					...rangeFields(source, attr.thunk),
-					resolution,
-				})
+				// ADR 0029 sub-design 5 (LT-165 step 5), item exception (ADR
+				// 0046 s1): an item-scoped site is per-item state no server
+				// phase answers BY DESIGN — the template bakes it empty and the
+				// mount writes it on every clone — so it routes no tier. The
+				// severe form below still fires: a no-JS item whose control is
+				// enabled-and-submittable is the same permanent wrong default.
+				if (fx.itemNames.size === 0)
+					routingSignals.push({
+						origin: 'LTC034',
+						detail: `\`${attr.name}\` on <${el.tag}> has no server-renderable value`,
+						...rangeFields(source, attr.thunk),
+						resolution,
+					})
 				if (
 					resolution.by === 'none' &&
 					(attr.name === 'disabled' || attr.name === 'checked') &&
@@ -806,10 +853,15 @@ const emitConstructEffects = (
 				continue
 			}
 			checkPassEntries(fx, attr.entries, el.tag, el.node)
-			emitPassEntries(fx, attr.entries, query, sink)
+			emitPassEntries(fx, attr.entries, query, sink, badNames)
 		} else if (attr.kind === 'class-map') {
 			collectAmbient(attr.object)
-			reportServerOnlyNames(fx, attr.thunk, 'Reactive class map')
+			reportServerOnlyNames(
+				fx,
+				attr.thunk,
+				'Reactive class map',
+				badNames(attr.thunk),
+			)
 			sink.push({
 				kind: 'watch-class',
 				query,
@@ -820,7 +872,12 @@ const emitConstructEffects = (
 			})
 		} else if (attr.kind === 'style-map') {
 			collectAmbient(attr.object)
-			reportServerOnlyNames(fx, attr.thunk, 'Reactive style map')
+			reportServerOnlyNames(
+				fx,
+				attr.thunk,
+				'Reactive style map',
+				badNames(attr.thunk),
+			)
 			sink.push({
 				kind: 'watch-style',
 				query,
@@ -831,7 +888,12 @@ const emitConstructEffects = (
 			})
 		} else if (attr.kind === 'event') {
 			collectAmbient(attr.handler)
-			reportServerOnlyNames(fx, attr.handler, `Event handler \`${attr.name}\``)
+			reportServerOnlyNames(
+				fx,
+				attr.handler,
+				`Event handler \`${attr.name}\``,
+				badNames(attr.handler),
+			)
 			sink.push({
 				kind: 'on',
 				query,
@@ -845,7 +907,12 @@ const emitConstructEffects = (
 			// dangerouslyBindInnerHTML watch, the sanctioned XSS-aware sink
 			// (ADR 0010) — never a raw innerHTML property binding.
 			collectAmbient(attr.thunk)
-			reportServerOnlyNames(fx, attr.thunk, 'Reactive `truc:html`')
+			reportServerOnlyNames(
+				fx,
+				attr.thunk,
+				'Reactive `truc:html`',
+				badNames(attr.thunk),
+			)
 			sink.push({
 				kind: 'watch-html',
 				query,
@@ -866,6 +933,7 @@ const emitConstructEffects = (
 		`<${el.tag}>`,
 		selectorOf(fx, query),
 		false,
+		badNames,
 	)
 }
 
@@ -1640,8 +1708,17 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 						'`each()` binds each item through its own element, and an arm cloned after connect escapes it — move it out of the loop, or bind a reactive attribute on the item instead.',
 					),
 				)
-			// A reactive-list body already refuses all control flow
-			// (`validateListBody`).
+			// A reactive-list item is a Mount Scope (ADR 0046 s1), and the arm
+			// set would switch inside its mount — nested scopes are LT-424.
+			else if (loop?.kind === 'reconcile')
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						node.node,
+						`${subject} inside a reactive-list ${wording.loop} body`,
+						"The item's mount has no lowering for an arm set — move it out of the item, beside the loop.",
+					),
+				)
 			else if (enclosed && !loop)
 				diagnostics.push(
 					diagnostic.unsupported(
@@ -1834,6 +1911,221 @@ const handleReactiveConditional = (
 	})
 }
 
+/**
+ * A reactive-list item is a Mount Scope (ADR 0046 s1): its content plans
+ * through the same construct emission an arm's does (`emitConstructEffects`,
+ * the compose pass-entry path), addressed through the item's own `first` —
+ * the item root by `bindItem`'s element parameter (declared as a typed local
+ * only when something binds it), descendants by selectors resolved within
+ * the item's own subtree and queried once per entering item. Item reads keep
+ * the signal meaning (ADR 0046 s3): the bare `{item}` child is the signal
+ * shorthand — its watch source IS the item signal — and every other read is
+ * the authored arrow over `.get()`. A `server` attribute over the key
+ * binding alone is a key-derived attribute (`keyAttrs`): set once at clone,
+ * because a key never changes, so there is nothing to watch. Item-scoped
+ * sites are per-item state in every tier — `fx.itemNames` makes the LTC034
+ * router and the limb-(b) suppression skip them, and `badListBodyNames`
+ * reports the server-only face whose setup-const class no client-need walk
+ * reaches (LT-349). A composed child in the item renders into the template;
+ * its `truc:pass` entries bind against a scoped local, resolved within the
+ * item the way `emitComposeEffects` resolves within the template (the
+ * child's own `lang`/`i18n` are LT-355's). Nesting — arm sets, boundaries,
+ * loops — is refused by the shared machinery and LT-424's.
+ */
+const planReconcileItem = (
+	fx: EffectsContext,
+	loop: ReconcileForIR,
+	plan: ReconcilePlan,
+): void => {
+	const { component, source, diagnostics, usedNames } = fx
+	const output = loop.output
+	const scope = plan.itemScope
+	const wording = wordingOf(component)
+	const saved = fx.itemNames
+	fx.itemNames = loop.keyName
+		? new Set([loop.itemName, loop.keyName])
+		: new Set([loop.itemName])
+	const badNames = fx.badListBodyNames
+	try {
+		// Key-derived attributes first (ADR 0046 s1): `server` attributes
+		// whose expression reads the key binding alone. `validateListBody`
+		// proved the item reads none and refused key-plus-other mixes, so
+		// every survivor here is clone-time evaluable against `bindItem`'s
+		// key parameter. They claim an element local like a construct does.
+		const keyAttrSites: Array<{
+			el: ElementNode
+			attr: Extract<AttributeIR, { kind: 'server' }>
+		}> = []
+		if (loop.keyName !== null) {
+			const collectKeyAttrs = (node: TemplateNode): void => {
+				if (isElement(node)) {
+					for (const attr of node.attrs) {
+						if (attr.kind !== 'server' || attr.bindsProp != null) continue
+						const free = [...freeIdentifiers(attr.node)]
+						if (free.length > 0 && free.every(n => n === loop.keyName))
+							keyAttrSites.push({ el: node, attr })
+					}
+					for (const child of node.children) collectKeyAttrs(child)
+					return
+				}
+				// A hole may sit inside a server-rendered conditional's arm —
+				// so may a key-derived attribute: the winner is fixed per
+				// render call, so the clone-time write addresses markup that
+				// exists in both adopted items and clones.
+				if (node.kind === 'conditional' && node.mode === 'server')
+					for (const arm of node.arms)
+						for (const child of arm.children) collectKeyAttrs(child)
+			}
+			collectKeyAttrs(output)
+		}
+
+		// Scope locals: the root by its element parameter, descendants by
+		// `first()` within the item. Minted lazily — an element nothing
+		// binds (its own constructs or a key-derived attribute) declares
+		// nothing, exactly like an arm root no effect reads.
+		const locals = new Map<TemplateNode, string>()
+		const localFor = (el: ElementNode): string => {
+			const known = locals.get(el)
+			if (known) return known
+			const name = uniqueName(usedNames, sanitizeVarName(el.tag))
+			locals.set(el, name)
+			if (el === output) {
+				scope.root = { name, tag: el.tag }
+				return name
+			}
+			const scoped = resolveSelectorScoped(output, el, component.composedShapes)
+			if (!scoped.unique)
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						source,
+						el.node,
+						`No unique selector for <${el.tag}> inside the ${wording.loop} item <${output.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
+					),
+				)
+			scope.locals.push({
+				name,
+				selector: scoped.selector,
+				message: `${component.tag}: ${scoped.selector} missing`,
+			})
+			return name
+		}
+
+		// The item root's own constructs.
+		if (hasOwnConstruct(output))
+			emitConstructEffects(
+				fx,
+				output,
+				localFor(output),
+				scope.effects,
+				badNames,
+			)
+
+		// Descendants with constructs of their own, document order, through
+		// server-rendered conditional arms (a construct there addresses
+		// markup the render's own winner put in every item).
+		const visitElements = (node: TemplateNode): void => {
+			if (isElement(node)) {
+				if (node !== output && hasOwnConstruct(node))
+					emitConstructEffects(
+						fx,
+						node,
+						localFor(node),
+						scope.effects,
+						badNames,
+					)
+				for (const child of node.children) visitElements(child)
+				return
+			}
+			if (node.kind === 'compose') {
+				collectCompose(node)
+				return
+			}
+			if (node.kind === 'conditional' && node.mode === 'server')
+				for (const arm of node.arms)
+					for (const child of arm.children) visitElements(child)
+		}
+
+		// Composed children in the item: `truc:pass` entries bind against a
+		// scoped local, resolved within the item the way
+		// `emitComposeEffects` resolves within the template. The same
+		// registry-discovery tolerance applies: that pass runs with no
+		// `composeRegistry` and needs only this component's own entry, so a
+		// site it cannot resolve says nothing (the LT-015 tolerance).
+		function collectCompose(node: ComposeNode): void {
+			const passAttrs = node.attrs.filter(
+				(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
+					a.kind === 'pass',
+			)
+			if (passAttrs.length === 0) return
+			if (fx.composeRefs.mode === 'skipped') return
+			const childTag = fx.composeRefs.registry.get(node.source)?.tag ?? null
+			if (!childTag) {
+				diagnostics.push(
+					diagnostic.composedComponentNotCompiled(
+						source,
+						node.node,
+						node.component,
+						node.source,
+					),
+				)
+				return
+			}
+			const siblings = composeNodesBySourceIn(output, node.source)
+			let discriminator = ''
+			if (siblings.length !== 1) {
+				const clause = composeDiscriminatorClause(node, siblings)
+				if (!clause) {
+					diagnostics.push(
+						diagnostic.unaddressableElement(
+							source,
+							node.node,
+							`Multiple <${node.component}> sites in one ${wording.loop} item compose the same child, and no static class/id/data-* attribute tells this one apart — give each site a distinct class.`,
+						),
+					)
+					return
+				}
+				discriminator = clause
+			}
+			const name = uniqueName(usedNames, sanitizeVarName(childTag))
+			const selector = `${childTag}${discriminator}`
+			locals.set(node, name)
+			scope.locals.push({
+				name,
+				selector,
+				message: `${component.tag}: ${selector} missing`,
+			})
+			// Type-flow import: the composed child's tag-map augmentation must
+			// reach the client module even though no factory query names it.
+			if (childTag !== component.tag && fx.registry.has(childTag))
+				fx.childTags.add(childTag)
+			const entries = passAttrs.flatMap(a => a.entries)
+			checkPassEntries(fx, entries, childTag, node.node)
+			emitPassEntries(fx, entries, name, scope.effects, badNames)
+		}
+		visitElements(output)
+
+		// The key-derived attributes, with the locals their sites claimed.
+		for (const { el, attr } of keyAttrSites)
+			scope.keyAttrs.push({
+				el: localFor(el),
+				attr: attr.name,
+				exprText: attr.exprText,
+				sourceStart: attr.node.start,
+				sourceEnd: attr.node.end,
+			})
+
+		// The root local is only declared when something binds it.
+		if (
+			scope.root &&
+			!scope.effects.some(e => 'query' in e && e.query === scope.root?.name) &&
+			!scope.keyAttrs.some(k => k.el === scope.root?.name)
+		)
+			scope.root = null
+	} finally {
+		fx.itemNames = saved
+	}
+}
+
 const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 	const {
 		component,
@@ -1871,7 +2163,10 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 	if (loop) {
 		if (loop.kind === 'reconcile') {
 			const plan = reconcilePlans.get(loop)
-			if (plan) effects.push({ kind: 'reconcile', for: plan })
+			if (plan) {
+				planReconcileItem(fx, loop, plan)
+				effects.push({ kind: 'reconcile', for: plan })
+			}
 			return
 		}
 		const plan = forPlans.get(loop)
@@ -2029,6 +2324,8 @@ export const runEffects = (
 		addQuery,
 		collectAmbient,
 		badFreeNames,
+		badListBodyNames,
+		childTags,
 		usedNames,
 		queries,
 	} = shared
@@ -2062,7 +2359,12 @@ export const runEffects = (
 		addQuery,
 		collectAmbient,
 		badFreeNames,
+		badListBodyNames,
+		childTags,
 		entryByTag,
+		// Empty outside a reactive-list item; `planReconcileItem` swaps it in
+		// for the item's own walk and restores it after.
+		itemNames: new Set<string>(),
 		armSelectors: new Map(),
 		derivableHostProps: foldableHostProps(component),
 		derivableRefGuards: foldableRefGuards(component),

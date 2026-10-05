@@ -1059,6 +1059,14 @@ const reconcileList = <T extends {}>(
 					keyOf.set(el, key)
 					mount = true
 				}
+				if (!pinned.has(key)) {
+					if (nextKeyed(prev) !== el)
+						container.insertBefore(
+							el,
+							prev ? prev.nextElementSibling : container.firstElementChild,
+						)
+					prev = el
+				}
 				if (mount) {
 					// A stale scope survives only if the element was replaced
 					// behind our back (removed externally, or re-adopted).
@@ -1066,6 +1074,12 @@ const reconcileList = <T extends {}>(
 					const item = source.byKey(key)
 					if (item) {
 						const element = el
+						// Mounted AFTER the element sits at its position — the
+						// order `reconcileArms` already uses: a cloned item's
+						// composed children are inert template content until
+						// the insertion upgrades them, and a `pass()` in
+						// bindItem validates the target's exposed slots
+						// (LT-423).
 						disposers.set(
 							key,
 							mountScope(() =>
@@ -1074,13 +1088,6 @@ const reconcileList = <T extends {}>(
 						)
 					}
 				}
-				if (pinned.has(key)) continue
-				if (nextKeyed(prev) !== el)
-					container.insertBefore(
-						el,
-						prev ? prev.nextElementSibling : container.firstElementChild,
-					)
-				prev = el
 			}
 		}
 

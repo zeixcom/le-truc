@@ -238,17 +238,22 @@ export const singleRootOf = (
 /**
  * Mark direct `{expr}` children of each root element reactive when they read
  * a name that is reactive *by position* rather than by declaration (LT-052).
- * Two such names exist, and both are already recognised structurally
- * downstream: a `@catch`/`err` arm's error parameter, and a reactive loop
- * body's item binding (the slot fill). Neither is a declared signal, so the
- * general lift rule in `reactivity.ts` correctly classifies them static —
- * the context that makes them reactive lives here, in the construct that
- * binds them.
+ * Three such names exist, and all are already recognised structurally
+ * downstream: a `@catch`/`err` arm's error parameter, a reactive loop body's
+ * item binding (the slot fill), and — since items became Mount Scopes (ADR
+ * 0046 s1) — nothing else needs marking here, but the descent now follows the
+ * server-rendered control flow an item body may carry (a server-known
+ * conditional's arms, a plain boundary's): a bare `{item}` is routinely
+ * nested inside one (`<li>{ok ? <b>{item}</b> : null}</li>`), and the slot
+ * marker the server bakes and the client binds must fire at that depth too.
+ * None of the marked names is a declared signal, so the general lift rule in
+ * `reactivity.ts` correctly classifies them static — the context that makes
+ * them reactive lives here, in the construct that binds them.
  *
- * Recurses through element children, matching the recursive walk
- * `validateListBody` uses to count slot-fill holes — a reactive loop's item
- * is routinely nested (`<li><span>{item}</span></li>`), not a direct child
- * of the loop's output root.
+ * Recurses through element children and server-rendered control-flow arms,
+ * matching the recursive walk `validateListBody` uses to count item reads —
+ * a reactive loop's item is routinely nested, not a direct child of the
+ * loop's output root.
  */
 export const markPositionallyReactive = (
 	nodes: TemplateNode[],
@@ -267,6 +272,13 @@ export const markPositionallyReactive = (
 			return
 		}
 		if (node.kind === 'element') for (const child of node.children) visit(child)
+		if (node.kind === 'conditional' && node.mode === 'server')
+			for (const arm of node.arms)
+				for (const child of arm.children) visit(child)
+		if (node.kind === 'try' && node.pendingChildren === null) {
+			for (const child of node.children) visit(child)
+			for (const child of node.catchChildren) visit(child)
+		}
 	}
 	for (const node of nodes) visit(node)
 }
@@ -885,106 +897,144 @@ export type LoopSource = {
 }
 
 /**
- * Validate the reactive-list body shape (ADR 0024 sub-design 5, extended by
- * LT-215): statics and event attributes anywhere, exactly one lazy `{item}`
- * hole (the slot fill), and — since LT-215 — expressions that classify
- * SERVER-STATIC (`isServerEvaluable` against `ctx.serverKnown`: server args,
- * the reserved record's `t`/`lang`, no impure ambient state). A server-static
- * value folds identically into every item at every render call and needs no
- * per-item client binding, so `listTemplateLines` bakes it into the extracted
- * `<template>` at render time — the client clones the SERVED template, so the
- * folded bytes ride along to cloned items. Item-derived expressions (they
- * read names outside `serverKnown`) and control flow stay rejected: the
- * slot-fill contract has no channel for a per-item value. (`ref={}` never
- * reaches here — `classify-attributes.ts` retires it on every element.)
+ * Validate a reactive-list body (ADR 0046 s1: the item is a Mount Scope).
+ * Item content lowers through the arm emission — reactive attributes, class/
+ * style maps, `truc:pass`, events, lazy text children over the item, and
+ * key-derived attributes (a `server` attribute reading the `key` binding,
+ * set once at clone because a key never changes) all bind in `bindItem`
+ * against the item's own scope, and the server bakes item-dependent sites
+ * empty in the extracted `<template>`. What still has no lowering inside an
+ * item (nesting is LT-424): a plain `@try` boundary (neither emitter renders
+ * one in an item template), a nested loop, and any non-arrow expression or
+ * attribute over the item or key — the item is the signal the List hands
+ * out, so a client read takes the arrow form (`() => item.get()`) and the
+ * bare `{item}` child is the signal shorthand.
+ *
+ * The slot-fill restrictions this walk used to enforce (one lazy hole,
+ * server-static attributes only, no control flow, no client constructs) are
+ * retired here (ADR 0028 lifecycle); the shape errors item content now hits
+ * live in the shared arm/element machinery (`emitLazyTextChildren`'s
+ * one-lazy-child gate and the server-only-name report), and the unmountable
+ * constructs an arm set would collide with are `validateArmSetPlacement`'s.
+ * (`ref={}` never reaches here — `classify-attributes.ts` retires it on
+ * every element; a host-level `first()` into an item is refused in the
+ * analysis, which is where the synthetic ref attrs exist for both raw and
+ * composed targets.)
  */
 const validateListBody = (
 	ctx: ExtractContext,
 	output: TemplateNode & { kind: 'element' },
 	itemName: string,
+	keyName: string | null,
+	fors: ReadonlyMap<AstNode, ForIR>,
 ): void => {
-	const { loop, listControlFlow } = wordingOf(ctx)
-	// Join FIRST, then test the string: an empty array is truthy, which
-	// once made the impure-ambient arm unreachable and printed `reads , …`
-	// (COMPILER_REVIEW §1.1, LT-221).
-	const notBuildTime = (node: AstNode): string => {
-		const offenders = [...dependenciesOf(node)]
-			.filter(name => !ctx.serverKnown.has(name))
-			.map(name => `\`${name}\``)
-			.join(', ')
-		return offenders
-			? `that reads ${offenders}`
-			: 'that reads impure ambient state'
-	}
-	let holes = 0
+	const wording = wordingOf(ctx)
+	const { loop } = wording
+	const itemRead = (node: AstNode): string[] =>
+		[...freeIdentifiers(node)].filter(
+			name => name === itemName || name === keyName,
+		)
+	let offendingLoop: AstNode | undefined
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'expr') {
-			const isItemHole =
-				node.reactivity === 'reactive' &&
-				node.expr.type === 'Identifier' &&
-				node.exprText === itemName
-			if (isItemHole) holes++
-			else if (node.reactivity === 'reactive')
+			// The bare `{item}` identifier is the signal shorthand — reactive by
+			// position (`markPositionallyReactive`), the one sanctioned spelling.
+			if (node.reactivity === 'reactive') return
+			const reads = itemRead(node.expr)
+			if (reads.length > 0)
 				ctx.diagnostics.push(
 					diagnostic.unsupported(
 						ctx.source,
 						node.node,
-						`The lazy child \`{${node.exprText}}\` in a reactive-list ${loop} body`,
-						`The extracted \`<template>\` has one per-item slot, the bare item \`{${itemName}}\`, and no channel for other per-item values (ADR 0024 sub-design 5). Render \`{${itemName}}\` as the only lazy child.`,
-					),
-				)
-			else if (!isServerEvaluable(node.expr, ctx.serverKnown))
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node,
-						`The expression \`{${node.exprText}}\` in a reactive-list ${loop} body ${notBuildTime(node.expr)}`,
-						`The extracted \`<template>\` is the same for every item, so it takes only values the server render knows: server args and the \`i18n\` record's \`t\` (ADR 0024 sub-design 5). Read only those here.`,
+						`The expression \`{${node.exprText}}\` in a reactive-list ${loop} body reading ${reads.map(n => `\`${n}\``).join(' and ')}, which the extracted \`<template>\` render does not bind`,
+						`The loop item is the signal the List hands out: \`${itemName}\` is read with \`.get()\` in an arrow (\`{() => ${itemName}.get()}\`), and the bare \`{${itemName}}\` child is its shorthand. The key is not renderable text.`,
 					),
 				)
 			return
 		}
-		if (node.kind !== 'element') {
-			if (node.kind === 'conditional' || node.kind === 'try')
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						node.node,
-						`${listControlFlow} in a reactive-list ${loop} body`,
-						'The extracted `<template>` is static markup — move the condition outside the loop, or render both states and toggle `hidden` from the item.',
-					),
-				)
-			return
-		}
-		for (const attr of node.attrs) {
-			if (attr.kind === 'event' || attr.kind === 'static') continue
-			if (
-				attr.kind === 'server' &&
-				isServerEvaluable(attr.node, ctx.serverKnown)
-			)
-				continue
+		if (node.kind === 'try') {
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
 					node.node,
-					`The dynamic attribute \`${'name' in attr ? attr.name : attr.kind}\` in a reactive-list ${loop} body${attr.kind === 'server' ? ` ${notBuildTime(attr.node)}` : ''}`,
-					`The extracted \`<template>\` is the same for every item, so it takes only values the server render knows: server args and the \`i18n\` record's \`t\` (ADR 0024 sub-design 5). Read only those here.`,
+					`A ${wording.boundary} inside a reactive-list ${loop} body`,
+					"The item's mount has no lowering for a boundary — move it out of the item, beside the loop.",
+				),
+			)
+			return
+		}
+		if (node.kind !== 'element') return
+		for (const attr of node.attrs) {
+			if (attr.kind !== 'server' || attr.bindsProp != null) continue
+			const reads = itemRead(attr.node)
+			if (reads.length === 0) continue
+			if (!reads.includes(itemName) && keyName !== null) {
+				// A key-only read is a key-derived attribute (ADR 0046 s1):
+				// set once at clone against the key binding, nothing to watch.
+				// The key binding mixed with anything else has no clone-time
+				// meaning — the other names are server values no client phase
+				// can fold there.
+				const free = [...freeIdentifiers(attr.node)]
+				if (free.every(n => n === keyName)) continue
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						attr.node,
+						`The attribute \`${attr.name}\` in a reactive-list ${loop} body reading the key binding \`${keyName}\` together with ${free
+							.filter(n => n !== keyName)
+							.map(n => `\`${n}\``)
+							.join(' and ')}`,
+						`A key-derived attribute reads the key binding alone (\`${attr.name}={${keyName}}\`) and is set once at clone, because a key never changes; the other names are server values the clone-time write cannot fold.`,
+					),
+				)
+				continue
+			}
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					ctx.source,
+					attr.node,
+					`The attribute \`${attr.name}\` in a reactive-list ${loop} body reading \`${itemName}\`, which is a signal, not a value`,
+					`Read it in an arrow thunk: \`${attr.name}={() => ${itemName}.get()}\` — a store item's fields are cells too (\`${itemName}.field.get()\`). A key-derived attribute (\`${attr.name}\` over the key binding alone) is set once at clone.`,
 				),
 			)
 		}
-		for (const child of node.children) walk(child)
+		if (node.kind === 'element') {
+			for (const child of node.children) {
+				if (child.kind !== 'compose') continue
+				for (const composeAttr of child.attrs) {
+					if (composeAttr.kind !== 'arg' || composeAttr.node === null) continue
+					const reads = itemRead(composeAttr.node)
+					if (reads.length > 0)
+						ctx.diagnostics.push(
+							diagnostic.unsupported(
+								ctx.source,
+								composeAttr.node,
+								`The \`${composeAttr.name}\` arg of a composed element in a reactive-list ${loop} body reading ${reads.map(n => `\`${n}\``).join(' and ')}, which the child render call does not bind`,
+								`The extracted \`<template>\` renders once per render call, outside the loop — pass the child a server-known arg, or compose it per item outside the list.`,
+							),
+						)
+				}
+			}
+		}
+		for (const child of node.children) {
+			if (
+				offendingLoop === undefined &&
+				[...fors.values()].some(inner => inner.output === child)
+			) {
+				offendingLoop = child.node
+				ctx.diagnostics.push(
+					diagnostic.unsupported(
+						ctx.source,
+						child.node,
+						`A loop inside a reactive-list ${loop} body`,
+						"The item's mount has no lowering for a nested loop — move it out of the item, beside the loop.",
+					),
+				)
+			}
+			walk(child)
+		}
 	}
 	walk(output)
-	if (holes !== 1) {
-		ctx.diagnostics.push(
-			diagnostic.unsupported(
-				ctx.source,
-				output.node,
-				`A reactive-list ${loop} body that renders the item ${holes === 0 ? 'nowhere' : `${holes} times`} (found ${holes})`,
-				`The bare item \`{${itemName}}\` is the template slot the client fills — render it exactly once.`,
-			),
-		)
-	}
 }
 
 /**
@@ -1077,9 +1127,9 @@ const lowerListLoop = (
 	)
 	// The item binding is the slot fill — reactive by position, not a
 	// declared signal, so the lift rule alone would leave it static and
-	// `validateListBody` would then see zero holes.
+	// `validateListBody` would then see no item reads to route.
 	markPositionallyReactive([output], new Set([itemName]))
-	validateListBody(ctx, output, itemName)
+	validateListBody(ctx, output, itemName, keyName, fors)
 	const emptyArm = loop.lowerEmptyArm('reconcile')
 	if (emptyArm === false) return null
 	const forIR: ReconcileForIR = {

@@ -714,17 +714,17 @@ export function C({}: {})
 		expect(component).not.toBeNull()
 	})
 
-	test('reactive attribute inside the body is LTC005', () => {
-		const { diagnostics } = compileComponent(
-			listSource('<li class={() => item}>no</li>'),
+	// ADR 0046 s1: the item is a Mount Scope — a reactive attribute over the
+	// item lowers into `bindItem` like any arm content, the arrow over the
+	// item signal.
+	test('a reactive attribute over the item lowers into bindItem (LT-423)', () => {
+		const { component, diagnostics } = compileComponent(
+			listSource('<li class={() => item.get()}>no</li>'),
 			'c.tsrx',
 			new Set(),
 		)
-		expect(
-			diagnostics.some(
-				d => d.code === 'LTC005' && d.message.includes('dynamic attribute'),
-			),
-		).toBe(true)
+		expect(diagnostics).toEqual([])
+		expect(component?.clientCode).toContain("bindAttribute(li, 'class')")
 	})
 
 	// Since LT-052 a bare `{item}` IS the slot fill — the item binding is
@@ -742,21 +742,38 @@ export function C({}: {})
 		expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
 	})
 
-	test('a non-item expression reading unknown names is LTC005', () => {
+	// The slot-fill exceptions retired (ADR 0046 s1): the shared
+	// lazy-text gate owns the shape now — `bindText()` replaces the
+	// element's whole `textContent`, so a lazy child beside other content
+	// would erase it on the first write.
+	test('a lazy child beside other content is the shared gate', () => {
 		const { diagnostics } = compileComponent(
-			listSource('<li>{item}{label}</li>'),
+			listSource('<li>{item} static</li>'),
 			'c.tsrx',
 			new Set(),
 		)
 		expect(
 			diagnostics.some(d =>
-				d.message.includes('only values the server render knows'),
+				d.message.includes('A lazy text child beside other content'),
 			),
 		).toBe(true)
 	})
 
-	test('a non-item server-known expression in the body is admitted (LT-215)', () => {
-		const { component, diagnostics } = compileComponent(
+	test('more than one lazy text child is the shared gate', () => {
+		const { diagnostics } = compileComponent(
+			listSource('<li>{item}{() => item.get()}</li>'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(
+			diagnostics.some(d =>
+				d.message.includes('More than one lazy text child'),
+			),
+		).toBe(true)
+	})
+
+	test('server-known text beside the hole is the shared gate; separated elements bake (LT-215, LT-423)', () => {
+		const { diagnostics } = compileComponent(
 			`import { createList } from '@zeix/le-truc'
 export function C({ label }: { label: string })
 	@{
@@ -775,34 +792,89 @@ export function C({ label }: { label: string })
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics).toEqual([])
-		// Baked into the extracted template at render time.
-		expect(component?.serverCode).toContain('__html.push(text(label))')
+		expect(
+			diagnostics.some(d =>
+				d.message.includes('A lazy text child beside other content'),
+			),
+		).toBe(true)
+		const separated = compileComponent(
+			`import { createList } from '@zeix/le-truc'
+export function C({ label }: { label: string })
+	@{
+		const items = createList<string>([], { keyConfig: 'item' })
+			<c-el>
+				<ul data-container>
+					@for (const item of items; key k) {
+						<li><span>{item}</span><em>{label}</em></li>
+					}
+				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
+	}`,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(separated.diagnostics).toEqual([])
+		// Server-known text bakes into the extracted template at render
+		// time, so every clone carries the folded value.
+		expect(separated.component?.serverCode).toContain('text(label)')
 	})
 
-	test('missing or duplicated item hole is LTC005', () => {
-		const { diagnostics } = compileComponent(
+	// The one-hole rule retired (ADR 0046 s1): a body that renders the item
+	// nowhere compiles when the seed is a literal — only the ARG-seeded
+	// harvest needs a rendered item value (the test after this one).
+	test('a body rendering the item nowhere compiles with a literal seed (LT-423)', () => {
+		const { component, diagnostics } = compileComponent(
 			listSource('<li>static</li>'),
 			'c.tsrx',
 			new Set(),
 		)
-		expect(diagnostics.some(d => d.message.includes('exactly once'))).toBe(true)
+		expect(diagnostics).toEqual([])
+		expect(component?.serverCode).toContain('<template data-list="0">')
+		expect(component?.clientCode).toContain(', () => {})')
 	})
 
-	test('handler referencing the loop item is LTC005 (bindItem Signal)', () => {
+	test('an arg-seeded list whose body renders the item nowhere is LTC005 (LT-423)', () => {
 		const { diagnostics } = compileComponent(
-			listSource(
-				'<li><span>{item}</span><button type="button" onClick={() => items.remove(item)}>✕</button></li>',
-			),
+			`import { createList } from '@zeix/le-truc'
+export function C({ initial }: { initial?: string[] })
+	@{
+		const items = createList<string>(initial, { keyConfig: 'item' })
+			<c-el>
+				<ul data-container>
+					@for (const item of items) {
+						<li>static</li>
+					}
+				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
+	}`,
 			'c.tsrx',
 			new Set(),
 		)
 		expect(
-			diagnostics.some(
-				d =>
-					d.code === 'LTC005' && d.message.includes('a signal, not the value'),
+			diagnostics.some(d =>
+				d.message.includes('rendering the item nowhere to read it from'),
 			),
 		).toBe(true)
+	})
+
+	// The `listItemHandlerFix` refusal retired (ADR 0046 s1): a handler may
+	// read the item signal — `bindItem` scopes it, so `item` IS in scope.
+	test('a handler reading the loop item compiles (LT-423)', () => {
+		const { component, diagnostics } = compileComponent(
+			listSource(
+				'<li><span>{item}</span><button type="button" onClick={() => console.log(item.get())}>✕</button></li>',
+			),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.clientCode).toContain('console.log(item.get())')
 	})
 
 	test('index binding is LTC005', () => {
@@ -1006,9 +1078,11 @@ export function C({ initial }: { initial?: string[] })
 			'c.tsrx',
 			new Set(['c-el']),
 		)
-		const hit = diagnostics.find(d => d.message.includes('dynamic attribute'))
+		const hit = diagnostics.find(d =>
+			d.message.includes('which is a signal, not a value'),
+		)
 		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('reads `item`')
+		expect(hit?.message).toContain('`aria-label`')
 	})
 
 	test('client constructs on the root element are outside the subset', () => {
@@ -3191,14 +3265,15 @@ describe('deferred collector call (LTC045, LT-157d)', () => {
 	})
 })
 
-describe('reactive-list body impure-ambient diagnostic (LT-221 §1.1)', () => {
+describe('reactive-list body impure-ambient diagnostic (LT-221 §1.1, retired LT-423)', () => {
 	// `Date` is a JS global, so `dependenciesOf` strips it and the offender
-	// list is EMPTY — the expression is rejected by `containsImpureAmbient`
-	// alone. That is the only input shape that reaches the message's second
-	// arm, on both surfaces.
+	// list is EMPTY. The slot-fill refusal that carried the LT-221 §1.1
+	// message retired with the slot fill (ADR 0046 s1): the shape now hits
+	// the shared lazy-text gate instead — `{Date.now()}` classifies server,
+	// so the lazy `{item}` child stands beside other content.
 	const mapBody = '{items.map(item => <li>{item} {Date.now()}</li>)}'
 
-	test('.tsx names impure ambient state — an empty offender list is not `reads ,`', () => {
+	test('.tsx — the retired impure-ambient refusal is the shared gate now', () => {
 		const source = `import { createList } from '@zeix/le-truc'
 
 export function C({}, { expose }: FactoryContext<{}>) {
@@ -3214,13 +3289,15 @@ export function C({}, { expose }: FactoryContext<{}>) {
 	)
 }`
 		const { diagnostics } = compileComponentTsx(source, 'c.tsx', new Set())
-		const hit = diagnostics.find(d => d.message.includes('reactive-list'))
+		const hit = diagnostics.find(d =>
+			d.message.includes('A lazy text child beside other content'),
+		)
 		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('reads impure ambient state')
+		expect(hit?.message).toContain('on <li>')
 		expect(hit?.message).not.toContain('reads ,')
 	})
 
-	test('.tsrx names impure ambient state too (twin — regression guard)', () => {
+	test('.tsrx twin — the shared gate, not the retired refusal', () => {
 		const source = `export function C({}: {})
 	@{
 		const items = createList([])
@@ -3238,9 +3315,11 @@ export function C({}, { expose }: FactoryContext<{}>) {
 	}
 import { createList } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
-		const hit = diagnostics.find(d => d.message.includes('reactive-list'))
+		const hit = diagnostics.find(d =>
+			d.message.includes('A lazy text child beside other content'),
+		)
 		expect(hit).toBeDefined()
-		expect(hit?.message).toContain('reads impure ambient state')
+		expect(hit?.message).toContain('on <li>')
 		expect(hit?.message).not.toContain('reads ,')
 	})
 })

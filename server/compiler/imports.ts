@@ -277,6 +277,16 @@ export const placeLeTrucImports = (
 	ctx: ExtractContext,
 	component: SetupLikeComponent,
 	leTrucImports: LeTrucImport[],
+	/**
+	 * Verbatim texts each generated module re-emits (type declarations, the
+	 * params slice, the setup statements): a le-truc name whose only
+	 * surviving uses there are TYPE positions places as `type X` — the
+	 * usage walks count value reads only (LT-423 fixture).
+	 */
+	typeTexts: { server: readonly string[]; client: readonly string[] } = {
+		server: [],
+		client: [],
+	},
 ): {
 	server: string[]
 	client: string[]
@@ -292,6 +302,18 @@ export const placeLeTrucImports = (
 
 	const serverUsage = serverUsageNames(component)
 	const clientUsage = computeClientNeededNames(component)
+	const typeNamesIn = (texts: readonly string[]): ReadonlySet<string> =>
+		new Set(
+			texts.flatMap(
+				t =>
+					t
+						.replace(/\/\*[\s\S]*?\*\//g, '')
+						.replace(/\/\/.*$/gm, '')
+						.match(/[A-Za-z_$][\w$]*/g) ?? [],
+			),
+		)
+	const serverTypeNames = typeNamesIn(typeTexts.server)
+	const clientTypeNames = typeNamesIn(typeTexts.client)
 	// A FactoryContext member inside an authored '@zeix/le-truc' import is
 	// LTC037 (compiler.ts) — never re-emit one: it is not a package export
 	// and would break the generated module's imports.
@@ -307,7 +329,22 @@ export const placeLeTrucImports = (
 		if (names.length === 0) continue
 		const usedServer = names.filter(n => serverUsage.has(n))
 		const usedClient = names.filter(n => clientUsage.has(n))
-		if (usedServer.length === 0 && usedClient.length === 0) {
+		// Type-only survivors: unused as values, named in the module's own
+		// verbatim texts. Placed as `type X` so a type-only export stays one
+		// (LT-423 fixture: `MutableStore<T>` in a verbatim signal
+		// declaration — the usage walks count value reads only).
+		const typeServer = names.filter(
+			n => !serverUsage.has(n) && serverTypeNames.has(n),
+		)
+		const typeClient = names.filter(
+			n => !clientUsage.has(n) && clientTypeNames.has(n),
+		)
+		if (
+			usedServer.length === 0 &&
+			usedClient.length === 0 &&
+			typeServer.length === 0 &&
+			typeClient.length === 0
+		) {
 			// One report per run of adjacent names, so no range covers a
 			// context name between them (LT-371).
 			for (const run of runsWithout(imp, contextVocabulary))
@@ -320,14 +357,18 @@ export const placeLeTrucImports = (
 				)
 			continue
 		}
-		const serverSide = usedServer.filter(n => !RUNTIME_HARNESS_EXPORTS.has(n))
+		const serverSide = [
+			...usedServer.filter(n => !RUNTIME_HARNESS_EXPORTS.has(n)),
+			...typeServer.map(n => `type ${n}`),
+		]
 		if (serverSide.length > 0) {
-			for (const n of serverSide) serverNames.add(n)
+			for (const n of [...usedServer, ...typeServer]) serverNames.add(n)
 			server.push(`import { ${serverSide.join(', ')} } from '@zeix/le-truc'`)
 		}
-		if (usedClient.length > 0) {
-			for (const n of usedClient) clientNames.add(n)
-			client.push(`import { ${usedClient.join(', ')} } from '@zeix/le-truc'`)
+		const clientSide = [...usedClient, ...typeClient.map(n => `type ${n}`)]
+		if (clientSide.length > 0) {
+			for (const n of [...usedClient, ...typeClient]) clientNames.add(n)
+			client.push(`import { ${clientSide.join(', ')} } from '@zeix/le-truc'`)
 		}
 	}
 	return { server, client, serverNames, clientNames }

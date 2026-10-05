@@ -42,7 +42,13 @@
  * only in the modules that care about it.
  */
 
-import type { AttributeIR, ComponentIR, TemplateNode } from './ir'
+import type {
+	AttributeIR,
+	ComponentIR,
+	ForIR,
+	ReconcileForIR,
+	TemplateNode,
+} from './ir'
 import { attributeReactivity } from './reactivity'
 
 /* === Conditionals === */
@@ -93,6 +99,29 @@ export const armSetOf = (root: TemplateNode, target: TemplateNode): number => {
 		if (node === target) found = index
 	})
 	return found
+}
+
+/**
+ * A reactive list's index (ADR 0046 s2): its position among the component's
+ * reconcile loops in document order. The server stamps it on the extracted
+ * item template (`data-list`) and the client queries it from the list's own
+ * container (`:scope > template[data-list="N"]`), so both emitters derive it
+ * from the IR, never from emitter state — the same rule as `armSetOf`, and
+ * what lifts the one-list-per-component limit. Lowering registers loops in
+ * document order, and nesting is refused, so insertion order IS document
+ * order.
+ */
+export const listIndexOf = (
+	fors: ReadonlyMap<unknown, ForIR>,
+	target: ReconcileForIR,
+): number => {
+	let index = -1
+	for (const loop of fors.values()) {
+		if (loop.kind !== 'reconcile') continue
+		index++
+		if (loop === target) return index
+	}
+	return -1
 }
 
 /**

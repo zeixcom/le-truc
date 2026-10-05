@@ -1,0 +1,40 @@
+<test-listitem id="default">
+	<ul class="tasks">
+		<li data-key="task-1" class="done">
+			<label for="task-1">First task</label>
+			<input type="text" id="task-1" value="First task">
+			<form-checkbox name="task">
+				<label>
+					<input type="checkbox">
+					<span class="label">Done</span>
+				</label>
+			</form-checkbox>
+			<button type="button">Remove</button>
+		</li>
+		<li data-key="task-2">
+			<label for="task-2">Second task</label>
+			<input type="text" id="task-2" value="Second task">
+			<form-checkbox name="task">
+				<label>
+					<input type="checkbox">
+					<span class="label">Done</span>
+				</label>
+			</form-checkbox>
+			<button type="button">Remove</button>
+		</li>
+	</ul>
+	<template data-list="0">
+		<li>
+			<label></label>
+			<input type="text">
+			<form-checkbox name="task">
+				<label>
+					<input type="checkbox">
+					<span class="label">Done</span>
+				</label>
+			</form-checkbox>
+			<button type="button">Remove</button>
+		</li>
+	</template>
+	<button type="button" class="add">Add</button>
+</test-listitem>

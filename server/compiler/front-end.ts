@@ -238,6 +238,7 @@ export const runFrontEnd = (
 		lowered,
 		adapter.stylesheetOf,
 		wording.outputLabel,
+		fors,
 	)
 	if (!resolved) return done()
 

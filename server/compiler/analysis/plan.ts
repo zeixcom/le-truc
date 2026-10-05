@@ -176,18 +176,31 @@ export type ForClientPlan = {
 	effects: LoopEffectPlan[]
 }
 
-/** Events on one element inside a reactive-list item, mounted in bindItem. */
-export type ReconcileItemEvents = {
-	/** bindItem-scoped variable for the element (null target = item root). */
-	selector: string | null
-	name: string
-	message: string
-	events: Array<{
-		event: string
-		handlerText: string
+/**
+ * One reactive-list item as a Mount Scope (ADR 0046 s1): the per-item mount
+ * `bindItem` runs, addressed through the item's own `first` — the item root
+ * by its element parameter (declared as a typed local only when something
+ * binds it), descendants by scoped queries.
+ */
+export type ReconcileItemScope = {
+	/** The item root's local (the bound element, typed by its tag). */
+	root: { name: string; tag: string } | null
+	/** Descendants the item's effects address, queried within the item root. */
+	locals: Array<{ name: string; selector: string; message: string }>
+	/**
+	 * Key-derived attributes (ADR 0046 s1): `server` attributes over the key
+	 * binding, set once at clone — a key never changes, so there is nothing
+	 * to watch. `el` names the root local or a scope local.
+	 */
+	keyAttrs: Array<{
+		el: string
+		attr: string
+		exprText: string
 		sourceStart: number | undefined
 		sourceEnd: number | undefined
 	}>
+	/** The item's effects, in document order. */
+	effects: TopEffectPlan[]
 }
 
 /** One reactive `@for` over a declared List lowered to `reconcile()`. */
@@ -196,19 +209,36 @@ export type ReconcilePlan = {
 	tag: string
 	/** Container query variable (`container`). */
 	container: string
-	/** Extracted-template query variable (`template`). */
-	template: string
+	/**
+	 * The list's compile-time document-order index per component (ADR 0046
+	 * s2): the extracted template is stamped `data-list` and queried from the
+	 * container's parent as `:scope > template[data-list="N"]` — the stamp
+	 * lifts the one-list-per-component limit.
+	 */
+	listIndex: number
+	/**
+	 * Query variable of the element the extracted `<template>` is queried
+	 * from (ADR 0046 s2): the template sits OUTSIDE the container — after
+	 * its close tag — so `:scope > template[data-list="N"]` runs on the
+	 * container's parent, `'host'` when that is the component root.
+	 */
+	parent: string
 	/** The declared createList signal (`items`). */
 	signal: string
 	/** bindItem's item-signal parameter, named after the loop variable. */
 	itemParam: string
 	/** bindItem's key parameter, from `key k` (null → `_key`). */
 	keyParam: string | null
-	/** Scoped selector of the element carrying the &{item} hole. */
-	holeSelector: string
-	/** Source offset of the authored `{item}` hole (LT-011 span table). */
-	holeStart: number | undefined
-	itemEvents: ReconcileItemEvents[]
+	/**
+	 * Scoped selector of the FIRST bare `{item}` hole's parent element — the
+	 * item value's DOM site the arg-seeded List harvest reads at connect
+	 * (ADR 0003). Null when the body renders the item nowhere; an arg-seeded
+	 * List without a hole is refused in the harvest pass, a literal-seeded
+	 * one needs no site.
+	 */
+	holeSelector: string | null
+	/** The item's Mount Scope: everything bindItem mounts per entering item. */
+	itemScope: ReconcileItemScope
 	/**
 	 * Query variables of the `@empty` arm's roots (LT-212), in order. Each
 	 * root is always server-rendered inside the container with

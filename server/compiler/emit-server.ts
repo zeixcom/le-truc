@@ -55,6 +55,7 @@ import {
 	type ConditionalNode,
 	elseOf,
 	isIf,
+	listIndexOf,
 	thenOf,
 	walkTemplate,
 } from './walk'
@@ -493,19 +494,32 @@ const hostDerivedExpr = (
 }
 
 /**
- * The extracted `<template>`: statics render, the hole becomes a slot,
- * and server-static expressions (LT-215 — admitted by validateListBody)
- * are baked in at render time: the template is emitted per render call,
- * so each locale's folded strings ride along to every cloned item.
+ * The extracted `<template>` (ADR 0046 s2): stamped `data-list="N"` — the
+ * list's compile-time document-order index, which the client's `reconcile`
+ * call queries from the container's parent — statics render, the bare
+ * `{item}` child becomes a slot, and server-known content folds in at
+ * render time as today. Item-dependent sites bake EMPTY (ADR 0037 s1's
+ * losing-arm rule): a lazy child other than the bare item, a reactive or
+ * map attribute, and a key-derived attribute (a `server` attribute over the
+ * key binding alone — the mount sets it against the clone's key parameter;
+ * the live items render the same value from the loop's own key binding) all
+ * push nothing. A server-known conditional inside the item renders its
+ * winner — the winner is fixed per render call, so every clone carries the
+ * same arm — and a composed child renders its child call into the template.
  * Written into a fork of the markup builder: the caller queues it for the
- * innermost open element's close tag.
+ * container's close tag, outside the container.
  */
-const listTemplate = (ctx: EmitContext, loop: ReconcileForIR): CodeBuilder => {
+const listTemplate = (
+	ctx: EmitContext,
+	loop: ReconcileForIR,
+	listIndex: number,
+	scope: ReadonlySet<string>,
+): CodeBuilder => {
 	const out = ctx.out.fork()
 	const pushTo = (expr: string): void => {
 		out.line(`${ctx.buffer}.push(${expr})`)
 	}
-	pushTo("'<template>'")
+	pushTo(`'<template data-list="${listIndex}">'`)
 	const shape = (node: TemplateNode): void => {
 		if (node.kind === 'text') {
 			pushTo(jsString(node.value, 'double'))
@@ -520,16 +534,67 @@ const listTemplate = (ctx: EmitContext, loop: ReconcileForIR): CodeBuilder => {
 				pushTo("'<slot></slot>'")
 			else if (node.reactivity === 'server')
 				pushText(ctx, out, 'text', node.exprText, node)
+			// Any other lazy child is item-dependent: baked empty, the item
+			// mount writes it on enter.
 			return
 		}
-		// Statics and server-static expressions only — validateListBody
-		// rejected everything else, and events/refs never render
-		// server-side.
+		if (node.kind === 'conditional' && node.mode === 'server') {
+			// Server-known control flow folds to its winner, evaluated per
+			// render call; the template carries that arm for every clone.
+			if (isIf(node)) {
+				const win = node.arms[0]
+				const lose = node.arms[1]
+				out.open(`if (${node.testText}) {`)
+				if (win) for (const child of win.children) shape(child)
+				if (lose && lose.children.length > 0) {
+					out.between('} else {')
+					for (const child of lose.children) shape(child)
+				}
+				out.close()
+				return
+			}
+			out.open(`switch (${node.testText}) {`)
+			for (const arm of node.arms) {
+				out.open(
+					`${arm.testText === null ? 'default' : `case ${arm.testText}`}: {`,
+				)
+				for (const child of arm.children) shape(child)
+				out.line('break').close()
+			}
+			out.close()
+			return
+		}
+		if (node.kind === 'compose') {
+			// A composed child renders its child call into the template: the
+			// server splices the same markup into every clone (its args are
+			// server-known — `validateListBody` refuses item reads).
+			const saved = ctx.out
+			ctx.out = out
+			try {
+				emit(ctx, node, scope)
+			} finally {
+				ctx.out = saved
+			}
+			return
+		}
+		// Statics, server-known expressions, and the winner of a server
+		// conditional — item-dependent content was refused or bakes empty,
+		// and events/refs never render server-side.
 		if (node.kind !== 'element') return
 		const html = new HtmlWriter().static(`<${node.tag}`)
 		for (const attr of node.attrs) {
 			if (attr.kind === 'static') html.attr(attr.name, attr.value)
 			else if (attr.kind === 'server') {
+				// A key-derived attribute (ADR 0046 s1) bakes empty — the
+				// mount sets it once at clone; `validateListBody` proved the
+				// expression reads the key binding alone.
+				const reads = [...freeIdentifiers(attr.node)]
+				if (
+					loop.keyName !== null &&
+					reads.length > 0 &&
+					reads.every(n => n === loop.keyName)
+				)
+					continue
 				// esc() escapes quotes too, so the value is safe inside the
 				// double-quoted attribute the static parts open and close.
 				ctx.used.add('esc')
@@ -611,9 +676,13 @@ const emitListFor = (
 	}
 
 	// Extracted template → the innermost open element's pending queue
-	// (flushed after that element's close tag).
+	// (flushed after that element's close tag — the container's, since the
+	// loop output renders inside it).
 	const queue = ctx.templateQueue.at(-1)
-	if (queue) queue.push(listTemplate(ctx, loop))
+	if (queue)
+		queue.push(
+			listTemplate(ctx, loop, listIndexOf(ctx.component.fors, loop), scope),
+		)
 }
 
 /**
@@ -1553,6 +1622,14 @@ export const emitServerModule = (
 			continue
 		}
 		used.add(signal.constructor)
+		// A harness export named inside the initializer's OPTIONS —
+		// `createItem: createStore` on a reactive list (ADR 0046 s3) — is
+		// filtered out of the authored import line by
+		// `RUNTIME_HARNESS_EXPORTS` (imports.ts), so the runtime import line
+		// must provide it: register every harness name the declaration's own
+		// text mentions.
+		for (const id of signal.text.match(/[A-Za-z_$][\w$]*/g) ?? [])
+			if (RUNTIME_HARNESS_EXPORTS.has(id)) used.add(id)
 	}
 	// `expose()` declares no name, so the retention rule never keeps it; its
 	// runtime import and its ambients go with it.

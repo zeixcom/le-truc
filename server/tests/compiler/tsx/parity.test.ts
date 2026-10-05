@@ -467,9 +467,10 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 		)
 		expect(diagnostics).toEqual([])
 		if (!component) throw new Error('seeded fixture must compile')
-		// The reconcile path: an extracted <template> and a reconcile() call,
-		// keyed by the list's own keyConfig (no authored key clause needed).
-		expect(component.serverCode).toContain('<template>')
+		// The reconcile path: an extracted <template> (stamped `data-list`,
+		// ADR 0046 s2) and a reconcile() call, keyed by the list's own
+		// keyConfig (no authored key clause needed).
+		expect(component.serverCode).toContain('<template data-list="0">')
 		expect(component.clientCode).toContain('reconcile(')
 		// LT-215: a server-static attribute inside the reactive-list body is
 		// admitted — folded into the initial items AND baked into the served

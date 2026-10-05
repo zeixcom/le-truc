@@ -269,20 +269,18 @@ describe('client golden — convergence with the hand-written trio', () => {
 		// Static seed passes through verbatim — the server rendered from the
 		// same literal, so the DOM agrees by construction.
 		expect(code).toContain('const items = createList<string>([], {')
+		// The extracted template is stamped `data-list` and queried from the
+		// container's parent — the host, here (ADR 0046 s2).
 		expect(code).toContain(
-			"const template = first('template', 'module-list: template missing')",
+			'host.querySelector<HTMLTemplateElement>(\':scope > template[data-list="0"]\')!',
 		)
-		// The spec lowering (unified-lowerings.md §3), hardened in review: the
-		// value site is bound reactively (bindItem runs once per entering
-		// element — a one-shot read goes stale on in-place updates), and the
-		// textContent write is idempotent for adopted items while replacing
-		// the template's slot in clones.
+		// The item is a Mount Scope (ADR 0046 s1): the hole and the button
+		// are bindItem-scoped locals, the bare `{item}` watched as the item
+		// signal itself.
 		expect(code).toContain(
-			'reconcile(container, template, items, (_element, item, k, first) => {',
+			"const span = first('span', 'module-list: span missing')",
 		)
-		expect(code).toContain(
-			"watch(item, bindText(first('span', 'module-list: span missing')))",
-		)
+		expect(code).toContain('watch(item, bindText(span))')
 		expect(code).toContain(
 			"const button = first('button', 'module-list: button missing')",
 		)
