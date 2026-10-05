@@ -1050,7 +1050,12 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   `:host` (LTC070), and a selector that descends past a boundary tag
   (LTC071); and a `<style>` block that is not the root's single direct
   `<style>` child — a second direct one, or one nested in a descendant —
-  whose CSS the hoist would drop (LTC073, LT-417).
+  whose CSS the hoist would drop (LTC073, LT-417); and a `<style>` block
+  whose content is not a stylesheet spelling — on `.tsx` anything but the
+  `css` marker's tagged template, a bare template literal or nothing (another
+  tag, a `css` that is not the marker, a `${}` substitution, any other
+  expression or text); on `.tsrx` an expression in place of the CSS body —
+  which would read as an empty sheet (LTC078, LT-444).
 - *Corpus-level*: one component tag declared by more than one corpus source
   outside a folder-local variant set (LTC048) — fires before pass 2, names
   every declaring file whatever surface each is written in, and drops them

@@ -39,7 +39,7 @@ import {
 import { extractParams } from './params'
 import { extractSetup, seedExtractionContext } from './setup-extraction'
 import { type Surface, wordingOf } from './surface'
-import { resolveTemplateOutput } from './template-output'
+import { resolveTemplateOutput, type StylesheetRead } from './template-output'
 import type { LocalRoutingSignal } from './tier'
 import { validateLoweredComponent } from './validate-lowered'
 
@@ -74,11 +74,12 @@ export type SurfaceAdapter = {
 		filename: string,
 	) => { setup: AstNode[]; output: AstNode | undefined } | null
 	/**
-	 * The raw CSS of a `<style>` placeholder's source node. `ctx` carries the
-	 * marker bindings (`markerOf`), for a surface that spells the sheet
-	 * through the `css` marker.
+	 * The raw CSS of a `<style>` placeholder's source node, or why its
+	 * content is not a stylesheet spelling (LTC078, reported by the shared
+	 * hoist). `ctx` carries the marker bindings (`markerOf`), for a surface
+	 * that spells the sheet through the `css` marker.
 	 */
-	stylesheetOf: (ctx: ExtractContext, node: AstNode) => string
+	stylesheetOf: (ctx: ExtractContext, node: AstNode) => StylesheetRead
 	lowerElement: (
 		ctx: ExtractContext,
 		element: AstNode,

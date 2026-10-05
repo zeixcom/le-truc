@@ -107,7 +107,7 @@ describe('the server emitter renames its minted locals (LT-234)', () => {
 	return (
 			<c-el>
 				<p title={__key}>{__html}</p>
-				<style>{'c-el { color: red }'}</style>
+				<style></style>
 			</c-el>
 	)
 }`,

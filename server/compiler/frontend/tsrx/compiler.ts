@@ -182,8 +182,17 @@ const TSRX_ADAPTER: SurfaceAdapter = {
 			output: codeBlock.render as AstNode | undefined,
 		}
 	},
-	stylesheetOf: (_ctx, node) =>
-		String(getStyleElementStylesheet(node)?.source ?? ''),
+	// The CSS body parses as a `StyleSheet` child; an expression child
+	// (`<style>{sheet}</style>`) parses instead, with no sheet at all — a
+	// refusal (LTC078, LT-444), never an empty sheet.
+	stylesheetOf: (_ctx, node) => {
+		const sheet = getStyleElementStylesheet(node)
+		if (sheet) return String(sheet.source ?? '')
+		const content = asArray(node.children).find(
+			c => !(c.type === 'JSXText' && String(c.value ?? '').trim() === ''),
+		)
+		return content ? { reason: 'content', at: content } : ''
+	},
 	lowerElement,
 }
 

@@ -106,6 +106,7 @@ export type DiagnosticCode =
 	| 'LTC073' // a `<style>` block that is not the root's single direct `<style>` child — a second direct one, or one nested in a descendant; only the first direct child is hoisted as the stylesheet, so the CSS would be dropped (ADR 0032 s1, LT-417) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC074' // an element sibling of a reactive-list loop in its reconcile() container — directly or as an arm root, in any arm, of a server-mode conditional or a non-async `try` — carries no `data-unreconciled`, so the first reconcile removes it (LT-186, LT-431; an authored `data-key` is no exemption) — tier 1 Prevented, statically decidable; the runtime half is LT-185's DEV_MODE advisory, not a Contained error. Lands out of numeric order: `LTC072` is LT-429's, `LTC073` LT-417's — both reserved before this rule picked
 	| 'LTC075' // a composed element in a reactive-list item whose args or content read the item or key binding — the child renders once, into the extracted `<template>` every item clones (ADR 0030 s9, ADR 0046, LT-355) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC078' // a `<style>` block whose content is not a stylesheet spelling — on `.tsx` anything but the `css` marker's tagged template, a bare template literal or nothing (another tag, a shadowed or unimported `css`, a `${}` substitution, any other expression or text); on `.tsrx` an expression child in place of the CSS body. The sheet would read as empty and ship no CSS (ADR 0034 s1, LT-444) — tier 1 Prevented, statically decidable, no runtime half. Lands out of numeric order: `LTC076` is LT-429's, `LTC077` LT-443's — both reserved before this rule picked
 
 /**
  * A range in the file the author wrote (ADR 0044 s1–s2): `start` and `end`
@@ -180,6 +181,18 @@ export type LocalDiagnostic = {
 		edits: { range: SourceRange; text: string }[]
 	}
 }
+
+/**
+ * Why a `<style>` block's content is not a stylesheet (LTC078, LT-444), as
+ * a surface's `stylesheetOf` reports it. `content` is the one reason both
+ * surfaces share; the other three are `.tsx` template-literal shapes.
+ * `tag` carries the authored tag text for the message.
+ */
+export type StyleBlockRefusal =
+	| { reason: 'content'; at: Site }
+	| { reason: 'shadowed'; at: Site }
+	| { reason: 'tag'; at: Site; tag: string }
+	| { reason: 'substitution'; at: Site }
 
 /* === Internal Functions === */
 
@@ -514,6 +527,57 @@ export const diagnostic = {
 				: "A second `<style>` block in the root — the stylesheet is read only from the root's first `<style>` child, so this block's CSS would be dropped. Merge its rules into the root's single `<style>` child.",
 			rangeOf(source, at),
 		),
+
+	/**
+	 * A `<style>` block whose content is not a stylesheet spelling (LT-444,
+	 * the LT-442 finding; ADR 0034 s1). The `.tsx` stylesheet is the `css`
+	 * marker's tagged template, a bare template literal, or nothing; a
+	 * `.tsrx` one is the CSS body itself. Anything else — on `.tsx` another
+	 * tag, a `css` that is not the marker (unimported, another module's,
+	 * shadowed by a component-scope declaration), a `${}` substitution, or
+	 * any other expression or text; on `.tsrx` an expression child — read
+	 * as an empty sheet, so the component shipped no CSS and the build said
+	 * nothing. `tsc` catches some `.tsx` shapes (the missing import, the
+	 * `never`-typed substitution), but the compiler decides the drop and so
+	 * reports it. Channel: compiler (each surface's `stylesheetOf`, reported
+	 * by the shared hoist in `template-output.ts`). ADR 0028 tier 1
+	 * (Prevented): statically decidable, no runtime half.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 */
+	unreadableStyleBlock: (
+		source: string,
+		refusal: StyleBlockRefusal,
+		wording: SurfaceWording,
+	) => {
+		const MACROS = '`@zeix/le-truc-compiler/macros`'
+		switch (refusal.reason) {
+			case 'shadowed':
+				return error(
+					'LTC078',
+					`The \`css\` tag on this \`<style>\` block is not the \`css\` marker — the name is not imported from ${MACROS}, or a declaration in the component shadows that import. The compiler reads no stylesheet from it, so the component would ship no CSS. Import \`css\` from ${MACROS} and rename any other \`css\` in scope.`,
+					rangeOf(source, refusal.at),
+				)
+			case 'tag':
+				return error(
+					'LTC078',
+					`The template in this \`<style>\` block is tagged \`${refusal.tag}\`, not the \`css\` marker — the compiler reads only a \`css\`-tagged or untagged template literal, so the component would ship no CSS. Tag it with \`css\` from ${MACROS}, or remove the tag.`,
+					rangeOf(source, refusal.at),
+				)
+			case 'substitution':
+				return error(
+					'LTC078',
+					'The template in this `<style>` block contains a `${}` substitution — the compiler reads the stylesheet at build time and evaluates nothing in it, so the component would ship no CSS. Replace the substitution with literal CSS, or set the value as a custom property on an element and read it with `var()`.',
+					rangeOf(source, refusal.at),
+				)
+			case 'content':
+				return error(
+					'LTC078',
+					`The content of this \`<style>\` block is not a stylesheet — the compiler does not evaluate it, so the component would ship no CSS. Write the CSS as ${wording.stylesheetForm}.`,
+					rangeOf(source, refusal.at),
+				)
+		}
+	},
 
 	/**
 	 * A reactive switch keys its arms by their case values (ADR 0037 s2:

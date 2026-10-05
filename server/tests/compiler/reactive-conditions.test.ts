@@ -930,7 +930,7 @@ export function C(${params}) {
 	${setup}
 	return (
 			<c-el>${body}
-				<style>{'c-el { color: red }'}</style>
+				<style></style>
 			</c-el>
 	)
 }

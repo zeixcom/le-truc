@@ -98,6 +98,7 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 | LTC056 | a `<script>` in a template, whatever its type | move it to the page, or do the work in setup |
 | LTC060 | the template output is a fragment (`<>…</>`). The root is the host element; there is no fragment root | drop the fragment so that the host element is the root; put a stylesheet inside the root as a `<style>` child |
 | LTC073 | a `<style>` that isn't the root's first direct `<style>` child: a second one in the root, or one nested in a descendant. Its CSS would be dropped | merge its rules into the root's single `<style>` child |
+| LTC078 | a `<style>` block whose content is not a stylesheet: in `.tsx`, another tag, a `css` that is not the marker (not imported from `@zeix/le-truc-compiler/macros`, or shadowed by a local), a `${}` substitution, or any other expression; in `.tsrx`, an expression instead of CSS text. The component would ship no CSS | write ``<style>{css`…`}</style>`` with `css` imported from `@zeix/le-truc-compiler/macros`; move dynamic values into custom properties read with `var()` |
 | LTC061 | an authored `<template>` in a template. The compiler emits its own. | render directly, or use a list or condition |
 | LTC062 | a reactive switch has a non-literal `case` value, or two values with the same key | string, number, boolean or `null` literals, one arm each |
 | LTC063 | a reactive condition or async boundary inside a reactive list's container, which the list clears | move it out, or wrap the loop in its own element |

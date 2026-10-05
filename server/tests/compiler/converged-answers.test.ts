@@ -79,7 +79,7 @@ export function C({ items }: { items: string[] }) {
 	return (
 			<c-el>
 				<ul>{items.map(item => ${li})}</ul>
-				<style>{'c-el { color: red }'}</style>
+				<style></style>
 			</c-el>
 	)
 }`,
@@ -239,7 +239,7 @@ describe('the `@if` branch signature distinguishes binding sources (LT-378)', ()
 			{flag
 				? <p class="msg" title={label} onClick={() => {}}>a</p>
 				: <p class="msg" title={desc} onClick={() => {}}>b</p>}
-			<style>{':host { color: red; }'}</style>
+			<style></style>
 		</c-el>
 	)
 }`,

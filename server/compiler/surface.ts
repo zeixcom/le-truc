@@ -40,6 +40,10 @@ export type SurfaceWording = {
 	/** The conditional spelling that picks between two static tags (LTC053). */
 	conditionalTag: string
 
+	/* --- the stylesheet --- */
+	/** The stylesheet's authored spelling, as a fix-it noun phrase (LTC078). */
+	stylesheetForm: string
+
 	/* --- conditions --- */
 	ifCondition: string
 	switchDiscriminant: string
@@ -117,6 +121,8 @@ const TSRX: SurfaceWording = {
 	composedPosition: '`@for` output',
 	conditionalTag: '@if (level === 2) { <h2>…</h2> } @else { <h3>…</h3> }',
 
+	stylesheetForm: 'plain text in the `<style>` body',
+
 	ifCondition: 'An `@if` condition',
 	switchDiscriminant: 'A `@switch` discriminant',
 
@@ -171,6 +177,9 @@ const TSX: SurfaceWording = {
 		'A control-flow expression (a ternary, `.map()`, `switch` or `<truc:try>`)',
 	composedPosition: '`.map()` output',
 	conditionalTag: '{level === 2 ? <h2>…</h2> : <h3>…</h3>}',
+
+	stylesheetForm:
+		'a `css`-tagged template literal, ``<style>{css`…`}</style>``, with `css` imported from `@zeix/le-truc-compiler/macros`',
 
 	ifCondition: 'A conditional test',
 	switchDiscriminant: 'A `switch` discriminant',

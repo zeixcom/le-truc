@@ -177,7 +177,7 @@ import { bindText, createMemo } from '@zeix/le-truc'`)
 							return <p>other</p>
 					}
 				})()}
-				<style>{'c-el { display: block }'}</style>
+				<style></style>
 			</c-el>
 	)
 }

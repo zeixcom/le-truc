@@ -153,7 +153,7 @@ export function C(
 			<div class="box">{host.label.length + Math.random() > 0.5 ? <b class="heads">heads</b> : <i class="tails">tails</i>}</div>
 			<section class="pick">{(() => { switch ((host.label.length + Date.now()) % 3) { case 0: return <s class="zero">0</s>; case 1: return <u class="one">1</u>; default: return <q class="many">n</q> } })()}</section>
 			{host.label.length + Math.random() >= 0 && <em class="up">up</em>}
-			<style>{'x-el { color: red }'}</style>
+			<style></style>
 		</x-el>
 	)
 }

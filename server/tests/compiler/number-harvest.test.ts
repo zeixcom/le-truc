@@ -35,6 +35,7 @@ export function C(${PARAMS})
 	}`
 
 const tsxSource = (tag: string, body: string) => `${NAMES}
+import { css } from '@zeix/le-truc-compiler/macros'
 export function C(${PARAMS}) {
 	${SETUP}
 	return (
