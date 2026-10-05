@@ -10,11 +10,17 @@
  * authored files (the ADR 0032 s3 dividend — no span remapping needed).
  *
  * The EXAMPLES config (`examples/tsconfig.json`, LT-285, LT-237) typechecks
- * every `.tsx` variant-set member in `examples/` — with basic-counter's
- * hand-written `.ts` twin in the same program. Under ADR 0039 s4 every
- * member declares its own `HTMLElementTagNameMap` entry, so this program is
- * the cross-spelling Props-drift gate: a `.tsx` Props type diverging from
- * the twin's fails with TS 2717 here.
+ * every `.tsx` source in `examples/`. A `.tsx` without a twin joins through
+ * the `**\/*.tsx` include glob, with no manual step (LT-435). A twin pair is
+ * listed in `files` as BOTH members, side by side: tsc silently drops a
+ * wildcard match whose base name a higher-priority extension already
+ * claims as a `files` literal (`.ts` outranks `.tsx`), so a twin listed
+ * alone would push its `.tsx` sibling out of the program and still compile
+ * green. The membership test below guards that drop: every
+ * `examples/**\/*.tsx` on disk must appear in the program's file list.
+ * Under ADR 0039 s4 every member declares its own `HTMLElementTagNameMap`
+ * entry, so this program is the cross-spelling Props-drift gate: a `.tsx`
+ * Props type diverging from the twin's fails with TS 2717 here.
  *
  * This is the standing CI form of the LT-183 spike's manual
  * `tsconfig.neg.json` probes; `check:corpus` is the corpus-side analog.
@@ -22,8 +28,9 @@
 import { describe, expect, setDefaultTimeout, test } from 'bun:test'
 import { spawnSync } from 'node:child_process'
 import * as path from 'node:path'
+import { Glob } from 'bun'
 
-// Three cold `tsc -p` runs per file — well over the 5s default on a cold
+// Four cold `tsc -p` runs per file — well over the 5s default on a cold
 // cache, comfortably under a minute.
 setDefaultTimeout(60_000)
 
@@ -119,5 +126,29 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 		const { status, output } = runTsc(path.join(ROOT, 'examples/tsconfig.json'))
 		expect(output).toBe('')
 		expect(status).toBe(0)
+	})
+
+	test('every examples/**/*.tsx on disk is in the examples program (LT-435)', () => {
+		const proc = spawnSync(
+			'bunx',
+			['tsc', '-p', 'examples/tsconfig.json', '--listFilesOnly'],
+			{ cwd: ROOT, encoding: 'utf8' },
+		)
+		expect(proc.status).toBe(0)
+		const inProgram = new Set(
+			(proc.stdout ?? '')
+				.split('\n')
+				.map(line => line.trim())
+				.filter(line => line.endsWith('.tsx'))
+				.map(line => path.relative(ROOT, line)),
+		)
+		const onDisk = [
+			...new Glob('examples/**/*.tsx').scanSync({ cwd: ROOT }),
+		].filter(file => !file.includes('node_modules'))
+		expect(onDisk.length).toBeGreaterThan(0)
+		const missing = onDisk.filter(file => !inProgram.has(file)).sort()
+		// A twin listed in `files` without its `.tsx` sibling lands here:
+		// tsc drops the glob match without a message.
+		expect(missing).toEqual([])
 	})
 })

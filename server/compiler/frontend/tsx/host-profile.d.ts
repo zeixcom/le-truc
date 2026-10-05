@@ -386,6 +386,10 @@ declare namespace JSX {
 		items?: unknown
 	}
 	type AsyncElAttrs = CommonLightDom
+	/** A test-fixture tag (LT-304, `examples/test/scoping/css-probe.tsx`),
+	 * not a migrated example: the probe takes no args, so only the common
+	 * set applies. */
+	type CssProbeAttrs = CommonLightDom
 
 	/**
 	 * `<truc:try>` (ADR 0041), the `.tsx` spelling of
@@ -464,6 +468,7 @@ declare namespace JSX {
 		'module-splitview': ModuleSplitviewAttrs
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs
+		'css-probe': CssProbeAttrs
 		'truc:try': TrucTryAttrs
 	}
 }
