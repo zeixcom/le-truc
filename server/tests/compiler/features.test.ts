@@ -208,7 +208,7 @@ describe('@try — error boundaries', () => {
 	})
 })
 
-describe('@pending — async boundaries (ADR 0023 sub-design 13, LT-012)', () => {
+describe('@pending — async boundaries (ADR 0024 sub-design 13, LT-012)', () => {
 	const asyncComponent = (deriveExpr: string): string =>
 		`import { deriveCell } from '@zeix/le-truc'
 export function C({}: {})

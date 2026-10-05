@@ -6,7 +6,7 @@
  * `MissingElementError` for the component's own root at activation, with no
  * compile-time diagnostic. Two analysis sites could produce that:
  *
- * 1. `paramDomRead`'s attribute-site walk (ADR 0023 sub-design 12) matched the
+ * 1. `paramDomRead`'s attribute-site walk (ADR 0024 sub-design 12) matched the
  *    root's own server attributes first — the usual case, since args render as
  *    root attributes — planning a query named after the component's own tag
  *    (basic-pluralize / basic-gauge both hit this; a regrouping-era edit had

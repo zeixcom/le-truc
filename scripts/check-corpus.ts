@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * `check:corpus` (LT-011, ADR 0023 sub-design 6 amendment, stage 1; server
+ * `check:corpus` (LT-011, ADR 0024 sub-design 6 amendment, stage 1; server
  * coverage added by LT-019; both authored surfaces since ADR 0032 s6).
  *
  * Compiles the whole corpus — `.tsx` and `.tsrx` sources alike, each through
@@ -14,7 +14,7 @@
  * Code positions (setup, thunks, handlers) lower into the client module and
  * are span-mapped there. The server module is checked too: a composed call
  * is a real typed function call between two generated server modules
- * (`render<Name>({ … })`, ADR 0023 sub-design 10), so a missing or mistyped
+ * (`render<Name>({ … })`, ADR 0024 sub-design 10), so a missing or mistyped
  * server arg or `children` argument (LT-018) only shows up there; and every
  * text position renders through a typed sink on both halves (`text`/`textOf`
  * on the server, `bindText` on the client, ADR 0046 s6, LT-428), so an object

@@ -1,5 +1,5 @@
 /**
- * `truc:pass={{ }}` dispatch (ADR 0023 sub-design 10, amending sub-design 4):
+ * `truc:pass={{ }}` dispatch (ADR 0024 sub-design 10, amending sub-design 4):
  * the sole client-prop interop channel for custom-element targets, for both
  * raw dashed tags and composed (PascalCase) elements — replacing the old
  * shape-inferred "function-valued attribute on a custom tag" dispatch.

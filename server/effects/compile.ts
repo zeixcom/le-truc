@@ -1,5 +1,5 @@
 /**
- * Component compiler build effect (ADR 0023 milestone 1, LT-001).
+ * Component compiler build effect (ADR 0024 milestone 1, LT-001).
  *
  * Watches every authored `.tsrx` AND `.tsx` source the CONFIGURED source
  * globs select (dual front end, ADR 0032 sub-design 6; LT-202) and re-runs

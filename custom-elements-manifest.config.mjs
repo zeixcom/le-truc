@@ -12,7 +12,7 @@ let typeChecker
 // Bun because the loader is TypeScript), never hard-coded here: a second
 // copy of the path is what left this glob on the pre-LT-255 tsrx/ directory
 // after the rename. The plugin extracts the same declarations from
-// the generated defineComponent() shape (ADR 0023, LT-006). Since the site
+// the generated defineComponent() shape (ADR 0024, LT-006). Since the site
 // cutover (LT-092) the hand-written .ts twins are deleted per component, so
 // nearly all exclusions are gone — main.ts imports the generated clients
 // directly and every compiled component declares its tag exactly once.

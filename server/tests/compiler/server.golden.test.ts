@@ -51,7 +51,7 @@ const moduleList = compileComponent(
 	'examples/module/list/module-list.tsrx',
 	new Set<string>([...registry, 'form-textbox', 'module-list', 'basic-button']),
 	undefined,
-	// module-list composes FormTextbox (ADR 0023 sub-design 10, LT-020) —
+	// module-list composes FormTextbox (ADR 0024 sub-design 10, LT-020) —
 	// keyed by form-textbox's own repo-relative source path, mirroring
 	// server/effects/compile.ts's corpus-wide compose registry.
 	new Map(
@@ -455,7 +455,7 @@ describe('server golden — module-list (reactive @for → template extraction)'
 		const html = await render('ModuleList', 'module-list', {})
 		expect(html).toBe(
 			'<module-list><form action="#">' +
-				// FormTextbox is composed (ADR 0023 sub-design 10, LT-020): this
+				// FormTextbox is composed (ADR 0024 sub-design 10, LT-020): this
 				// is form-textbox.tsrx's OWN render output for
 				// { name: 'new-item', label: 'New item', clearable: true } —
 				// value="" (unauthored default, now real, not hand-copied), the
@@ -583,7 +583,7 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-304/L
 		)
 		expect(css).not.toContain(':where(:not(')
 	})
-	// module-list composes form-textbox (ADR 0023 sub-design 10): the
+	// module-list composes form-textbox (ADR 0024 sub-design 10): the
 	// boundary stops at the composed child — the guard names form-textbox,
 	// and the composed child's internals stay unreachable.
 	test('module-list: authored sheet carried verbatim, boundary at the composed child', () => {

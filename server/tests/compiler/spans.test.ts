@@ -1,5 +1,5 @@
 /**
- * Unit tests for the LT-011 span table (ADR 0023 sub-design 6 amendment,
+ * Unit tests for the LT-011 span table (ADR 0024 sub-design 6 amendment,
  * stage 1): `appendWithSpans` records generated-file ↔ source-file offsets
  * for verbatim slices (setup statements, thunks, handlers), and
  * `check:corpus` uses `fileLineColToOffset`/`fileOffsetToLineCol`/
