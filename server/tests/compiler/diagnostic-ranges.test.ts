@@ -37,6 +37,8 @@ type Shape = {
 	head?: string
 	params?: string
 	css?: string
+	/** Declare the component function `async` (LTC008). */
+	async?: boolean
 }
 
 const DEFAULT_CSS = ':host {\n  color: red;\n}'
@@ -47,7 +49,8 @@ const tsrxSource = ({
 	head = '',
 	params = '{}: {}',
 	css = DEFAULT_CSS,
-}: Shape): string => `${head}export function C(${params})
+	async = false,
+}: Shape): string => `${head}export ${async ? 'async ' : ''}function C(${params})
 	@{
 ${setup}
 			<c-el>${template}
@@ -62,7 +65,8 @@ const tsxSource = ({
 	head = '',
 	params = '{}: {}',
 	css = DEFAULT_CSS,
-}: Shape): string => `${head}export function C(${params}) {
+	async = false,
+}: Shape): string => `${head}export ${async ? 'async ' : ''}function C(${params}) {
 ${setup}
 	return (
 			<c-el>${template}
@@ -232,6 +236,12 @@ describe('each producer family covers the offending construct, on both surfaces'
 			expect(textAt(source, hit)).toBe(covered)
 			expect(hit?.severity).toBe('error')
 		}
+	})
+
+	test('source shape: an async component function (LTC008, LT-416) covers the keyword', () => {
+		// The whole statement would underline the entire component for one
+		// keyword — and equal the file when the file holds only the component.
+		expectCovers({ async: true, template: '<span>x</span>' }, 'LTC008', 'async')
 	})
 
 	test('selectors and addressing: no match (LTC026)', () => {
