@@ -23,14 +23,14 @@ const render = async (file: string, code: string, args: unknown) => {
 	return mod.renderC(args)
 }
 
-const PROPS = '{ items, esc }: { items: string[]; esc: string }'
+const PROPS = '{ items, text }: { items: string[]; text: string }'
 
 const tsrx = compileComponent(
 	`export function C(${PROPS})
 @{
 	expose({})
 		<c-el>
-			<p title={esc}>{esc}</p>
+			<p title={text}>{text}</p>
 			<ul>
 				@for (const item of items) {
 					<li>{item}</li>
@@ -49,7 +49,7 @@ const tsx = compileComponentTsx(
 	`export function C(${PROPS}) {
 	return (
 			<c-el>
-				<p title={esc}>{esc}</p>
+				<p title={text}>{text}</p>
 				<ul>{items.map(item => <li>{item}</li>)}</ul>
 				<style>{'c-el { color: red }'}</style>
 			</c-el>
@@ -66,15 +66,16 @@ describe('harness names shadowed by args are aliased (LT-302)', () => {
 	test.each([
 		['tsrx', tsrx],
 		['tsx', tsx],
-	])('args `items`/`esc` render on .%s', async (surface, result) => {
+	])('args `items`/`text` render on .%s', async (surface, result) => {
 		expect(result.diagnostics.filter(d => d.severity === 'error')).toEqual([])
 		const code = result.component?.serverCode ?? ''
-		expect(code).toContain('esc as __esc')
+		// `text` is the typed text sink every text position writes (LT-428).
+		expect(code).toContain('text as __text')
 		expect(code).toContain('items as __items')
 		expect(
 			await render(`c-${surface}.server.ts`, code, {
 				items: ['a', 'b'],
-				esc: '<b>',
+				text: '<b>',
 			}),
 		).toBe(EXPECTED)
 	})

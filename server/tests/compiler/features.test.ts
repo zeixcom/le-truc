@@ -341,10 +341,10 @@ import { deriveCell } from '@zeix/le-truc'`,
 		)
 		expect(code).toContain("return 'ok'")
 		expect(code).toContain(
-			'watch(data, { ok: value => { armElement.textContent = String(value) }, err: () => {} })',
+			'watch(data, { ok: bindText(armElement), err: () => {} })',
 		)
 		expect(code).toContain(
-			'watch(data, { ok: () => {}, err: error => { armElement.textContent = String(error.message) } })',
+			'watch(data, { ok: () => {}, err: error => bindText(armElement)(error.message) })',
 		)
 		// The toggled-arm machinery is gone (LT-276).
 		expect(code).not.toContain('.hidden')

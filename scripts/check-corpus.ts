@@ -2,29 +2,28 @@
 
 /**
  * `check:corpus` (LT-011, ADR 0023 sub-design 6 amendment, stage 1; server
- * coverage added by LT-019).
+ * coverage added by LT-019; both authored surfaces since ADR 0032 s6).
  *
- * Compiles the whole `.tsrx` corpus, runs `tsc --noEmit` against the
- * generated client modules (the same emit-then-check already exercised in
- * `server/tests/compiler/client.golden.test.ts`), and remaps every diagnostic's
- * `generated-file:line:col` back onto its `.tsrx` source location using the
- * span table each component's client emitter records. TS diagnostics only
- * ever arise in CODE positions (setup, thunks, handlers) — every code
- * position lowers into the client module, so the span table only needs to
- * cover those, never template markup (which lowers into the server half and
- * is never type-checked) — UNTIL component composition (ADR 0023 sub-design
- * 10): a composed call is a real typed function call between two generated
- * SERVER modules (`render<Name>({ … })`), so a missing/mistyped server arg
- * or `children` argument (LT-018) is a tsc diagnostic that only ever shows up
- * there. Generated server modules are therefore type-checked too, through
- * their own span table (recorded by `emit-server.ts` since LT-011, unused for
- * this purpose until now).
+ * Compiles the whole corpus — `.tsx` and `.tsrx` sources alike, each through
+ * its own front end — runs `tsc --noEmit` against the generated client AND
+ * server modules (the emit-then-check already exercised in
+ * `server/tests/compiler/client.golden.test.ts`), and remaps every
+ * diagnostic's `generated-file:line:col` back onto its authored source
+ * location through the span table each emitter records.
  *
- * This is the CLI-first half of LT-011: zero editor tooling, just `bun run
- * check:corpus` reporting type errors at their authored `.tsrx` location.
- * Stage 2 (optional, later, scheduled after the `examples/` wholesale
- * migration — LT-014) reuses this same span table in a `@volar/language-core`
- * plugin for in-editor diagnostics.
+ * Code positions (setup, thunks, handlers) lower into the client module and
+ * are span-mapped there. The server module is checked too: a composed call
+ * is a real typed function call between two generated server modules
+ * (`render<Name>({ … })`, ADR 0023 sub-design 10), so a missing or mistyped
+ * server arg or `children` argument (LT-018) only shows up there; and every
+ * text position renders through a typed sink on both halves (`text`/`textOf`
+ * on the server, `bindText` on the client, ADR 0046 s6, LT-428), so an object
+ * or a boolean in a text position reports at its authored child.
+ *
+ * This is the CLI half: zero editor tooling, just `bun run check:corpus`
+ * reporting type errors at their authored location. A `@volar/language-core`
+ * plugin reusing the same span table for in-editor diagnostics is a later,
+ * optional stage.
  */
 
 import { readFileSync } from 'node:fs'
@@ -90,7 +89,7 @@ try {
 	console.warn = realWarn
 }
 if (spanInfos.length === 0) {
-	console.error('❌ No .tsrx source compiled — nothing to check')
+	console.error('❌ No component source compiled — nothing to check')
 	process.exit(1)
 }
 

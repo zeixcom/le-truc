@@ -46,7 +46,7 @@ describe('text sites (LT-122)', () => {
 		)
 		expect(diagnostics).toEqual([])
 		// Server: the ARG is spliced, exactly as before this rule.
-		expect(component?.serverCode).toContain('esc(String(label))')
+		expect(component?.serverCode).toContain('text(label)')
 		// Client: the PROP is watched — the spelling `{host.label}`
 		// would have produced, against the same site.
 		expect(component?.clientCode).toContain(
@@ -60,7 +60,7 @@ describe('text sites (LT-122)', () => {
 			`<span>{label}</span>`,
 		)
 		expect(diagnostics).toEqual([])
-		expect(component?.serverCode).toContain('esc(String(label))')
+		expect(component?.serverCode).toContain('text(label)')
 		expect(component?.clientCode).not.toContain('watch(')
 	})
 
@@ -87,7 +87,7 @@ describe('text sites (LT-122)', () => {
 		expect(client).toMatch(/const \w+ = first\('b'\)\n/)
 		expect(client).toContain('watch(() => host.badge, bindText(')
 		// …and the server still renders the branch from the arg.
-		expect(component?.serverCode).toContain('esc(String(badge))')
+		expect(component?.serverCode).toContain('text(badge)')
 	})
 })
 

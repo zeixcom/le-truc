@@ -701,7 +701,10 @@ export const lowerChildrenSkeleton = (
 		if (hooks.dispatchChild?.(ctx, child, out, signals, fors)) continue
 		if (child.type === 'JSXExpressionContainer') {
 			const expr = child.expression
-			if (!isNode(expr)) continue
+			// A `{/* comment */}` child renders nothing: the `.tsx` front end
+			// already drops its `JSXEmptyExpression`, and as an `expr` child
+			// it would reach a typed text sink with no argument (LT-428).
+			if (!isNode(expr) || expr.type === 'JSXEmptyExpression') continue
 			if (hooks.dispatchControlFlow?.(ctx, expr, out, child, signals, fors))
 				continue
 			out.push(lowerExpressionChild(ctx, expr, child, signals))
