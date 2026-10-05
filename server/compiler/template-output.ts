@@ -21,6 +21,7 @@ import {
 	collectMatchingElements,
 	inOptionalBranch,
 	inReactiveArm,
+	inReconcileItem,
 	namesCustomElementTag,
 	reportStaticIds,
 	shareExclusiveIf,
@@ -29,6 +30,7 @@ import type {
 	ComponentSheet,
 	FirstRefDecl,
 	FirstRefStage,
+	ForIR,
 	TemplateNode,
 } from './ir'
 import type { SetupExtraction } from './setup-extraction'
@@ -87,6 +89,8 @@ export const resolveTemplateOutput = (
 	lowered: TemplateNode[],
 	stylesheetOf: (node: AstNode) => string,
 	outputShapeLabel: string,
+	/** The lowered loops, for the host-level `first()`-into-an-item check. */
+	fors: ReadonlyMap<AstNode, ForIR> = new Map(),
 ): ResolvedTemplate | null => {
 	const source = ctx.source
 	const root = lowered.find(
@@ -204,6 +208,25 @@ export const resolveTemplateOutput = (
 					node,
 					`A \`first()\` reference to <${inArm.tag}> inside a reactive conditional's arm`,
 					"The arm's elements are cloned anew each time the arm renders, so a reference taken at connect goes stale — bind the element from inside the arm instead (an event handler or a reactive attribute on it).",
+				),
+			)
+			resolve('rejected')
+			continue
+		}
+		// The same staleness inside a reactive-list item (ADR 0046 s1): an
+		// item's elements exist once per item and are recreated on every
+		// reconcile — the host-level reference would bind the first item's.
+		const itemOutputs = [...fors.values()]
+			.filter(l => l.kind === 'reconcile')
+			.map(l => l.output)
+		const inItem = elements.find(el => inReconcileItem(itemOutputs, el))
+		if (inItem) {
+			ctx.diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					node,
+					`A \`first()\` reference to <${inItem.tag}> inside a reactive-list loop body`,
+					"The item's elements exist once per item and are recreated on every reconcile, so a reference taken at connect goes stale — bind the element from inside the item instead (an event handler or a reactive attribute on it).",
 				),
 			)
 			resolve('rejected')

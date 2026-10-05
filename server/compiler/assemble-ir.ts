@@ -289,6 +289,17 @@ export const assembleComponentIR = (
 			serverKnown,
 		},
 		leTrucImports,
+		{
+			// The verbatim texts both modules re-emit: the type declarations
+			// and the setup statements, whose type positions a usage walk
+			// never sees (the params slice is value vocabulary).
+			server: [...decls.typeDecls, ...extraction.setup.map(stmt => stmt.text)],
+			client: [
+				...decls.typeDecls,
+				...(decls.globalDecl ? [decls.globalDecl] : []),
+				...extraction.setup.map(stmt => stmt.text),
+			],
+		},
 	)
 	const imports = {
 		server: [...plainPlacement.server, ...leTrucPlacement.server],

@@ -483,6 +483,39 @@ describe('reconcile — enter, leave, move', () => {
 		dispose()
 	})
 
+	// LT-423: bindItem mounts AFTER the element sits at its position — the
+	// order `reconcileArms` already used. A cloned item's composed children
+	// are inert template content until the insertion upgrades them, so a
+	// `pass()` in bindItem validated a not-yet-upgraded target and threw
+	// before the item ever entered the DOM.
+	test('bindItem mounts the element in the container, not detached', async () => {
+		const container = new FakeElement('ul')
+		const list = createList<string>([], { keyConfig: 'item' })
+		const mountedIn: string[] = []
+
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					element => {
+						const fake = element as unknown as FakeElement
+						mountedIn.push(fake.parent === container ? 'placed' : 'detached')
+					},
+				),
+			),
+		)
+
+		list.add('a')
+		list.add('b')
+		await tick()
+
+		expect(childKeys(container)).toEqual(['item0', 'item1'])
+		expect(mountedIn).toEqual(['placed', 'placed'])
+		dispose()
+	})
+
 	test('leaving key disposes its scope and removes its element', async () => {
 		const container = new FakeElement('ul')
 		const list = createList<string>(['a', 'b'], { keyConfig: 'item' })

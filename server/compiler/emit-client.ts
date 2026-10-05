@@ -294,57 +294,6 @@ const emitEachBlock = (
 }
 
 /**
- * One reactive-list @for → reconcile() (ADR 0017): bindItem fills the item's
- * value site reactively — `watch(item, bindText(hole))` updates on every
- * value change (bindItem runs once per entering element, so a one-shot read
- * would go stale on in-place updates) and is idempotent against
- * server-adopted content (setting textContent replaces the template's
- * `<slot>` in clones) — plus per-item event listeners through bindItem's
- * scoped `first` (correctness first — delegation is a later compiler
- * optimization).
- */
-const emitReconcileBlock = (
-	plan: ReconcilePlan,
-	imports: ClientImports,
-	out: CodeBuilder,
-): void => {
-	imports.add('reconcile')
-	imports.add('watch')
-	imports.add('bindText')
-	const keyParam = plan.keyParam ?? '_key'
-	out.open(
-		`${imports.local('reconcile')}(${plan.container}, ${plan.template}, ${plan.signal}, (_element, ${plan.itemParam}, ${keyParam}, first) => {`,
-	)
-	const watch = imports.local('watch')
-	out.line(
-		`${watch}(${plan.itemParam}, ${imports.local('bindText')}(first(${jsString(plan.holeSelector)}, ${jsString(`${plan.tag}: ${plan.holeSelector} missing`)})))`,
-		textSinkSlices(`${watch}(`, plan.itemParam, plan.itemParam, plan.holeStart),
-	)
-	for (const target of plan.itemEvents) {
-		if (target.selector !== null)
-			out.line(
-				`const ${target.name} = first(${jsString(target.selector)}, ${jsString(target.message)})`,
-			)
-		for (const event of target.events) {
-			imports.add('on')
-			out.line(
-				`${imports.local('on')}(${target.name}, ${jsString(event.event)}, ${event.handlerText})`,
-				sliceOf(event.handlerText, event.sourceStart),
-			)
-		}
-	}
-	out.close('})')
-	// The @empty arm on the toggle path (LT-212, ADR 0037 s5): the List's
-	// `length` read subscribes, so each root shows exactly while it is empty.
-	for (const query of plan.emptyQueries) {
-		imports.add('bindVisible')
-		out.line(
-			`${imports.local('watch')}(() => ${plan.signal}.length === 0, ${imports.local('bindVisible')}(${query}))`,
-		)
-	}
-}
-
-/**
  * Every name the author binds in the factory scope, for the alias check in
  * {@link ClientImports}. `host`/`internals` are left out: the plan
  * addresses the root through the literal `host`, so an authored `host`
@@ -745,6 +694,60 @@ export const emitClientModule = (
 		out.close('})')
 	}
 
+	// One reactive-list @for → reconcile()'s list form (ADR 0017), the item
+	// a Mount Scope (ADR 0046 s1): bindItem mounts the item's own effects
+	// against its element parameter and `first` — descendants queried once
+	// per entering item, key-derived attributes set once at clone (a key
+	// never changes), and the bare `{item}` shorthand watched as the signal
+	// itself. The extracted `<template>` is stamped `data-list="N"` (ADR
+	// 0046 s2) and queried from the container's parent — the direct-child
+	// step and the stamp lift the one-list-per-component limit.
+	const emitReconcile = (plan: ReconcilePlan): void => {
+		imports.add('reconcile')
+		const scope = plan.itemScope
+		const keyParam = plan.keyParam ?? '_key'
+		// The stamp addresses the template the compiler extracted; a missing
+		// one is markup drift, and `reconcile()`'s own template checks are
+		// the Contained backstop (ADR 0028).
+		const templateQuery = `${plan.parent}.querySelector<HTMLTemplateElement>(${jsString(`:scope > template[data-list="${plan.listIndex}"]`)})!`
+		if (scope.effects.length === 0 && scope.keyAttrs.length === 0) {
+			out.line(
+				`${imports.local('reconcile')}(${plan.container}, ${templateQuery}, ${plan.signal}, () => {})`,
+			)
+		} else {
+			const usesFirst = scope.locals.length > 0
+			out.open(
+				`${imports.local('reconcile')}(${plan.container}, ${templateQuery}, ${plan.signal}, (_element, ${plan.itemParam}, ${keyParam}${usesFirst ? ', first' : ''}) => {`,
+			)
+			if (scope.root) {
+				needsElementType = true
+				out.line(
+					`const ${scope.root.name} = _element as ElementFromSelector<${jsString(scope.root.tag)}>`,
+				)
+			}
+			for (const local of scope.locals)
+				out.line(
+					`const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
+				)
+			for (const keyAttr of scope.keyAttrs)
+				out.line(
+					`${keyAttr.el}.setAttribute(${jsString(keyAttr.attr)}, ${keyAttr.exprText})`,
+					sliceOf(keyAttr.exprText, keyAttr.sourceStart),
+				)
+			for (const inner of scope.effects) emitTopEffect(inner)
+			out.close('})')
+		}
+		// The @empty arm on the toggle path (LT-212, ADR 0037 s5): the List's
+		// `length` read subscribes, so each root shows exactly while it is
+		// empty.
+		for (const query of plan.emptyQueries) {
+			imports.add('bindVisible')
+			out.line(
+				`${imports.local('watch')}(() => ${plan.signal}.length === 0, ${imports.local('bindVisible')}(${query}))`,
+			)
+		}
+	}
+
 	// An async boundary (ADR 0037 s4): the arm key follows the task's
 	// state with `match()`'s precedence — no value yet is `nil`, a
 	// rejection `err`, anything else (a re-fetch keeping its value
@@ -806,7 +809,7 @@ export const emitClientModule = (
 			return
 		}
 		if (effect.kind === 'reconcile') {
-			emitReconcileBlock(effect.for, imports, out)
+			emitReconcile(effect.for)
 			return
 		}
 		if (effect.kind === 'watch-text') {

@@ -28,6 +28,7 @@ import type {
 	SignalIR,
 	TemplateNode,
 } from '../ir'
+import { wordingOf } from '../surface'
 import { rangeFields, resolutionOf } from '../tier'
 import {
 	CONTEXT_NAMES,
@@ -962,14 +963,30 @@ const planHarvests = (
 			if ([...free].every(name => JS_GLOBALS.has(name))) {
 				harvests.push({ kind: 'list', signal: signal.name, seed: 'verbatim' })
 			} else if ([...free].every(name => component.paramNames.includes(name))) {
-				harvests.push({
-					kind: 'list',
-					signal: signal.name,
-					seed: {
-						container: listPlan.container,
-						valueSelector: listPlan.holeSelector,
-					},
-				})
+				// The arg-seeded List harvests the container's adopted children
+				// through the item value's DOM site (the bare `{item}` hole's
+				// parent, ADR 0003). A body that renders the item nowhere has
+				// no site — no phase can deliver a value the markup does not
+				// carry.
+				if (listPlan.holeSelector === null) {
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							signal.init,
+							`The list seed of \`${signal.name}\`, which is derived from server args, with the ${wordingOf(component).loop} body rendering the item nowhere to read it from`,
+							"The client seeds the list from the adopted items' rendered values — render the item in the body (the bare `{item}` child), or seed the list with a literal.",
+						),
+					)
+				} else {
+					harvests.push({
+						kind: 'list',
+						signal: signal.name,
+						seed: {
+							container: listPlan.container,
+							valueSelector: listPlan.holeSelector,
+						},
+					})
+				}
 			} else {
 				diagnostics.push(
 					diagnostic.unsupported(

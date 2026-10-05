@@ -129,6 +129,8 @@ describe('tier assignment over the migrated corpus', () => {
 				'module-scrollarea',
 				'module-splitview',
 				'module-tabgroup',
+				'test-listitem',
+				'test-listitem-tsx',
 			],
 			simulated: [
 				'form-colorgraph',

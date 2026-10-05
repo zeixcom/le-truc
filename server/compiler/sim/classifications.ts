@@ -49,4 +49,28 @@ export const CLASSIFIED_DIAGNOSTICS: readonly ClassifiedDiagnostic[] = [
 			'asserts. It keeps its served markup, which is what the spec expects ' +
 			'(LT-104: page occurrences simulate now that lazyload is Simulated).',
 	},
+	{
+		kind: 'console',
+		component: 'test-listitem-tsx',
+		message:
+			/reconcile\(\) did not activate .*InvalidPassPropertyError: Cannot pass from <test-listitem-tsx> to <form-checkbox>: 'checked' is not a property/,
+		reason:
+			'The same notice for the `.tsx` twin (LT-423). Same fixed-point ' +
+			're-parse, same real-page verification, same per-descriptor ' +
+			'Contained drop, same unaffected serialization.',
+	},
+	{
+		kind: 'console',
+		component: 'test-listitem',
+		message:
+			/reconcile\(\) did not activate .*InvalidPassPropertyError: Cannot pass from <test-listitem> to <form-checkbox>: 'checked' is not a property/,
+		reason:
+			'LT-423: the fixed-point second pass re-parses with the definitions ' +
+			'already live, so jsdom connects parent-first and the composed ' +
+			"child's connect lags the item mount's pass() validation. A real " +
+			'page registers definitions from a deferred module after the parse ' +
+			'(children upgrade first — verified against plain jsdom), the ' +
+			'Contained drop is per descriptor, and the serialization is the ' +
+			'fixed point either way.',
+	},
 ]

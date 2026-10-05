@@ -493,9 +493,13 @@ attribute, list membership, initializer substitution, or List container
 adoption; a `requestContext` signal never appears: it has no DOM seed), and
 `effects` (the document-ordered effect list: `watch`-bindings, `pass`, `on`,
 `each`/`reconcile` blocks, guarded optional-branch effects for server-known
-conditionals, and the arm blocks of reactive conditionals and the async
+conditionals, the arm blocks of reactive conditionals and the async
 boundary — `reconcile()`'s arm form over the stamped templates with a key
-thunk and one mount per arm, ADR 0037). Every plan node carries source spans for the remapping tables.
+thunk and one mount per arm, ADR 0037 — and the item Mount Scope of a
+reactive list: a `ReconcilePlan` carries `listIndex` (the `data-list` stamp),
+the container's parent query, and an `itemScope` of root local, descendants,
+key-derived attributes and effects that `bindItem` mounts per entering item,
+ADR 0046 s1). Every plan node carries source spans for the remapping tables.
 The passes run as functions over a typed shared environment (`PassShared` —
 the order-carrying accumulators: queries, used names, ambients, child tags,
 ref names, and the diagnostic sinks), each taking its producers' output as a
@@ -1276,11 +1280,15 @@ member.
   page authored; structural verification is enforced for required refs only.
   Compose sites are addressed the same way, resolved registry-aware in
   `analysis/compose-refs.ts`.
-- **Addressing limits**: one reactive list per component; one addressable
-  construct root per `@if` branch (union-addressed when every branch root
-  carries an identical construct signature, per-branch guarded otherwise; a
-  `first()`-addressed element is exempt — it has its own query and presence
-  guard); composed children accept statics and server expressions only.
+- **Addressing limits**: one addressable construct root per `@if` branch
+  (union-addressed when every branch root carries an identical construct
+  signature, per-branch guarded otherwise; a `first()`-addressed element is
+  exempt — it has its own query and presence guard); composed children accept
+  statics and server expressions only. The one-list-per-component limit is
+  lifted (LT-423, ADR 0046 s2): each extracted list template is stamped
+  `data-list="N"` (its compile-time document-order index) and queried from
+  the list container's own parent, so repeated and sibling lists share no
+  selector.
 - **One machinery, two front ends**: both surfaces run one driver
   (`front-end.ts`'s `runFrontEnd`, LT-233) and, after lowering, identical
   stages through `pipeline.ts`; the shared front-end stage modules

@@ -83,12 +83,10 @@ const framed = (
  * `conditional` would also rewrite surface-neutral prose.
  */
 const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
-	term('listControlFlow', 'control flow inside a list body'),
 	term(
 		'loopBindings',
 		'the names a list loop binds (`.tsx` has no key binding)',
 	),
-	term('listItemHandlerFix', 'acting on an item (`.tsx` has no key binding)'),
 	term('loopBodyStatements', 'statements in a server-data loop body'),
 	framed('loop', l => `reactive-list ${l}`, 'the list loop'),
 	framed('loop', l => `${l} over`, 'a loop over its iterable'),
@@ -307,20 +305,10 @@ const cell = (name: string, init: string) =>
  * `attr.kind === 'ref'` arm in `validateListBody` is unreachable (LT-233
  * deletes it with the fold). The pins keep all three closed.
  */
+// The two §1.1 offender shapes (the impure attribute and the named
+// offender) retired with the slot fill (LT-423) — they are in the
+// reactive-list bodies describe's compiles-clean list.
 const REVIEW_SHAPES: Case[] = [
-	{
-		name: '§1.1 offenders: an impure attribute with no offending name',
-		code: 'LTC005',
-		spec: list(...same('<li title={String(Math.random())}>{item}</li>')),
-		pins: ['reads impure ambient state'],
-		forbid: ['reads ,'],
-	},
-	{
-		name: '§1.1 offenders: a named offender in a list-body attribute',
-		code: 'LTC005',
-		spec: list(...same('<li title={label}>{item}</li>')),
-		pins: ['that reads `label`'],
-	},
 	{
 		name: '§2.3 keyName: a loop variable named `first`',
 		code: 'LTC005',
@@ -350,33 +338,53 @@ const REVIEW_SHAPES: Case[] = [
 /** The reactive-list body family (ADR 0024 sub-design 5, the copied seam). */
 const LIST_BODY: Case[] = [
 	{
-		name: 'missing item hole',
-		code: 'LTC005',
-		spec: list(...same('<li>static</li>')),
-		pins: ['(found 0)'],
-	},
-	{
+		// The one-hole rule retired (ADR 0046 s1); the shared lazy-text gate
+		// owns this shape now — two lazy children race on the shared
+		// textContent.
 		name: 'a lazy child other than the item',
 		code: 'LTC005',
 		spec: list(...same('<li>{item}{() => item}</li>')),
+		pins: ['More than one lazy text child'],
 	},
 	{
-		name: 'control flow inside the body',
+		// A server attribute over the item is still refused: the item is the
+		// signal the List hands out (ADR 0046 s3), and the template render
+		// outside the loop cannot fold a per-item value.
+		name: 'a server attribute reading the item',
 		code: 'LTC005',
-		spans: [['@if (ok) { <b>x</b> }', 'ok ? <b>x</b> : null']],
-		spec: list(
-			'<li>{item}@if (ok) { <b>x</b> }</li>',
-			'<li>{item}{ok ? <b>x</b> : null}</li>',
-			'{ ok }: { ok: boolean }',
-		),
+		spec: list(...same('<li title={item}>{item}</li>')),
+		pins: ['which is a signal, not a value'],
 	},
 	{
-		name: 'a handler reading the loop item',
+		// The impure-ambient attribute refusal (LTC033) is position-blind:
+		// the build machine's clock/RNG baked into the extracted template is
+		// the same permanent wrong value it is anywhere else.
+		name: '§1.1 offenders: an impure attribute in the body',
+		code: 'LTC033',
+		spec: list(...same('<li title={String(Math.random())}>{item}</li>')),
+		pins: ['reads an ambient value'],
+	},
+	{
+		// The arm set would switch inside the item's mount (ADR 0046 s1,
+		// LT-423) — nesting is LT-424.
+		name: 'an arm set inside the body',
 		code: 'LTC005',
-		spec: list(...same('<li onClick={() => items.remove(item)}>{item}</li>')),
+		spans: [['@if (open.get()) { <b>x</b> }', 'open.get() ? <b>x</b> : null']],
+		spec: {
+			...list(
+				'<li>{item}@if (open.get()) { <b>x</b> }</li>',
+				'<li>{item}{open.get() ? <b>x</b> : null}</li>',
+				'{ ok }: { ok: boolean }',
+			),
+			setup: `${LIST}\n\t\tconst open = createCell(false)`,
+			pre: imports('createCell', 'createList'),
+		},
+		pins: ['inside a reactive-list'],
 	},
 	{
-		// LT-349: the positive server-only rule, with the LT-348 tail.
+		// LT-349: the positive server-only rule, with the LT-348 tail. The
+		// subject is the shared construct face now — the item plans through
+		// `emitConstructEffects` like an arm (LT-423).
 		name: 'a handler reading a server arg',
 		code: 'LTC005',
 		spec: list(
@@ -384,9 +392,25 @@ const LIST_BODY: Case[] = [
 			'{ label }: { label: string }',
 		),
 		pins: [
-			'Event handler `onClick` inside a reactive-list',
 			'references server-only name `label` — the generated client does not bind it',
 		],
+	},
+	{
+		// The boundary has no lowering inside the item's mount (LT-423) —
+		// nesting is LT-424.
+		name: 'a boundary inside the body',
+		code: 'LTC005',
+		spans: [
+			[
+				'@try { <b>{item}</b> } @catch (e) { <b>{e.message}</b> }',
+				'<truc:try catch={e => <b>{e.message}</b>}><b>{item}</b></truc:try>',
+			],
+		],
+		spec: list(
+			'<li>@try { <b>{item}</b> } @catch (e) { <b>{e.message}</b> }</li>',
+			'<li><truc:try catch={e => <b>{e.message}</b>}><b>{item}</b></truc:try></li>',
+		),
+		pins: ['inside a reactive-list'],
 	},
 	{
 		// No client-need walk reaches a list body, so a setup const read only
@@ -1446,6 +1470,45 @@ describe('diagnostic parity — the §2.3 drift shapes (negative pins)', () => {
 
 describe('diagnostic parity — reactive-list bodies', () => {
 	runCases(LIST_BODY)
+	// The slot-fill refusals ADR 0046 s1 retires (LT-423): server-known
+	// content (impure included), a body that renders the item nowhere, a
+	// server condition in the item, and the item signal read in arrows all
+	// compile on both surfaces now — the item is a Mount Scope, and the
+	// shared machinery owns every remaining shape error.
+	test.each([
+		[
+			'<li title={label}>{item}</li>',
+			'<li title={label}>{item}</li>',
+			'{ label }: { label: string }',
+		],
+		['<li>static</li>', '<li>static</li>', '{}: {}'],
+		[
+			'<li><span>{item}</span>@if (ok) { <b>{label}</b> }</li>',
+			'<li><span>{item}</span>{ok ? <b>{label}</b> : null}</li>',
+			'{ ok, label }: { ok: boolean; label: string }',
+		],
+	])('compiles on both surfaces (LT-423): %s', (tsrxBody, tsxBody, params) => {
+		const { tsrx, tsx } = compileBoth({
+			name: 'clean',
+			code: 'LTC005',
+			spec: list(tsrxBody, tsxBody, params),
+		})
+		for (const diagnostics of [tsrx, tsx])
+			expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+	})
+	test.each([
+		[
+			'<li class={() => item.get()} onClick={() => console.log(item.get())}>{item}</li>',
+		],
+	])('the item signal binds in arrows on both surfaces (LT-423): %s', body => {
+		const { tsrx, tsx } = compileBoth({
+			name: 'clean',
+			code: 'LTC005',
+			spec: list(...same(body)),
+		})
+		for (const diagnostics of [tsrx, tsx])
+			expect(diagnostics.filter(d => d.severity === 'error')).toEqual([])
+	})
 })
 
 describe('an authored <template> beside a reactive list (LT-383)', () => {
@@ -1531,6 +1594,42 @@ describe('diagnostic parity — one sample per family', () => {
 })
 
 describe('grammar asymmetry — shapes with no counterpart', () => {
+	// ADR 0046 s1: a `server` attribute over the key binding alone is a
+	// key-derived attribute — set once at clone, baked empty in the
+	// extracted template. The key binding is `.tsrx` grammar (`key k`);
+	// the `.tsx` keyed `map` is LT-425.
+	test('.tsrx: a key-derived attribute compiles, set once at clone', () => {
+		const { component, diagnostics } = compileComponent(
+			tsrxSource({
+				pre: imports('createList'),
+				setup: LIST,
+				body: '<ul data-container>@for (const item of items; key k) { <li id={k}><label for={k}>{item}</label></li> }</ul>',
+			}),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.clientCode).toContain(".setAttribute('id', k)")
+		expect(component?.clientCode).toContain(".setAttribute('for', k)")
+		expect(component?.serverCode).toContain('<template data-list="0">')
+	})
+
+	test('.tsrx: a nested reactive loop inside the item is LTC005 (LT-424 owns nesting)', () => {
+		const source = tsrxSource({
+			pre: imports('createList'),
+			setup: `${LIST}\n\t\tconst others = createList<string>([], { keyConfig: 'x' })`,
+			body: '<ul data-container>@for (const item of items; key k) { <li>@for (const x of others) { <i>{x}</i> }</li> }</ul>',
+		})
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(
+			diagnostics.some(
+				d =>
+					d.code === 'LTC005' &&
+					d.message.includes('A loop inside a reactive-list'),
+			),
+		).toBe(true)
+	})
+
 	test('.tsrx: a key binding named `first` is rejected (no `.tsx` spelling — the key comes from keyConfig)', () => {
 		const { diagnostics } = compileComponent(
 			tsrxSource({

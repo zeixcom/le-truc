@@ -571,7 +571,7 @@ describe('the generated i18n module', () => {
 		// Initial items carry the folded value through the ordinary
 		// server-attr path.
 		expect(html).toContain('aria-label="Entfernen"')
-		const templateStart = html.indexOf('<template>')
+		const templateStart = html.indexOf('<template data-list="0">')
 		const templateEnd = html.indexOf('</template>')
 		expect(templateStart).toBeGreaterThan(-1)
 		const template = html.slice(templateStart, templateEnd)

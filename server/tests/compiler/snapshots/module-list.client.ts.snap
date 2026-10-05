@@ -9,9 +9,8 @@ import { createList } from '@zeix/le-truc'
 
 export default defineComponent(
 	'module-list',
-	({ first, on, pass, watch }) => {
+	({ first, host, on, pass, watch }) => {
 		const container = first('ul', 'module-list: ul missing')
-		const template = first('template', 'module-list: template missing')
 		const form = first('form', 'module-list: form missing')
 		const textbox = first('form-textbox', 'the new-item textbox')
 		const basicButton = first('basic-button.submit', 'module-list: basic-button.submit missing')
@@ -26,9 +25,10 @@ export default defineComponent(
 			textbox.clear()
 		})
 		pass(basicButton, { disabled: { get: () => !textbox.length } })
-		reconcile(container, template, items, (_element, item, k, first) => {
-			watch(item, bindText(first('span', 'module-list: span missing')))
+		reconcile(container, host.querySelector<HTMLTemplateElement>(':scope > template[data-list="0"]')!, items, (_element, item, k, first) => {
+			const span = first('span', 'module-list: span missing')
 			const button = first('button', 'module-list: button missing')
+			watch(item, bindText(span))
 			on(button, 'click', () => items.remove(k))
 		})
 	},

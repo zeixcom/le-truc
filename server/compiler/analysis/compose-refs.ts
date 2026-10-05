@@ -19,7 +19,7 @@
  */
 
 import { diagnostic, type LocalDiagnostic } from '../diagnostics'
-import { matchesAuthoredSelectorOn } from '../first-refs'
+import { inReconcileItem, matchesAuthoredSelectorOn } from '../first-refs'
 import type { ComponentIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
 import { wordingOf } from '../surface'
@@ -107,6 +107,24 @@ export const resolveComposeRefs = (
 					ref.at,
 					ref.name,
 					ref.selector,
+				),
+			)
+			continue
+		}
+		// A host-level `first()` into a reactive-list item is ADR 0046 s1's
+		// remaining refusal: the item's elements are recreated on every
+		// reconcile, so the connect-time reference goes stale (LT-423).
+		const itemOutputs = [...component.fors.values()]
+			.filter(l => l.kind === 'reconcile')
+			.map(l => l.output)
+		const inItem = matches.find(node => inReconcileItem(itemOutputs, node))
+		if (inItem) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					component.source,
+					ref.at,
+					`A \`first()\` reference to <${composeRegistry.get(inItem.source)?.tag ?? inItem.component}> inside a reactive-list loop body`,
+					"The item's elements exist once per item and are recreated on every reconcile, so a reference taken at connect goes stale — bind the element from inside the item instead (an event handler or a reactive attribute on it).",
 				),
 			)
 			continue

@@ -3153,6 +3153,11 @@ var reconcileList = (container, template, source, bindItem) => {
           keyOf.set(el, key);
           mount = true;
         }
+        if (!pinned.has(key)) {
+          if (nextKeyed(prev) !== el)
+            container.insertBefore(el, prev ? prev.nextElementSibling : container.firstElementChild);
+          prev = el;
+        }
         if (mount) {
           disposers.get(key)?.();
           const item = source.byKey(key);
@@ -3161,11 +3166,6 @@ var reconcileList = (container, template, source, bindItem) => {
             disposers.set(key, mountScope(() => bindItem(element, item, key, bindFirst(element))));
           }
         }
-        if (pinned.has(key))
-          continue;
-        if (nextKeyed(prev) !== el)
-          container.insertBefore(el, prev ? prev.nextElementSibling : container.firstElementChild);
-        prev = el;
       }
     };
     createScope(() => {

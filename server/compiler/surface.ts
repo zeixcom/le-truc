@@ -98,13 +98,6 @@ export type SurfaceWording = {
 	emptyArm: string
 	/** The empty arm as a fix-it. */
 	emptyArmFix: string
-	/** Control flow inside a reactive-list body. */
-	listControlFlow: string
-	/**
-	 * How a handler acts on its item, appended after a sentence — empty on
-	 * `.tsx`, which has no key binding.
-	 */
-	listItemHandlerFix: string
 	/** A loop inside a conditional/switch branch (LT-301). */
 	loopInBranch: (branch: 'if' | 'switch') => { inside: string; outOf: string }
 }
@@ -153,9 +146,6 @@ const TSRX: SurfaceWording = {
 	loopBindings: 'A loop variable or key binding',
 	emptyArm: '`@empty` arm',
 	emptyArmFix: "the loop's own `@empty` arm",
-	listControlFlow: 'A control-flow directive (`@if`, `@switch` or `@try`)',
-	listItemHandlerFix:
-		' Act on the item through the key binding instead (`@for (const item of items; key k)`, then `items.remove(k)`).',
 	loopInBranch: branch => ({
 		inside: `an \`@${branch}\` branch`,
 		outOf: 'the branch',
@@ -209,8 +199,6 @@ const TSX: SurfaceWording = {
 	emptyArm: 'empty-state arm',
 	emptyArmFix:
 		'the empty-state idiom (`{items.length === 0 ? <empty/> : items.map(…)}`)',
-	listControlFlow: 'A control-flow expression',
-	listItemHandlerFix: '',
 	loopInBranch: branch =>
 		branch === 'if'
 			? { inside: 'a conditional branch', outOf: 'the conditional' }
