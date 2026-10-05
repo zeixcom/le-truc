@@ -47,6 +47,21 @@ import { composedShapesFor } from './selectors'
 /** The harvest parser an attr/text seed reads through (from `parserForType`). */
 export type ParserKind = 'asNumber' | 'asBoolean' | 'asString'
 
+/**
+ * An authored parser spliced into the client as written (LT-443): the
+ * `harvest(seed, parser)` marker's second argument. A type error in the
+ * generated module maps to `start` through the span table.
+ */
+export type AuthoredParser = {
+	kind: 'authored'
+	/** The parser expression, as authored. */
+	text: string
+	/** Where the expression starts in the authored source. */
+	start: number
+	/** Whether the call needs parentheses around `text` (an arrow, an operator). */
+	wrap: boolean
+}
+
 /** A generated element query. */
 export type QueryPlan = {
 	/** Variable name in the generated factory. */
@@ -69,14 +84,14 @@ export type HarvestPlan =
 			signal: string
 			/** Query name of the element whose text was rendered. */
 			query: string
-			parser: ParserKind
+			parser: ParserKind | AuthoredParser
 	  }
 	| {
 			kind: 'attr'
 			signal: string
 			query: string
 			attr: string
-			parser: ParserKind
+			parser: ParserKind | AuthoredParser
 	  }
 	| {
 			kind: 'membership'
@@ -88,6 +103,13 @@ export type HarvestPlan =
 			/** Attribute carrying the signal's value (`aria-controls`). */
 			valueAttr: string
 			default: string
+			/**
+			 * The parser the value read goes through (LT-443): the
+			 * `harvest()` marker's, spliced as authored — it owns the
+			 * no-match miss, so `default` is unused then. Absent (today's
+			 * raw read) for an unmarked seed.
+			 */
+			parser?: AuthoredParser
 	  }
 	| {
 			/**
@@ -100,6 +122,13 @@ export type HarvestPlan =
 			signal: string
 			/** Initializer text with param identifiers replaced by DOM reads. */
 			expr: string
+			/**
+			 * The parser the substituted DOM read goes through (LT-443): the
+			 * `harvest()` marker's, spliced as authored. Absent for an
+			 * unmarked seed — a `number` arg's read carries its own `Number()`
+			 * conversion (`asParamType`), everything else is a string.
+			 */
+			parser?: ParserKind | AuthoredParser
 	  }
 	| {
 			/** Reactive List reconciled over the adopted DOM (milestone 3). */

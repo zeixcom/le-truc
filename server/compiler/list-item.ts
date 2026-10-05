@@ -298,12 +298,21 @@ export const resolveListItem = (
 }
 
 /**
- * Why a `harvest()` call cannot be read, or its seed and parser map. The
- * list form is `harvest(seed, { field: parser, … })` with a literal map of
- * plain keys; LT-443 adds the scalar form, `harvest(seed, parser)`.
+ * Why a `harvest()` call cannot be read, or its seed and parser. The list
+ * form is `harvest(seed, { field: parser, … })` with a literal map of
+ * plain keys; the scalar form is `harvest(seed, parser)` (LT-443).
  */
 export type HarvestCall =
-	| { form: 'list'; seed: AstNode; marker: HarvestSeedIR }
+	| {
+			form: 'list'
+			seed: AstNode
+			marker: Extract<HarvestSeedIR, { kind: 'list' }>
+	  }
+	| {
+			form: 'scalar'
+			seed: AstNode
+			marker: Extract<HarvestSeedIR, { kind: 'scalar' }>
+	  }
 	| { form: 'malformed'; call: AstNode; what: string; fix: string }
 
 /**
@@ -322,38 +331,54 @@ export const harvestCallOf = (
 	// Read here, refused or not: whatever the caller reports names it, so
 	// the unclaimed-marker sweep does not report it again.
 	claimMarker(ctx, call.callee)
-	const [seed, map, ...rest] = asArray(call.arguments)
-	if (!seed || !map || rest.length > 0 || map.type !== 'ObjectExpression')
+	const [seed, second, ...rest] = asArray(call.arguments)
+	if (!seed || !second || rest.length > 0)
 		return {
 			form: 'malformed',
 			call,
-			what: 'A `harvest()` call other than `harvest(seed, { field: parser, … })`',
-			fix: 'Pass the seed, then an object literal with one `field: parser` entry per field.',
+			what: 'A `harvest()` call other than `harvest(seed, { field: parser, … })` or `harvest(seed, parser)`',
+			fix: 'Pass the seed, then an object literal with one `field: parser` entry per field — or, for a scalar seed, one parser.',
 		}
-	const entries: HarvestSeedIR['entries'] = []
-	for (const prop of asArray(map.properties)) {
-		const key = prop.key as AstNode | undefined
-		const field =
-			prop.type === 'Property' && !prop.computed && prop.kind === 'init'
-				? (identifierName(key) ??
-					(nodeType(key) === 'Literal' && typeof key?.value === 'string'
-						? key.value
-						: null))
-				: null
-		if (!field || prop.method || !isNode(prop.value))
-			return {
-				form: 'malformed',
-				call,
-				what: 'A `harvest()` parser map entry other than `field: parser`',
-				fix: 'Write each entry as `field: parser`, with a plain field name — no spread, method or computed key.',
-			}
-		const value = prop.value as AstNode
-		entries.push({
-			field,
-			key: key as AstNode,
-			value,
-			text: text(ctx.source, value),
-		})
+	if (second.type === 'ObjectExpression') {
+		const entries: Extract<HarvestSeedIR, { kind: 'list' }>['entries'] = []
+		for (const prop of asArray((second as AstNode).properties)) {
+			const key = prop.key as AstNode | undefined
+			const field =
+				prop.type === 'Property' && !prop.computed && prop.kind === 'init'
+					? (identifierName(key) ??
+						(nodeType(key) === 'Literal' && typeof key?.value === 'string'
+							? key.value
+							: null))
+					: null
+			if (!field || prop.method || !isNode(prop.value))
+				return {
+					form: 'malformed',
+					call,
+					what: 'A `harvest()` parser map entry other than `field: parser`',
+					fix: 'Write each entry as `field: parser`, with a plain field name — no spread, method or computed key.',
+				}
+			const value = prop.value as AstNode
+			entries.push({
+				field,
+				key: key as AstNode,
+				value,
+				text: text(ctx.source, value),
+			})
+		}
+		return {
+			form: 'list',
+			seed,
+			marker: { kind: 'list', call, entries },
+		}
 	}
-	return { form: 'list', seed, marker: { call, entries } }
+	return {
+		form: 'scalar',
+		seed,
+		marker: {
+			kind: 'scalar',
+			call,
+			parser: second,
+			parserText: text(ctx.source, second),
+		},
+	}
 }

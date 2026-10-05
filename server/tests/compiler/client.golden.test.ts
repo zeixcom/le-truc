@@ -70,6 +70,25 @@ export function C({ mode }: { mode: string })
 			</c-arm-set>
 	}`
 
+// A scalar-harvest marker's fix-it (ADR 0046 s7, LT-443): an aliased-number
+// seed wrapped in `harvest(price, asNumber())` and read at a reactive
+// attribute site. The marker does not inform inference, so without the
+// number-marker coercion the site emitted `bindAttribute` over a
+// `State<number>` and the very module LTC077's fix produced failed tsc.
+const SCALAR_ATTR_SOURCE = `import { asNumber, createState } from '@zeix/le-truc'
+import { harvest } from '@zeix/le-truc-compiler/macros'
+type Price = number
+export function C({ price }: { price: Price })
+	@{
+		const p = createState(harvest(price, asNumber()))
+			<c-scalar-attr>
+				<data aria-valuenow={() => p.get()}>{p}</data>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-scalar-attr>
+	}`
+
 // module-list composes FormTextbox (ADR 0024 sub-design 10, LT-020) — the
 // compose registry must be built before it compiles, keyed by form-textbox's
 // own repo-relative source path (mirroring server/effects/compile.ts).
@@ -310,7 +329,7 @@ const generated = createGeneratedDir('client-golden')
 afterAll(() => generated.cleanup())
 
 describe('client golden — emit-then-check (ADR 0024 sub-design 6)', () => {
-	test('generated client modules, an arm-set client among them, typecheck against @zeix/le-truc', async () => {
+	test('generated client modules, an arm-set and a scalar-harvest client among them, typecheck against @zeix/le-truc', async () => {
 		const files: string[] = []
 		for (const { result } of compiled) {
 			const component = result.component
@@ -345,6 +364,21 @@ describe('client golden — emit-then-check (ADR 0024 sub-design 6)', () => {
 		expect(armSetClient).toContain('template[data-arms="0"]')
 		files.push(
 			generated.emit(armSet.component.entry.clientModule, armSetClient),
+		)
+		const scalarAttr = compileComponent(
+			SCALAR_ATTR_SOURCE,
+			'c-scalar-attr.tsrx',
+			registry,
+		)
+		if (!scalarAttr.component || scalarAttr.diagnostics.length > 0)
+			throw new Error(
+				`scalar-attr fixture must compile clean: ${JSON.stringify(scalarAttr.diagnostics)}`,
+			)
+		files.push(
+			generated.emit(
+				scalarAttr.component.entry.clientModule,
+				scalarAttr.component.clientCode,
+			),
 		)
 		const proc = Bun.spawn(
 			[

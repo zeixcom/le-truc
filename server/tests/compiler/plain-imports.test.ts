@@ -81,12 +81,17 @@ describe('plain import used both server- and client-side', () => {
 	// is correctly static and the client would need no code at all. As a
 	// signal, the client re-emits the initializer to seed it, which is what
 	// pulls `bothHelper` into the client module.
+	// The seed carries the scalar `harvest()` marker (LT-443): an imported
+	// callee's return type is one the compiler cannot read, so the direct-
+	// site harvest needs a declared parser. The setup statement still reads
+	// `bothHelper`, so the import places into both modules as before.
 	const source = `import { bothHelper } from '../../_common/bothHelper.ts'
-	import { createCell } from '@zeix/le-truc'
+	import { asString, createCell } from '@zeix/le-truc'
+	import { harvest } from '@zeix/le-truc-compiler/macros'
 
 	export function C({ count }: { count: number })
 	@{
-		const formatted = createCell(bothHelper(count))
+		const formatted = createCell(harvest(bothHelper(count), asString()))
 		expose({ formatted: formatted.get })
 			<c-el>
 				<p>{formatted}</p>

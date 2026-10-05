@@ -171,6 +171,12 @@ site but no parser — no type the compiler infers one from and no
 lists its fields; ADR 0046 s7, LT-429) lands with `LTC072`, after `LTC078`.
 It is `LTC`, not `TSRX`: Pass 3 (`analysis/list-harvest.ts`) raises it, on
 both surfaces.
+`LTC077` (a signal with a direct harvest site whose seed type the compiler
+cannot read — any annotation that is not the bare `string`/`number`/
+`boolean` keyword — and no `harvest()` marker declaring its parser; ADR
+0046 s7, LT-443) was reserved at the LT-429 design session, between
+`LTC076` and `LTC078`. It is `LTC`, not `TSRX`: Pass 3
+(`analysis/harvest.ts`) raises it, on both surfaces.
 `LTC078` (a `<style>` block whose content is not a stylesheet spelling; ADR
 0034 s1, LT-444) skips `LTC076` and `LTC077`, which LT-429 and LT-443 hold.
 It is `LTC`, not `TSRX`: each surface's `stylesheetOf` reads the block and

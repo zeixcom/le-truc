@@ -767,12 +767,19 @@ export const computeClientNeededNames = (
 		for (const n of dependenciesOf(exprNode)) needed.add(n)
 	for (const stmt of component.clientSetup)
 		for (const n of dependenciesOf(stmt.node)) needed.add(n)
-	// A `harvest()` entry is spliced into the client's list declaration as
-	// authored (ADR 0046 s7); the server reads the seed through without it.
-	for (const signal of component.signals)
-		if (signal.family === 'declared')
-			for (const entry of signal.harvest?.entries ?? [])
+	// A `harvest()` marker is spliced into the client's declaration as
+	// authored (ADR 0046 s7): the list form's parser entries (LT-429) and
+	// the scalar form's parser (LT-443); the server reads the seed through
+	// without it.
+	for (const signal of component.signals) {
+		if (signal.family !== 'declared') continue
+		const { harvest } = signal
+		if (harvest?.kind === 'list')
+			for (const entry of harvest.entries)
 				for (const n of dependenciesOf(entry.value)) needed.add(n)
+		if (harvest?.kind === 'scalar')
+			for (const n of dependenciesOf(harvest.parser)) needed.add(n)
+	}
 	// Every item setup statement is client-emitted, in `bindItem` (ADR
 	// 0046 s5) — a ref through its selector alone.
 	for (const stmt of component.itemSetup)
