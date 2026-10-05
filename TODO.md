@@ -121,7 +121,7 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → **next:** LT-429 (needs LT-439, LT-440, LT-442 from track B) → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
   ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). **Next:** LT-443 (needs LT-429).
@@ -149,7 +149,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-445.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-445.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -201,51 +201,6 @@ recorded against the 30.4k opening measurement.
 
 
 ### C — corpus port
-
-- [ ] LT-429: Per-field harvest for list items seeded from server args — parsers inferred or declared with `harvest()`; LTC072 for a field with no harvest site, LTC076 for a field with no parser (ADR 0046 s7).
-  **Area:** compiler
-  **Needs:** LT-423, LT-439, LT-440, LT-442
-  **Gates:** check:corpus
-  **Context:** The `list` harvest (`emit-client.ts:164` `listDeclaration`) rebuilds each adopted
-  item from one slot's `textContent` — strings only. ADR 0046 s7 (ruled with the owner,
-  2026-10-05) harvests each field from its canonical render site and settles how each field gets
-  its parser. Only lists seeded from server args are in scope (a literal-array seed, as in
-  `test-listitem`, is not harvested).
-  1. **Sites.** Per field, inside the adopted item: a direct text child, or an attribute/property
-     whose arrow reads exactly the field, unformatted; first in document order. A field the
-     `keyConfig` returns verbatim comes from `data-key`. Each site reads the way the scalar harvest
-     reads that site kind today. A formatted-only site needs a raw source (LT-374's LTC059, per
-     field).
-  2. **Inferred parsers.** Resolve the item type syntactically: the declaring call's type argument
-     (`createList<CalcItem, …>`), else the element type of the seed arg's annotation; follow a
-     same-file `type` alias or `interface` (no `extends`) to its members, or read an inline type
-     literal. `string` and string-literal unions → `asString`, `number` → `asNumber` (LT-440's
-     mapping), `boolean` → `asBoolean`. Anything else, or an unresolvable type, has no inferred
-     parser.
-  3. **`harvest()`.** Add `harvest<T>(seed: T[], parsers: { [K in keyof T]?: Parser<T[K]> }): T[]`
-     to `server/compiler/macros.ts` (LT-442's subpath; same throwing stub, specifier+binding
-     recognition, stripped from both modules), recognized only as the seed argument of
-     `createList`. An entry overrides inference. For an unresolvable item type the map's keys are
-     the field list. Entries are spliced into the client as authored; a free name the client cannot
-     resolve is LTC005's client-position face. The server reads the seed through as identity.
-     Leave the scalar overload to LT-443, but shape the recognition so it adds one.
-  4. **Typed result.** The generated harvested array is checked against the item type: by the
-     declaring call's explicit type argument where present, else by `satisfies <element type>[]`
-     spelled from the seed arg's annotation. A wrong parser type, or a field missing from the map of
-     an imported type, is then a tsc error, mapped to the authored line on both surfaces.
-  5. **LTC072** — compiler, tier 1 Prevented, statically decidable: a field with no harvest site.
-     Copy names the field and the fix: render it raw (`data-<field>` on the item root, or
-     `<data value>`). **LTC076** — compiler, tier 1 Prevented, statically decidable: a field with a
-     site but neither an inferable type nor a `harvest()` entry; the copy names the field and its type
-     text and shows the fix, `harvest(items, { <field>: … })`. Both per `writer` → error-messages;
-     update `ITERATION.md`'s code ledger in the handoff.
-  **Check:** a calctable-shaped fixture round-trips a seeded `{ id, description, amount,
-  pricePerUnit }` set on both surfaces, `pricePerUnit` keeping decimals; an imported item type
-  compiles with a complete map and fails tsc with a field missing; a `Date` field round-trips
-  through an authored parser; a wrong parser type is a tsc error at the authored line; an
-  unrendered field fails LTC072 and an unparsable one LTC076, on both surfaces. Full gates.
-
-  **Rider (Architect, 2026-10-05, from LT-442):** `shadowMarkers` drops only the names the component function's own scope declares (args and top-level setup). That suffices for `css` (a `<style>` is a direct child of the root); `harvest()` can appear in item setup and nested scopes, so resolve its binding against the enclosing scopes there — extend `shadowMarkers`/`markerOf`, do not fork them.
 
 - [ ] LT-111: Migrate `module-todo` to `.tsx` with same-commit cutover — last hand-written example, completes the corpus port.
   **Area:** examples
