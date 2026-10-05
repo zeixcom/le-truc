@@ -202,16 +202,6 @@ recorded against the 30.4k opening measurement.
 
 ### C — corpus port
 
-- [ ] LT-111: Migrate `module-todo` to `.tsx` with same-commit cutover — last hand-written example, completes the corpus port.
-  **Area:** examples
-  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428
-  **Updated (Architect, 2026-10-04, ADR 0046):** an acceptance probe. Must show: store items from an empty seed, per-item `truc:pass` `{get,set}` into `form-checkbox` and the composed `FormInplaceEdit`, key-derived `id`/`for`, a reactive `disabled` from `items.length`, and remove through the key. Drag, keyboard reorder and the live region live in **one shared client-only helper module** called from every surface's setup (LT-427), replacing the module-level `idCounter` and the `let`s. Both `.tsx` and `.tsrx` members. The sweep check is ruling 5's, not "no `.ts` files remain".
-  **Context:** ~379 lines, the largest example (`reconcile()` ×10, `each()`, pointer capture).
-  Has a spec. Completing this satisfies LT-014's trigger — after review, confirm the corpus
-  sweep: no `.ts` component files remain in `examples/` outside `test/`, `docs/`, and `_common`
-  helpers.
-
-
 - [ ] LT-109: Migrate `module-calctable` to `.tsx` with same-commit cutover.
   **Area:** examples
   **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429
