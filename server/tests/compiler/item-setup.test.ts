@@ -54,6 +54,7 @@ const tsx = (
 	body: string,
 ): string => `${pre}
 import type { FactoryContext } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
 
 export function C({}: {}, { ${context} }: FactoryContext<{}>) {
 	${setup}
