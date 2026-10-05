@@ -219,7 +219,7 @@ export type DeclaredSignalIR = SignalIRBase & {
 	 * argument: the server reads it through as identity (ADR 0046 s7).
 	 */
 	init: AstNode | null
-	/** A `createList` seed declared through `harvest()` (ADR 0046 s7, LT-429). */
+	/** A seed declared through `harvest()` (ADR 0046 s7, LT-429/LT-443). */
 	harvest?: HarvestSeedIR
 	/** A `createList` declaration's item type, read syntactically (ADR 0046 s7). */
 	listItem?: ListItemIR
@@ -237,15 +237,27 @@ export type InferredParserIR = {
 }
 
 /**
- * A `createList(harvest(seed, { field: parser, … }), …)` seed (ADR 0046 s7,
- * LT-429): `call` is the marker call the client splices the harvested array
- * over; `entries` are the parser map's entries in source order, spliced
- * into the client as authored.
+ * A seed declared through a `harvest()` marker (ADR 0046 s7): the list
+ * form, `createList(harvest(seed, { field: parser, … }), …)` (LT-429) —
+ * `call` is the marker call the client splices the harvested array over,
+ * `entries` the parser map's entries in source order, spliced into the
+ * client as authored — and the scalar form,
+ * `createState(harvest(seed, parser))` (LT-443) — the parser the client's
+ * text/attribute harvest reads the signal's site through, spliced as
+ * authored.
  */
-export type HarvestSeedIR = {
-	call: AstNode
-	entries: Array<{ field: string; key: AstNode; value: AstNode; text: string }>
-}
+export type HarvestSeedIR =
+	| {
+			kind: 'list'
+			call: AstNode
+			entries: Array<{
+				field: string
+				key: AstNode
+				value: AstNode
+				text: string
+			}>
+	  }
+	| { kind: 'scalar'; call: AstNode; parser: AstNode; parserText: string }
 
 /** One field of a resolved list item type (ADR 0046 s7). */
 export type ListItemFieldIR = {

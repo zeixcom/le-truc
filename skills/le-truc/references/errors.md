@@ -106,6 +106,7 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 | LTC075 | a composed element in a reactive-list item whose args or content read the item or key binding. The server renders the child once, into the `<template>` that every item clones | pass the value through `truc:pass`, or give the child only server-known values |
 | LTC072 | a field of a list item seeded from server args renders nowhere in the item: no text child or reactive attribute reads exactly the field, and `keyConfig` doesn't return it. The client rebuilds each server-rendered item from its markup | render the raw value in the item, reading exactly the field: `data-<field>={() => …}` on the item root, or `<data value={() => …}>` |
 | LTC076 | a field of a list item seeded from server args has no parser: its type isn't `string`, a string-literal union, `number` or `boolean` (a `Date`, an object, an optional `?:` field), or the item type is imported and no `harvest()` map lists the fields | declare the parser on the seed: `createList(harvest(items, { due: … }), …)`, with `harvest` imported from `@zeix/le-truc-compiler/macros` |
+| LTC077 | a signal is harvested from its render site but its seed's type isn't one the compiler reads (`string`, `number`, `boolean` — an alias, a union or an imported type), so it would connect as a string | declare the parser on the seed: `createState(harvest(value, asNumber()))`, with `harvest` imported from `@zeix/le-truc-compiler/macros` |
 
 ### Stylesheet
 

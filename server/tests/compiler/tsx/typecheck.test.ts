@@ -114,10 +114,21 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 			"discriminated-compose.tsx(27,4): error TS2322: Type '{ collapsed: true; }' is not assignable to type 'LibraryManagedAttributes<",
 		)
 		expect(output).not.toContain('discriminated-compose.tsx(26,')
-		// `harvest()` (LT-429): each entry reads its field's type, so a
-		// wrong parser type fails at the entry on the authored file.
+		// `harvest()` (LT-429/LT-443): the parser reads the field's (or the
+		// scalar seed's) type. Since the scalar overload joined the set,
+		// both overloads fail together and tsc reports TS2769, whose
+		// matching-overload clause carries the substance.
 		expect(output).toContain(
-			"harvest-bad-parser.tsx(15,4): error TS2322: Type 'Parser<string>' is not assignable to type 'FieldParser<Date>'",
+			'harvest-bad-parser.tsx(15,4): error TS2769: No overload matches this call.',
+		)
+		expect(output).toContain(
+			"Type 'Parser<string>' is not assignable to type 'FieldParser<Date>'",
+		)
+		expect(output).toContain(
+			'harvest-bad-scalar.tsx(19,29): error TS2769: No overload matches this call.',
+		)
+		expect(output).toContain(
+			"Argument of type 'Parser<string>' is not assignable to parameter of type 'FieldParser<number>'",
 		)
 		expect(status).not.toBe(0)
 	})

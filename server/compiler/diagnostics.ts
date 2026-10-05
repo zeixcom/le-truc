@@ -109,6 +109,7 @@ export type DiagnosticCode =
 	| 'LTC074' // an element sibling of a reactive-list loop in its reconcile() container — directly or as an arm root, in any arm, of a server-mode conditional or a non-async `try` — carries no `data-unreconciled`, so the first reconcile removes it (LT-186, LT-431; an authored `data-key` is no exemption) — tier 1 Prevented, statically decidable; the runtime half is LT-185's DEV_MODE advisory, not a Contained error. Lands out of numeric order: `LTC072` is LT-429's, `LTC073` LT-417's — both reserved before this rule picked
 	| 'LTC075' // a composed element in a reactive-list item whose args or content read the item or key binding — the child renders once, into the extracted `<template>` every item clones (ADR 0030 s9, ADR 0046, LT-355) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC076' // a field of a list item seeded from server args has a harvest site but no parser — its type is not one the compiler infers a parser from (`string`, a string-literal union, `number`, `boolean`; never an optional field) and no `harvest()` entry declares one; or the item type itself is unreadable (imported, generic) and no `harvest()` map lists its fields (ADR 0046 s7, LT-429) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC077' // a scalar-seeded signal whose harvest read is a raw DOM string — a direct text/attribute site, the substituted read of a seed that is the arg itself, or a membership value read — and whose seed type the compiler cannot read (any annotation that is not the bare `string`/`number`/`boolean` keyword) with no `harvest()` marker declaring its parser: the inferred-type fallback would connect e.g. `2.5` as `'2.5'` (ADR 0046 s7, LT-443) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC078' // a `<style>` block whose content is not a stylesheet spelling — on `.tsx` anything but the `css` marker's tagged template, a bare template literal or nothing (another tag, a shadowed or unimported `css`, a `${}` substitution, any other expression or text); on `.tsrx` an expression child in place of the CSS body. The sheet would read as empty and ship no CSS (ADR 0034 s1, LT-444) — tier 1 Prevented, statically decidable, no runtime half. Lands out of numeric order: `LTC076` is LT-429's, `LTC077` LT-443's — both reserved before this rule picked
 
 /**
@@ -486,8 +487,8 @@ export const diagnostic = {
 				fix: '`css` marks the component’s stylesheet, and the compiler reads it only as the tag of the template literal inside the root’s `<style>` — move the CSS there, or drop the tag.',
 			},
 			harvest: {
-				what: 'A `harvest()` call outside the seed of a `createList()`',
-				fix: '`harvest()` declares the field parsers of a list seeded from server args, so the compiler reads it only as the seed of a component-setup `createList()` — call it there, or drop it.',
+				what: 'A `harvest()` call outside the seed of a `createList()` or a scalar signal declaration',
+				fix: '`harvest()` declares the parser a client harvest reads a server-rendered seed through — the field parsers of a list seeded from server args, or the parser of a scalar signal seed — so the compiler reads it only as the seed of a component-setup `createList()` or a `createCell`/`createState`/`createStore` declaration. Call it there, or drop it.',
 			},
 		}
 		return error(
@@ -555,6 +556,45 @@ export const diagnostic = {
 			field === null
 				? `The items of list \`${list}\` have type \`${typeText}\`, which the compiler cannot read — it reads only types declared in this file — so it cannot list the fields the client rebuilds each server-rendered item from. Declare a parser for every field on the seed: \`createList(harvest(${seed}, { <field>: … }), …)\`.`
 				: `Field \`${field}\` of list \`${list}\` has type \`${typeText}\`, which the compiler infers no parser from, so the client cannot read the field back from the item's markup. ${marked ? `Add its parser to the \`harvest()\` map: \`${field}: …\`.` : `Declare its parser on the seed: \`createList(harvest(${seed}, { ${field}: … }), …)\`.`}`,
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A scalar-seeded signal whose harvest read is a raw DOM string — a
+	 * direct text/attribute site, the substituted read of a seed that is
+	 * the arg itself, or a membership value read — whose seed type the
+	 * compiler cannot read (an alias, a union, an imported type, any
+	 * annotation that is not the bare `string`/`number`/`boolean` keyword),
+	 * and no `harvest()` marker declaring a parser (ADR 0046 s7, LT-443).
+	 * The inferred-type fallback would read the string as-is, silently
+	 * connecting e.g. `2.5` as `'2.5'`. A seed that derives from the arg
+	 * (`value.length`) is never refused — the substitution reproduces the
+	 * derivation on both sides — and a signal with no harvest read at all
+	 * (a Parser-exposed prop, a context, a sensor) is never refused: only
+	 * the harvest needs a parser. `ctor` and `seed` spell the fix;
+	 * `annotation` is the unreadable type's text, null when the seed has no
+	 * authored annotation at all. Located at the seed, where the fix goes.
+	 * Channel: compiler (Pass 3, `analysis/harvest.ts`, both surfaces). ADR
+	 * 0028 tier 1 (Prevented): statically decidable, no runtime half.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-443).
+	 */
+	scalarSeedWithoutParser: (
+		source: string,
+		at: Site,
+		signal: string,
+		ctor: string,
+		seed: string,
+		annotation: string | null,
+	) =>
+		error(
+			'LTC077',
+			`Signal \`${signal}\` is seeded from \`${seed}\`, whose type ${
+				annotation
+					? `\`${annotation}\` the compiler cannot read — it reads only the bare \`string\`/\`number\`/\`boolean\` keywords`
+					: 'has no annotation the compiler can read'
+			}, so the harvest would connect it as a string. Declare its parser on the seed: \`${ctor}(harvest(${seed}, …))\`.`,
 			rangeOf(source, at),
 		),
 

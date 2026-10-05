@@ -65,6 +65,24 @@ export function harvest<T extends object>(
 	seed: T[],
 	parsers: { [K in keyof T]?: FieldParser<T[K]> },
 ): T[]
+/**
+ * The parser of a scalar signal seed (ADR 0046 s7, LT-443):
+ * `createState(harvest(price, asNumber()))`. A seed whose type the
+ * compiler cannot read (an alias, a union, a `Date`) would otherwise
+ * harvest from its render site as a string; this declares the parser the
+ * client reads the site through. The compiler infers a parser from the
+ * bare `string`/`number`/`boolean` keywords, so the marker is required
+ * exactly there — a resolvable seed may still declare one to be explicit.
+ * Recognized only as the seed argument of a scalar signal constructor
+ * (`createCell`, `createState`, `createStore`); the server reads `seed`
+ * through unchanged.
+ *
+ * @param seed - The server-side seed, from server args
+ * @param parser - The parser the client reads the render site through
+ * @returns `seed`, on the server
+ * @throws {Error} Always — reached only when the source was not compiled.
+ */
+export function harvest<T>(seed: T, parser: FieldParser<T>): T
 export function harvest(_seed: unknown, _parsers: unknown): unknown {
 	throw uncompiled('harvest')
 }

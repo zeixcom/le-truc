@@ -37,7 +37,7 @@ import { type ElementNode, isElement, resolveScopedSelector } from './selectors'
 /* === Internal Functions === */
 
 /** Expression types a call can follow without parentheses. */
-const CALLABLE_AS_WRITTEN: ReadonlySet<string> = new Set([
+export const CALLABLE_AS_WRITTEN: ReadonlySet<string> = new Set([
 	'Identifier',
 	'CallExpression',
 	'MemberExpression',
@@ -173,7 +173,7 @@ const collectSites = (
  * (or untyped) item keeps the whole-item read of its bare `{item}` hole.
  */
 export const harvestsPerField = (signal: DeclaredSignalIR): boolean =>
-	!!signal.harvest ||
+	signal.harvest?.kind === 'list' ||
 	signal.listItem?.shape.kind === 'fields' ||
 	signal.listItem?.shape.kind === 'opaque'
 
@@ -190,7 +190,7 @@ export const planListFieldHarvest = (
 ): HarvestPlan | null => {
 	const { component, source, diagnostics } = shared
 	const item = signal.listItem
-	const marker = signal.harvest
+	const marker = signal.harvest?.kind === 'list' ? signal.harvest : undefined
 	const seedNode = signal.init
 	const seedText = seedNode ? text(source, seedNode) : signal.name
 	const seedSite = marker?.call ?? seedNode ?? undefined

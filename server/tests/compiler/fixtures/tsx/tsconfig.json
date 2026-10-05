@@ -33,7 +33,8 @@
 			"async-bad-arms.tsx",
 			"bad-host-typo.tsx",
 			"i18n-bad-reads.tsx",
-			"discriminated-compose.tsx",
-			"harvest-bad-parser.tsx",
-		],
+		"discriminated-compose.tsx",
+		"harvest-bad-parser.tsx",
+		"harvest-bad-scalar.tsx",
+	],
 }

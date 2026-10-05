@@ -24,6 +24,7 @@ import { dependenciesOf } from '../evaluability'
 import type {
 	AttributeIR,
 	ComponentIR,
+	HarvestSeedIR,
 	InitSignalIR,
 	SignalIR,
 	TemplateNode,
@@ -34,10 +35,17 @@ import {
 	CONTEXT_NAMES,
 	FACTORY_CONTEXT_MEMBERS,
 	JS_GLOBALS,
+	SCALAR_HARVEST_CONSTRUCTORS,
 } from '../vocabulary'
 import { elseOf, isIf, thenOf, walkTemplate } from '../walk'
-import { harvestsPerField, planListFieldHarvest } from './list-harvest'
+import { reportServerOnlyNames } from './effects'
+import {
+	CALLABLE_AS_WRITTEN,
+	harvestsPerField,
+	planListFieldHarvest,
+} from './list-harvest'
 import type {
+	AuthoredParser,
 	HarvestPlan,
 	HarvestPlans,
 	LoopPlans,
@@ -955,6 +963,100 @@ const planHarvests = (
 		// no-harvest path; LT-348 still refuses a server name in either), and
 		// a harvest would replace the start callback (ADR 0046 s5).
 		if (signal.constructor === 'createSensor') continue
+		/**
+		 * A scalar `harvest(seed, parser)` marker (ADR 0046 s7, LT-443): the
+		 * parser the scalar harvest reads go through — the direct text/attr
+		 * site read, an identity seed's substituted DOM read, a membership
+		 * value read — spliced as authored. Its free names must resolve on
+		 * the client (LTC005's client-position face, as LT-429's map
+		 * entries); checked once, where the marker is consumed.
+		 */
+		const scalarMarker =
+			signal.family === 'declared' && signal.harvest?.kind === 'scalar'
+				? signal.harvest
+				: null
+		/**
+		 * A scalar-seeded signal: the only family the scalar marker and
+		 * LTC077 apply to. A derived callback re-derives (never parses a
+		 * seed back — its `inferredType` is usually `unknown` and that is
+		 * fine), and a `createList` seed is the list harvest's business.
+		 */
+		const scalarSeeded =
+			signal.family === 'declared' &&
+			SCALAR_HARVEST_CONSTRUCTORS.has(signal.constructor)
+		/** The authored parser plan for a consumed marker. */
+		const authoredParserOf = (
+			marker: Extract<HarvestSeedIR, { kind: 'scalar' }>,
+		): AuthoredParser => {
+			reportServerOnlyNames(
+				shared,
+				marker.parser,
+				`The \`harvest()\` parser of signal \`${signal.name}\``,
+			)
+			return {
+				kind: 'authored',
+				text: marker.parserText,
+				start: marker.parser.start as number,
+				wrap: !CALLABLE_AS_WRITTEN.has(String(marker.parser.type)),
+			}
+		}
+		/**
+		 * The parser a scalar harvest reads through (LT-443): the marker's
+		 * parser when declared, else the one the inferred type maps to —
+		 * and LTC077 at the seed when the type is one the compiler cannot
+		 * read and no marker declares a parser, because the inferred-
+		 * string fallback would silently connect e.g. `2.5` as `'2.5'`.
+		 * Null after reporting: the signal plans nothing.
+		 */
+		const parserForSeed = (): ParserKind | AuthoredParser | null => {
+			// A non-scalar signal with a direct site (a bare `{items}` list
+			// signal) keeps today's inferred mapping — the scalar rule does
+			// not speak to it.
+			if (!scalarSeeded) return parserForType(signal.inferredType)
+			if (scalarMarker) return authoredParserOf(scalarMarker)
+			if (signal.inferredType === 'unknown') {
+				const seedName =
+					signal.init && nodeType(signal.init) === 'Identifier'
+						? String((signal.init as AstNode).name)
+						: null
+				const param = seedName
+					? component.paramProps.find(p => p.name === seedName)
+					: undefined
+				diagnostics.push(
+					diagnostic.scalarSeedWithoutParser(
+						source,
+						signal.init,
+						signal.name,
+						signal.constructor,
+						signal.init
+							? source.slice(signal.init.start, signal.init.end)
+							: signal.name,
+						param && param.typeText !== 'unknown' ? param.typeText : null,
+					),
+				)
+				rawSourceRefused.add(signal.name)
+				return null
+			}
+			return parserForType(signal.inferredType)
+		}
+		/**
+		 * A marker whose parser no read takes: a literal seed, an
+		 * initializer reused verbatim, a seed that derives from the arg
+		 * (the substitution reproduces the derivation, nothing parses).
+		 * The same dead declaration a literal-seeded list's map is (ADR
+		 * 0046 s7) — refused, not silently ignored.
+		 */
+		const refuseDeadMarker = (at: AstNode): void => {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					at,
+					`The \`harvest()\` parser of signal \`${signal.name}\`, whose seed reads no server-rendered value,`,
+					'The client re-evaluates the seed as written, and no parser runs — drop the marker.',
+				),
+			)
+			rawSourceRefused.add(signal.name)
+		}
 		// A reconciled List seeds from the adopted DOM, not a text/attr site.
 		// A derived List (ADR 0046 s4) has no seed to harvest: like every
 		// derive callback it re-derives on the client from its sources.
@@ -1058,6 +1160,28 @@ const planHarvests = (
 					.filter(s => s.signal === signal.name)
 					.sort((a, b) => a.order - b.order)
 		if (own.length === 0) {
+			// The substitution route reproduces the seed expression with each
+			// param replaced by its DOM read — so the client value is the
+			// seed's own derivation, evaluated identically on both sides. The
+			// parser (and LTC077) applies only to an IDENTITY seed: the seed
+			// IS the arg's value, so the substituted read is a raw DOM string
+			// the inferred-string fallback would connect as-is. A deriving
+			// seed (`value.length`, `mode === 'wide'`) keeps today's bare
+			// substitution; a marker there declares a parser no read takes —
+			// refused, like a literal seed's.
+			const identitySeed =
+				!!signal.init &&
+				nodeType(signal.init) === 'Identifier' &&
+				component.paramNames.includes(String((signal.init as AstNode).name))
+			const readsArgs =
+				!!signal.init &&
+				[...dependenciesOf(signal.init)].some(name =>
+					component.paramNames.includes(name),
+				)
+			if (scalarMarker && (!readsArgs || (scalarSeeded && !identitySeed))) {
+				refuseDeadMarker(scalarMarker.call)
+				continue
+			}
 			// No rendered site: an initializer over server args can still seed
 			// from the args' DOM sites (LT-008 substitution rule). A signal
 			// rendered only through a map/computed thunk (LT-036) may also
@@ -1073,11 +1197,50 @@ const planHarvests = (
 					)
 				: null
 			if (substituted) {
-				harvests.push({
-					kind: 'substitute',
-					signal: signal.name,
-					expr: substituted,
-				})
+				// The substituted read of an identity seed is a DOM string
+				// (LT-008); the marker's parser parses it back, and an unmarked
+				// seed whose type the compiler cannot read is LTC077 (LT-443) —
+				// the bare splice would connect the string as-is. Derived
+				// callbacks and list seeds leave this limb untouched.
+				if (scalarSeeded && scalarMarker) {
+					harvests.push({
+						kind: 'substitute',
+						signal: signal.name,
+						expr: substituted,
+						parser: authoredParserOf(scalarMarker),
+					})
+				} else if (
+					scalarSeeded &&
+					identitySeed &&
+					signal.inferredType === 'unknown'
+				) {
+					const seedName =
+						signal.init && nodeType(signal.init) === 'Identifier'
+							? String((signal.init as AstNode).name)
+							: null
+					const param = seedName
+						? component.paramProps.find(p => p.name === seedName)
+						: undefined
+					diagnostics.push(
+						diagnostic.scalarSeedWithoutParser(
+							source,
+							signal.init,
+							signal.name,
+							signal.constructor,
+							signal.init
+								? source.slice(signal.init.start, signal.init.end)
+								: signal.name,
+							param && param.typeText !== 'unknown' ? param.typeText : null,
+						),
+					)
+					rawSourceRefused.add(signal.name)
+				} else {
+					harvests.push({
+						kind: 'substitute',
+						signal: signal.name,
+						expr: substituted,
+					})
+				}
 				continue
 			}
 			// D-20 (LT-374): a signal seeded from server args that renders only
@@ -1128,14 +1291,26 @@ const planHarvests = (
 		// it. (An `attr` site on the root is unreachable in a compiling
 		// component — reactive attributes on the root are LTC005 — but routed
 		// uniformly rather than left emitting a broken query.)
+		/**
+		 * The parser the signal's direct-site harvest reads through
+		 * (LT-443): the `harvest()` marker's parser when there is one
+		 * (spliced as authored, its free names client-checked), else the
+		 * parser the inferred type maps to — and LTC077 when the seed's
+		 * type is one the compiler cannot read and no marker declares a
+		 * parser, because `asString` would silently connect the seed as a
+		 * string. Null after reporting LTC077: the signal plans nothing.
+		 */
+		const directSiteParser = parserForSeed
 		if (direct && direct.element === component.root) {
+			const parser = directSiteParser()
+			if (!parser) continue
 			ambient.add('host')
 			if (direct.kind === 'text') {
 				harvests.push({
 					kind: 'text',
 					signal: signal.name,
 					query: 'host',
-					parser: parserForType(signal.inferredType),
+					parser,
 				})
 			} else {
 				harvests.push({
@@ -1143,12 +1318,14 @@ const planHarvests = (
 					signal: signal.name,
 					query: 'host',
 					attr: direct.attr,
-					parser: parserForType(signal.inferredType),
+					parser,
 				})
 			}
 			continue
 		}
 		if (direct) {
+			const parser = directSiteParser()
+			if (!parser) continue
 			const { selector, unique } = resolveSelector(direct.element)
 			if (!unique) {
 				diagnostics.push(
@@ -1169,7 +1346,7 @@ const planHarvests = (
 					kind: 'text',
 					signal: signal.name,
 					query,
-					parser: parserForType(signal.inferredType),
+					parser,
 				})
 			} else {
 				harvests.push({
@@ -1177,7 +1354,7 @@ const planHarvests = (
 					signal: signal.name,
 					query,
 					attr: direct.attr,
-					parser: parserForType(signal.inferredType),
+					parser,
 				})
 			}
 			continue
@@ -1202,14 +1379,26 @@ const planHarvests = (
 			reportUnharvestable(signal)
 			continue
 		}
-		harvests.push({
-			kind: 'membership',
+		// A scalar seed's membership read takes the marker's parser when
+		// declared (LT-443) — the parser owns the no-match miss, so no typed
+		// default — and LTC077 when the type is unreadable and no marker
+		// declares one. A typed, unmarked seed keeps today's parser-less
+		// read: the compared const is a string the attribute round-trips
+		// verbatim, and an inferred parser would only restate it.
+		const membership = {
+			kind: 'membership' as const,
 			signal: signal.name,
 			collection: plan.collection,
 			markAttr: mark.attr,
 			valueAttr: valueAttr.name,
 			default: defaultForType(signal.inferredType),
-		})
+		}
+		if (scalarSeeded && scalarMarker)
+			harvests.push({ ...membership, parser: authoredParserOf(scalarMarker) })
+		else {
+			if (scalarSeeded && !parserForSeed()) continue
+			harvests.push(membership)
+		}
 	}
 	return harvests
 }

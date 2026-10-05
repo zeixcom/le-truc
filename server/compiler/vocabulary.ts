@@ -40,6 +40,18 @@ export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>(
 	SIGNAL_CONSTRUCTOR_NAMES,
 )
 
+/**
+ * Signal constructors whose seed is a scalar value — the family a
+ * `harvest(seed, parser)` marker (ADR 0046 s7, LT-443) and the LTC077
+ * refusal apply to. `createList` takes the marker's map form (LT-429), and
+ * a derived callback re-derives instead of parsing a seed back.
+ */
+export const SCALAR_HARVEST_CONSTRUCTORS: ReadonlySet<string> = new Set([
+	'createCell',
+	'createState',
+	'createStore',
+])
+
 /** Parser factory names recognized as ambients in `expose()` initializers. */
 export const PARSER_FACTORY_NAMES = [
 	'asString',
