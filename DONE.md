@@ -976,6 +976,35 @@ Full entry text: `git log -p -- DONE.md`.
   browser): all green. Noted, no task: module-list has no Playwright spec; the harness
   `deriveList` source form does not run async item callbacks.
 
+- [x] LT-426: Per-item setup — the `map` block body and `@for` statements classified by the setup rules; selectors may name the scope root (ADR 0046 s2, s5). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-424, LT-425
+  **Gates:** check:sim
+  **Context:** A reactive list body refuses every statement today (`lower-shared.ts:1045-1062`,
+  "A hoisted const in a reactive-list body"). ADR 0046 s5 runs the component-setup
+  classification (`setup-extraction.ts`, shared by both front ends) per item, with the item and
+  key as known names:
+  1. **Statements:** plain `const`s (both phases; per initial item on the server, in `bindItem`
+     on the client); signal declarations over the item (the harness evaluates once, the client
+     per item); `first()` refs against the item's `first`; client-only side effects
+     (`watch`/`on`/`pass`) in `bindItem` only. Everything else is LTC005 with component setup's
+     message.
+  2. **Scope root:** a selector in a scope that matches the scope root resolves at build time
+     and emits the root parameter (`_element`/the arm root), not a query.
+  3. **Scope-declared lists** are loop sources: a `deriveList` declared in an item's setup
+     drives a nested list (LT-424).
+  4. Arms take no setup statements (ADR 0046 s5); a `.tsrx` `@if` body statement stays refused.
+  **Channel/tier:** compiler; parity cases on both surfaces.
+  **Check:** fixtures on both surfaces: a key-derived `const`, a per-item `createMemo`, a
+  `first()` naming the item root, a per-item `createSensor` with a seed driving an arm or empty
+  state, a nested list over a scope-declared `deriveList`. Full gates.
+  **Impasse rule (iteration ruling 10).**
+
+  **Changed:** per-item setup (ADR 0046 s2, s5). A reactive list's body statements — the `.tsx` `map` callback's block body, the `.tsrx` `@for` body — are the item's setup, classified by `extractItemSetup` (`setup-extraction.ts`, shared by both front ends) into `ItemSetupStmt`s on `ReconcileForIR.setup` (flattened as `ComponentIR.itemSetup` for import placement and client-needed names). Plain `const`s and signal declarations run in both phases (declared per initial item inside the server's loop, per entering item in `bindItem`); `first()` resolves against the item's own content, and a selector naming the item root emits `bindItem`'s element parameter (`const row = _element as ElementFromSelector<…>`); client-only side effects (`watch`/`on`/`pass`) run in `bindItem` only. Per-item names are bound while the output lowers (reactive by position: a condition over one switches arms in the item); an attribute over the item's consts and key alone is clone-time (baked empty in the template, set once at mount, in arm mounts too); a scope-declared `deriveList` drives a nested list; the `.tsrx` bare `{sig}` shorthand works over a per-item signal. `.tsx`: `watch`/`on` directly in a List `map` callback body is no longer LTC045. New LTC005 refusals (parity-pinned): a both-phase position reading a server arg or a client-only name (function-const bodies and `createSensor` start callbacks may read client-only names — the server stubs them as `any` or omits the function), an unseeded/unresolvable per-item `createSensor`, `expose()` and `requestContext()` in an item, `first()` into a nested arm/item (plus LTC026/LTC027/LTC040 as for component refs); anything else gets component setup's message verbatim. The old "hoisted const in a reactive-list body" refusal is retired. Docs: HOST_PROFILE.md (per-item setup paragraph, statement-context notes), LE_TRUC_COMPILER.md (IR, module map).
+  **How:** `lower-shared.ts` `lowerListLoop` (extract under the item/key binding, lower the output with per-item signals and `setupInits` overlaid; `resolveItemRefs`; `validateListBody` generalizes key-derived to clone-time names); `emit-server.ts` `emitItemSetup` + `listTemplate` clone-time skip and `templateUnbound`; `emit-client.ts` `emitItemSetup` in `emitReconcile`; `analysis/effects.ts` `planReconcileItem` widens `itemNames`/`keyNames`; `initial-winner.ts`, `fold-inputs.ts`, `imports.ts`, `module-scans.ts`, `plan.ts` (usedNames, message keys) follow.
+  **Check:** `server/tests/compiler/item-setup.test.ts` (both surfaces, byte-identical modules, realm-driven: key-derived const, per-item `createMemo`, root `first()`, seeded `createSensor` switching an arm, side effect, nested list over an item-declared `deriveList`, `.tsrx` shorthand) and the `per-item setup (LT-426)` block in `tsx/diagnostic-parity.test.ts`. Gates: test:server 3094 pass / 3 fail (the LT-441 baseline only); typecheck, check:contract, check:corpus, build:docs, check:links (729) green; lint (biome on changed paths) clean; check:sim node≡bun green, Deno leg unrunnable in sandbox (dl.deno.land denied / cause-effect 1.6.1 under Deno's min-age policy); test:variants not run (no variant set touched; Playwright not drivable here). Doubts for review: (1) refusal of a non-function per-item const reading a client-only name (top-level routes such a const Simulated instead) — I read "plain consts (both phases)" as a constraint; (2) a per-item const reading the item is a snapshot and, in an attribute, is set once at clone like a key-derived one; (3) `expose()`/`requestContext()` in an item get their own message rather than component setup's (whose copy lists `expose()` as allowed); (4) an item `first()` that matches nothing but names a custom tag is emitted unverified (composed child); (5) new error copy may want a writer pass.
+  **Review:** Approved (Architect, 2026-10-05). `extractItemSetup` (`setup-extraction.ts`) classifies item setup by the component rules with item, key and enclosing items' names known; IR `ItemSetupStmt` on `ReconcileForIR.setup`; root-naming `first()` emits `_element`. Rulings on the contributor's doubts: (1) a non-function per-item const reading a client-only name is refused, not routed to Simulated — an item const has no server value and the server renders every initial item from it; (2) an item-reading const is a snapshot, set at clone like a key-derived value; (3) `expose()`/`requestContext()` keep their own messages, since component setup's copy names `expose()` as allowed; (4) an unmatched custom-element `first()` is emitted unverified, as at component level. The new refusal copy gets the `writer` pass with the iteration's changelog. `check:sim` Deno leg and `test:variants` are the owner's (sandbox). **Integration with LT-442:** whichever lands second adds `import { css } from '@zeix/le-truc-compiler/macros'` to the inline `.tsx` sources of `item-setup.test.ts` (`STYLE_TSX`) and LT-426's new `diagnostic-parity.test.ts` block — without it the sheet compiles empty after LT-442.
+
 - [x] LT-427: An imported function is a known name in a client-only setup side effect (ADR 0046 s5). — reviewed ✓
   **Area:** compiler
   **Changed:** no compiler behavior change. The entry's premise did not hold: `clientKnownName`
@@ -1112,3 +1141,108 @@ Full entry text: `git log -p -- DONE.md`.
   records it at iteration close (35cf3094). `index.js` is not rebuilt on this branch: rebuild once
   after LT-412 and LT-436 are both integrated. Playwright to be run by the owner. Follow-up LT-438:
   the reused report copy ("its other effects") reads wrongly for a container.
+
+- [x] LT-439: A module-level `type` declaration in a `.tsrx` source may not reach the generated modules (LT-424 finding) — reproduce, then fix or close. — reviewed ✓
+  **Area:** compiler
+  **Context:** During LT-424 the contributor's ad-hoc `.tsrx` fixtures declared a module-level
+  `type` (an item shape for `createList<Task, …>`) that did not appear in the generated client or
+  server module, so the generated code failed to type. Unverified, and it predates LT-424. The corpus
+  migrations (LT-109–LT-111) author `.tsrx` members with item types, so a confirmed drop would block
+  them silently. Reproduce on a minimal `.tsrx` fixture with a module-level `type` and `interface`
+  used by a setup declaration; compare against the `.tsx` spelling of the same component.
+  1. **If it reproduces:** carry module-level type declarations (`type`, `interface`, type-only
+     imports) into both generated modules on `.tsrx`, the way the `.tsx` front end does; pin it with a
+     fixture whose generated modules typecheck under `check:corpus`'s tsc flags, on both surfaces.
+  2. **If it does not:** record the fixture that disproves it in the task's `**Changed:**` line and
+     close it with no code change.
+  **Channel/tier:** compiler — a carry-through fix, no new diagnostic.
+  **Check:** the fixture's generated modules typecheck on both surfaces; corpus goldens
+  byte-identical; server suite and `check:corpus` green.
+
+  **Changed:** Reproduced — on BOTH surfaces, not just `.tsrx`: a module-level `type`/`interface` without `export` was dropped from the client and server modules (the shared `readModuleDecls` in `assemble-ir.ts` carried only `ExportNamedDeclaration`-wrapped ones), so `createList<Task, …>` / `const n: Note` named undeclared types (TS2304). Exported declarations and `import type` placement already worked on both surfaces.
+  **How:** `readModuleDecls` now carries a bare `TSTypeAliasDeclaration`/`TSInterfaceDeclaration` verbatim like an exported one; it flows into `typeDecls`, so the existing type-only-import placement (LT-106) credits names it references. `propsTypeName` still binds only an exported `<Name>Props`. IR doc updated. Fixture: `server/tests/compiler/module-type-decls.test.ts` — the same component with a module-local `type ProbeTask` (list item shape) and `interface ProbeNote` (setup annotation) on `.tsrx` and `.tsx`; asserts both declarations in both modules and runs tsc with `check:corpus`'s flags over all four generated modules (red before the fix with 8 TS2304, green after).
+  **Check:** `test:server` 3064 pass / 3 fail (exactly the LT-441 build-report baseline trio); corpus goldens byte-identical (no corpus source has a module-local type); `typecheck`, `check:contract`, `check:corpus` (38 components), `build:docs`, `check:links` (728) green; biome clean on touched paths. Doubt: the entry assumed `.tsx` carried these — it did not, so the fix lives in the shared assembler; a module-local type now also lands in the generated module's text, which is harmless (not exported) but is a generated-output change.
+  **Review:** Approved (Architect, 2026-10-05). The drop was surface-independent: the shared `readModuleDecls` carried only exported type declarations, so the fix lives in `assemble-ir.ts` and `.tsx` output gains module-local types too (corpus goldens unchanged, no corpus source declares one). A module-local `<Name>Props` stays unbound as the props type by design.
+
+- [x] LT-440: A compiler-inferred `number` harvest truncates decimals — `parserForType` maps `number` to `asNumber` (LT-429 design session). — reviewed ✓
+  **Area:** compiler
+  **Context:** `parserForType` (`server/compiler/analysis/harvest.ts:123`) maps an inferred
+  `number` signal to `asInteger`, which `Math.trunc`s (`src/parsers/number.ts:39`). A number signal
+  harvested from a text or attribute site whose server value is `2.5` connects as `2` — a silent
+  miscompile (ADR 0003: the DOM is the truth at load, and the harvest must reproduce it). The server
+  renders numbers with `String(n)`, the shortest round-tripping form, so `parseFloat` (`asNumber`)
+  recovers every value exactly; `asInteger` adds only hex, which the server never writes.
+  Ruling (owner, 2026-10-05): `asInteger` is not a generalizable inference — map `number` →
+  `asNumber`. Narrow `ParserKind` (`analysis/plan.ts:47`) to `'asNumber' | 'asBoolean' | 'asString'`
+  and drop `asInteger` from the harvest emission path; an authored `asInteger()` (a Parser-exposed
+  prop, `evaluability.ts` route 1) is untouched. LT-429 reuses this mapping for list-item fields.
+  Channel/tier: none — no new check; this fixes a silent wrong value.
+  **Check:** a fixture with a number signal seeded `2.5` from a text site and from an attribute site
+  connects at `2.5` on both surfaces; regenerate affected generated-module snapshots and confirm the
+  diff is the parser name only. Full compiler gates.
+
+  **Changed:** `parserForType` maps an inferred `number` signal to `asNumber` (was `asInteger`, which `Math.trunc`ed a `2.5` seed to `2` at connect); `ParserKind` narrowed to `'asNumber' | 'asBoolean' | 'asString'`. Authored `asInteger()` (Parser-exposed props, evaluability route 1) untouched. `COMPILER_SPEC.md` §10 example updated.
+  **How:** `server/compiler/analysis/harvest.ts` + `analysis/plan.ts`; new regression `server/tests/compiler/number-harvest.test.ts` (text site and `data-n` attribute site, both surfaces, connect in the simulation realm at `2.5`; all 8 fail on the old mapping). Expectations in `client.golden.test.ts`, `raw-value-source.test.ts` updated; snapshots `basic-counter.client.ts.snap` and `tsx/__snapshots__/parity.test.ts.snap` regenerated — diff is the parser name only (import line + seed call, 2 lines each).
+  **Check:** `bun test server/tests/compiler/number-harvest.test.ts`. Gates: test:server 3069 pass / 3 fail (exactly the LT-441 build-report baseline trio), typecheck, check:contract, check:corpus, build:docs, check:links, lint:server green. Unrunnable: test:variants (Playwright) — every spec timed out at 30s in the sandbox; basic-counter's served `.tsx` client changes import, so the owner should run it. Doubt: a `<data value>` attribute site harvests via `String(data.value)` and now reads through `asNumber` too (raw-value-source fixture).
+  **Review:** Approved (Architect, 2026-10-05). Mapping and `ParserKind` narrowed; every remaining `asInteger` in `server/compiler/` is the authored-Parser path (vocabulary, imports allowlist, route-1 seeds). Snapshot diff is the parser name only (basic-counter client, tsx parity). `test:variants` did not run in the sandbox (Playwright timeouts across unrelated specs); the owner runs it at integration, since basic-counter's served client now imports `asNumber`. The `<data value>` IDL harvest path reaches `asNumber` through the same mapping; no separate pin.
+
+- [x] LT-441: The `test-listitem` simulation classifications predate LT-436's Mount Scope descriptor — `test:server` is red on v3 (LT-355 review finding). — reviewed ✓
+  **Area:** compiler
+  **Gates:** test:server
+  **Context:** LT-436 reports a throwing `reconcile()` item through `reportEffectFailure` with the
+  descriptor `reconcile() item "<key>"`, so the realm logs ``reconcile() item "task-1" did not
+  activate in <ul.tasks>; …``. The two standing entries for `test-listitem` and `test-listitem-tsx`
+  in `server/compiler/sim/classifications.ts` still match `/reconcile\(\) did not activate .*/`. Result
+  on v3 (c59013a2): `sim-driver.test.ts` "build-report baseline (LT-163)" fails three tests — the
+  `.tsrx` notice is unclassified and the `.tsx` entry matches nothing. The attribution also needs a
+  look: the failing run reports only `test-listitem`, not the `.tsx` twin.
+  1. Widen both regexes to the LT-436 descriptor (`reconcile\(\) item "[^"]+" did not activate`).
+     Do not loosen them past the `InvalidPassPropertyError` clause.
+  2. Confirm both twins still report the notice. If the `.tsx` twin no longer does, retire its
+     entry (the test demands it) and state why in the handoff.
+  **Channel/tier:** none — test classification data only.
+  **Check:** `test:server` green, the LT-163 baseline included. LT-438 rewords the same message
+  again; it updates these regexes in the same change.
+
+  **Changed:** both `test-listitem`/`test-listitem-tsx` entries in `server/compiler/sim/classifications.ts` now match the LT-436 descriptor (`reconcile\(\) item "[^"]+" did not activate .*InvalidPassPropertyError: …`, tail unchanged); the `.tsx` twin still reports the notice (items `task-1`/`task-2`, twice each, same as the `.tsrx` twin), so its entry stays — `test:server` 3064 pass / 0 fail, LT-163 baseline included.
+  **Review:** Approved (Architect, 2026-10-05). Prefix-only widening; the `InvalidPassPropertyError` tail is untouched. Both twins report the notice, so both entries stay; the entry's "only `test-listitem`" observation did not reproduce.
+
+- [x] LT-442: Stand up the `@zeix/le-truc-compiler/macros` subpath and move the `css` tag onto it — compile-time markers are imports, never ambients (ADR 0034 s1). — reviewed ✓
+  **Area:** compiler
+  **Gates:** check:corpus
+  **Context:** Ruling (owner, LT-429 design session, 2026-10-05; ADR 0034 s1, ARCHITECTURE.md →
+  *Authoring Surfaces* → Compile-time markers): a call the compiler consumes and never runs is
+  imported from `@zeix/le-truc-compiler/macros`, because a `.tsx` source is plain TypeScript and the
+  import is the only sign a compiler consumes the call. Today `css` is a global in
+  `server/compiler/frontend/tsx/host-profile.d.ts:112`, matched by bare name
+  (`frontend/tsx/compiler-tsx.ts:73`). This task builds the subpath with `css` as its first export;
+  LT-429 adds `harvest()` to it.
+  1. **The module.** `server/compiler/macros.ts` exports `css` with today's signature
+     (`(source: TemplateStringsArray, ...substitutions: never[]) => string`) and JSDoc moved from
+     the profile. Its body throws `Error('css is a compile-time marker: this module was not compiled
+     by @zeix/le-truc-compiler')` — copy per `writer` → error-messages. The package does not exist
+     yet (LT-254): resolve the specifier in-repo with a `tsconfig.json` `paths` entry beside
+     `@zeix/le-truc`, and in whatever resolution `check:corpus` and the pipeline use for authored
+     sources. LT-254 carries the `./macros` export (rider added there).
+  2. **Recognition by binding.** The compiler matches a marker by module specifier and imported
+     name: `import { css as style }` resolves, and a local `css` that is not the import does not
+     match. Put the resolution in shared code both front ends call (`.tsrx` uses no `css` today, but
+     `harvest()` arrives on both surfaces).
+  3. **Stripping.** The marker import never reaches either generated module; drop the whole
+     declaration when every specifier is a marker, otherwise only the marker specifiers.
+  4. **Retire the ambient.** Delete `css` from `host-profile.d.ts`; add the import to every corpus
+     `.tsx` that uses the tag and to the probe/fixture sources. A missing import is then tsc's
+     "Cannot find name 'css'" (channel TypeScript, tier 1 Prevented — no LTC rule: tsc already
+     decides it at the authored line). Existing `css`-position rules keep their codes, now keyed on
+     the resolved binding.
+  5. **Docs.** `server/compiler/HOST_PROFILE.md` and `LE_TRUC_COMPILER.md`: the import replaces the
+     ambient in every example; one paragraph on markers (specifier + binding, stripped, throwing
+     stub). AGENTS.md's mentions of the `css` tag go through `.agents-proposals/` if they need it.
+  **Check:** an aliased import compiles identically; a shadowing local `css` is not treated as the
+  marker; generated modules carry no `/macros` import; `check:corpus` and the full compiler gates
+  green on every `.tsx`.
+
+  **Changed:** `server/compiler/macros.ts` is the `@zeix/le-truc-compiler/macros` module: a `css` stub with the old signature and JSDoc, which throws when reached uncompiled. The `css` ambient is removed from `host-profile.d.ts`. The compiler recognizes a marker by module specifier and imported name (`parseMarkerImports`/`shadowMarkers`/`markerOf` in `imports.ts`, wired by the shared `runFrontEnd` into `ExtractContext.markers` for both surfaces). An alias resolves. A bare `css`, another module's `css` or a component-scope declaration that shadows the import does not match. `parsePlainImports` strips marker specifiers: a declaration of markers only is dropped whole, and a mixed one keeps its other specifiers. Every corpus `.tsx` that uses the tag, both fixtures, the contract probe and the inline test sources now import it. `paths` entries resolve the specifier in the root, `examples/` and the `.tsx` fixture tsconfigs. HOST_PROFILE.md, LE_TRUC_COMPILER.md and `skills/le-truc/references/compiled.md` are updated.
+  **How:** `SurfaceAdapter.stylesheetOf` now takes `ctx`, so the `.tsx` adapter can read the marker bindings. A shadowed name is removed from `ctx.markers` after the setup/output split (args + setup `const`/`function`/`class` declarations). `check:corpus` and the pipeline never resolve the specifier, because the generated modules carry no import of it. Only tsc over authored `.tsx` needs the `paths` entry.
+  **Check:** `server/tests/compiler/macros.test.ts` (9 tests) covers the aliased import (identical css/server/client), a bare `css`, a foreign `css`, a shadowing local, alias vs local, a mixed declaration, the `.tsrx` strip without LTC014, and the stub's throw. The corpus was rebuilt before and after: every `*.server.ts`/`*.client.ts`/`*.css` is byte-identical. The only diff is `registry.json`'s authored-source offsets, which shift by the added import line. Gates: test:server 3071 pass / 3 fail, and the 3 failures are exactly the LT-441 baseline. typecheck, check:contract, check:corpus (38 components), build:docs and check:links (729) are green, and biome is clean on the changed paths. test:variants could not run here: Playwright times out at 30s on every test, including the untouched `.ts` surface (sandbox). Doubts: (1) A non-marker tag (shadowed, unimported or foreign) or a `${}` substitution still yields an empty stylesheet silently, which was already true before this change. tsc catches the missing import and the substitution, but not a shadowing local, so a rule may be wanted. (2) The task's "css-position rules keep their codes" had nothing to re-key: no LTC rule keys on the tag. (3) Line expectations in two `diagnostics.test.ts` cases moved by +1 because of the added import line.
+  **Review:** Approved (Architect, 2026-10-05). Marker table in `imports.ts` (`parseMarkerImports`/`markerOf`/`shadowMarkers`), stored on `ExtractContext.markers`; stripping in `parsePlainImports` (whole declaration or marker specifiers only); `paths` entries in the root, `examples/` and tsx-fixture tsconfigs; the pipeline and `check:corpus` never resolve the specifier, since generated modules never import it. Corpus server/client/CSS outputs byte-identical; only `registry.json` source offsets moved. No `css`-keyed LTC rule existed to re-key. `test:variants` did not run in the sandbox; the owner runs it at integration. Follow-ups: the silent empty sheet on a non-marker `<style>` tag is LT-444; scope-aware shadowing for `harvest()` rides LT-429.

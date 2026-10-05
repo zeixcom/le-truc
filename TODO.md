@@ -118,13 +118,13 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). ~~LT-429~~ (ruled 2026-10-05 → ADR 0046
   s7, ADR 0034 s1; ruling 14). **Next owner session:** LT-334 (lazyload's boundary; its implementation task pairs
   with LT-390), LT-409 (the shadow-root departures; re-scopes LT-405/LT-407/LT-408).
-- **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). **Next:** LT-441 (`test:server` is red on v3 until it lands; every contributor gate reports it).
+- **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → **next:** LT-426 → LT-429 (needs LT-439, LT-440, LT-442 from track B) → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → **next:** LT-429 (needs LT-439, LT-440, LT-442 from track B) → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types) → LT-440 (ahead of LT-429, which reuses its mapping) → LT-442 (the `/macros` subpath LT-429 extends) → LT-443 (needs LT-429).
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). **Next:** LT-444 (LT-442 finding) → LT-443 (needs LT-429).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
@@ -149,7 +149,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-444.** Next free diagnostic code: LTC078 (LTC077 is LT-443's; LTC076 is LT-429's; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-445.** Next free diagnostic code: LTC079 (LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -200,51 +200,7 @@ recorded against the 30.4k opening measurement.
   **Channel/tier:** decided per difference by the session.
 
 
-### 0 — test hygiene
-
-- [ ] LT-441: The `test-listitem` simulation classifications predate LT-436's Mount Scope descriptor — `test:server` is red on v3 (LT-355 review finding).
-  **Area:** compiler
-  **Gates:** test:server
-  **Context:** LT-436 reports a throwing `reconcile()` item through `reportEffectFailure` with the
-  descriptor `reconcile() item "<key>"`, so the realm logs ``reconcile() item "task-1" did not
-  activate in <ul.tasks>; …``. The two standing entries for `test-listitem` and `test-listitem-tsx`
-  in `server/compiler/sim/classifications.ts` still match `/reconcile\(\) did not activate .*/`. Result
-  on v3 (c59013a2): `sim-driver.test.ts` "build-report baseline (LT-163)" fails three tests — the
-  `.tsrx` notice is unclassified and the `.tsx` entry matches nothing. The attribution also needs a
-  look: the failing run reports only `test-listitem`, not the `.tsx` twin.
-  1. Widen both regexes to the LT-436 descriptor (`reconcile\(\) item "[^"]+" did not activate`).
-     Do not loosen them past the `InvalidPassPropertyError` clause.
-  2. Confirm both twins still report the notice. If the `.tsx` twin no longer does, retire its
-     entry (the test demands it) and state why in the handoff.
-  **Channel/tier:** none — test classification data only.
-  **Check:** `test:server` green, the LT-163 baseline included. LT-438 rewords the same message
-  again; it updates these regexes in the same change.
-
 ### C — corpus port
-
-- [ ] LT-426: Per-item setup — the `map` block body and `@for` statements classified by the setup rules; selectors may name the scope root (ADR 0046 s2, s5).
-  **Area:** compiler
-  **Needs:** LT-424, LT-425
-  **Gates:** check:sim
-  **Context:** A reactive list body refuses every statement today (`lower-shared.ts:1045-1062`,
-  "A hoisted const in a reactive-list body"). ADR 0046 s5 runs the component-setup
-  classification (`setup-extraction.ts`, shared by both front ends) per item, with the item and
-  key as known names:
-  1. **Statements:** plain `const`s (both phases; per initial item on the server, in `bindItem`
-     on the client); signal declarations over the item (the harness evaluates once, the client
-     per item); `first()` refs against the item's `first`; client-only side effects
-     (`watch`/`on`/`pass`) in `bindItem` only. Everything else is LTC005 with component setup's
-     message.
-  2. **Scope root:** a selector in a scope that matches the scope root resolves at build time
-     and emits the root parameter (`_element`/the arm root), not a query.
-  3. **Scope-declared lists** are loop sources: a `deriveList` declared in an item's setup
-     drives a nested list (LT-424).
-  4. Arms take no setup statements (ADR 0046 s5); a `.tsrx` `@if` body statement stays refused.
-  **Channel/tier:** compiler; parity cases on both surfaces.
-  **Check:** fixtures on both surfaces: a key-derived `const`, a per-item `createMemo`, a
-  `first()` naming the item root, a per-item `createSensor` with a seed driving an arm or empty
-  state, a nested list over a scope-declared `deriveList`. Full gates.
-  **Impasse rule (iteration ruling 10).**
 
 - [ ] LT-429: Per-field harvest for list items seeded from server args — parsers inferred or declared with `harvest()`; LTC072 for a field with no harvest site, LTC076 for a field with no parser (ADR 0046 s7).
   **Area:** compiler
@@ -288,6 +244,8 @@ recorded against the 30.4k opening measurement.
   compiles with a complete map and fails tsc with a field missing; a `Date` field round-trips
   through an authored parser; a wrong parser type is a tsc error at the authored line; an
   unrendered field fails LTC072 and an unparsable one LTC076, on both surfaces. Full gates.
+
+  **Rider (Architect, 2026-10-05, from LT-442):** `shadowMarkers` drops only the names the component function's own scope declares (args and top-level setup). That suffices for `css` (a `<style>` is a direct child of the root); `harvest()` can appear in item setup and nested scopes, so resolve its binding against the enclosing scopes there — extend `shadowMarkers`/`markerOf`, do not fork them.
 
 - [ ] LT-111: Migrate `module-todo` to `.tsx` with same-commit cutover — last hand-written example, completes the corpus port.
   **Area:** examples
@@ -346,74 +304,26 @@ recorded against the 30.4k opening measurement.
 
 ### B — correctness
 
-- [ ] LT-439: A module-level `type` declaration in a `.tsrx` source may not reach the generated modules (LT-424 finding) — reproduce, then fix or close.
+- [ ] LT-444: A `.tsx` `<style>` whose content is not a stylesheet spelling compiles to an empty sheet with no message — refuse it (LT-442 finding).
   **Area:** compiler
-  **Context:** During LT-424 the contributor's ad-hoc `.tsrx` fixtures declared a module-level
-  `type` (an item shape for `createList<Task, …>`) that did not appear in the generated client or
-  server module, so the generated code failed to type. Unverified, and it predates LT-424. The corpus
-  migrations (LT-109–LT-111) author `.tsrx` members with item types, so a confirmed drop would block
-  them silently. Reproduce on a minimal `.tsrx` fixture with a module-level `type` and `interface`
-  used by a setup declaration; compare against the `.tsx` spelling of the same component.
-  1. **If it reproduces:** carry module-level type declarations (`type`, `interface`, type-only
-     imports) into both generated modules on `.tsrx`, the way the `.tsx` front end does; pin it with a
-     fixture whose generated modules typecheck under `check:corpus`'s tsc flags, on both surfaces.
-  2. **If it does not:** record the fixture that disproves it in the task's `**Changed:**` line and
-     close it with no code change.
-  **Channel/tier:** compiler — a carry-through fix, no new diagnostic.
-  **Check:** the fixture's generated modules typecheck on both surfaces; corpus goldens
-  byte-identical; server suite and `check:corpus` green.
-
-- [ ] LT-440: A compiler-inferred `number` harvest truncates decimals — `parserForType` maps `number` to `asNumber` (LT-429 design session).
-  **Area:** compiler
-  **Context:** `parserForType` (`server/compiler/analysis/harvest.ts:123`) maps an inferred
-  `number` signal to `asInteger`, which `Math.trunc`s (`src/parsers/number.ts:39`). A number signal
-  harvested from a text or attribute site whose server value is `2.5` connects as `2` — a silent
-  miscompile (ADR 0003: the DOM is the truth at load, and the harvest must reproduce it). The server
-  renders numbers with `String(n)`, the shortest round-tripping form, so `parseFloat` (`asNumber`)
-  recovers every value exactly; `asInteger` adds only hex, which the server never writes.
-  Ruling (owner, 2026-10-05): `asInteger` is not a generalizable inference — map `number` →
-  `asNumber`. Narrow `ParserKind` (`analysis/plan.ts:47`) to `'asNumber' | 'asBoolean' | 'asString'`
-  and drop `asInteger` from the harvest emission path; an authored `asInteger()` (a Parser-exposed
-  prop, `evaluability.ts` route 1) is untouched. LT-429 reuses this mapping for list-item fields.
-  Channel/tier: none — no new check; this fixes a silent wrong value.
-  **Check:** a fixture with a number signal seeded `2.5` from a text site and from an attribute site
-  connects at `2.5` on both surfaces; regenerate affected generated-module snapshots and confirm the
-  diff is the parser name only. Full compiler gates.
-
-- [ ] LT-442: Stand up the `@zeix/le-truc-compiler/macros` subpath and move the `css` tag onto it — compile-time markers are imports, never ambients (ADR 0034 s1).
-  **Area:** compiler
+  **Needs:** LT-442
   **Gates:** check:corpus
-  **Context:** Ruling (owner, LT-429 design session, 2026-10-05; ADR 0034 s1, ARCHITECTURE.md →
-  *Authoring Surfaces* → Compile-time markers): a call the compiler consumes and never runs is
-  imported from `@zeix/le-truc-compiler/macros`, because a `.tsx` source is plain TypeScript and the
-  import is the only sign a compiler consumes the call. Today `css` is a global in
-  `server/compiler/frontend/tsx/host-profile.d.ts:112`, matched by bare name
-  (`frontend/tsx/compiler-tsx.ts:73`). This task builds the subpath with `css` as its first export;
-  LT-429 adds `harvest()` to it.
-  1. **The module.** `server/compiler/macros.ts` exports `css` with today's signature
-     (`(source: TemplateStringsArray, ...substitutions: never[]) => string`) and JSDoc moved from
-     the profile. Its body throws `Error('css is a compile-time marker: this module was not compiled
-     by @zeix/le-truc-compiler')` — copy per `writer` → error-messages. The package does not exist
-     yet (LT-254): resolve the specifier in-repo with a `tsconfig.json` `paths` entry beside
-     `@zeix/le-truc`, and in whatever resolution `check:corpus` and the pipeline use for authored
-     sources. LT-254 carries the `./macros` export (rider added there).
-  2. **Recognition by binding.** The compiler matches a marker by module specifier and imported
-     name: `import { css as style }` resolves, and a local `css` that is not the import does not
-     match. Put the resolution in shared code both front ends call (`.tsrx` uses no `css` today, but
-     `harvest()` arrives on both surfaces).
-  3. **Stripping.** The marker import never reaches either generated module; drop the whole
-     declaration when every specifier is a marker, otherwise only the marker specifiers.
-  4. **Retire the ambient.** Delete `css` from `host-profile.d.ts`; add the import to every corpus
-     `.tsx` that uses the tag and to the probe/fixture sources. A missing import is then tsc's
-     "Cannot find name 'css'" (channel TypeScript, tier 1 Prevented — no LTC rule: tsc already
-     decides it at the authored line). Existing `css`-position rules keep their codes, now keyed on
-     the resolved binding.
-  5. **Docs.** `server/compiler/HOST_PROFILE.md` and `LE_TRUC_COMPILER.md`: the import replaces the
-     ambient in every example; one paragraph on markers (specifier + binding, stripped, throwing
-     stub). AGENTS.md's mentions of the `css` tag go through `.agents-proposals/` if they need it.
-  **Check:** an aliased import compiles identically; a shadowing local `css` is not treated as the
-  marker; generated modules carry no `/macros` import; `check:corpus` and the full compiler gates
-  green on every `.tsx`.
+  **Context:** `styleElementStylesheet` (`frontend/tsx/compiler-tsx.ts`) returns `null` — read as
+  `''` by `stylesheetOf` — when the `<style>` child is a tagged template whose tag does not resolve to
+  the `css` marker (a shadowing local, an unimported or foreign `css`, any other tag), or when the
+  template carries a `${}` substitution. The component then ships no stylesheet and the build says
+  nothing. tsc catches the missing import and the substitution (`never[]`), but not a shadowing local
+  or a foreign tag; and the compiler must not lean on tsc for a drop it decides itself.
+  1. Every `<style>` child on `.tsx` is one of: the `css` marker's tagged template, a bare template
+     literal, or empty. Anything else — another tag, a non-template expression, a substitution — is a
+     new LTC code (next free: LTC078), tier 1 Prevented, statically decidable, no runtime half. Copy
+     per `writer` → error-messages; name the shadowing case explicitly when the tag's local name is
+     `css`.
+  2. `.tsrx` spells the sheet as a `<style>` element body; confirm its parser already refuses a
+     substitution, and if it does not, the same code covers it (`diagnostic-parity.test.ts`).
+  **Channel/tier:** compiler, tier 1 Prevented.
+  **Check:** parity cases for a shadowed `css`, a foreign tag and a substitution; corpus emits no new
+  diagnostic (`check:corpus` 0 hits); goldens byte-identical.
 
 - [ ] LT-443: An unresolvable scalar seed type harvests silently as a string — refuse it (LTC077) unless `harvest(value, parser)` declares its parser (ADR 0046 s7).
   **Area:** compiler
