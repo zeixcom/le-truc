@@ -386,7 +386,9 @@ describe('two-order hermeticity (sub-design 10, LT-164)', () => {
 				// end-of-its-renders posture, not a between-renders disposal.
 				// It must dispose BEFORE the file-level realm (its restores
 				// re-install realm's patches), and this test is the file's last.
-				realm2.dispose()
+				// Awaited: the restores follow the final settle (LT-411), so an
+				// un-awaited dispose would race the file realm's own afterAll.
+				await realm2.dispose()
 			}
 		} finally {
 			order2.cleanup()

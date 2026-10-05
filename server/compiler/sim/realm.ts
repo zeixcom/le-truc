@@ -47,6 +47,13 @@
  * realm (tests dispose per file or per test) never fires against its
  * restored globals and lands as an uncaught error in whatever runs next.
  *
+ * The LAST render's tree is settled by `dispose()` itself (LT-411): it runs
+ * the same teardown the next render's window performed for every earlier
+ * render, before the restores and before `window.close()` — so the final
+ * disconnect's output is captured and attributed like every other render's,
+ * and nothing it queued fires against the deleted globals. `dispose()` is
+ * therefore async; await it before reading `diagnostics` for the last time.
+ *
  * ## Diagnostics
  *
  * jsdom's `virtualConsole` is the diagnostic channel (ADR 0027 Consequences).
@@ -768,7 +775,9 @@ export function createSimulationRealm(
 
 	/**
 	 * Tear down the previous render's tree under ITS attribution, before the
-	 * next window opens (LT-335).
+	 * next window opens (LT-335) — and, from `dispose()`, the LAST render's
+	 * tree before the realm retires, for which there is no next window
+	 * (LT-411).
 	 *
 	 * The live tree of a render stays in the document after `render()`
 	 * returns (callers and tests inspect it), so it used to be detached by
@@ -823,12 +832,47 @@ export function createSimulationRealm(
 		}
 	}
 
-	const dispose = () => {
-		processLike?.off?.('unhandledRejection', onRejection)
-		for (const [handle, clear] of pendingTimers) clear(handle)
-		pendingTimers.clear()
-		for (const restore of restores.reverse()) restore()
-		window.close()
+	/** The in-flight or completed disposal, for idempotence (LT-411). */
+	let disposal: Promise<void> | null = null
+
+	/**
+	 * Tear down the last render's tree, then retire the realm (LT-411).
+	 *
+	 * Until LT-411 `dispose()` went straight to `window.close()`, which tore
+	 * the last render's tree down AFTER the build report was computed and
+	 * with the patch table already gone: whatever its disconnect did was
+	 * uncaptured, unattributed, or — for a cleanup reading a free global
+	 * like `window` — an error against the deleted globals. That is the
+	 * shape LT-335 fixed between renders; this is the same teardown, given
+	 * the same treatment at end-of-process. `settlePreviousRender()` runs
+	 * FIRST, with `currentComponent` still naming the last render and the
+	 * globals still in place, under a host-console capture like any render
+	 * window; only then are the rejection handler retired, the realm's
+	 * timers cancelled (catching ones the disconnect itself scheduled —
+	 * LT-207's guarantee, extended to the final teardown), the globals
+	 * restored, and the window closed.
+	 *
+	 * Idempotent: a second call returns the first disposal's promise. The
+	 * simulation pass disposes before the report is computed (so the final
+	 * teardown is gated like every other render) and keeps a disposal in
+	 * its `finally` for the error path; the guard makes the two coincide.
+	 */
+	const dispose = (): Promise<void> => {
+		if (disposal) return disposal
+		disposal = (async () => {
+			const releaseConsole = captureHostConsole()
+			try {
+				await settlePreviousRender()
+			} finally {
+				releaseConsole()
+			}
+			processLike?.off?.('unhandledRejection', onRejection)
+			for (const [handle, clear] of pendingTimers) clear(handle)
+			pendingTimers.clear()
+			for (const restore of restores.reverse()) restore()
+			window.close()
+		})()
+		return disposal
 	}
 
 	return {

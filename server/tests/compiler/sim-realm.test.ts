@@ -53,8 +53,8 @@ const withRealm = (): JsdomSimulationRealm => {
 	return active
 }
 
-afterEach(() => {
-	active?.dispose()
+afterEach(async () => {
+	await active?.dispose()
 	active = null
 })
 
@@ -182,7 +182,7 @@ describe('realm application', () => {
 		expect(globalRecord.Event).not.toBe(before)
 	})
 
-	test('restores every touched global on dispose', () => {
+	test('restores every touched global on dispose', async () => {
 		const before = new Map(
 			[
 				'HTMLElement',
@@ -194,7 +194,9 @@ describe('realm application', () => {
 			].map(name => [name, globalRecord[name]]),
 		)
 		const realm = createSimulationRealm()
-		realm.dispose()
+		// The restores happen after the final settle (LT-411), so the promise
+		// is the contract: past the await, the globals are back.
+		await realm.dispose()
 		for (const [name, value] of before)
 			expect(globalRecord[name]).toBe(value as never)
 	})
@@ -227,7 +229,7 @@ describe('realm application', () => {
 				fired = true
 			}, 0)
 		} finally {
-			realm.dispose()
+			await realm.dispose()
 		}
 		// Past DEPENDENCY_TIMEOUT (200 ms): the wait would have fired by now.
 		await new Promise(resolve => hostSetTimeout(resolve, 300))
@@ -942,6 +944,62 @@ describe('teardown attributes to the render that built the tree (LT-335)', () =>
 			['probe-noisy-teardown', 'sync teardown notice'],
 			['probe-noisy-teardown', 'queued teardown notice'],
 		])
+	})
+})
+
+describe('the last render settles at dispose (LT-411)', () => {
+	/**
+	 * The pin: with no next render to run `settlePreviousRender()`, the final
+	 * tree used to be torn down by `window.close()` in `dispose()` — after
+	 * the build report existed, and after the patch-table restores — so its
+	 * disconnect output went uncaptured and unattributed, and a cleanup
+	 * reading a free global (`module-listnav`'s `window.removeEventListener`)
+	 * errored against the deleted globals. Dispose must settle FIRST, under
+	 * the last render's own attribution, with the globals still in place.
+	 */
+	test('a last-rendered fixture reporting on disconnect shows that report in the final diagnostics under its own tag', async () => {
+		const realm = withRealm()
+		await realm.load(async () => {
+			// The module-listnav cleanup shape, plus the sync and queued
+			// reports the LT-335 pin uses: all of it is disconnect work, all
+			// of it must land attributed and captured.
+			customElements.define(
+				'probe-final-teardown',
+				class extends HTMLElement {
+					disconnectedCallback() {
+						window.removeEventListener('hashchange', () => {})
+						console.error('final teardown notice')
+						queueMicrotask(() => console.error('queued final teardown notice'))
+					}
+				},
+			)
+		})
+		await realm.render({
+			markup: '<probe-final-teardown></probe-final-teardown>',
+			component: 'probe-final-teardown',
+		})
+		await realm.dispose()
+		const notices = realm.diagnostics.filter(entry =>
+			entry.message.includes('teardown notice'),
+		)
+		expect(notices.map(entry => [entry.component, entry.message])).toEqual([
+			['probe-final-teardown', 'final teardown notice'],
+			['probe-final-teardown', 'queued final teardown notice'],
+		])
+		// Nothing else fired: in particular no `window is not defined` — the
+		// cleanup read its `window` while the patch table was still applied.
+		expect(
+			realm.diagnostics.filter(
+				entry => !entry.message.includes('teardown notice'),
+			),
+		).toEqual([])
+	})
+
+	test('dispose is idempotent — a second call returns the first disposal', async () => {
+		const realm = withRealm()
+		const first = realm.dispose()
+		expect(realm.dispose()).toBe(first)
+		await first
 	})
 })
 

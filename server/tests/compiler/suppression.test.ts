@@ -485,8 +485,9 @@ describe('the realm reverts suppressed sites before serializing', () => {
 			} finally {
 				// LIFO against the file-level realm (its restores re-install
 				// the outer realm's patches) — disposed before this file's
-				// afterAll runs.
-				realm2.dispose()
+				// afterAll runs. Awaited: the restores follow the final settle
+				// (LT-411), so an un-awaited dispose would race the afterAll's.
+				await realm2.dispose()
 			}
 		} finally {
 			unwired.cleanup()

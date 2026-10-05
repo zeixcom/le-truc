@@ -86,6 +86,7 @@ const fakeRealm = (diagnostics: SimDiagnostic[] = []) => {
 		},
 		dispose() {
 			log.push('dispose')
+			return Promise.resolve()
 		},
 	}
 	return { realm, log }
@@ -263,6 +264,39 @@ describe('disposal is end-of-build (LT-152 review, obligation 1)', () => {
 			}),
 		).rejects.toThrow(/x-a/)
 		expect(log.at(-1)).toBe('dispose')
+	})
+
+	test('the report is computed after disposal, so the final teardown is gated (LT-411)', async () => {
+		// The last render's tree is settled by dispose (LT-411). A diagnostic
+		// that only exists once dispose ran must be IN the report — before
+		// LT-411 the pass computed the report first and disposed in the
+		// finally, so the final teardown landed after it, gated nowhere.
+		const { realm } = fakeRealm()
+		realm.dispose = async () => {
+			;(realm.diagnostics as SimDiagnostic[]).push({
+				kind: 'console',
+				component: 'x-a',
+				level: 'error',
+				message: 'final teardown notice',
+			})
+			return Promise.resolve()
+		}
+		const result = await simulateCorpus({
+			registry: registryOf(entry('x-a', 'simulated')),
+			createRealm: () => realm,
+			classifications: [
+				{
+					kind: 'console',
+					component: 'x-a',
+					message: /final teardown notice/,
+					reason: 'test: the final teardown reached the report.',
+				},
+			],
+			readMarkup: async () => '<x-a></x-a>',
+			log: () => {},
+		})
+		expect(result.report.classified).toHaveLength(1)
+		expect(result.report.unclassified).toEqual([])
 	})
 })
 

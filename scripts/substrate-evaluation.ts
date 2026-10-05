@@ -475,7 +475,7 @@ const runColorgraph = async (
 			diagnostics: [...realm.diagnostics],
 		}
 	} finally {
-		realm.dispose()
+		await realm.dispose()
 	}
 }
 
@@ -605,7 +605,7 @@ const timeSubstrate = async (
 		}
 		await drain()
 	} finally {
-		realm.dispose()
+		await realm.dispose()
 	}
 	Bun.gc(true)
 	return { totalMs: rows.reduce((sum, row) => sum + row.ms, 0), rows }

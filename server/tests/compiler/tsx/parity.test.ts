@@ -326,7 +326,10 @@ describe('variant sets — front-end parity (§4.3, ADR 0039 s1)', () => {
 						})
 						expect(phase2B).toBe(phase2A)
 					} finally {
-						realm.dispose()
+						// Awaited: the restores follow the final settle (LT-411), and
+						// the next fixture's realm must not be created under this
+						// one's still-applied patches.
+						await realm.dispose()
 					}
 				})
 			}

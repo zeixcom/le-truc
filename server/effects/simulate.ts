@@ -57,7 +57,11 @@
  * render the build will ever do — never between renders. A disposed realm's
  * deleted globals turn a contained component's lingering dependency-wait
  * into a synchronous `customElements is not defined` flood that aborts the
- * process (LT-152 review). This is also why `build.ts` runs the pass only
+ * process (LT-152 review). On the normal path the disposal happens BEFORE
+ * the report is computed (LT-411): the last render's tree is settled under
+ * its own attribution, so its disconnect output reaches the gate like every
+ * other render's instead of landing after the report existed. This is also
+ * why `build.ts` runs the pass only
  * for a one-shot build and not on watch rebuilds: one module cache per
  * process means a second load of the same generated client records no
  * definitions, which `realm.load()` asserts against (ADR 0027 sub-design
@@ -466,6 +470,15 @@ export const simulateCorpus = async ({
 	// Set once the normal path has printed the report, so the catch below
 	// prints captured diagnostics only when an earlier throw would lose them.
 	let reported = false
+	// Exactly one disposal per pass, on every path (LT-411): the happy path
+	// disposes BEFORE the report is computed, so the last render's teardown
+	// is gated like every other render's; the finally covers the error path.
+	let disposed = false
+	const disposeOnce = async () => {
+		if (disposed) return
+		disposed = true
+		await realm.dispose()
+	}
 	try {
 		// Resolution phase, over the composed-children closure (LT-188). A
 		// module already recorded — a child its parent's client module
@@ -501,6 +514,11 @@ export const simulateCorpus = async ({
 			}
 			simulated.push(subject.tag)
 		}
+		// Settle the LAST render's tree before the report is final (LT-411):
+		// its disconnect runs component code, and un-disposed it would tear
+		// down after this report existed — attributed and gated nowhere. The
+		// dispose-once guard keeps the `finally` below a no-op on this path.
+		await disposeOnce()
 		const report = reportDiagnostics(realm.diagnostics, standingEntries)
 		const ms = performance.now() - started
 		log(
@@ -544,6 +562,8 @@ export const simulateCorpus = async ({
 	} finally {
 		// End of build, not between renders: every render the build will ever
 		// do has happened by here, including the ones an exception cut short.
-		realm.dispose()
+		// A no-op on the normal path — the report above required the settle —
+		// and the actual disposal when a throw skipped it.
+		await disposeOnce()
 	}
 }
