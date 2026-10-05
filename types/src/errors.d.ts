@@ -38,8 +38,9 @@ declare const reportEffectFailure: (host: Element, descriptor: string, error: un
  * ADR 0028 sub-design 3 one level down (LT-436): a list item or an arm
  * (ADR 0046) whose `bindItem`/`bindArm` throws is contained to that scope.
  * Its element stays in place without behavior — its server-rendered or
- * cloned markup, which is already correct (ADR 0003) — and the other items
- * or arms are unaffected. The diagnostic names the scope by its key, in the
+ * cloned markup, which is already correct (ADR 0003). A failed item leaves
+ * the other items unaffected; a failed arm stays unbound until the condition
+ * switches, and the next arm mounts afresh (re-entry clones, ADR 0037). The diagnostic names the scope by its key, in the
  * reconciled container. A dedicated reporter rather than a flavour of
  * {@link reportEffectFailure}, so the copy tree-shakes away with
  * `reconcile()` (LT-438).

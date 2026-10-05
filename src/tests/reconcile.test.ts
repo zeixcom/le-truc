@@ -2061,8 +2061,9 @@ describe('reconcile — a throwing Mount Scope is contained (LT-436)', () => {
 		])
 		dispose?.()
 	})
-	// LT-438: the copy is the Mount Scope's own, not the component's — the
-	// element stays unbound and the other items (or arms) are unaffected.
+	// LT-438: the copy is the Mount Scope's own, not the component's — an
+	// item stays unbound and the other items are unaffected; an arm stays
+	// unbound until the condition switches, and the next arm mounts afresh.
 	// Pinned whole in both modes; the production pin is also what the
 	// simulation's `test-listitem` classifications match.
 	const pinScope = async (
@@ -2112,7 +2113,7 @@ describe('reconcile — a throwing Mount Scope is contained (LT-436)', () => {
 			boom,
 		])
 		expect(arm).toEqual([
-			'reconcile() arm "then" did not activate in <div> and stays unbound; the other arms are unaffected:',
+			'reconcile() arm "then" did not activate in <div> and stays unbound until the condition switches; the next arm mounts afresh:',
 			boom,
 		])
 	})
@@ -2124,7 +2125,7 @@ describe('reconcile — a throwing Mount Scope is contained (LT-436)', () => {
 			boom,
 		])
 		expect(arm).toEqual([
-			'reconcile() arm "then" did not activate in <div>. The arm stays in place but is not bound; the other arms are unaffected. Fix the error below, thrown while the arm\'s effects were set up.',
+			'reconcile() arm "then" did not activate in <div>. The arm stays in place, unbound, until the condition switches; then the next arm mounts afresh. Fix the error below, thrown while the arm\'s effects were set up.',
 			boom,
 		])
 	})

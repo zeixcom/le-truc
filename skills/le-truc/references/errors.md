@@ -13,7 +13,7 @@ Each row says what fired, why, how to fix it, and its tier. The message itself n
 There are two Tier 2 shapes at runtime:
 
 - **Factory failure**: the whole component is inert. Example: `Connect failed in <x-y> while running …`.
-- **Activation failure**: one effect didn't activate and the others did. Example: `watch() failed to activate in …`. The component is *partially enhanced*, and the named helper is the fastest route to the cause. A list item or a conditional arm reports in its own words, named by its key: `reconcile() item "a" did not activate in <ul>` means that item's `bindItem` threw (`reconcile() arm "then"` means a `bindArm` threw). The element stays in place, unbound, and the other items or arms are unaffected. The error logged after the message is the cause.
+- **Activation failure**: one effect didn't activate and the others did. Example: `watch() failed to activate in …`. The component is *partially enhanced*, and the named helper is the fastest route to the cause. A list item or a conditional arm reports in its own words, named by its key: `reconcile() item "a" did not activate in <ul>` means that item's `bindItem` threw (`reconcile() arm "then"` means a `bindArm` threw). The element stays in place, unbound. The other items are unaffected; a failed arm stays unbound until the condition switches, and the next arm mounts afresh. The error logged after the message is the cause.
 
 ## Runtime error classes
 

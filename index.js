@@ -2085,7 +2085,7 @@ var reportScopeFailure = (container, scope, key, error) => {
   if (false)
     ;
   else
-    console.error(`reconcile() ${scope} "${key}" did not activate in ${elementName(container)} and stays unbound; the other ${scope}s are unaffected:`, error);
+    console.error(`reconcile() ${scope} "${key}" did not activate in ${elementName(container)} and stays unbound${scope === "item" ? "; the other items are unaffected" : " until the condition switches; the next arm mounts afresh"}:`, error);
 };
 
 class InvalidComponentNameError extends TypeError {
