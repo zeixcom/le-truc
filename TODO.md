@@ -202,16 +202,6 @@ recorded against the 30.4k opening measurement.
 
 ### C — corpus port
 
-- [ ] LT-109: Migrate `module-calctable` to `.tsx` with same-commit cutover.
-  **Area:** examples
-  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429
-  **Updated (Architect, 2026-10-04, ADR 0046):** an acceptance probe for the reactive-list design. Must show: a list seeded from server args with per-field harvest (LT-429), handlers that write fields (`item.amount.set`), remove-on-zero through the key, a per-row derived price formatted from a raw source, and the trailing `data-unreconciled` entry row (LT-186). Both `.tsx` and `.tsrx` members; the `.ts` twin stays as a variant (ruling 5).
-  **Context:** ~200 lines, the heaviest `reconcile()` consumer (8 call sites). Reactive lists
-  lower to the compiled `each()`/reconcile path (LT-003) — check loop-body reactive attrs on
-  non-root children (LT-037) carefully. Formats numbers through `Intl`; read LT-142's fold rule
-  and ADR 0029's tier split rather than re-deciding whether those thunks fold.
-
-
 - [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
   **Area:** examples
   **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429
@@ -286,7 +276,7 @@ recorded against the 30.4k opening measurement.
 
 ### B — correctness
 
-- [ ] LT-443: An unresolvable scalar seed type harvests silently as a string — refuse it (LTC077) unless `harvest(value, parser)` declares its parser (ADR 0046 s7).
+- [ ] LT-443: An unresolvable scalar seed type harvests silently as a string — refuse it (LTC077) unless `harvest(value, parser)` declares its parser (ADR 0046 s7). — in progress ⚙
   **Area:** compiler
   **Needs:** LT-429
   **Context:** `typeOfAnnotation` (`server/compiler/infer-type.ts:128`) recognizes only the
