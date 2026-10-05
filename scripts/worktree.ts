@@ -10,6 +10,10 @@
  * symlinked in (fresh worktrees lack it, and a fresh install is minutes; the
  * symlink is never staged). Build outputs are not carried over — a task whose
  * gates need built docs/ runs `bun run --cwd <path> build:docs` first.
+ * The committed index.js bundle is location-independent: `build:prod` runs
+ * scripts/build-bundle.ts, which rewrites Bun's realpath module comments
+ * (`// ../../node_modules/…` through the symlink) to the repo-root form, so a
+ * worktree's rebuild is byte-identical to the main checkout's (LT-433).
  * Idempotent: an existing worktree on the right branch is verified and reused,
  * so a resumed run bootstraps again freely; a branch that already carries
  * commits beyond HEAD is reused too, because that is a task's rework
