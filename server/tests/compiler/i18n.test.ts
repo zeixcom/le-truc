@@ -1025,6 +1025,85 @@ describe('an unreadable catalog file is one census record (LT-356)', () => {
 	})
 })
 
+/* === An unreadable staleness manifest (LT-430) === */
+
+describe('an unreadable manifest is one census record and no stale (LT-430)', () => {
+	const probe = {
+		tag: 'census-probe',
+		i18nMessages: { greet: 'Hello, {name}!', bye: 'Bye' },
+	} as unknown as RegistryEntry
+	const scratch = mkdtempSync(join(tmpdir(), 'lt-430-'))
+	const absent = mkdtempSync(join(tmpdir(), 'lt-430-absent-'))
+	afterAll(() => {
+		rmSync(scratch, { recursive: true, force: true })
+		rmSync(absent, { recursive: true, force: true })
+	})
+	writeFileSync(join(scratch, 'de.json'), '{ "census-probe.bye": "Tschüss" }')
+	writeFileSync(join(scratch, 'it.json'), '{ "census-probe.bye": "Ciao" }')
+	writeFileSync(
+		join(scratch, 'manifest.json'),
+		'{ "de": { "census-probe.bye": "0123456789ab" }, }',
+	)
+	writeFileSync(join(absent, 'de.json'), '{ "census-probe.bye": "Tschüss" }')
+
+	test('readCatalogs tells an unreadable manifest from an absent one', async () => {
+		const catalogs = await readCatalogs(scratch)
+		expect(catalogs.unreadableManifest).toBeString()
+		expect(catalogs.manifest.size).toBe(0)
+		// The catalog files are still read.
+		expect(catalogs.overrides.get('de')).toEqual({
+			'census-probe.bye': 'Tschüss',
+		})
+		const first = await readCatalogs(absent)
+		expect(first.unreadableManifest).toBeUndefined()
+		expect(first.manifest.size).toBe(0)
+	})
+
+	test('a manifest whose top level is not an object is unreadable', async () => {
+		const dir = mkdtempSync(join(tmpdir(), 'lt-430-array-'))
+		try {
+			writeFileSync(join(dir, 'manifest.json'), '[]')
+			expect((await readCatalogs(dir)).unreadableManifest).toBe(
+				'its top level is an array, not an object',
+			)
+		} finally {
+			rmSync(dir, { recursive: true, force: true })
+		}
+	})
+
+	test('a trailing comma yields one malformed record on the file, and no stale', async () => {
+		const { gaps } = await collectI18n([probe], undefined, scratch)
+		const manifestGaps = gaps.filter(gap => gap.key === 'manifest.json')
+		expect(manifestGaps.map(gap => [gap.locale, gap.status])).toEqual([
+			['*', 'malformed'],
+		])
+		expect(manifestGaps[0]?.detail).toStartWith(
+			'the staleness manifest is unreadable, so no translation is checked for staleness — ',
+		)
+		expect(gaps.filter(gap => gap.status === 'stale')).toEqual([])
+		// Missing keys are still censused per locale.
+		expect(gaps).toContainEqual({
+			key: 'census-probe.greet',
+			locale: 'de',
+			status: 'missing',
+		})
+		// An absent manifest stays the first-run state: carried keys are stale.
+		const first = await collectI18n([probe], undefined, absent)
+		expect(first.gaps.some(gap => gap.key === 'manifest.json')).toBe(false)
+		expect(first.gaps).toContainEqual({
+			key: 'census-probe.bye',
+			locale: 'de',
+			status: 'stale',
+		})
+	})
+
+	test('the committed manifest is readable', async () => {
+		const catalogs = await readCatalogs(join(import.meta.dir, '../../../i18n'))
+		expect(catalogs.unreadableManifest).toBeUndefined()
+		expect(catalogs.manifest.size).toBeGreaterThan(0)
+	})
+})
+
 /* === ICU MessageFormat patterns (LT-250, ADR 0030 s4) === */
 
 const ICU_DECL = `export const i18n = {
