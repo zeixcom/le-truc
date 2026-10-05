@@ -372,6 +372,106 @@ describe('reconcile — first run', () => {
 		expect(unkeyed).toContain('data-unreconciled')
 	})
 
+	test('a second child with a key another child already holds warns as a duplicate', () => {
+		// LT-187: the key IS in the source — an earlier sibling claimed it and
+		// the first occurrence wins, so removing the duplicate is correct. The
+		// message must name the collision, not send the author to a source
+		// where nothing is wrong.
+		const container = new FakeElement('ul')
+		const first = keyedChild('item0')
+		const duplicate = keyedChild('item0')
+		container.appendChild(first)
+		container.appendChild(duplicate)
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+
+		const { calls } = captureWarns(() =>
+			withDevMode(() => {
+				const dispose = createScope(() =>
+					activate(() =>
+						reconcile(
+							container as unknown as Element,
+							makeTemplate(),
+							list,
+							() => {},
+						),
+					),
+				)
+				dispose()
+			}),
+		)
+
+		const messages = calls.map(c => String(c[0]))
+		expect(messages).toHaveLength(1)
+		expect(messages[0]).toContain('duplicate child with data-key="item0"')
+		expect(messages[0]).toContain('already holds that key')
+		expect(messages[0]).toContain('first occurrence wins')
+		// The first occurrence is adopted; only the duplicate is removed.
+		expect(container.children).toEqual([first])
+		expect(container.children).not.toContain(duplicate)
+	})
+
+	test('a key genuinely absent from the source keeps the not-present message', () => {
+		// Pins the pre-existing keyed message (LT-185) so the LT-187 split at
+		// the same branch cannot quietly reword it.
+		const container = new FakeElement('ul')
+		container.appendChild(keyedChild('stale'))
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+
+		const { calls } = captureWarns(() =>
+			withDevMode(() => {
+				const dispose = createScope(() =>
+					activate(() =>
+						reconcile(
+							container as unknown as Element,
+							makeTemplate(),
+							list,
+							() => {},
+						),
+					),
+				)
+				dispose()
+			}),
+		)
+
+		const messages = calls.map(c => String(c[0]))
+		expect(messages).toHaveLength(1)
+		expect(messages[0]).toContain('data-key="stale"')
+		expect(messages[0]).toContain('not present in the source')
+		expect(messages[0]).not.toContain('duplicate')
+	})
+
+	test('a duplicate introduced after the first run warns as a duplicate too', async () => {
+		// The keyed warning outlives the adoption pass, and the duplicate is
+		// its second case: external DOM mutation can add a second element for
+		// a live key at any time.
+		const container = new FakeElement('ul')
+		const list = createList<string>(['a'], { keyConfig: 'item' })
+		const dispose = createScope(() =>
+			activate(() =>
+				reconcile(
+					container as unknown as Element,
+					makeTemplate(),
+					list,
+					() => {},
+				),
+			),
+		)
+
+		const { calls } = await captureWarnsAsync(async () =>
+			withDevModeAsync(async () => {
+				container.appendChild(keyedChild('item0')) // external duplicate
+				list.add('b') // triggers the structural effect
+				await Promise.resolve()
+			}),
+		)
+
+		const messages = calls.map(c => String(c[0]))
+		expect(messages).toHaveLength(1)
+		expect(messages[0]).toContain('duplicate child with data-key="item0"')
+		expect(messages[0]).toContain('already holds that key')
+		dispose()
+	})
+
 	test('the data-unreconciled opt-out silences the adoption-pass warning', () => {
 		// The negative direction: the documented escape hatch must not warn, or
 		// the warning trains authors to ignore it.
