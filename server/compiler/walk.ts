@@ -31,7 +31,7 @@
  *   scope per arm);
  * - element-chain-only searches that deliberately stop at control flow
  *   other than `@if`: `enclosingIfOf`/`enclosingIfIn`, `findMirror`,
- *   `parentOf`, `findHoleParent`, `hasClientConstructs`,
+ *   `findHoleParent`, `hasClientConstructs`,
  *   `markPositionallyReactive`, and the depth-guarded `hasDeepConstruct`;
  * - pass-interleaved walks: `recordSites` (harvest), `emitTopEffects`
  *   (effect planning) and the server emitter (`emit`, `shape`);
@@ -103,25 +103,57 @@ export const armSetOf = (root: TemplateNode, target: TemplateNode): number => {
 
 /**
  * A reactive list's index (ADR 0046 s2): its position among the component's
- * reconcile loops in document order. The server stamps it on the extracted
- * item template (`data-list`) and the client queries it from the list's own
- * container (`:scope > template[data-list="N"]`), so both emitters derive it
- * from the IR, never from emitter state — the same rule as `armSetOf`, and
- * what lifts the one-list-per-component limit. Lowering registers loops in
- * document order, and nesting is refused, so insertion order IS document
- * order.
+ * reconcile loops in document order (pre-order, so an outer list precedes
+ * the lists nested in its item, LT-424). The server stamps it on the
+ * extracted item template (`data-list`) and the client queries it from the
+ * list container's parent (`:scope > template[data-list="N"]`), so both
+ * emitters derive it from the IR, never from emitter state — the same rule
+ * as `armSetOf`, and what lifts the one-list-per-component limit.
  */
 export const listIndexOf = (
+	root: TemplateNode,
 	fors: ReadonlyMap<unknown, ForIR>,
 	target: ReconcileForIR,
 ): number => {
+	const outputs = new Set<TemplateNode>()
+	for (const loop of fors.values())
+		if (loop.kind === 'reconcile') outputs.add(loop.output)
 	let index = -1
-	for (const loop of fors.values()) {
-		if (loop.kind !== 'reconcile') continue
+	let found = -1
+	walkTemplate(root, node => {
+		if (found >= 0 || !outputs.has(node)) return
 		index++
-		if (loop === target) return index
+		if (node === target.output) found = index
+	})
+	return found
+}
+
+/**
+ * Does `target` sit inside a Mount Scope other than the host (ADR 0046 s1)
+ * — in an arm of an arm set, or inside a reactive-list item? Strict: an arm
+ * set or a list is itself nested when its POSITION is, so a list whose
+ * output sits in an arm is nested, and the item root is not counted as
+ * inside its own item. A nested construct emits into its nearest enclosing
+ * scope's mount (LT-424), never as a host-level query.
+ */
+export const inNestedScope = (
+	root: TemplateNode,
+	fors: ReadonlyMap<unknown, ForIR>,
+	target: TemplateNode,
+): boolean => {
+	const outputs = new Set<TemplateNode>()
+	for (const loop of fors.values())
+		if (loop.kind === 'reconcile') outputs.add(loop.output)
+	const search = (node: TemplateNode, scoped: boolean): boolean | null => {
+		if (node === target) return scoped
+		const inner = scoped || hasArmSet(node) || outputs.has(node)
+		for (const child of childNodes(node)) {
+			const found = search(child, inner)
+			if (found !== null) return found
+		}
+		return null
 	}
-	return -1
+	return search(root, false) ?? false
 }
 
 /**

@@ -31,7 +31,14 @@ import type {
 	TemplateNode,
 } from '../ir'
 import type { RegistryEntry } from '../registry'
-import { elseOf, type IfNode, isIf, thenOf, walkTemplate } from '../walk'
+import {
+	childNodes,
+	elseOf,
+	type IfNode,
+	isIf,
+	thenOf,
+	walkTemplate,
+} from '../walk'
 import {
 	probeComposeNodes,
 	probeCount,
@@ -567,6 +574,56 @@ export const resolveSelectorIn = (
 			return { selector: emit, unique: true }
 	}
 	return { selector: candidates[0]?.emit ?? element.tag, unique: false }
+}
+
+/**
+ * The `:scope >` child path from `tree` down to `element` (ADR 0046 s2) —
+ * one bare-tag step per element on the way, control flow transparent (an
+ * arm root or a list item is a DOM child of the element holding it) — or
+ * null when `element` is `tree` itself or sits in no element chain under it
+ * (composed content is another component's template). Proved like any
+ * candidate: it must match exactly one element of the materialized probe,
+ * whose root is `tree`, so `:scope` is the probe root (css-select reads a
+ * context-free `:scope` as `:root`).
+ */
+const childPathSelector = (
+	tree: ElementNode,
+	element: ElementNode,
+): string | null => {
+	const chain: string[] = []
+	const find = (node: TemplateNode): boolean => {
+		if (node === element) return true
+		if (node.kind === 'compose') return false
+		for (const child of childNodes(node)) {
+			if (isElement(child)) chain.push(child.tag)
+			if (find(child)) return true
+			if (isElement(child)) chain.pop()
+		}
+		return false
+	}
+	if (element === tree || !find(tree) || chain.length === 0) return null
+	const selector = `:scope > ${chain.join(' > ')}`
+	return countForSelector(tree, selector) === 1 ? selector : null
+}
+
+/**
+ * Resolve the selector a Mount Scope's `first` queries for `element` (ADR
+ * 0046 s2, LT-424): {@link resolveSelectorIn} over the scope root's subtree —
+ * the materialized probe includes every arm of a nested arm set and one copy
+ * of each nested item shape, so a candidate that counts 1 matches nothing in
+ * a nested scope's possible content — and, when no class, role or `data-*`
+ * separates the elements, the synthesized `:scope >` child path. Unique
+ * false when neither proves out (LTC007; the fix is a unique class).
+ */
+export const resolveScopedSelector = (
+	tree: ElementNode,
+	element: ElementNode,
+	composed?: ReadonlyMap<string, ComposedMarkup>,
+): { selector: string; unique: boolean } => {
+	const resolved = resolveSelectorIn(tree, element, composed)
+	if (resolved.unique) return resolved
+	const path = childPathSelector(tree, element)
+	return path === null ? resolved : { selector: path, unique: true }
 }
 
 export const resolveSelector = (

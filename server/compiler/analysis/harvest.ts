@@ -969,8 +969,19 @@ const planHarvests = (
 				// through the item value's DOM site (the bare `{item}` hole's
 				// parent, ADR 0003). A body that renders the item nowhere has
 				// no site — no phase can deliver a value the markup does not
-				// carry.
-				if (listPlan.holeSelector === null) {
+				// carry. A list nested in a Mount Scope (LT-424) has no
+				// connect-time container: its items render inside an arm or
+				// an item, which may not exist at connect.
+				if (listPlan.scoped) {
+					diagnostics.push(
+						diagnostic.unsupported(
+							source,
+							signal.init,
+							`The list seed of \`${signal.name}\`, which is derived from server args, for a reactive-list ${wordingOf(component).loop} nested in an arm or a list item`,
+							'The client seeds an arg-derived list from the adopted container at connect, and a nested container may not exist then — seed the list with a literal.',
+						),
+					)
+				} else if (listPlan.holeSelector === null) {
 					diagnostics.push(
 						diagnostic.unsupported(
 							source,

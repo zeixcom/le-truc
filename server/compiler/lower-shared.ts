@@ -82,20 +82,34 @@ export type Lowering = {
  */
 export type ConditionMode = 'server' | 'reactive'
 
-/** Lower a loop body with the loop's bindings shadowing same-named signals. */
+/**
+ * Lower a loop body with the loop's bindings shadowing same-named signals.
+ * `reactive` marks a reactive list's item and key: they are signals of their
+ * own (ADR 0046 s3), so a condition reading one is reactive (LT-424).
+ */
 const lowerLoopBody = <T>(
 	ctx: ExtractContext,
 	names: ReadonlyArray<string | null | undefined>,
 	lower: () => T,
+	reactive = false,
 ): T => {
 	const depth = ctx.loopBound.length
-	for (const n of names) if (n) ctx.loopBound.push(n)
+	for (const n of names)
+		if (n) {
+			ctx.loopBound.push(n)
+			ctx.loopReactive.push(reactive)
+		}
 	try {
 		return lower()
 	} finally {
 		ctx.loopBound.length = depth
+		ctx.loopReactive.length = depth
 	}
 }
+
+/** Is `name`'s innermost loop binding a reactive list's item or key? */
+const boundReactive = (ctx: ExtractContext, name: string): boolean =>
+	ctx.loopReactive[ctx.loopBound.lastIndexOf(name)] === true
 
 /** Whether a setup const's initializer reads a signal or `host`, transitively. */
 const readsSignalThroughAlias = (
@@ -183,7 +197,9 @@ export const validateCondition = (
 	for (const global of JS_GLOBALS) free.delete(global)
 	const bound = new Set(ctx.loopBound)
 	const isSignal = (name: string) =>
-		!bound.has(name) && (signals.has(name) || name === 'host')
+		bound.has(name)
+			? boundReactive(ctx, name)
+			: signals.has(name) || name === 'host'
 	if ([...free].some(isSignal)) return 'reactive'
 	// A live setup alias of a signal (`const isOpen = () => open.get()`)
 	// would classify `server` and never update; refuse it rather than go
@@ -781,6 +797,17 @@ export const validateEmptyArm = (
 ): TemplateNode[] | null => {
 	const what = wordingOf(ctx).emptyArm
 	const outputs = new Set([...fors.values()].map(f => f.output))
+	// A reactive list's empty arm stays in the container on the toggle path,
+	// always rendered, so its elements bind in the scope that holds the
+	// list like any other element there (ADR 0046 s1, LT-424): reactive
+	// attributes, class and style maps, events and lazy text. A server-data
+	// loop's arm renders conditionally, server-side, and binds nothing.
+	const bindsInScope = (a: AttributeIR): boolean =>
+		kind === 'reconcile' &&
+		(a.kind === 'reactive' ||
+			a.kind === 'class-map' ||
+			a.kind === 'style-map' ||
+			a.kind === 'event')
 	let offending: AstNode | undefined
 	// Pre-order, first offender wins — an offending node is not descended.
 	const offends = (node: TemplateNode): boolean => {
@@ -792,14 +819,19 @@ export const validateEmptyArm = (
 				if (node.mode === 'reactive') offending = node.node
 				return node.mode === 'reactive'
 			case 'expr':
-				if (node.reactivity === 'reactive') offending = node.node
-				return node.reactivity === 'reactive'
+				if (node.reactivity !== 'reactive' || kind === 'reconcile') return false
+				offending = node.node
+				return true
 			case 'element':
 				// A client construct, or any `truc:html` — the arm root renders
 				// through `emitElement`, which writes no inner HTML.
 				if (
 					outputs.has(node) ||
-					node.attrs.some(a => isClientConstructAttr(a) || a.kind === 'html')
+					node.attrs.some(
+						a =>
+							(isClientConstructAttr(a) && !bindsInScope(a)) ||
+							a.kind === 'html',
+					)
 				) {
 					offending = node.node
 					return true
@@ -905,12 +937,13 @@ export type LoopSource = {
  * key-derived attributes (a `server` attribute reading the `key` binding,
  * set once at clone because a key never changes) all bind in `bindItem`
  * against the item's own scope, and the server bakes item-dependent sites
- * empty in the extracted `<template>`. What still has no lowering inside an
- * item (nesting is LT-424): a plain `@try` boundary (neither emitter renders
- * one in an item template), a nested loop, and any non-arrow expression or
- * attribute over the item or key — the item is the signal the List hands
- * out, so a client read takes the arrow form (`() => item.get()`) and the
- * bare `{item}` child is the signal shorthand.
+ * empty in the extracted `<template>`. Arm sets and loops nest (ADR 0046 s1,
+ * LT-424): their content is walked under the same rules. What still has no
+ * lowering inside an item: a plain `@try` boundary (neither emitter renders
+ * one in an item template), a server-data loop over the item or key, and
+ * any non-arrow expression or attribute over the item or key — the item is
+ * the signal the List hands out, so a client read takes the arrow form
+ * (`() => item.get()`) and the bare `{item}` child is the signal shorthand.
  *
  * The slot-fill restrictions this walk used to enforce (one lazy hole,
  * server-static attributes only, no control flow, no client constructs) are
@@ -936,7 +969,6 @@ const validateListBody = (
 		[...freeIdentifiers(node)].filter(
 			name => name === itemName || name === keyName,
 		)
-	let offendingLoop: AstNode | undefined
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'expr') {
 			// The bare `{item}` identifier is the signal shorthand — reactive by
@@ -952,6 +984,24 @@ const validateListBody = (
 						`The loop item is the signal the List hands out: \`${itemName}\` is read with \`.get()\` in an arrow (\`{() => ${itemName}.get()}\`), and the bare \`{${itemName}}\` child is its shorthand. The key is not renderable text.`,
 					),
 				)
+			return
+		}
+		// An async boundary is an arm set (ADR 0037 s4), a Mount Scope that
+		// nests in the item (ADR 0046 s1, LT-424); its arms answer to the same
+		// item-read rules.
+		if (node.kind === 'try' && node.pendingChildren !== null) {
+			for (const child of [
+				...node.children,
+				...node.catchChildren,
+				...node.pendingChildren,
+			])
+				walk(child)
+			return
+		}
+		// A conditional's arms — server-rendered or an arm set — are item
+		// content too.
+		if (node.kind === 'conditional') {
+			for (const arm of node.arms) for (const child of arm.children) walk(child)
 			return
 		}
 		if (node.kind === 'try') {
@@ -1019,19 +1069,23 @@ const validateListBody = (
 			}
 		}
 		for (const child of node.children) {
-			if (
-				offendingLoop === undefined &&
-				[...fors.values()].some(inner => inner.output === child)
-			) {
-				offendingLoop = child.node
-				ctx.diagnostics.push(
-					diagnostic.unsupported(
-						ctx.source,
-						child.node,
-						`A loop inside a reactive-list ${loop} body`,
-						"The item's mount has no lowering for a nested loop — move it out of the item, beside the loop.",
-					),
-				)
+			// A nested loop (ADR 0046 s1, LT-424): a reactive list's item is a
+			// Mount Scope of its own, and a server-data loop lowers to a static
+			// query against the item — over server data. One whose iterable
+			// reads the item or key iterates per-item state the extracted
+			// template cannot render.
+			const inner = [...fors.values()].find(f => f.output === child)
+			if (inner?.kind === 'each') {
+				const reads = itemRead(inner.iterable)
+				if (reads.length > 0)
+					ctx.diagnostics.push(
+						diagnostic.unsupported(
+							ctx.source,
+							inner.iterable,
+							`A server-data loop inside a reactive-list ${loop} body iterating ${reads.map(n => `\`${n}\``).join(' and ')}`,
+							'A server-data loop renders once into the extracted `<template>`, outside the list — iterate server data, or declare the per-item collection as a List and loop over it reactively.',
+						),
+					)
 			}
 			walk(child)
 		}
@@ -1134,8 +1188,11 @@ const lowerListLoop = (
 		)
 		return null
 	}
-	const output = lowerLoopBody(ctx, [itemName, keyName], () =>
-		lowerElement(ctx, outputNode, signals, fors, lowering),
+	const output = lowerLoopBody(
+		ctx,
+		[itemName, keyName],
+		() => lowerElement(ctx, outputNode, signals, fors, lowering),
+		true,
 	)
 	// The item binding is the slot fill — reactive by position, not a
 	// declared signal, so the lift rule alone would leave it static and

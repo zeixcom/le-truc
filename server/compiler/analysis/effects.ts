@@ -29,6 +29,7 @@ import { initialFold } from '../initial-winner'
 import type {
 	AttributeIR,
 	ComponentIR,
+	EachForIR,
 	ForIR,
 	PassEntryIR,
 	ReconcileForIR,
@@ -61,15 +62,18 @@ import {
 } from '../walk'
 import type { ComposeRefs } from './compose-refs'
 import { lazyWatchSource, returnsNumber } from './harvest'
+import { planEachLoop } from './loops'
 import { renderOnlyBindings, uniqueName } from './naming'
 import type {
 	ArmPlan,
 	EffectPlans,
 	HarvestPlans,
+	KeyAttrPlan,
 	LoopPlans,
 	PassShared,
 	QueryPlan,
 	ReconcilePlan,
+	ScopeLocal,
 	TopEffectPlan,
 } from './plan'
 import {
@@ -87,8 +91,8 @@ import {
 	loopFor as loopForIn,
 	refOf,
 	resolveExclusiveSelectorIn,
+	resolveScopedSelector,
 	resolveSelector as resolveSelectorIn,
-	resolveSelectorIn as resolveSelectorScoped,
 	type SwitchNode,
 	selectorFor as selectorForIn,
 	type TryNode,
@@ -177,6 +181,18 @@ type EffectsContext = {
 	 * undo per-item truth the mount re-establishes on every clone).
 	 */
 	itemNames: ReadonlySet<string>
+	/**
+	 * The key bindings of every enclosing reactive-list item (ADR 0046 s1,
+	 * LT-424), empty outside one. A `server` attribute over these alone is
+	 * key-derived: set once at the mount of the scope that owns its element.
+	 */
+	keyNames: ReadonlySet<string>
+	/**
+	 * The server-only check for the current scope's positions: `badFreeNames`
+	 * at host level and in host-level arms, `badListBodyNames` once inside a
+	 * reactive-list item — arms and lists nested in an item included.
+	 */
+	scopeBadNames: (node: AstNode) => string[]
 	/**
 	 * Registry entries by TAG (LT-158). The compose registry is keyed by source
 	 * path because composition resolves through import specifiers; a
@@ -1323,8 +1339,12 @@ const handleSwitchEffects = (fx: EffectsContext, node: SwitchNode): void => {
  * `reconcile()`'s arm form, keyed by the guarded task's state, and the
  * `ok`/`err` mounts write the resolved value and the error text.
  */
-const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
-	const { component, source, diagnostics, effects, usedNames } = fx
+const handleAsyncBoundary = (
+	fx: EffectsContext,
+	node: TryNode,
+	scope: MountScope | null = null,
+): void => {
+	const { component, source, diagnostics, usedNames } = fx
 	const wording = wordingOf(component)
 	const okRoot = node.children.find(isElement) as ElementNode
 	const pendingRoot = (node.pendingChildren as TemplateNode[]).find(
@@ -1418,7 +1438,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 		return
 	}
 
-	const container = armContainer(fx, node, `a ${wording.boundary}`)
+	const container = armContainer(fx, node, `a ${wording.boundary}`, scope)
 	if (container === null) return
 	const arm = (key: string): ArmPlan => ({
 		key,
@@ -1426,9 +1446,10 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 		renders: true,
 		root: null,
 		locals: [],
+		keyAttrs: [],
 		effects: [],
 	})
-	effects.push({
+	;(scope?.sink ?? fx.effects).push({
 		kind: 'arms',
 		arms: {
 			container,
@@ -1584,22 +1605,289 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 }
 
 /**
+ * A Mount Scope other than the host (ADR 0046 s1): an arm of an arm set or a
+ * reactive-list item — an element subtree with its own mount and its own
+ * `first`, bound to its root. Every construct inside it emits into its sink
+ * through its locals (LT-424: recursive emission), and a construct that is a
+ * scope of its own — a nested arm set, a nested list's item — plans into a
+ * scope of its own the same way. `null` stands for the host scope, whose
+ * addressing is the factory's queries.
+ */
+type MountScope = {
+	/** The scope root element: the arm root, the item root. */
+	root: ElementNode
+	/** The root's local; naming it declares it in the mount. */
+	rootRef: () => string
+	/**
+	 * The local naming `el` inside the scope (memoized; the root's own for
+	 * the root), queried once per mount through the scope's `first` with a
+	 * selector proved within the scope root. `optional` mints a
+	 * non-throwing query (an element in a server-rendered branch); a later
+	 * required request for the same element makes it required.
+	 */
+	localFor: (el: ElementNode, optional?: boolean) => string
+	/** Is the local `name` an optional (non-throwing) query? */
+	isOptional: (name: string) => boolean
+	/** The scope's effects, in document order. */
+	sink: TopEffectPlan[]
+	/** The scope's key-derived attributes (ADR 0046 s1). */
+	keyAttrs: KeyAttrPlan[]
+	/** How diagnostics name the scope root (`the arm root <section>`). */
+	label: string
+}
+
+/**
+ * A scope's addressing over its plan's locals: descendants by selectors
+ * proved within the root (`resolveScopedSelector` — a nested scope's
+ * possible content counts, and a `:scope >` child path is synthesized when
+ * no class, role or `data-*` tells the element apart), the root through
+ * `rootRef`. A failed proof is LTC007, whose fix is a unique class.
+ */
+const mountScope = (
+	fx: EffectsContext,
+	init: {
+		root: ElementNode
+		rootRef: () => string
+		locals: ScopeLocal[]
+		sink: TopEffectPlan[]
+		keyAttrs: KeyAttrPlan[]
+		label: string
+	},
+): MountScope => {
+	const { component, source, diagnostics, usedNames } = fx
+	const names = new Map<ElementNode, string>()
+	return {
+		root: init.root,
+		rootRef: init.rootRef,
+		sink: init.sink,
+		keyAttrs: init.keyAttrs,
+		label: init.label,
+		isOptional: name =>
+			init.locals.some(local => local.name === name && local.optional),
+		localFor: (el, optional = false) => {
+			if (el === init.root) return init.rootRef()
+			const known = names.get(el)
+			if (known) {
+				if (!optional) {
+					const local = init.locals.find(l => l.name === known)
+					if (local?.optional) delete local.optional
+				}
+				return known
+			}
+			const scoped = resolveScopedSelector(
+				init.root,
+				el,
+				component.composedShapes,
+			)
+			if (!scoped.unique)
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						source,
+						el.node,
+						`No unique selector for <${el.tag}> inside ${init.label} — no \`class\`, \`role\`, \`data-*\` attribute or child path tells it apart from the other elements there, nested arms and list items included. Give it a unique \`class\`.`,
+					),
+				)
+			const name = uniqueName(usedNames, sanitizeVarName(el.tag))
+			names.set(el, name)
+			init.locals.push({
+				name,
+				selector: scoped.selector,
+				message: `${component.tag}: ${scoped.selector} missing`,
+				...(optional ? { optional: true } : {}),
+			})
+			fx.armSelectors.set(name, resolveSelector(fx, el).selector)
+			return name
+		},
+	}
+}
+
+/**
+ * The nearest element holding `target` (control flow is transparent in the
+ * DOM), or null at the template root.
+ */
+const holderOf = (
+	fx: EffectsContext,
+	target: TemplateNode,
+): ElementNode | null => {
+	const find = (
+		node: TemplateNode,
+		holder: ElementNode | null,
+	): ElementNode | null | undefined => {
+		if (node === target) return holder
+		const next = isElement(node) ? node : holder
+		for (const child of childNodes(node)) {
+			const found = find(child, next)
+			if (found !== undefined) return found
+		}
+		return undefined
+	}
+	return find(fx.component.root, null) ?? null
+}
+
+/**
+ * A construct that is a Mount Scope of its own, or a loop, met while
+ * planning `scope` (LT-424): plan it into the scope's sink through the
+ * scope's locals and report true, so the caller does not descend. False for
+ * everything else.
+ */
+const planNested = (
+	fx: EffectsContext,
+	scope: MountScope,
+	node: TemplateNode,
+): boolean => {
+	if (node.kind === 'conditional' && node.mode === 'reactive') {
+		handleReactiveConditional(fx, node, scope)
+		return true
+	}
+	if (node.kind === 'try' && node.pendingChildren !== null) {
+		handleAsyncBoundary(fx, node, scope)
+		return true
+	}
+	if (!isElement(node)) return false
+	const loop = loopFor(fx, node)
+	if (!loop) return false
+	if (loop.kind === 'reconcile') planNestedList(fx, loop, scope)
+	else planNestedEach(fx, loop, scope)
+	return true
+}
+
+/**
+ * A reactive list nested in a Mount Scope (ADR 0046 s1–s2): its container,
+ * the element its extracted template is queried from and its `@empty` roots
+ * are the scope's locals, and its item is a Mount Scope of its own. The
+ * container cannot be the scope root: the template sits after the
+ * container's close tag, which would put it outside the arm or item.
+ */
+const planNestedList = (
+	fx: EffectsContext,
+	loop: ReconcileForIR,
+	scope: MountScope,
+): void => {
+	const { component, source, diagnostics } = fx
+	const plan = fx.reconcilePlans.get(loop)
+	if (!plan) return
+	const wording = wordingOf(component)
+	const container = holderOf(fx, loop.output)
+	if (container === null || container === scope.root) {
+		diagnostics.push(
+			diagnostic.unsupported(
+				source,
+				loop.output.node,
+				`A reactive-list ${wording.loop} directly under ${scope.label}`,
+				"The list puts its item template after the container's closing tag, and that position is outside the arm or item — wrap the loop in an element of its own.",
+			),
+		)
+		return
+	}
+	plan.container = scope.localFor(container)
+	const parent = holderOf(fx, container)
+	plan.parent =
+		parent === null || parent === scope.root
+			? scope.rootRef()
+			: scope.localFor(parent)
+	plan.emptyQueries = (loop.emptyArm ?? [])
+		.filter(isElement)
+		.map(root => scope.localFor(root))
+	planReconcileItem(fx, loop, plan)
+	scope.sink.push({ kind: 'reconcile', for: plan })
+}
+
+/**
+ * A server-data loop nested in a Mount Scope (ADR 0046 s2, LT-424): its items
+ * are fixed for the life of the clone, so it lowers to a static query
+ * against the scope root — no `all()`, no MutationObserver.
+ */
+const planNestedEach = (
+	fx: EffectsContext,
+	loop: EachForIR,
+	scope: MountScope,
+): void => {
+	const plan = planEachLoop(fx, loop, { root: '', tree: scope.root })
+	if (!plan?.scoped) return
+	plan.scoped.root = scope.rootRef()
+	scope.sink.push({ kind: 'each', for: plan })
+}
+
+/**
+ * Key-derived attributes on `el` (ADR 0046 s1): `server` attributes reading
+ * the enclosing items' key bindings alone. `validateListBody` refused every
+ * other item or key read in a server attribute, so each survivor is
+ * mount-time evaluable against the key parameters in scope.
+ */
+const keyAttrsOf = (
+	fx: EffectsContext,
+	el: ElementNode,
+): Array<Extract<AttributeIR, { kind: 'server' }>> =>
+	fx.keyNames.size === 0
+		? []
+		: el.attrs.filter(
+				(attr): attr is Extract<AttributeIR, { kind: 'server' }> => {
+					if (attr.kind !== 'server' || attr.bindsProp != null) return false
+					const free = [...freeIdentifiers(attr.node)]
+					return free.length > 0 && free.every(n => fx.keyNames.has(n))
+				},
+			)
+
+/**
+ * Record `el`'s key-derived attributes on `scope`. `inBranch`: `el` sits in a
+ * server-rendered conditional branch, whose winner the render fixes for every
+ * clone but may leave out — its local is a non-throwing query, and the write
+ * is guarded.
+ */
+const collectKeyAttrs = (
+	fx: EffectsContext,
+	scope: MountScope,
+	el: ElementNode,
+	inBranch = false,
+): void => {
+	for (const attr of keyAttrsOf(fx, el)) {
+		const local = scope.localFor(el, inBranch)
+		scope.keyAttrs.push({
+			el: local,
+			...(scope.isOptional(local) ? { optional: true } : {}),
+			attr: attr.name,
+			exprText: attr.exprText,
+			sourceStart: attr.node.start,
+			sourceEnd: attr.node.end,
+		})
+	}
+}
+
+/**
+ * The key-derived attributes in a server-rendered conditional's arms (and
+ * the server conditionals nested in them), for `scope`: the same descent the
+ * item walk makes. Client constructs there are refused elsewhere
+ * (`unmountableInArm`), so only key-derived attributes bind.
+ */
+const collectBranchKeyAttrs = (
+	fx: EffectsContext,
+	scope: MountScope,
+	node: TemplateNode,
+): void => {
+	if (isElement(node)) {
+		if (loopFor(fx, node)) return
+		collectKeyAttrs(fx, scope, node, true)
+		for (const child of node.children) collectBranchKeyAttrs(fx, scope, child)
+		return
+	}
+	if (node.kind === 'conditional' && node.mode === 'server')
+		for (const arm of node.arms)
+			for (const child of arm.children) collectBranchKeyAttrs(fx, scope, child)
+}
+
+/**
  * Why a node inside a reactive conditional's arm has no lowering in the
  * arm's mount (ADR 0037 s3), or null when it has one. The mount binds the
- * arm root and its descendants; nested control flow, loops and composed
- * references keep their host-level addressing, which an arm cloned after
- * connect would escape.
+ * arm root and its descendants, and plans nested arm sets and loops into
+ * their own scopes (ADR 0046 s1, LT-424); client constructs in a nested
+ * server-rendered branch and composed references keep their host-level
+ * addressing, which an arm cloned after connect would escape.
  */
-const unmountableInArm = (
-	fx: EffectsContext,
-	node: TemplateNode,
-): string | null => {
+const unmountableInArm = (node: TemplateNode): string | null => {
 	const carriesConstruct = (n: TemplateNode): boolean =>
 		n.kind === 'client-stmt' ||
 		(n.kind === 'expr' && n.reactivity === 'reactive') ||
 		(n.kind === 'element' && n.attrs.some(isClientConstructAttr))
-	// A nested arm set is `validateArmSetPlacement`'s.
-	if (hasArmSet(node)) return null
 	if (
 		(node.kind === 'conditional' || node.kind === 'try') &&
 		someNode(node, carriesConstruct)
@@ -1610,13 +1898,22 @@ const unmountableInArm = (
 		node.attrs.some(a => a.kind === 'pass' || a.kind === 'ref')
 	)
 		return 'A composed element read through `first()` or `truc:pass`'
-	if (node.kind === 'element' && loopFor(fx, node)) return 'A loop'
 	return null
 }
 
+/** Is `holder` a reactive list's container (LTC063's question)? */
+const isReconcileContainer = (
+	fx: EffectsContext,
+	holder: ElementNode,
+): boolean =>
+	[...fx.component.fors.values()].some(
+		loop => loop.kind === 'reconcile' && holderOf(fx, loop.output) === holder,
+	)
+
 /**
  * The container a node's arms switch in (ADR 0037): the element that holds
- * it, as a query variable, or `'host'` at the component root. Null, after
+ * it — a host query, or `'host'` at the component root; inside a Mount
+ * Scope (LT-424), the scope's local, or the scope root's own. Null, after
  * the diagnostic, when that element is a reactive list's container, which
  * removes every child it did not place (LTC063), or has no unique selector.
  * Placement elsewhere is `validateArmSetPlacement`'s; `noun` names the
@@ -1626,6 +1923,7 @@ const armContainer = (
 	fx: EffectsContext,
 	node: TemplateNode & { node: AstNode },
 	noun: string,
+	scope: MountScope | null,
 ): string | null => {
 	const { component, source, diagnostics, addQuery } = fx
 	const wording = wordingOf(component)
@@ -1635,15 +1933,7 @@ const armContainer = (
 	})
 	const holder = container as TemplateNode | null
 	if (holder === null || holder.kind !== 'element') return null
-	const inReconcileContainer = [...component.fors.values()].some(loop => {
-		if (loop.kind !== 'reconcile') return false
-		let found: TemplateNode | null = null
-		walkTemplate(component.root, (current, parent) => {
-			if (current === loop.output) found = parent
-		})
-		return found === holder
-	})
-	if (inReconcileContainer) {
+	if (isReconcileContainer(fx, holder)) {
 		diagnostics.push(
 			diagnostic.reactiveConditionInReconcileContainer(
 				source,
@@ -1654,6 +1944,7 @@ const armContainer = (
 		)
 		return null
 	}
+	if (scope !== null) return scope.localFor(holder)
 	if (holder === component.root) {
 		fx.ambient.add('host')
 		return 'host'
@@ -1677,11 +1968,13 @@ const armContainer = (
 }
 
 /**
- * Every arm set (ADR 0037: a reactive conditional, an async boundary) must
- * sit outside other control-flow arms, composed content and loop bodies —
- * the effect walk reaches it only there, and the element holding it is the
- * container the client finds at connect. One check over the whole template,
- * because a misplaced arm set is exactly one the walk would never visit.
+ * Every arm set (ADR 0037: a reactive conditional, an async boundary) and
+ * every nested reactive list must sit where a mount reaches it: directly in
+ * an element of the host or of a Mount Scope — an arm, a list item (ADR
+ * 0046 s1) — never inside a server-rendered branch or composed content of
+ * that scope, and never in a server-data loop body, whose `each()` binds
+ * each item through its own element. One check over the whole template,
+ * because a misplaced construct is exactly one the walk would never visit.
  */
 const validateArmSetPlacement = (fx: EffectsContext): void => {
 	const { component, source, diagnostics } = fx
@@ -1694,6 +1987,7 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 		enclosed: boolean,
 		loop: ForIR | null,
 	): void => {
+		const own = loopOutputs.get(node) ?? null
 		if (hasArmSet(node)) {
 			const subject =
 				node.kind === 'try'
@@ -1708,18 +2002,7 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 						'`each()` binds each item through its own element, and an arm cloned after connect escapes it — move it out of the loop, or bind a reactive attribute on the item instead.',
 					),
 				)
-			// A reactive-list item is a Mount Scope (ADR 0046 s1), and the arm
-			// set would switch inside its mount — nested scopes are LT-424.
-			else if (loop?.kind === 'reconcile')
-				diagnostics.push(
-					diagnostic.unsupported(
-						source,
-						node.node,
-						`${subject} inside a reactive-list ${wording.loop} body`,
-						"The item's mount has no lowering for an arm set — move it out of the item, beside the loop.",
-					),
-				)
-			else if (enclosed && !loop)
+			else if (enclosed)
 				diagnostics.push(
 					diagnostic.unsupported(
 						source,
@@ -1728,13 +2011,33 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 						'Its arms switch inside the element that holds it, which the client must find at connect — move it out of the enclosing branch, or onto an element of its own.',
 					),
 				)
+		} else if (own?.kind === 'reconcile' && loop?.kind === 'each') {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					node.node,
+					`A reactive-list ${wording.loop} inside a server-data ${wording.loop} body`,
+					'`each()` binds the loop items once at connect and has no mount for a list in each item — move the list out of the loop.',
+				),
+			)
 		}
-		const innerLoop = loop ?? loopOutputs.get(node) ?? null
-		const innerEnclosed =
-			enclosed ||
+		// An arm and a reactive-list item are Mount Scopes: what sits inside
+		// starts over from its own mount. A server-data loop body stays
+		// `each()`'s; a server-rendered branch or composed content encloses.
+		let innerLoop = loop
+		let innerEnclosed = enclosed
+		if (hasArmSet(node)) {
+			innerLoop = null
+			innerEnclosed = false
+		} else if (own !== null) {
+			innerLoop = own
+			if (own.kind === 'reconcile') innerEnclosed = false
+		} else if (
 			node.kind === 'conditional' ||
 			node.kind === 'try' ||
 			node.kind === 'compose'
+		)
+			innerEnclosed = true
 		for (const child of childNodes(node)) visit(child, innerEnclosed, innerLoop)
 	}
 	visit(component.root, false, null)
@@ -1745,16 +2048,19 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
  * form — templates the server stamps beside the live winner, a key thunk
  * over the test, and one mount per arm whose effects address the arm root
  * and its descendants inside the arm (collector parity, ADR 0017). The
- * conditional must sit directly in an element outside every other
- * control-flow arm and loop: that element is the container the arm
- * switches in, and the client finds it at connect.
+ * conditional sits directly in an element of its scope — the host or a Mount
+ * Scope (ADR 0046 s1) — and that element is the container the arm switches
+ * in, found at connect or at the enclosing mount. Each arm is a Mount Scope:
+ * arm sets and lists inside it plan into its mount (LT-424).
  */
 const handleReactiveConditional = (
 	fx: EffectsContext,
 	node: ConditionalNode,
+	scope: MountScope | null = null,
 ): void => {
-	const { component, source, diagnostics, effects, usedNames } = fx
+	const { component, source, diagnostics, usedNames } = fx
 	const wording = wordingOf(component)
+	const badNames = fx.scopeBadNames
 	const unsupported = (at: Site, what: string, fix: string) => {
 		diagnostics.push(diagnostic.unsupported(source, at, what, fix))
 	}
@@ -1763,6 +2069,7 @@ const handleReactiveConditional = (
 		fx,
 		node,
 		'a condition that reads a signal',
+		scope,
 	)
 	if (containerQuery === null) return
 
@@ -1782,13 +2089,21 @@ const handleReactiveConditional = (
 			)
 			return
 		}
+		// Nested arm sets and loops are scopes of their own: their content
+		// answers to their own rules when they are planned.
 		let blocked: { at: TemplateNode; what: string } | null = null
+		const check = (inner: TemplateNode): void => {
+			if (blocked || hasArmSet(inner)) return
+			if (isElement(inner) && loopFor(fx, inner)) return
+			const what = unmountableInArm(inner)
+			if (what) {
+				blocked = { at: inner, what }
+				return
+			}
+			for (const child of childNodes(inner)) check(child)
+		}
 		for (const child of arm.children)
-			walkTemplate(child, inner => {
-				if (blocked || inner === child) return
-				const what = unmountableInArm(fx, inner)
-				if (what) blocked = { at: inner, what }
-			})
+			for (const inner of childNodes(child)) check(inner)
 		const rootLoop = loopFor(fx, elements[0] as ElementNode)
 		if (rootLoop) blocked = { at: elements[0] as ElementNode, what: 'A loop' }
 		if (blocked) {
@@ -1808,11 +2123,17 @@ const handleReactiveConditional = (
 		fx,
 		node.test,
 		isIf(node) ? wording.ifCondition : wording.switchDiscriminant,
+		badNames(node.test),
 	)
 	// No server phase can pick the winner: no live arm renders (ADR 0037
 	// s5), and the component leaves the Folded tier — the realm, when it
-	// can answer, renders the arm the client would.
-	if (!initialFold(component, node)) {
+	// can answer, renders the arm the client would. A test over an
+	// enclosing item is per-item state (ADR 0046 s1): the live item renders
+	// its winner with the item in scope, so it routes nothing.
+	const itemScoped = [...dependenciesOf(node.test)].some(name =>
+		fx.itemNames.has(name),
+	)
+	if (!itemScoped && !initialFold(component, node)) {
 		fx.routingSignals.push({
 			origin: 'LTC034',
 			detail: `the initial arm of a ${isIf(node) ? 'conditional' : 'switch'} that reads a signal has no server-renderable value`,
@@ -1842,12 +2163,25 @@ const handleReactiveConditional = (
 			renders: root !== null,
 			root: null,
 			locals: [],
+			keyAttrs: [],
 			effects: [],
 		}
 		if (root === null) return plan
 		const rootName = uniqueName(usedNames, sanitizeVarName(root.tag))
 		plan.root = { name: rootName, tag: root.tag }
+		let rootUsed = false
 		fx.armSelectors.set(rootName, resolveSelector(fx, root).selector)
+		const armScope = mountScope(fx, {
+			root,
+			rootRef: () => {
+				rootUsed = true
+				return rootName
+			},
+			locals: plan.locals,
+			sink: plan.effects,
+			keyAttrs: plan.keyAttrs,
+			label: `the arm root <${root.tag}>`,
+		})
 		for (const child of arm.children)
 			if (child.kind === 'client-stmt') {
 				fx.collectAmbient(child.node)
@@ -1858,45 +2192,40 @@ const handleReactiveConditional = (
 					sourceEnd: child.node.end,
 				})
 			}
-		emitConstructEffects(fx, root, rootName, plan.effects)
+		emitConstructEffects(fx, root, rootName, plan.effects, badNames)
+		collectKeyAttrs(fx, armScope, root)
 		const visitDescendants = (el: ElementNode): void => {
 			for (const child of el.children) {
-				if (!isElement(child)) continue
-				if (hasOwnConstruct(child)) {
-					const scoped = resolveSelectorScoped(
-						root,
-						child,
-						component.composedShapes,
-					)
-					if (!scoped.unique)
-						diagnostics.push(
-							diagnostic.unaddressableElement(
-								source,
-								child.node,
-								`No unique selector for <${child.tag}> inside the arm root <${root.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
-							),
-						)
-					const name = uniqueName(usedNames, sanitizeVarName(child.tag))
-					plan.locals.push({
-						name,
-						selector: scoped.selector,
-						message: `${component.tag}: ${scoped.selector} missing`,
-					})
-					fx.armSelectors.set(name, resolveSelector(fx, child).selector)
-					emitConstructEffects(fx, child, name, plan.effects)
+				if (planNested(fx, armScope, child)) continue
+				if (child.kind === 'conditional' && child.mode === 'server') {
+					collectBranchKeyAttrs(fx, armScope, child)
+					continue
 				}
+				if (!isElement(child)) continue
+				if (hasOwnConstruct(child))
+					emitConstructEffects(
+						fx,
+						child,
+						armScope.localFor(child),
+						plan.effects,
+						badNames,
+					)
+				collectKeyAttrs(fx, armScope, child)
 				visitDescendants(child)
 			}
 		}
 		visitDescendants(root)
+		// The root local is only declared when something reads it.
+		if (
+			!rootUsed &&
+			!plan.effects.some(e => 'query' in e && e.query === rootName) &&
+			!plan.keyAttrs.some(k => k.el === rootName)
+		)
+			plan.root = null
 		return plan
 	})
-	// The root local is only declared when an effect reads it.
-	for (const arm of arms)
-		if (!arm.effects.some(e => 'query' in e && e.query === arm.root?.name))
-			arm.root = null
 
-	effects.push({
+	;(scope?.sink ?? fx.effects).push({
 		kind: 'arms',
 		arms: {
 			container: containerQuery,
@@ -1916,12 +2245,12 @@ const handleReactiveConditional = (
  * through the same construct emission an arm's does (`emitConstructEffects`,
  * the compose pass-entry path), addressed through the item's own `first` —
  * the item root by `bindItem`'s element parameter (declared as a typed local
- * only when something binds it), descendants by selectors resolved within
- * the item's own subtree and queried once per entering item. Item reads keep
+ * only when something binds it), descendants by selectors proved within the
+ * item's own subtree and queried once per entering item. Item reads keep
  * the signal meaning (ADR 0046 s3): the bare `{item}` child is the signal
  * shorthand — its watch source IS the item signal — and every other read is
  * the authored arrow over `.get()`. A `server` attribute over the key
- * binding alone is a key-derived attribute (`keyAttrs`): set once at clone,
+ * bindings alone is a key-derived attribute (`keyAttrs`): set once at clone,
  * because a key never changes, so there is nothing to watch. Item-scoped
  * sites are per-item state in every tier — `fx.itemNames` makes the LTC034
  * router and the limb-(b) suppression skip them, and `badListBodyNames`
@@ -1929,8 +2258,9 @@ const handleReactiveConditional = (
  * reaches (LT-349). A composed child in the item renders into the template;
  * its `truc:pass` entries bind against a scoped local, resolved within the
  * item the way `emitComposeEffects` resolves within the template (the
- * child's own `lang`/`i18n` are LT-355's). Nesting — arm sets, boundaries,
- * loops — is refused by the shared machinery and LT-424's.
+ * child's own `lang`/`i18n` are LT-355's). Nested arm sets and loops plan
+ * into the item's mount as scopes of their own (LT-424); the enclosing
+ * items' bindings stay in scope there.
  */
 const planReconcileItem = (
 	fx: EffectsContext,
@@ -1939,98 +2269,86 @@ const planReconcileItem = (
 ): void => {
 	const { component, source, diagnostics, usedNames } = fx
 	const output = loop.output
-	const scope = plan.itemScope
 	const wording = wordingOf(component)
-	const saved = fx.itemNames
-	fx.itemNames = loop.keyName
-		? new Set([loop.itemName, loop.keyName])
-		: new Set([loop.itemName])
+	const saved = {
+		itemNames: fx.itemNames,
+		keyNames: fx.keyNames,
+		scopeBadNames: fx.scopeBadNames,
+	}
+	fx.itemNames = new Set([
+		...saved.itemNames,
+		loop.itemName,
+		...(loop.keyName ? [loop.keyName] : []),
+	])
+	fx.keyNames = loop.keyName
+		? new Set([...saved.keyNames, loop.keyName])
+		: saved.keyNames
+	fx.scopeBadNames = fx.badListBodyNames
 	const badNames = fx.badListBodyNames
 	try {
-		// Key-derived attributes first (ADR 0046 s1): `server` attributes
-		// whose expression reads the key binding alone. `validateListBody`
-		// proved the item reads none and refused key-plus-other mixes, so
-		// every survivor here is clone-time evaluable against `bindItem`'s
-		// key parameter. They claim an element local like a construct does.
-		const keyAttrSites: Array<{
-			el: ElementNode
-			attr: Extract<AttributeIR, { kind: 'server' }>
-		}> = []
-		if (loop.keyName !== null) {
-			const collectKeyAttrs = (node: TemplateNode): void => {
-				if (isElement(node)) {
-					for (const attr of node.attrs) {
-						if (attr.kind !== 'server' || attr.bindsProp != null) continue
-						const free = [...freeIdentifiers(attr.node)]
-						if (free.length > 0 && free.every(n => n === loop.keyName))
-							keyAttrSites.push({ el: node, attr })
-					}
-					for (const child of node.children) collectKeyAttrs(child)
-					return
-				}
-				// A hole may sit inside a server-rendered conditional's arm —
-				// so may a key-derived attribute: the winner is fixed per
-				// render call, so the clone-time write addresses markup that
-				// exists in both adopted items and clones.
-				if (node.kind === 'conditional' && node.mode === 'server')
-					for (const arm of node.arms)
-						for (const child of arm.children) collectKeyAttrs(child)
-			}
-			collectKeyAttrs(output)
-		}
-
 		// Scope locals: the root by its element parameter, descendants by
 		// `first()` within the item. Minted lazily — an element nothing
 		// binds (its own constructs or a key-derived attribute) declares
 		// nothing, exactly like an arm root no effect reads.
-		const locals = new Map<TemplateNode, string>()
-		const localFor = (el: ElementNode): string => {
-			const known = locals.get(el)
-			if (known) return known
-			const name = uniqueName(usedNames, sanitizeVarName(el.tag))
-			locals.set(el, name)
-			if (el === output) {
-				scope.root = { name, tag: el.tag }
-				return name
+		let rootName: string | null = null
+		const item = plan.itemScope
+		const scope = mountScope(fx, {
+			root: output,
+			rootRef: () => {
+				if (rootName === null) {
+					rootName = uniqueName(usedNames, sanitizeVarName(output.tag))
+					item.root = { name: rootName, tag: output.tag }
+				}
+				return rootName
+			},
+			locals: item.locals,
+			sink: item.effects,
+			keyAttrs: item.keyAttrs,
+			label: `the ${wording.loop} item <${output.tag}>`,
+		})
+
+		// Key-derived attributes first, through server-rendered conditional
+		// arms (the winner is fixed per render call, so the mount-time write
+		// addresses markup that exists in both adopted items and clones) but
+		// never into a nested scope or loop, whose own mount sets its own.
+		const keyAttrSites: Array<{ el: ElementNode; inBranch: boolean }> = []
+		const collectKeySites = (node: TemplateNode, inBranch: boolean): void => {
+			if (isElement(node)) {
+				if (node !== output && loopFor(fx, node)) return
+				if (keyAttrsOf(fx, node).length > 0)
+					keyAttrSites.push({ el: node, inBranch })
+				for (const child of node.children) collectKeySites(child, inBranch)
+				return
 			}
-			const scoped = resolveSelectorScoped(output, el, component.composedShapes)
-			if (!scoped.unique)
-				diagnostics.push(
-					diagnostic.unaddressableElement(
-						source,
-						el.node,
-						`No unique selector for <${el.tag}> inside the ${wording.loop} item <${output.tag}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
-					),
-				)
-			scope.locals.push({
-				name,
-				selector: scoped.selector,
-				message: `${component.tag}: ${scoped.selector} missing`,
-			})
-			return name
+			if (node.kind === 'conditional' && node.mode === 'server')
+				for (const arm of node.arms)
+					for (const child of arm.children) collectKeySites(child, true)
 		}
+		collectKeySites(output, false)
 
 		// The item root's own constructs.
 		if (hasOwnConstruct(output))
 			emitConstructEffects(
 				fx,
 				output,
-				localFor(output),
-				scope.effects,
+				scope.localFor(output),
+				item.effects,
 				badNames,
 			)
 
 		// Descendants with constructs of their own, document order, through
 		// server-rendered conditional arms (a construct there addresses
-		// markup the render's own winner put in every item).
+		// markup the render's own winner put in every item); nested arm sets
+		// and loops plan into the item's mount as their own scopes.
 		const visitElements = (node: TemplateNode): void => {
+			if (node !== output && planNested(fx, scope, node)) return
 			if (isElement(node)) {
 				if (node !== output && hasOwnConstruct(node))
 					emitConstructEffects(
 						fx,
 						node,
-						localFor(node),
-						scope.effects,
+						scope.localFor(node),
+						item.effects,
 						badNames,
 					)
 				for (const child of node.children) visitElements(child)
@@ -2088,8 +2406,7 @@ const planReconcileItem = (
 			}
 			const name = uniqueName(usedNames, sanitizeVarName(childTag))
 			const selector = `${childTag}${discriminator}`
-			locals.set(node, name)
-			scope.locals.push({
+			item.locals.push({
 				name,
 				selector,
 				message: `${component.tag}: ${selector} missing`,
@@ -2100,29 +2417,17 @@ const planReconcileItem = (
 				fx.childTags.add(childTag)
 			const entries = passAttrs.flatMap(a => a.entries)
 			checkPassEntries(fx, entries, childTag, node.node)
-			emitPassEntries(fx, entries, name, scope.effects, badNames)
+			emitPassEntries(fx, entries, name, item.effects, badNames)
 		}
 		visitElements(output)
 
 		// The key-derived attributes, with the locals their sites claimed.
-		for (const { el, attr } of keyAttrSites)
-			scope.keyAttrs.push({
-				el: localFor(el),
-				attr: attr.name,
-				exprText: attr.exprText,
-				sourceStart: attr.node.start,
-				sourceEnd: attr.node.end,
-			})
-
-		// The root local is only declared when something binds it.
-		if (
-			scope.root &&
-			!scope.effects.some(e => 'query' in e && e.query === scope.root?.name) &&
-			!scope.keyAttrs.some(k => k.el === scope.root?.name)
-		)
-			scope.root = null
+		for (const { el, inBranch } of keyAttrSites)
+			collectKeyAttrs(fx, scope, el, inBranch)
 	} finally {
-		fx.itemNames = saved
+		fx.itemNames = saved.itemNames
+		fx.keyNames = saved.keyNames
+		fx.scopeBadNames = saved.scopeBadNames
 	}
 }
 
@@ -2362,9 +2667,11 @@ export const runEffects = (
 		badListBodyNames,
 		childTags,
 		entryByTag,
-		// Empty outside a reactive-list item; `planReconcileItem` swaps it in
-		// for the item's own walk and restores it after.
+		// Empty outside a reactive-list item; `planReconcileItem` swaps them
+		// in for the item's own walk and restores them after.
 		itemNames: new Set<string>(),
+		keyNames: new Set<string>(),
+		scopeBadNames: badFreeNames,
 		armSelectors: new Map(),
 		derivableHostProps: foldableHostProps(component),
 		derivableRefGuards: foldableRefGuards(component),

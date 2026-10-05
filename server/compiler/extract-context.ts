@@ -78,6 +78,12 @@ export type ExtractContext = {
 	 * They shadow same-named signals inside the loop body (LT-387).
 	 */
 	loopBound: string[]
+	/**
+	 * Parallel to `loopBound`: whether each binding is a reactive-list item or
+	 * key (ADR 0046 s3) — a signal, so a condition over it is reactive and
+	 * switches arms inside the item's mount (LT-424).
+	 */
+	loopReactive: boolean[]
 }
 
 /* === Internal Functions === */
@@ -105,4 +111,5 @@ export const createExtractContext = (
 	composeImports: new Map<string, string>(),
 	setupInits: new Map<string, AstNode>(),
 	loopBound: [],
+	loopReactive: [],
 })

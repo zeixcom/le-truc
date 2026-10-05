@@ -168,8 +168,15 @@ export type LoopEffectPlan =
 
 /** One `@for` over server data lowered to `each()`. */
 export type ForClientPlan = {
-	/** Collection query variable (`tabs`). */
+	/** Collection query variable (`tabs`); empty for a scoped loop. */
 	collection: string
+	/**
+	 * A loop nested in a Mount Scope (ADR 0046 s2, LT-424): its items are
+	 * fixed for the life of the clone, so the collection is a static query
+	 * against the scope root — `root`, the root's local — with no `all()`
+	 * and no MutationObserver. Null for a host-level loop (`each(all())`).
+	 */
+	scoped: { root: string; selector: string } | null
 	/** Element parameter name inside each() (`tab`). */
 	itemParam: string
 	rebindings: RebindingPlan[]
@@ -186,19 +193,13 @@ export type ReconcileItemScope = {
 	/** The item root's local (the bound element, typed by its tag). */
 	root: { name: string; tag: string } | null
 	/** Descendants the item's effects address, queried within the item root. */
-	locals: Array<{ name: string; selector: string; message: string }>
+	locals: ScopeLocal[]
 	/**
 	 * Key-derived attributes (ADR 0046 s1): `server` attributes over the key
 	 * binding, set once at clone — a key never changes, so there is nothing
 	 * to watch. `el` names the root local or a scope local.
 	 */
-	keyAttrs: Array<{
-		el: string
-		attr: string
-		exprText: string
-		sourceStart: number | undefined
-		sourceEnd: number | undefined
-	}>
+	keyAttrs: KeyAttrPlan[]
 	/** The item's effects, in document order. */
 	effects: TopEffectPlan[]
 }
@@ -246,6 +247,41 @@ export type ReconcilePlan = {
 	 * length (ADR 0037 s5: the toggle path). Empty when the loop has no arm.
 	 */
 	emptyQueries: string[]
+	/**
+	 * The list sits in a Mount Scope (an arm, an item; LT-424): `container`,
+	 * `parent` and `emptyQueries` name that scope's locals, filled in pass 4
+	 * — and an arg-seeded harvest has no connect-time container to read.
+	 */
+	scoped: boolean
+}
+
+/**
+ * One element a Mount Scope's mount queries through its `first`. `optional`
+ * marks an element reached through a server-rendered conditional branch
+ * that carries only key-derived attributes (LT-424): the render's winner may
+ * not include it, so the query does not throw (`first(selector)`).
+ */
+export type ScopeLocal = {
+	name: string
+	selector: string
+	message: string
+	optional?: boolean
+}
+
+/**
+ * A key-derived attribute (ADR 0046 s1): a `server` attribute over the
+ * enclosing items' key bindings alone, set once at mount — a key never
+ * changes, so there is nothing to watch. `el` names the scope root local or
+ * a scope local.
+ */
+export type KeyAttrPlan = {
+	el: string
+	/** `el` is an optional local (LT-424): the write is `el?.setAttribute`. */
+	optional?: boolean
+	attr: string
+	exprText: string
+	sourceStart: number | undefined
+	sourceEnd: number | undefined
 }
 
 /** One arm of a reactive conditional, mounted inside `bindArm`. */
@@ -259,7 +295,9 @@ export type ArmPlan = {
 	/** The arm root's local (the bound element, typed by its tag). */
 	root: { name: string; tag: string } | null
 	/** Descendants the arm's effects address, queried within the arm root. */
-	locals: Array<{ name: string; selector: string; message: string }>
+	locals: ScopeLocal[]
+	/** Key-derived attributes of an arm nested in a list item (LT-424). */
+	keyAttrs: KeyAttrPlan[]
 	effects: TopEffectPlan[]
 }
 

@@ -456,9 +456,11 @@ base is the loop's empty arm (LT-212): `.tsrx` `@for … @empty { … }`, and
 `.tsx` `{xs.length === 0 ? <empty/> : xs.map(…)}`. The arm roots sit in the
 template tree as the loop output's following siblings, so selector
 resolution and the id and prose checks see them; the server emitter renders
-them from inside the loop. The arm is client-inert (static and server-known
-content only; LTC005 otherwise). Over server data the server renders it when
-the loop renders no item. Over a reactive List it stays on the toggle path
+them from inside the loop. Over server data the arm is client-inert (static
+and server-known content only; LTC005 otherwise), and the server renders it
+when the loop renders no item. Over a reactive List its elements bind in the
+scope that holds the list — reactive attributes, class and style maps, events
+and lazy text (LT-424); every other construct is LTC005. It stays on the toggle path
 (ADR 0037 s5): every root is an element, always rendered in the container
 with `data-unreconciled`, and the client toggles its `hidden` from the
 List's `length`. The compiler owns both attributes there, so an
@@ -501,7 +503,15 @@ thunk and one mount per arm, ADR 0037 — and the item Mount Scope of a
 reactive list: a `ReconcilePlan` carries `listIndex` (the `data-list` stamp),
 the container's parent query, and an `itemScope` of root local, descendants,
 key-derived attributes and effects that `bindItem` mounts per entering item,
-ADR 0046 s1). Every plan node carries source spans for the remapping tables.
+ADR 0046 s1). Emission recurses (LT-424): an arm set, a reactive list or a
+server-data loop inside an arm or an item plans into that scope's effects
+through the scope's locals — selectors proved within the scope root, so they
+match nothing in a nested scope's content (`resolveScopedSelector`, which
+synthesizes a `:scope >` child path when no class, role or `data-*`
+separates the elements; LTC007 otherwise). A nested `ReconcilePlan` is
+`scoped` (its container, parent and empty roots are scope locals), and a
+nested `ForClientPlan` is a static query against the scope root rather than
+`each(all())`. Every plan node carries source spans for the remapping tables.
 The passes run as functions over a typed shared environment (`PassShared` —
 the order-carrying accumulators: queries, used names, ambients, child tags,
 ref names, and the diagnostic sinks), each taking its producers' output as a
