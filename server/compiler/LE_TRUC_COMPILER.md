@@ -446,9 +446,11 @@ whose test reads the signal through such a binding — the binding, not the
 signal — classifies `server`; a conditional over anything else the server
 render does not know is still refused (LTC005).
 `ReconcileForIR` (`kind: 'reconcile'`) is a loop over a declared
-`createList` and lowers to `reconcile()` (ADR 0017); it carries `listSignal`,
-`keyName` and `keyText`. The plan maps are typed per member —
-`Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR, ReconcilePlan>` — so
+`createList` or `deriveList` and lowers to `reconcile()` (ADR 0017); it
+carries `listSignal`, `keyName` and `keyText`. `keyName` comes from `.tsrx`'s
+`key k` clause or from a `.tsx` `.map()` callback's second parameter, which
+over a List is the item's key (ADR 0046 s4). The plan maps are typed per
+member — `Map<EachForIR, ForClientPlan>` and `Map<ReconcileForIR, ReconcilePlan>` — so
 a pass that reads the wrong map fails to type-check. `emptyArm` on the union
 base is the loop's empty arm (LT-212): `.tsrx` `@for … @empty { … }`, and
 `.tsx` `{xs.length === 0 ? <empty/> : xs.map(…)}`. The arm roots sit in the
@@ -986,8 +988,8 @@ A `{/* comment */}` child is dropped by both front ends; it renders nothing.
 the six `.tsrx`-grammar `TSRX###` codes) fall into families:
 
 - *Grammar and shape gates*: unrecognized setup statements, reactive `@for`
-  over a non-`createList` (LTC001), async component functions, deferred
-  collector calls, retired `&{}`/`&[]` sigils.
+  over a source other than `createList`/`deriveList` (LTC001), async
+  component functions, deferred collector calls, retired `&{}`/`&[]` sigils.
 - *React near-miss hard errors* (TSRX021–024): conditional/loop rendering
   idioms that parse but stringify JSX nodes into the HTML, plus the
   `className`/`htmlFor` rename check; `scripts/codemod-react-jsx.ts`

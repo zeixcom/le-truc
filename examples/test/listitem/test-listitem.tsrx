@@ -13,9 +13,8 @@
  *
  * The page serves two server-rendered tasks (adopted at connect, wiring
  * applied in place) and the Add button exercises the clone path. The `.tsx`
- * twin (`test-listitem-tsx.tsx`) carries the same item content minus the
- * key-derived `id`/`for` — the key binding is `.tsrx` grammar (`key k`);
- * the `.tsx` keyed `map` is LT-425.
+ * twin (`test-listitem-tsx.tsx`) carries the same item content over the
+ * keyed `map` (LT-425), its button logging instead of removing.
  */
 import { createList, createStore, type MutableStore } from '@zeix/le-truc'
 import { FormCheckbox } from '../../form/checkbox/form-checkbox.tsrx'

@@ -55,7 +55,8 @@ export function MyToggle(
 - A condition on server-known values only is rendered once on the server.
 - **Loops**: `.map()` in `.tsx`, `@for` in `.tsrx`.
   - Over server data, the loop renders once, and each item gets `each()` bindings.
-  - Over a declared `createList(…)` signal, it reconciles by key on the client.
+  - Over a declared `createList(…)` or `deriveList(…)` signal, it reconciles by key on the client. The item is the item's signal: read it in an arrow (`{() => item.get()}`); `.tsrx`'s bare `{item}` is its shorthand.
+  - Over a list, `.tsx`'s second `.map()` parameter is the item's stable key, not an index: `items.map((item, k) => … items.remove(k) …)`. `.tsrx` binds it with `key k`. Over an Array it stays the index.
   - Over any other reactive source, it's not supported (LTC001 skips the file).
   - Hoist values derived from a loop variable into a `const` before a reactive read (LTC002).
   - A `.tsrx` `key` clause is meaningful only over a `createList` (LTC052).

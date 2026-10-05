@@ -496,12 +496,13 @@ const hostDerivedExpr = (
 /**
  * The extracted `<template>` (ADR 0046 s2): stamped `data-list="N"` — the
  * list's compile-time document-order index, which the client's `reconcile`
- * call queries from the container's parent — statics render, the bare
- * `{item}` child becomes a slot, and server-known content folds in at
- * render time as today. Item-dependent sites bake EMPTY (ADR 0037 s1's
- * losing-arm rule): a lazy child other than the bare item, a reactive or
- * map attribute, and a key-derived attribute (a `server` attribute over the
- * key binding alone — the mount sets it against the clone's key parameter;
+ * call queries from the container's parent — statics render, and
+ * server-known content folds in at render time as today. Item-dependent
+ * sites bake EMPTY (ADR 0037 s1's losing-arm rule): a lazy child (the bare
+ * `{item}` shorthand and its arrow spelling alike — the item mount writes
+ * either on enter, so the two surfaces bake the same bytes; LT-425 retired
+ * the slot-fill `<slot>` marker), a reactive or map attribute, and a
+ * key-derived attribute (a `server` attribute over the key binding alone — the mount sets it against the clone's key parameter;
  * the live items render the same value from the loop's own key binding) all
  * push nothing. A server-known conditional inside the item renders its
  * winner — the winner is fixed per render call, so every clone carries the
@@ -526,16 +527,10 @@ const listTemplate = (
 			return
 		}
 		if (node.kind === 'expr') {
-			if (
-				node.reactivity === 'reactive' &&
-				node.expr.type === 'Identifier' &&
-				node.exprText === loop.itemName
-			)
-				pushTo("'<slot></slot>'")
-			else if (node.reactivity === 'server')
+			if (node.reactivity === 'server')
 				pushText(ctx, out, 'text', node.exprText, node)
-			// Any other lazy child is item-dependent: baked empty, the item
-			// mount writes it on enter.
+			// A lazy child is item-dependent: baked empty, the item mount
+			// writes it on enter.
 			return
 		}
 		if (node.kind === 'conditional' && node.mode === 'server') {
@@ -617,11 +612,10 @@ const listTemplate = (
 
 /**
  * Reactive `@for` over a declared List (ADR 0024 sub-design 5): initial
- * keyed items render in place (adopted children are complete — values, no
- * slot markers) with `data-key` from the shim's cause-effect-parity key
- * generation, and the item shape is extracted as a sibling `<template>`
- * whose `&{item}` hole becomes a `<slot>` marker. `validateListBody`
- * (compiler) already proved the body is statics + events + the one hole.
+ * keyed items render in place (adopted children are complete) with
+ * `data-key` from the shim's cause-effect-parity key generation, and the
+ * item shape is extracted as a sibling `<template>` (`listTemplate`) whose
+ * item-dependent sites bake empty.
  */
 const emitListFor = (
 	ctx: EmitContext,

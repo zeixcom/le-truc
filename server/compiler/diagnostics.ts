@@ -317,7 +317,7 @@ export const diagnostic = {
 	) =>
 		warning(
 			'LTC001',
-			`${wording.loop} over reactive source \`${iterable}\` — only declared createList(…) signals lower (reconcile(), ADR 0017); derived or non-List reactive sources are not supported. File skipped.`,
+			`${wording.loop} over reactive source \`${iterable}\` — only declared createList(…) and deriveList(…) signals lower (reconcile(), ADR 0017); other reactive sources are not supported. File skipped.`,
 			rangeOf(source, at),
 		),
 

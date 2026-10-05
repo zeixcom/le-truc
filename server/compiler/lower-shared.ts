@@ -878,13 +878,15 @@ export type LoopSource = {
 	/** An index binding and where it was written. */
 	index: { name: string; at: Site } | null
 	iterable: AstNode
-	/** `.tsrx`'s `key` clause; `.tsx` has none (the List's keyConfig keys it). */
+	/** `.tsrx`'s `key` clause. */
 	key: AstNode | null
 	/**
-	 * `.tsx` only: the `.map()` callback declares more than `(item, index)`.
-	 * Checked on the server-data path — over a List the index check fires
-	 * first, as it always did.
+	 * `.tsx` only: the `.map()` callback's second parameter, which the
+	 * receiver's type routes (ADR 0046 s4) — over a declared List it is the
+	 * item's key and replaces `index`; over an Array it stays the index.
 	 */
+	keyOverList: AstNode | null
+	/** `.tsx` only: the `.map()` callback declares more than two parameters. */
 	extraParams: boolean
 	/** Body statements, in order. Empty for an expression-bodied callback. */
 	statements: AstNode[]
@@ -1038,9 +1040,9 @@ const validateListBody = (
 }
 
 /**
- * The reactive-list loop over a declared `createList` (milestone 3): the
- * reconcile plan. Index bindings stay gated (keyed reconciliation); the
- * body is exactly the output element — a hoisted const has no per-item
+ * The reactive-list loop over a declared `createList` or `deriveList`
+ * (milestone 3, ADR 0046 s4): the reconcile plan. Index bindings stay gated
+ * (keyed reconciliation); the body is exactly the output element — a hoisted const has no per-item
  * rebinding channel here.
  */
 const lowerListLoop = (
@@ -1053,6 +1055,17 @@ const lowerListLoop = (
 	lowering: Lowering,
 ): (TemplateNode & { kind: 'element' }) | null => {
 	const wording = wordingOf(ctx)
+	if (loop.extraParams) {
+		ctx.diagnostics.push(
+			diagnostic.unsupported(
+				ctx.source,
+				loop.node,
+				'A `.map()` callback over a List with more than two parameters',
+				"A List's `map` passes `(item, key)` and nothing else — remove the extra parameters.",
+			),
+		)
+		return null
+	}
 	if (loop.index) {
 		ctx.diagnostics.push(
 			diagnostic.unsupported(
@@ -1066,15 +1079,14 @@ const lowerListLoop = (
 	}
 	let keyName: string | null = null
 	if (loop.key) {
-		// Reachable from `.tsrx` only — `.tsx` has no key clause.
 		keyName = identifierName(loop.key)
 		if (!keyName) {
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					ctx.source,
 					loop.key,
-					'A reactive-list `@for` key clause that is not a bare identifier',
-					'The key clause names the key binding, which becomes the key parameter of `reconcile()`’s `bindItem` — write a bare identifier, for example `key k`.',
+					wording.keyBindingShape,
+					`The key binding becomes the key parameter of \`reconcile()\`’s \`bindItem\` — write a bare identifier, for example ${wording.keyBindingExample}.`,
 				),
 			)
 			return null
@@ -1148,7 +1160,7 @@ const lowerListLoop = (
 
 /**
  * Lower a loop from its parsed header. Server-data iterables lower to
- * `each()`; a declared reactive `createList` to the reconcile plan; any
+ * `each()`; a declared `createList` or `deriveList` to the reconcile plan; any
  * other reactive source stays gated (LTC001). The iterable's TYPE routes
  * the loop, never its spelling.
  */
@@ -1175,7 +1187,10 @@ export const lowerLoop = (
 	const iterableName = identifierName(loop.iterable)
 	const iterableSignal = iterableName ? signals.get(iterableName) : undefined
 	if (iterableSignal) {
-		if (iterableSignal.constructor !== 'createList') {
+		if (
+			iterableSignal.constructor !== 'createList' &&
+			iterableSignal.constructor !== 'deriveList'
+		) {
 			ctx.diagnostics.push(
 				diagnostic.reactiveForNotSupported(
 					ctx.source,
@@ -1188,7 +1203,8 @@ export const lowerLoop = (
 		}
 		return lowerListLoop(
 			ctx,
-			loop,
+			// A `.map()` callback's second parameter is the key over a List.
+			loop.keyOverList ? { ...loop, index: null, key: loop.keyOverList } : loop,
 			itemName,
 			iterableSignal.name,
 			signals,
@@ -1206,7 +1222,7 @@ export const lowerLoop = (
 				ctx.source,
 				loop.node,
 				'A `.map()` callback with more than two parameters',
-				'A `.map()` callback takes `(item, index)` at most — a key belongs to the `createList(…)` that the loop reads, not to the callback.',
+				'A `.map()` callback over an Array takes `(item, index)` at most — remove the extra parameters.',
 			),
 		)
 		return null

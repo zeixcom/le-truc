@@ -41,7 +41,7 @@ One exported component function per file:
 | Authored shape | Lowers to |
 | --- | --- |
 | `{cond ? <a/> : <b/>}`, `{cond && <a/>}` | `conditional` (`if`) — template-cloned arms when the test reads a signal or `host` |
-| `{items.map((item, i) => …)}` | `for` — `each()` over server data, the `reconcile()` path over a declared `createList`; decided by the iterable's type, not the spelling |
+| `{items.map((item, i) => …)}` | `for` — `each()` over server data, the `reconcile()` path over a declared `createList` or `deriveList`; decided by the iterable's type, not the spelling. The second parameter follows the same rule: the index over an Array, the item's stable key over a List (`items.map((item, k) => …)`, the `.tsx` spelling of `@for`'s `key k`; ADR 0046 s4) |
 | `{items.length === 0 ? <empty/> : items.map(…)}` | `for` with an empty arm — the spelling of `.tsrx`'s `@for … @empty`. It is recognized by shape: the test compares the map receiver's own `length` to `0`. A `.map()` in any other conditional arm is an error (LTC005), including one wrapped in a fragment arm (`{c ? <>{xs.map(…)}</> : …}`, LT-301) |
 | An IIFE whose body is a `switch` returning JSX per arm | `conditional` (`switch`) — literal case values when the discriminant reads a signal |
 | `<truc:try catch={e => …}>…</truc:try>` | the error boundary |

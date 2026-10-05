@@ -2,10 +2,11 @@
  * LT-423 fixture (.tsx surface): the Mount Scope twin of
  * `test-listitem.tsrx` — a store item with a reactive attribute over a
  * store field, a lazy text child, a handler reading the item, a dirty-flag
- * property attribute, and a composed child with `truc:pass={{ get, set }}`,
- * adopted from the server render and then cloned. No key-derived `id`/`for`
- * here: the key binding is `.tsrx` grammar (`key k`) until the `.tsx` keyed
- * `map` lands (LT-425), so the label/input pair loses its association.
+ * property attribute, key-derived `id`/`for` over the keyed `map`'s key
+ * binding (`items.map((task, k) => …)`, ADR 0046 s4, LT-425), and a
+ * composed child with `truc:pass={{ get, set }}`, adopted from the server
+ * render and then cloned. The button logs instead of removing: removal
+ * through the key is pinned on the `.tsrx` twin.
  */
 import { createList, createStore, type MutableStore } from '@zeix/le-truc'
 import { FormCheckbox } from '../../form/checkbox/form-checkbox.tsrx'
@@ -40,39 +41,32 @@ export function TestListitemTsx({}: TestListitemTsxProps) {
 	return (
 		<test-listitem-tsx>
 			<ul class="tasks">
-				{
-					// @ts-expect-error — `map` on a List is ADR 0046 s4, typed when
-					// Cause & Effect 1.6 lands (LT-425); the compiler accepts and
-					// lowers the spelling today, and this directive retires then.
-					items.map(task => (
-						<li class={() => (task.done.get() ? 'done' : null)}>
-							<label>{task.label.get()}</label>
-							<input
-								type="text"
-								value={() => task.label.get()}
-								onInput={(e: Event) =>
-									task.label.set((e.target as HTMLInputElement).value)
-								}
-							/>
-							<FormCheckbox
-								name="task"
-								label="Done"
-								truc:pass={{
-									checked: {
-										get: () => task.done.get(),
-										set: v => task.done.set(Boolean(v)),
-									},
-								}}
-							/>
-							<button
-								type="button"
-								onClick={() => console.log(task.done.get())}
-							>
-								Log
-							</button>
-						</li>
-					))
-				}
+				{items.map((task, k) => (
+					<li class={() => (task.done.get() ? 'done' : null)}>
+						<label for={k}>{task.label.get()}</label>
+						<input
+							type="text"
+							id={k}
+							value={() => task.label.get()}
+							onInput={(e: Event) =>
+								task.label.set((e.target as HTMLInputElement).value)
+							}
+						/>
+						<FormCheckbox
+							name="task"
+							label="Done"
+							truc:pass={{
+								checked: {
+									get: () => task.done.get(),
+									set: v => task.done.set(Boolean(v)),
+								},
+							}}
+						/>
+						<button type="button" onClick={() => console.log(task.done.get())}>
+							Log
+						</button>
+					</li>
+				))}
 			</ul>
 			<button
 				type="button"

@@ -1,21 +1,13 @@
 /**
- * Unified-format spike: module-list — exercises `@for` over a reactive List
- * and component composition (ADR 0023 sub-design 10).
+ * The `.tsx` spelling of `module-list.tsrx` (ADR 0046 s4, LT-425): the
+ * reactive list is the keyed `map` over a declared `createList`,
+ * `items.map((item, k) => …)`. The callback receives the item's signal,
+ * read in an arrow (`{() => item.get()}`), and its stable key, which the
+ * per-item remove handler uses (`items.remove(k)`).
  *
- * - `<FormTextbox ... />` composes `form-textbox.tsrx`: the server splices
- *   its `renderFormTextbox()` output inline instead of hand-duplicating its
- *   markup, and `first('form-textbox')` addresses the rendered custom element for
- *   client-side reads (`textbox.value`, `textbox.clear()`) exactly as a raw
- *   dashed tag would.
- * - `@for (const item of items; key k)` over a declared reactive List →
- *   server renders initial items in place + extracts the item shape into a
- *   `<template>` whose holes become `<slot>` markers; client lowers to
- *   `reconcile()` with a generated `bindItem` that fills the slots.
- * - `truc:pass={{ disabled: () => … }}` on a child custom element → `pass()`
- *   lowering (explicit client-prop attribute, ADR 0023 sub-design 10)
- * - `onClick` inside `@for` → per-item listener in the `bindItem` scope
- *   (ADR 0017 collector parity) — delegation becomes an optimization
- * - ZERO imports: createList auto-imported from '@zeix/le-truc' (v2 bridge)
+ * Lives beside its `.tsrx` twin as a variant set (ADR 0039) and is the
+ * served surface. Every member declares its own `HTMLElementTagNameMap`
+ * entry (s4).
  */
 import { createList } from '@zeix/le-truc'
 import { FormTextbox } from '../../form/textbox/form-textbox.tsrx'
@@ -26,14 +18,15 @@ declare global {
 	}
 }
 
-export function ModuleList({}: {})
-	@{
-		const textbox = first('form-textbox', 'the new-item textbox')
+// biome-ignore lint/correctness/noEmptyPattern: the component takes no server args, and the compiler's params contract requires an (empty) destructured object pattern.
+export function ModuleList({}: {}) {
+	const textbox = first('form-textbox', 'the new-item textbox')
 
-		const items = createList<string>([], {
-			keyConfig: 'item',
-		})
+	const items = createList<string>([], {
+		keyConfig: 'item',
+	})
 
+	return (
 		<module-list>
 			<form
 				action="#"
@@ -50,13 +43,15 @@ export function ModuleList({}: {})
 					class="submit"
 					truc:pass={{ disabled: () => !textbox.length }}
 				>
-					<button type="submit" class="constructive">Add</button>
+					<button type="submit" class="constructive">
+						Add
+					</button>
 				</basic-button>
 			</form>
 			<ul data-container>
-				@for (const item of items; key k) {
+				{items.map((item, k) => (
 					<li>
-						<span>{item}</span>
+						<span>{() => item.get()}</span>
 						<basic-button class="remove">
 							<button
 								type="button"
@@ -67,10 +62,10 @@ export function ModuleList({}: {})
 							</button>
 						</basic-button>
 					</li>
-				}
+				))}
 			</ul>
 
-			<style>
+			<style>{css`
 			:host {
 				display: flex;
 				flex-direction: column;
@@ -114,6 +109,7 @@ export function ModuleList({}: {})
 						align-items: flex-end;
 					}
 				}
-			}</style>
+			}`}</style>
 		</module-list>
-	}
+	)
+}

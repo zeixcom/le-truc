@@ -230,7 +230,9 @@ declare namespace JSX {
 	interface dialog extends CommonLightDom {}
 	interface div extends CommonLightDom {}
 	interface form extends CommonLightDom {
+		action?: string
 		method?: 'get' | 'post' | 'dialog'
+		onSubmit?: (event: SubmitEvent) => unknown
 	}
 	interface h2 extends CommonLightDom {}
 	interface h3 extends CommonLightDom {}
@@ -336,6 +338,11 @@ declare namespace JSX {
 		language?: string
 	}
 	type BasicBlogmetaAttrs = CommonLightDom
+	/** A `.tsrx` leaf authored raw (module-list's buttons): it declares a
+	 * pass surface for its `disabled` prop. */
+	type BasicButtonAttrs = CommonLightDom & {
+		'truc:pass'?: { disabled?: PassEntry }
+	}
 	type ModuleCarouselAttrs = CommonLightDom
 	type ModuleCatalogAttrs = CommonLightDom
 	type ModuleColoreditorAttrs = CommonLightDom & {
@@ -350,6 +357,7 @@ declare namespace JSX {
 		style?: string
 	}
 	type ModuleDialogAttrs = CommonLightDom
+	type ModuleListAttrs = CommonLightDom
 	type ModuleListnavAttrs = CommonLightDom
 	type ModuleLazyloadAttrs = CommonLightDom & {
 		/** Parser-backed: read once at connect; the `src` property owns it after. */
@@ -452,6 +460,7 @@ declare namespace JSX {
 		ul: ul
 		style: style
 		'basic-blogmeta': BasicBlogmetaAttrs
+		'basic-button': BasicButtonAttrs
 		'basic-counter': BasicCounterAttrs
 		'card-callout': CardCalloutAttrs
 		'context-media': ContextMediaAttrs
@@ -466,6 +475,7 @@ declare namespace JSX {
 		'module-colorinfo': ModuleColorinfoAttrs
 		'module-dialog': ModuleDialogAttrs
 		'module-lazyload': ModuleLazyloadAttrs
+		'module-list': ModuleListAttrs
 		'module-listnav': ModuleListnavAttrs
 		'module-pagination': ModulePaginationAttrs
 		'module-scrollarea': ModuleScrollareaAttrs

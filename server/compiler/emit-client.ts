@@ -164,17 +164,24 @@ const listDeclaration = (
 	signal: InitSignalIR,
 	seed: { container: string; valueSelector: string },
 ): string | null => {
-	const init = signal.init
-	if (!init || typeof init.start !== 'number' || typeof init.end !== 'number')
-		return null
-	const relStart = init.start - signal.textStart
-	const relEnd = init.end - signal.textStart
 	// Only adopted items carry data-key — authored static siblings of the
 	// @for output must not become phantom list items.
 	const harvested =
 		`[...${seed.container}.children].filter(el => el.hasAttribute('data-key')).map(el => ` +
 		`el.querySelector(${jsString(seed.valueSelector)})?.textContent ?? '')`
-	return signal.text.slice(0, relStart) + harvested + signal.text.slice(relEnd)
+	return spliceInit(signal, harvested)
+}
+
+/** The declaring call with its first argument replaced by `init`. */
+const spliceInit = (signal: InitSignalIR, init: string): string | null => {
+	const node = signal.init
+	if (!node || typeof node.start !== 'number' || typeof node.end !== 'number')
+		return null
+	return (
+		signal.text.slice(0, node.start - signal.textStart) +
+		init +
+		signal.text.slice(node.end - signal.textStart)
+	)
 }
 
 const sliceOf = (text: string, start: number | undefined): SourceSlice[] =>
@@ -593,7 +600,15 @@ export const emitClientModule = (
 			continue
 		}
 		const initializer = harvestInitializer(harvest, imports)
-		if (initializer)
+		// A derived List keeps its whole call (ADR 0046 s4): its `keyConfig`
+		// keys the client's items, which must match the server's `data-key`s,
+		// and a source-mapping form carries its item callback after the source.
+		const call =
+			initializer && signal.constructor === 'deriveList'
+				? spliceInit(signal, initializer)
+				: null
+		if (call) push(`const ${signal.name} = ${call}`)
+		else if (initializer)
 			push(
 				`const ${signal.name} = ${imports.local(signal.constructor)}(${initializer})`,
 			)

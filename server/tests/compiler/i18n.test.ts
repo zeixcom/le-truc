@@ -578,7 +578,8 @@ describe('the generated i18n module', () => {
 		// The template itself carries the folded value, not a slot for it —
 		// cloned pills announce the translation without any client catalog.
 		expect(template).toContain('aria-label="Entfernen"')
-		expect(template).toContain('<slot></slot>')
+		// The item text bakes empty: the item mount writes it (LT-425).
+		expect(template).not.toContain('<slot></slot>')
 	})
 
 	test('the de catalog rides the client-message attribute as parsed patterns (LT-219 fixture)', async () => {

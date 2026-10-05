@@ -63,9 +63,11 @@ const pascal = (tag: string): string => renderName(tag).slice('render'.length)
  * and a `.tsx` in ONE directory, named for one tag (ADR 0039). A new set
  * joins the suite by existing; none can escape it.
  */
+const CORPUS = await loadCorpus()
+
 const discoverVariantSets = async (): Promise<Fixture[]> => {
 	const byStem = new Map<string, { tsrx?: string; tsxx?: string }>()
-	for (const { filename } of await loadCorpus()) {
+	for (const { filename } of CORPUS) {
 		const match = /^(.*)\.(tsrx|tsx)$/.exec(filename)
 		if (!match?.[1]) continue
 		const pair = byStem.get(match[1]) ?? {}
@@ -93,7 +95,40 @@ const discoverVariantSets = async (): Promise<Fixture[]> => {
 
 const FIXTURES = await discoverVariantSets()
 
-const registry = new Set<string>(FIXTURES.map(fx => fx.tag))
+const MEMBERS = new Set(FIXTURES.flatMap(fx => [fx.tsrx, fx.tsxx]))
+
+/**
+ * The corpus components outside every variant set, which a set may compose
+ * (module-list composes `form-textbox` and authors `basic-button` raw):
+ * their tags join the registry and their entries the compose registry.
+ */
+const OTHERS = CORPUS.filter(
+	({ filename }) => /\.(tsrx|tsx)$/.test(filename) && !MEMBERS.has(filename),
+).map(({ filename }) => filename)
+
+const tagOf = (filename: string): string =>
+	path.basename(filename).replace(/\.(tsrx|tsx)$/, '')
+
+const registry = new Set<string>([
+	...FIXTURES.map(fx => fx.tag),
+	...OTHERS.map(tagOf),
+])
+
+const compileOne = (filename: string, entries: RegistryEntry[]) => {
+	const composeRegistry = new Map<string, RegistryEntry>(
+		entries.map(e => [e.source, e]),
+	)
+	const compile = filename.endsWith('.tsx')
+		? compileComponentTsx
+		: compileComponent
+	return compile(
+		read(filename),
+		filename,
+		new Set([...registry]),
+		undefined,
+		composeRegistry.size > 0 ? composeRegistry : undefined,
+	)
+}
 
 /** Both front ends get the same compose graph (e.g. combobox composes listbox). */
 const compilePair = (fx: Fixture, entries: RegistryEntry[]) => {
@@ -181,12 +216,13 @@ const renderOf =
 // same two-pass shape as `compileCorpus`. Hoisted to module scope because
 // the generated i18n module write below is top-level await (describe
 // callbacks are sync).
-const discoveryEntries = FIXTURES.flatMap(fx => {
-	const { tsrx, tsxx } = compilePair(fx, [])
-	return [tsrx, tsxx].flatMap(compiled =>
-		compiled.component ? [compiled.component.entry] : [],
-	)
-})
+const discoveryEntries = [
+	...FIXTURES.flatMap(fx => {
+		const { tsrx, tsxx } = compilePair(fx, [])
+		return [tsrx, tsxx]
+	}),
+	...OTHERS.map(filename => compileOne(filename, [])),
+].flatMap(compiled => (compiled.component ? [compiled.component.entry] : []))
 
 // A composing set's server module supplies its composed children's reserved
 // records (`i18n: i18nRecord("form-listbox", …)`), which import './i18n' —
@@ -208,6 +244,12 @@ const COMPILED = new Map(
 for (const [tag, { tsrx }] of COMPILED)
 	if (tsrx.component)
 		generated.emit(`${tag}.server.ts`, tsrx.component.serverCode)
+// A set's composed non-member children render through their own modules.
+for (const filename of OTHERS) {
+	const { component } = compileOne(filename, discoveryEntries)
+	if (component)
+		generated.emit(`${tagOf(filename)}.server.ts`, component.serverCode)
+}
 
 describe('variant sets — front-end parity (§4.3, ADR 0039 s1)', () => {
 	test('discovers every corpus variant set (non-vacuous)', () => {

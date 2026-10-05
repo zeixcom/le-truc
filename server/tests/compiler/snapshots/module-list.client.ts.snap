@@ -7,6 +7,12 @@ import './basic-button.client'
 import './form-textbox.client'
 import { createList } from '@zeix/le-truc'
 
+declare global {
+	interface HTMLElementTagNameMap {
+		'module-list': HTMLElement
+	}
+}
+
 export default defineComponent(
 	'module-list',
 	({ first, host, on, pass, watch }) => {

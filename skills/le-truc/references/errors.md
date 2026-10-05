@@ -48,7 +48,7 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 
 | Code | What fired, and why | Fix |
 |---|---|---|
-| LTC001 **W** | a loop over a reactive source that is not a declared `createList`. Only lists reconcile. **The file is skipped.** | declare the source with `createList(…)`, or loop over server data |
+| LTC001 **W** | a loop over a reactive source that is not a declared `createList` or `deriveList`. Only lists reconcile. **The file is skipped.** | declare the source with `createList(…)` or `deriveList(…)`, or loop over server data |
 | LTC002 | a reactive read of a loop variable | hoist the derived value into a `const` first |
 | LTC003 | a hoisted `const` read reactively but never rendered as a plain attribute, so the client can't rebind it | render it (e.g. `aria-controls={id}`), or stop reading it reactively |
 | LTC017 | a signal crosses a call the compiler can't see into, so its reactivity can't be traced | wrap the child in an explicit thunk |

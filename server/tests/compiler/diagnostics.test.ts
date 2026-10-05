@@ -286,12 +286,37 @@ describe('milestone gates', () => {
 		expect(diagnostics).toEqual([])
 	})
 
-	test('inline: @for over deriveList still warns LTC001', () => {
+	test('inline: @for over deriveList reconciles (ADR 0046 s4, LT-425)', () => {
 		const source = `export function C({}: {})
 	@{
 		const items = deriveList(() => ['a'])
 			<c-el>
-				@for (const item of items; key k) {
+				<ul data-container>
+					@for (const item of items; key k) {
+						<li>{item}</li>
+					}
+				</ul>
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
+	}
+import { deriveList } from '@zeix/le-truc'`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.clientCode).toContain('reconcile(container,')
+	})
+
+	test('inline: @for over a reactive source that is not a List warns LTC001', () => {
+		const source = `export function C({}: {})
+	@{
+		const items = deriveCell(() => ['a'])
+			<c-el>
+				@for (const item of items) {
 					<li>{item}</li>
 				}
 				<style>:host {
@@ -299,7 +324,7 @@ describe('milestone gates', () => {
 	}</style>
 			</c-el>
 	}
-import { deriveList } from '@zeix/le-truc'`
+import { deriveCell } from '@zeix/le-truc'`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
 		expect(diagnostics.some(d => d.code === 'LTC001')).toBe(true)
 	})
