@@ -200,6 +200,8 @@ const RUNTIME_HARNESS_EXPORTS: ReadonlySet<string> = new Set<string>([
 	'asJSON',
 	'attrValue',
 	'esc',
+	'text',
+	'textOf',
 	'attr',
 	'cls',
 	'styleAttr',

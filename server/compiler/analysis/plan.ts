@@ -206,6 +206,8 @@ export type ReconcilePlan = {
 	keyParam: string | null
 	/** Scoped selector of the element carrying the &{item} hole. */
 	holeSelector: string
+	/** Source offset of the authored `{item}` hole (LT-011 span table). */
+	holeStart: number | undefined
 	itemEvents: ReconcileItemEvents[]
 	/**
 	 * Query variables of the `@empty` arm's roots (LT-212), in order. Each
@@ -257,11 +259,28 @@ export type ArmsPlan = {
 	 * `err` arm's mount writes `errText` — the err arm's own lazy child over
 	 * `error` (bare or a member read), null when it has none.
 	 */
-	boundary?: { signal: string; errText: string | null }
+	boundary?: {
+		signal: string
+		errText: string | null
+		/** Offsets of the `ok` and `err` arms' lazy children (LT-428 spans). */
+		okStart: number | undefined
+		errStart: number | undefined
+	}
 }
 
 export type TopEffectPlan =
-	| { kind: 'watch-text'; query: string; source: string }
+	| {
+			kind: 'watch-text'
+			query: string
+			source: string
+			/**
+			 * The authored child's text and offset (LT-011 span table): the
+			 * `bindText` sink is typed, so a non-text source is a tsc error
+			 * `check:corpus` reports at the child (LT-428).
+			 */
+			exprText: string
+			sourceStart: number | undefined
+	  }
 	| {
 			kind: 'watch-attr'
 			query: string

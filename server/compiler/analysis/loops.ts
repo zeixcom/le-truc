@@ -462,6 +462,7 @@ const runReconcileLoops = (
 
 		// The item hole's parent element — the item value's DOM site, used by
 		// the arg-seeded harvest read.
+		let holeStart: number | undefined
 		const findHoleParent = (node: TemplateNode): ElementNode | null => {
 			if (!isElement(node)) return null
 			for (const child of node.children) {
@@ -469,8 +470,11 @@ const runReconcileLoops = (
 					child.kind === 'expr' &&
 					child.reactivity === 'reactive' &&
 					child.exprText === loop.itemName
-				)
+				) {
+					const start = child.expr.start
+					holeStart = typeof start === 'number' ? start : undefined
 					return node
+				}
 				const found = findHoleParent(child)
 				if (found) return found
 			}
@@ -584,6 +588,7 @@ const runReconcileLoops = (
 			itemParam: loop.itemName,
 			keyParam: loop.keyName,
 			holeSelector,
+			holeStart,
 			itemEvents,
 			emptyQueries,
 		})

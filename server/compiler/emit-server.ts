@@ -103,6 +103,8 @@ const EMITTED_HARNESS_NAMES = [
 	'refStub',
 	'sanitizeHtml',
 	'styleAttr',
+	'text',
+	'textOf',
 ] as const
 type EmittedHarnessName = (typeof EMITTED_HARNESS_NAMES)[number]
 
@@ -224,6 +226,35 @@ const push = (ctx: EmitContext, expr: string): void => {
 	ctx.out.line(`${ctx.buffer}.push(${expr})`)
 }
 
+/**
+ * One text position into `out`'s buffer, through a typed text sink (ADR 0046
+ * s6, LT-428): `text(value)`, or `textOf(thunk)` for an authored arrow. An
+ * object or a boolean reaching it is a tsc error, so when `value` is spelled
+ * from the authored child's own text (`item`, `data.get()`, `e.message`) the
+ * statement carries spans that let `check:corpus` report it at the authored
+ * line. The sink call itself maps there too: it anchors the search, so a
+ * one-letter child (`{e}`) is not found inside `push`.
+ */
+const pushText = (
+	ctx: EmitContext,
+	out: CodeBuilder,
+	sink: 'text' | 'textOf',
+	value: string,
+	child: { expr: AstNode; exprText: string } | null,
+): void => {
+	ctx.used.add(sink)
+	const call = `${ctx.h(sink)}(`
+	const start = child?.expr.start
+	const slices =
+		child && typeof start === 'number' && value.startsWith(child.exprText)
+			? [
+					{ text: call, start },
+					{ text: child.exprText, start },
+				]
+			: []
+	out.line(`${ctx.buffer}.push(${call}${value}))`, slices)
+}
+
 /** Push a closing tag, unless the element is void. */
 const pushClose = (ctx: EmitContext, tag: string): void => {
 	if (!isVoidElement(tag)) push(ctx, jsString(`</${tag}>`))
@@ -314,7 +345,8 @@ const dropUnreferencedUnevaluable = (
 
 /**
  * A lazy child's initial server value: a signal identifier reads `.get()`,
- * a thunk is invoked, an exposed-prop string key resolves through
+ * a thunk is returned as such (`thunk: true`, rendered through `textOf`,
+ * which invokes it), an exposed-prop string key resolves through
  * `expose()`'s prop→signal map, anything else is the expression itself.
  * A managed form prop (`validationMessage`) renders empty — the library
  * owns its value, and empty is its connect-time state.
@@ -326,11 +358,13 @@ const lazyValueExpression = (
 	scope: ReadonlySet<string>,
 	foldScope: ReadonlySet<string>,
 	onSeed?: (seed: string) => void,
-): string => {
+): { expr: string; thunk: boolean } => {
+	const value = (text: string) => ({ expr: text, thunk: false })
 	if (expr.type === 'Identifier') {
 		const name = String(expr.name)
-		if (component.signals.some(s => s.name === name)) return `${name}.get()`
-		return exprText
+		if (component.signals.some(s => s.name === name))
+			return value(`${name}.get()`)
+		return value(exprText)
 	}
 	// Anything else (a call expression, an arrow thunk, a bare non-signal
 	// identifier, …) is only safe to render verbatim if its dependency
@@ -351,7 +385,7 @@ const lazyValueExpression = (
 	// like its attribute sites.
 	if (expr.type === 'ArrowFunctionExpression') {
 		const mirror = hostPropMirrorExpr(component, expr)
-		if (mirror !== null) return mirror
+		if (mirror !== null) return value(mirror)
 		const derived = hostDerivedExpr(
 			component,
 			expr,
@@ -359,11 +393,12 @@ const lazyValueExpression = (
 			foldScope,
 			onSeed,
 		)
-		if (derived !== null) return derived
+		if (derived !== null) return value(derived)
 	}
-	if (!isServerEvaluable(expr, scope)) return "''"
-	if (expr.type === 'ArrowFunctionExpression') return `(${exprText})()`
-	return exprText
+	if (!isServerEvaluable(expr, scope)) return value("''")
+	if (expr.type === 'ArrowFunctionExpression')
+		return { expr: exprText, thunk: true }
+	return value(exprText)
 }
 
 /**
@@ -476,10 +511,8 @@ const listTemplate = (ctx: EmitContext, loop: ReconcileForIR): CodeBuilder => {
 				node.exprText === loop.itemName
 			)
 				pushTo("'<slot></slot>'")
-			else if (node.reactivity === 'server') {
-				ctx.used.add('esc')
-				pushTo(`${ctx.h('esc')}(String(${node.exprText}))`)
-			}
+			else if (node.reactivity === 'server')
+				pushText(ctx, out, 'text', node.exprText, node)
 			return
 		}
 		// Statics and server-static expressions only — validateListBody
@@ -891,8 +924,10 @@ const emitAsyncBoundary = (
 		for (const child of root.children) {
 			if (child.kind === 'expr' && child.reactivity === 'reactive') {
 				if (value === null) continue
-				ctx.used.add('esc')
-				push(ctx, `${ctx.h('esc')}(String(${value}))`)
+				// `value` starts with the child's own text — the signal of
+				// `{data}` read as `data.get()`, the catch parameter's read
+				// verbatim — so the child's slice locates it.
+				pushText(ctx, ctx.out, 'text', value, child)
 				continue
 			}
 			emit(ctx, child, armScope)
@@ -909,7 +944,10 @@ const emitAsyncBoundary = (
 	ctx.out.open(`if (${stateVar} === 'ok') {`)
 	emitArmRoot(okRoot, scope, `${signalName}.get()`, keyed('ok'))
 	ctx.out.between(`} else if (${stateVar} === 'err') {`)
-	if (node.catchParam) ctx.out.line(`const ${node.catchParam} = ${errVar}`)
+	// Typed as the authored arm types it (`err: Error`, LT-208), so the
+	// catch arm's text (`{e.message}`) typechecks in the server module.
+	if (node.catchParam)
+		ctx.out.line(`const ${node.catchParam} = ${errVar} as Error`)
 	emitArmRoot(
 		errRoot,
 		errScope,
@@ -1093,7 +1131,6 @@ const emit = (
 		// empty — the server has no initial value for it under the arm's
 		// condition; the mount writes it on enter.
 		if (node.reactivity === 'reactive' && ctx.inArmTemplate) return
-		ctx.used.add('esc')
 		const value =
 			node.reactivity === 'reactive'
 				? lazyValueExpression(
@@ -1104,8 +1141,9 @@ const emit = (
 						ctx.foldScope,
 						seed => useSeedNames(ctx, seed),
 					)
-				: node.exprText
-		push(ctx, `${ctx.h('esc')}(String(${value}))`)
+				: { expr: node.exprText, thunk: false }
+		// An authored arrow is `textOf`'s argument, anything else `text`'s.
+		pushText(ctx, ctx.out, value.thunk ? 'textOf' : 'text', value.expr, node)
 		return
 	}
 	if (node.kind === 'conditional' && node.mode === 'reactive') {

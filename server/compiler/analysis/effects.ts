@@ -380,6 +380,8 @@ const emitLazyTextChildren = (
 		kind: 'watch-text',
 		query,
 		source: lazyWatchSource(child),
+		exprText: child.exprText,
+		sourceStart: startOf(child.expr),
 	})
 	// Same record for either form (LT-165 step 7): the emission gate makes
 	// the site the element's whole textContent, so the element's pre-connect
@@ -474,6 +476,16 @@ const directLazyIdentifier = (el: ElementNode): string | null => {
 	}
 	return null
 }
+
+/** The first direct lazy child of `el`, if any. */
+const lazyChildOf = (el: ElementNode): ExprNode | undefined =>
+	el.children.find(
+		(c): c is ExprNode => c.kind === 'expr' && c.reactivity === 'reactive',
+	)
+
+/** An AST node's source offset, for the span table (LT-011). */
+const startOf = (node: AstNode | undefined): number | undefined =>
+	typeof node?.start === 'number' ? node.start : undefined
 
 /**
  * A direct lazy child of `el` referencing the catch param — bare (`e`) or
@@ -1332,7 +1344,7 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 				source,
 				errRoot.node,
 				`A lazy child in the ${wording.catchArm} that does not read the catch parameter \`${catchParam ?? 'e'}\``,
-				`Render the parameter itself or a member of it, for example \`{${catchParam ?? 'e'}.message}\`.`,
+				`Render a text member of it, for example \`{${catchParam ?? 'e'}.message}\` — the parameter itself is an \`Error\`, which a text position does not take (ADR 0046 s6).`,
 			),
 		)
 		return
@@ -1359,7 +1371,12 @@ const handleAsyncBoundary = (fx: EffectsContext, node: TryNode): void => {
 			elementParam: uniqueName(usedNames, 'armElement'),
 			keyParam: uniqueName(usedNames, 'armKey'),
 			arms: [arm('ok'), arm('nil'), arm('err')],
-			boundary: { signal, errText },
+			boundary: {
+				signal,
+				errText,
+				okStart: startOf(lazyChildOf(okRoot)?.expr),
+				errStart: startOf(lazyChildOf(errRoot)?.expr),
+			},
 		},
 	})
 }

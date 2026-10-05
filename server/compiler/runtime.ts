@@ -315,6 +315,33 @@ export const esc = (text: string): string =>
 		.replace(/'/g, '&#39;')
 
 /**
+ * What a text position renders: the type of every text sink the compiler
+ * emits, on the server ({@link text}) and the client (`bindText`), per
+ * ADR 0046 s6. Nil renders empty here; on the client it keeps the last
+ * value, which on first render is the same empty text.
+ */
+export type TextValue = string | number | null | undefined
+
+/**
+ * The server's text sink: HTML-escape one text position's value.
+ *
+ * Typed `TextValue` so an object or a boolean reaching a text position is a
+ * tsc error at its authored line, through `check:corpus` (ADR 0046 s6) —
+ * stringifying it would render `[object Object]` or `true`. To fix one,
+ * render a field (`{() => item.get().label}`), or choose the text with a
+ * ternary for a boolean (`{() => (done.get() ? 'Done' : 'Open')}`).
+ */
+export const text = (value: TextValue): string =>
+	value == null ? '' : esc(String(value))
+
+/**
+ * {@link text} over a thunk's value: the server form of an authored arrow
+ * in a text position. The arrow is the argument itself, so tsc reports a
+ * non-text return at the arrow's body, on the authored line.
+ */
+export const textOf = (thunk: () => TextValue): string => text(thunk())
+
+/**
  * Render one attribute from a computed value, matching `bindAttribute`'s
  * client dispatch (string → setAttribute, boolean → toggleAttribute,
  * number → String(v)):

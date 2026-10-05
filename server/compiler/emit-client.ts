@@ -180,6 +180,31 @@ const listDeclaration = (
 const sliceOf = (text: string, start: number | undefined): SourceSlice[] =>
 	start === undefined ? [] : [{ text, start }]
 
+/**
+ * Spans for a text sink's statement (ADR 0046 s6, LT-428): `bindText` is
+ * typed `string | number`, so a non-text value is a tsc error, and these
+ * slices let `check:corpus` report it at the authored child. `anchor` is the
+ * generated call that opens the statement (`watch(`): it maps to the child
+ * too, and it anchors the search, so a short child (`{e}`) is not found
+ * inside an earlier name. The value then maps verbatim when it is the
+ * child's own text, and as a whole onto the child's offset when synthesized
+ * around it (`() => <child>`, `() => host.<prop>`).
+ */
+const textSinkSlices = (
+	anchor: string,
+	value: string,
+	exprText: string,
+	start: number | undefined,
+): SourceSlice[] => {
+	if (start === undefined) return []
+	const slices: SourceSlice[] = [{ text: anchor, start }]
+	if (value === exprText) slices.push({ text: value, start })
+	else if (value === `() => ${exprText}`)
+		slices.push({ text: '() => ', start }, { text: exprText, start })
+	else slices.push({ text: value, start })
+	return slices
+}
+
 const emitEachBlock = (
 	plan: ForClientPlan,
 	imports: ClientImports,
@@ -290,8 +315,10 @@ const emitReconcileBlock = (
 	out.open(
 		`${imports.local('reconcile')}(${plan.container}, ${plan.template}, ${plan.signal}, (_element, ${plan.itemParam}, ${keyParam}, first) => {`,
 	)
+	const watch = imports.local('watch')
 	out.line(
-		`${imports.local('watch')}(${plan.itemParam}, ${imports.local('bindText')}(first(${jsString(plan.holeSelector)}, ${jsString(`${plan.tag}: ${plan.holeSelector} missing`)})))`,
+		`${watch}(${plan.itemParam}, ${imports.local('bindText')}(first(${jsString(plan.holeSelector)}, ${jsString(`${plan.tag}: ${plan.holeSelector} missing`)})))`,
+		textSinkSlices(`${watch}(`, plan.itemParam, plan.itemParam, plan.holeStart),
 	)
 	for (const target of plan.itemEvents) {
 		if (target.selector !== null)
@@ -741,14 +768,30 @@ export const emitClientModule = (
 		out.close()
 		out.line("return 'ok'")
 		out.between(`}, (${plan.elementParam}, ${plan.keyParam}) => {`)
+		// Both writes go through the typed `bindText` sink (ADR 0046 s6), so
+		// an object result or a bare `{e}` is a tsc error at its child.
+		const bindText = imports.use('bindText')
 		out.open(`if (${plan.keyParam} === 'ok') {`)
 		out.line(
-			`${watch}(${boundary.signal}, { ok: value => { ${plan.elementParam}.textContent = String(value) }, err: () => {} })`,
+			`${watch}(${boundary.signal}, { ok: ${bindText}(${plan.elementParam}), err: () => {} })`,
+			textSinkSlices(
+				`${watch}(`,
+				boundary.signal,
+				boundary.signal,
+				boundary.okStart,
+			),
 		)
 		if (boundary.errText !== null) {
 			out.between(`} else if (${plan.keyParam} === 'err') {`)
+			const sink = `${bindText}(${plan.elementParam})(`
 			out.line(
-				`${watch}(${boundary.signal}, { ok: () => {}, err: error => { ${plan.elementParam}.textContent = String(${boundary.errText}) } })`,
+				`${watch}(${boundary.signal}, { ok: () => {}, err: error => ${sink}${boundary.errText}) })`,
+				boundary.errStart === undefined
+					? []
+					: [
+							{ text: sink, start: boundary.errStart },
+							{ text: boundary.errText, start: boundary.errStart },
+						],
 			)
 		}
 		out.close()
@@ -769,8 +812,15 @@ export const emitClientModule = (
 		if (effect.kind === 'watch-text') {
 			imports.add('watch')
 			imports.add('bindText')
+			const watch = imports.local('watch')
 			at(
-				`${imports.local('watch')}(${effect.source}, ${imports.local('bindText')}(${effect.query}))`,
+				`${watch}(${effect.source}, ${imports.local('bindText')}(${effect.query}))`,
+				textSinkSlices(
+					`${watch}(`,
+					effect.source,
+					effect.exprText,
+					effect.sourceStart,
+				),
 			)
 			return
 		}

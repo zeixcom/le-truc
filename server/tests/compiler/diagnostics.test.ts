@@ -777,7 +777,7 @@ export function C({ label }: { label: string })
 		)
 		expect(diagnostics).toEqual([])
 		// Baked into the extracted template at render time.
-		expect(component?.serverCode).toContain('__html.push(esc(String(label)))')
+		expect(component?.serverCode).toContain('__html.push(text(label))')
 	})
 
 	test('missing or duplicated item hole is LTC005', () => {

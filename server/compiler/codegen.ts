@@ -154,7 +154,10 @@ export class HtmlWriter {
  * In `reindent` mode a multi-line statement's continuation lines drop their
  * common indentation and take the current depth, and verbatim `slices` are
  * span-recorded (`appendWithSpans`); otherwise a statement's continuation
- * lines pass through as written.
+ * lines pass through as written. A statement written with `slices` takes the
+ * `reindent` path in either mode, so its spans are recorded: a single-line
+ * statement comes out the same, and a multi-line one is re-indented (the
+ * server's text sinks over a multi-line authored arrow, LT-428).
  */
 export class CodeBuilder {
 	readonly lines: string[] = []
@@ -175,7 +178,7 @@ export class CodeBuilder {
 
 	/** One statement at the current depth. */
 	line(text: string, slices: readonly SourceSlice[] = []): this {
-		if (this.#reindent)
+		if (this.#reindent || slices.length > 0)
 			appendWithSpans(
 				this.lines,
 				text,

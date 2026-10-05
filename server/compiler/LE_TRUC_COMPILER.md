@@ -954,6 +954,17 @@ tsc-against-generated-modules gate — no unit test sits between the emitter
 and the gate. Widen both sides in the same change, and treat a `check:corpus`
 failure there as a contract break, not a fixture problem.
 
+**Text positions are typed sinks** (ADR 0046 s6, LT-428). Every text position
+the server renders goes through `runtime.ts`'s `text(value)` — or
+`textOf(thunk)` for an authored arrow — typed `string | number | null |
+undefined` (nil renders empty); every client text write goes through
+`bindText`, typed `string | number` (the async boundary's `ok`/`err` mounts
+included). An object or a boolean reaching a text position is therefore a tsc
+error in both generated modules, and each sink statement records spans over
+the authored child, so `check:corpus` reports it at the authored line on
+both surfaces. Attribute values are not text sinks: they keep `attr`/`esc`.
+A `{/* comment */}` child is dropped by both front ends; it renders nothing.
+
 **Diagnostic codes** (`diagnostics.ts` — surface-neutral `LTC###` codes plus
 the six `.tsrx`-grammar `TSRX###` codes) fall into families:
 
