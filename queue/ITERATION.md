@@ -118,13 +118,12 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   **next:** LT-424 → LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). **Next:** LT-412 (needs LT-425; the Cause & Effect 1.6.1 bump).
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
   LT-433~~ (done ✓). ~~LT-411~~ (reviewed ✓), ~~LT-416~~ (reviewed ✓), ~~LT-414~~
-  (reviewed ✓), ~~LT-187, LT-434, LT-435~~ (reviewed ✓). **Next:** LT-436 (ruling 12; an uncaught throw in a
-  reconcile effect's re-run; LT-423 finding).
+  (reviewed ✓), ~~LT-187, LT-434, LT-435~~ (reviewed ✓). ~~LT-436~~ (reviewed ✓).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
@@ -144,7 +143,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-437.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-440.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 

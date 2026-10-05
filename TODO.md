@@ -118,13 +118,12 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   **next:** LT-424 → LT-355 → LT-426 → LT-111 → LT-109, LT-110 (both need LT-429) → LT-390 (needs LT-334). LT-110 is
   LT-165 step 7's corpus pin.
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). **Next:** LT-412 (needs LT-425; the Cause & Effect 1.6.1 bump).
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). **Next:** LT-439 (LT-424 finding; ahead of the migrations that author `.tsrx` item types).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
   LT-433~~ (done ✓). ~~LT-411~~ (reviewed ✓), ~~LT-416~~ (reviewed ✓), ~~LT-414~~
-  (reviewed ✓), ~~LT-187, LT-434, LT-435~~ (reviewed ✓). **Next:** LT-436 (ruling 12; an uncaught throw in a
-  reconcile effect's re-run; LT-423 finding).
+  (reviewed ✓), ~~LT-187, LT-434, LT-435~~ (reviewed ✓). ~~LT-436~~ (reviewed ✓).
 
 **Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
@@ -144,7 +143,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-437.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-440.** Next free diagnostic code: LTC075 (LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -219,7 +218,7 @@ recorded against the 30.4k opening measurement.
 
 ### C — corpus port
 
-- [ ] LT-424: Mount Scopes nest — arms and lists inside arms and items, scoped server-data loops, the cross-scope uniqueness proof (ADR 0046 s1–s2).
+- [ ] LT-424: Mount Scopes nest — arms and lists inside arms and items, scoped server-data loops, the cross-scope uniqueness proof (ADR 0046 s1–s2). — changes requested ↩
   **Area:** compiler
   **Needs:** LT-423
   **Gates:** check:sim
@@ -244,6 +243,26 @@ recorded against the 30.4k opening measurement.
   (adopted, then cloned at both levels), a selector that would match into a nested item (proved
   or synthesized), and an `@empty` arm with a reactive style. Corpus goldens byte-identical.
   Full gates. **Impasse rule (iteration ruling 10).**
+
+  **Changed:** Mount Scopes nest (ADR 0046 s1–s2). Emission recurses: an arm set (reactive conditional or async boundary), a reactive list or a server-data loop inside an arm or a list item plans into that scope's mount through the scope's locals (`MountScope` in `analysis/effects.ts`; `planNested`/`planNestedList`/`planNestedEach`). Lifted refusals (parity-pinned on both surfaces): arm sets and lists inside arms, arm sets, lists, server-data loops and async boundaries inside items (`unmountableInArm`'s loop arm, `validateArmSetPlacement`'s item arm, `validateListBody`'s loop and async-boundary arms). A condition over a reactive-list item or key now classifies reactive (`loopReactive` in the extract context), and folds per live item (`initial-winner.ts`: `{ fold: true }`). Remaining refusals: arm sets in server-rendered branches, composed content and server-data loop bodies; LTC063; plus new, parity-pinned: a reactive list directly under an arm/item root, a reactive list inside a server-data loop body, a server-data loop over the item or key, an arg-seeded list nested in a scope (harvest). The proof across scopes is `resolveScopedSelector` (`analysis/selectors.ts`): the probe over the scope root already counts every nested arm and one copy of each nested item shape, so count 1 means "matches nothing in a nested scope"; when no class/role/`data-*` separates, a `:scope >` bare-tag child path is synthesized and proved on the probe; failure is LTC007 with the fix "give it a unique `class`" (arm and item local messages reworded to that). Server-data loops in a scope lower to `for (const x of root.querySelectorAll<ElementFromSelector<…>>(sel))`, no `all()`. Nested templates ride inside the outer template (`listTemplate`'s `nested()` renders through `emit` in template mode: no live arm, no items, enclosing item/key bindings unbound via `templateUnbound`); `data-list` indices are pre-order (`listIndexOf(root, fors, loop)`). The reactive list's `@empty` arm binds reactive attributes, class/style maps, events and lazy text in the scope that holds the list (`validateEmptyArm`); server-data empty arms stay inert. Key-derived attributes generalize to every enclosing item's key and are set at the mount of the scope owning the element (`ArmPlan.keyAttrs`). Docs: AGENTS.md, HOST_PROFILE.md, LE_TRUC_COMPILER.md, skills/le-truc/references/compiled.md.
+  **How:** `server/tests/compiler/mount-scopes.test.ts` (new): list in arm, arm in item, list in item with a reactive `@empty` style — each compiled on both surfaces to byte-identical modules, rendered, adopted with an empty connect diff, then cloned at both levels in the simulation realm; server-data loop in an arm; async boundary in an item; the cross-scope proof (class proved, child path synthesized, LTC007). `tsx/diagnostic-parity.test.ts`: `NESTED_SCOPES` cases and the lifted shapes compiling on both surfaces; the retired "arm set inside the body" and `.tsrx` nested-loop asymmetry cases replaced. Generated modules of the fixtures also typecheck under check:corpus's tsc flags (checked ad hoc).
+  **Check:** test:server 3050 pass / 0 fail; typecheck clean; check:contract green; check:corpus exit 0 (census 38: 30 folded / 8 simulated, warning baseline 0 — unchanged); build:docs green; check:links 724 green; check:sim bun+node identical, Deno leg unrunnable (sandbox network). Not run (untouched areas): Playwright, test:variants, check:size. Doubts: (1) the `:scope >` synthesis applies to nested-scope queries only — host-level `first()` keeps today's LTC007, though the ADR counts the host as a scope; (2) the synthesized child path skips the composed-children exclusion (`:not(child *)`) — sound only while no own element shares a composed child's tag; (3) the `@empty` lift admits events and lazy text besides reactive attributes; (4) LTC063's container test now looks through control flow (`holderOf`); (5) a key-derived attribute inside a server-rendered branch of a nested arm is not set on clone (arms walk elements only); (6) reworded LTC007 copy for arm/item locals — writer pass welcome.
+  **Review:** Changes requested. (1) **Silent drop:** a key-derived attribute inside a
+  server-rendered conditional branch of an arm nested in a list item is never set — the arm's
+  `visitDescendants` walks elements only, while the item walk (`collectKeySites`) descends into
+  server-rendered arms. A cloned arm therefore loses e.g. a key-derived `id`/`for`. Make the arm
+  walk descend into server-rendered conditional arms for `collectKeyAttrs` exactly as the item
+  walk does (client constructs there stay refused by `unmountableInArm`), and pin it on both
+  surfaces in `mount-scopes.test.ts` (adopted and cloned). (2) **Copy:** check the reworded LTC007
+  fix text and the four new LTC005 messages against `.claude/skills/writer/references/error-messages.md`.
+  Accepted as-is, no rework: doubts (1) host-level `first()` keeps LTC007 without `:scope >`
+  synthesis (conservative; the host keeps its current behavior); (2) the child path skips the
+  composed-children exclusion — sound because a path step names the enclosing element's tag, so it
+  matches into a composed child only when an own element shares that child's custom-element tag;
+  (3) the `@empty` lift admitting events and lazy text, the same construct family the entry named;
+  (4) `holderOf` looking through control flow for LTC063. Follow-up LT-439: doubt (8), a module-level
+  `type` in a `.tsrx` source not reaching the generated modules.
+
 
 - [ ] LT-355: A composed child inside a reactive-list template is silently dropped — render it, with its root `lang` and `i18n` (LT-351 ruling, ADR 0030 s9).
   **Area:** compiler
@@ -354,29 +373,22 @@ recorded against the 30.4k opening measurement.
 
 ### B — correctness
 
-- [ ] LT-412: `watch(prop, { stale })` never fires when a Slot fronts a Task (found 2026-10-03, cause-effect skill rewrite).
-  **Area:** runtime
-  **Needs:** LT-425
-  **Context:** cause-effect's `match()` used to route to `stale` only when the argument was
-  literally a Task (`isTask(s) && s.isPending()`). A writable prop is a Slot
-  (`src/component.ts:566`), so when a parent `pass()`es an async thunk into it, the child's
-  `watch('prop', { stale })` fell back to `ok`. **Ruled (Architect, 2026-10-05): fixed upstream.**
-  Cause & Effect 1.6.1 makes `match()` call the free `isPending(s)`, which resolves a Slot to its
-  current backing (`getAsyncSource`, `graph.ts:932`). Le Truc's `watch` changes nothing.
-  **Needs LT-425** only to serialize the dependency move: LT-425 runs on 1.6.0, and this task
-  owns the bump.
-  1. Bump `@zeix/cause-effect` to `^1.6.1`; rebuild `index.js`.
-  2. Add the verification case below. If it fails on 1.6.1, annotate `blocked` with the evidence
-     in `NOTES.md` and stop; do not fix it in `watch`.
-  3. Retire the documented edge: `skills/cause-effect/SKILL.md:45` and `:53` (`stale` now sees
-     through a Slot, so a `pass()`ed async thunk fires the child's `stale`), any matching text in
-     `skills/le-truc/`, and the AGENTS.md `stale` bullet — propose the AGENTS.md edit in
-     `NOTES.md` for the Architect if that file is write-protected.
-  **Channel/tier:** none — a semantics fix upstream, no new check.
-  **Verification:** a `reactive.test.ts` case: a parent passes an async thunk into a Slot-backed
-  child prop, and the child's `stale` handler fires during a re-fetch. Gates: unit, typecheck,
-  `check:size`, `check:baseline`. `check:sim`'s Deno leg refuses 1.6.1 until 24 h after its
-  publication (2026-10-05 12:58 UTC) — a known, self-clearing failure.
+- [ ] LT-439: A module-level `type` declaration in a `.tsrx` source may not reach the generated modules (LT-424 finding) — reproduce, then fix or close.
+  **Area:** compiler
+  **Context:** During LT-424 the contributor's ad-hoc `.tsrx` fixtures declared a module-level
+  `type` (an item shape for `createList<Task, …>`) that did not appear in the generated client or
+  server module, so the generated code failed to type. Unverified, and it predates LT-424. The corpus
+  migrations (LT-109–LT-111) author `.tsrx` members with item types, so a confirmed drop would block
+  them silently. Reproduce on a minimal `.tsrx` fixture with a module-level `type` and `interface`
+  used by a setup declaration; compare against the `.tsx` spelling of the same component.
+  1. **If it reproduces:** carry module-level type declarations (`type`, `interface`, type-only
+     imports) into both generated modules on `.tsrx`, the way the `.tsx` front end does; pin it with a
+     fixture whose generated modules typecheck under `check:corpus`'s tsc flags, on both surfaces.
+  2. **If it does not:** record the fixture that disproves it in the task's `**Changed:**` line and
+     close it with no code change.
+  **Channel/tier:** compiler — a carry-through fix, no new diagnostic.
+  **Check:** the fixture's generated modules typecheck on both surfaces; corpus goldens
+  byte-identical; server suite and `check:corpus` green.
 
 ### D — CSS departures
 
@@ -458,35 +470,3 @@ recorded against the 30.4k opening measurement.
   **Verification:** `check:links` green, and the three files state the difference in the same
   words.
 
-
-### Parallel slot
-
-- [ ] LT-436: A throw inside a reconcile effect's re-run escapes uncaught (LT-423 finding).
-  **Area:** runtime
-  **Context:** Found on the LT-423 add-click path, pre-existing and unchanged by it. When a
-  `reconcile()` effect's re-run throws (there: a `pass()` validating a not-yet-upgraded
-  composed child, before LT-423's insert-before-mount reorder), the exception escapes the
-  structural effect as an uncaught error — no DEV_MODE advisory, no Contained drop, no pin.
-  The same throw on the first run is also unpinned. Decide the channel per ADR 0028 (the
-  runtime advisory family is the likely carrier — `classify()`'s removal branch already warns
-  under DEV_MODE) and pin both paths: an effect body that throws is reported and the list
-  keeps its other work, or the escape is ruled deliberate and documented next to
-  `reconcile()`'s contract (whose JSDoc also owes the insert-before-mount ordering
-  LT-423 pinned by test).
-  **Ruled (Architect, 2026-10-05): Contained, per Mount Scope.** ADR 0028 s3 already contains
-  activation per effect descriptor; a Mount Scope (an arm or a list item, ADR 0046) is the same
-  unit one level down. In `reconcile()`, a `mountScope()` that throws — on the first run or on a
-  re-run — is caught per scope and reported once through the existing `reportEffectFailure`
-  (`src/errors.ts`), naming the scope (e.g. `"reconcile() item <key>"` / `"reconcile() arm
-  <key>"`); not DEV-gated, like every Contained report. `mountScope` keeps disposing the partial
-  scope before it rethrows (LT-385f). The element stays in the DOM unbound — the ADR 0003
-  degradation, and the list's key bookkeeping stays consistent — and the loop continues with the
-  remaining items and the structural effect's other work. Throws inside an already-mounted
-  item's own effects are Cause & Effect's and out of scope.
-  **Channel/tier:** runtime, tier 2 Contained. No compiler rule: a throwing `bindItem` is user
-  code, not statically decidable.
-  **Docs:** `reconcile()`'s JSDoc states the containment and the insert-before-mount ordering
-  LT-423 pinned.
-  **Check:** pins where `bindItem` throws mid-mount on the first run and on a re-run: exactly one
-  `console.error` per failing scope, the failing element stays unbound in place, the other items
-  mount and the scope's other effects survive; `test:src`, `check:size`, typecheck green.

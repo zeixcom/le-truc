@@ -3076,6 +3076,14 @@ var mountScope = (bind) => {
   }
   return dispose;
 };
+var mountContained = (container, scope, bind) => {
+  try {
+    return mountScope(bind);
+  } catch (error) {
+    reportEffectFailure(container, `reconcile() ${scope}`, error);
+    return () => {};
+  }
+};
 var reconcileArms = (container, templates, source, bindArm) => {
   const snapshot = Array.from(templates);
   const descriptor = () => {
@@ -3124,7 +3132,7 @@ var reconcileArms = (container, templates, source, bindArm) => {
           const element = current;
           const armKey = currentKey;
           if (element && armKey !== null)
-            dispose = mountScope(() => bindArm(element, armKey, bindFirst(element)));
+            dispose = mountContained(container, `arm "${armKey}"`, () => bindArm(element, armKey, bindFirst(element)));
         });
       });
       return () => {
@@ -3215,7 +3223,7 @@ var reconcileList = (container, template, source, bindItem) => {
           const item = source.byKey(key);
           if (item) {
             const element = el;
-            disposers.set(key, mountScope(() => bindItem(element, item, key, bindFirst(element))));
+            disposers.set(key, mountContained(container, `item "${key}"`, () => bindItem(element, item, key, bindFirst(element))));
           }
         }
       }

@@ -624,6 +624,18 @@ Full entry text: `git log -p -- DONE.md`.
   notice ruled a harness-ordering artifact, not a component defect — post-fix the cleanup
   succeeds silently, so no `CLASSIFIED_DIAGNOSTICS` entry (one would bless the broken ordering).
 
+- [x] LT-412: `watch(prop, { stale })` never fires when a Slot fronts a Task (found 2026-10-03, cause-effect skill rewrite). — reviewed ✓
+  **Area:** runtime
+  **Needs:** LT-425
+  **Changed:** `@zeix/cause-effect` bumped to `^1.6.1` (package.json, bun.lock, rebuilt `index.js`).
+  `watch('prop', { stale })` now fires when a `pass()`ed async thunk backs the child's Slot: 1.6.1's
+  `match()` calls the free `isPending()`, which follows a Slot chain to its backing. `watch` is
+  unchanged. The "literal Task" edge is retired from `skills/cause-effect/SKILL.md`,
+  `skills/le-truc/references/runtime.md` and the AGENTS.md `stale` bullet. Pin: `reactive.test.ts`
+  "stale fires through a Slot when a parent passes an async thunk (LT-412)".
+  **Review:** Approved. Follow-up LT-437: the cause-effect skill still stamps itself 1.5.x and does
+  not cover 1.6's list `map`/`forEach` or derived-list `stale`.
+
 - [x] LT-414: Move the four non-comment "ADR 0023" citations in `server/compiler/` to ADR 0024 (LT-393 residue). — reviewed ✓
   **Area:** compiler
   **Changed:** the two generated-module headers (`emit-server.ts`, `emit-client.ts`) drop the
@@ -1025,3 +1037,19 @@ Full entry text: `git log -p -- DONE.md`.
   test: every `examples/**/*.tsx` on disk must be in the program's `--listFilesOnly` output.
   **Review:** Approved (Architect, 2026-10-05). Gates re-run: typecheck test 4 pass, 18 `.tsx`
   in the program, tsc clean; owner confirmed 0 editor diagnostics on `css-probe.tsx`.
+
+- [x] LT-436: A throw inside a reconcile effect's re-run escapes uncaught (LT-423 finding). — reviewed ✓
+  **Area:** runtime
+  **Ruling (Architect, 2026-10-05):** a throwing Mount Scope is Contained per scope — ADR 0028 s3's
+  per-descriptor granularity one level down; runtime, tier 2; no compiler rule (user code).
+  **Changed:** `reconcile()` contains a throwing `bindItem`/`bindArm` per Mount Scope: `mountContained()`
+  (`src/helpers/reactive.ts`) wraps `mountScope()`, reports once through `reportEffectFailure` (not
+  DEV-gated) as `reconcile() item "<key>"` / `reconcile() arm "<key>"` in the container, and returns a
+  no-op cleanup so the element stays in place unbound and is not retried while its key stays. A
+  re-entered arm is a fresh scope and reports again. `reportEffectFailure`'s `host` widened to
+  `Element`. `reconcile()` JSDoc states the containment and LT-423's insert-before-mount ordering;
+  `skills/le-truc/references/errors.md` names the item/arm shape. Pins in `src/tests/reconcile.test.ts`.
+  **Review:** Approved. Reviewer nit: dropped the contributor's `CHANGELOG.md` entry — the writer
+  records it at iteration close (35cf3094). `index.js` is not rebuilt on this branch: rebuild once
+  after LT-412 and LT-436 are both integrated. Playwright to be run by the owner. Follow-up LT-438:
+  the reused report copy ("its other effects") reads wrongly for a container.

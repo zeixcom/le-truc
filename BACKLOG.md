@@ -933,6 +933,37 @@ to `TODO.md`.
   sources, or delete it and link the repo files instead. Filed while its staleness was
   re-observed during the LT-179 review.
 
+
+- [ ] LT-437: Refresh the `cause-effect` skill for 1.6 — version stamp, list `map`/`forEach`, derived-list `stale` (LT-412 review follow-up).
+  **Area:** docs
+  **Needs:** LT-412
+  **Context:** `skills/cause-effect/SKILL.md:6` still says it describes 1.5.x (verified against
+  1.5.2). LT-412 corrected the `stale` routing for 1.6.1, but the rest of the skill was never
+  checked against 1.6: 1.6.0 added `map((item, key) => R)` and `forEach` to both list kinds (the
+  `.tsx` keyed map, ADR 0046 s4, relies on them), and in 1.6.1 a list or store derived from an async
+  computation can reach `stale`. `skills/le-truc/references/runtime.md`'s `stale` bullet still says
+  "never fires for a cell or memo" and omits the derived-list case. Verify each claim against the
+  installed `node_modules/@zeix/cause-effect/src/`, add only what a Solid/Preact user would get
+  wrong (the skill's own rule), and restamp the version.
+  **Channel/tier:** none — docs.
+  **Check:** every behavioral claim in both files traces to the 1.6.1 source; the stamp names 1.6.x
+  and the version verified.
+
+- [ ] LT-438: `reportEffectFailure` copy for a `reconcile()` Mount Scope — "its other effects" names the container (LT-436 review follow-up).
+  **Area:** runtime
+  **Needs:** LT-436
+  **Context:** LT-436 reports a throwing list item or arm through `reportEffectFailure`
+  (`src/errors.ts`) with the container as `host`. The copy was written for a component: production
+  reads ``reconcile() item "a" did not activate in <ul>; its other effects are unaffected:`` and
+  DEV reads "…the component's other effects are unaffected." For a Mount Scope the truthful
+  statement is that the item (or arm) stays unbound and the list's other items are unaffected. Give
+  the scope case its own wording — a `scope` flavour of the reporter or a dedicated
+  `reportScopeFailure` beside it, whichever keeps `check:size` flat — following
+  `writer` → `references/error-messages.md`. Update `skills/le-truc/references/errors.md` to the
+  final string.
+  **Channel/tier:** runtime, tier 2 Contained (unchanged; copy only).
+  **Check:** the LT-436 pins assert the new strings in both DEV and production modes; `test:src`,
+  `check:size` green.
 ## P7 — Backlog (not scheduled)
 
 **Moved to TODO.md 2026-10-02:** LT-393.
