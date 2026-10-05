@@ -215,6 +215,8 @@ declare namespace JSX {
 	}
 	interface dialog extends CommonLightDom {}
 	interface div extends CommonLightDom {}
+	/** module-todo's per-item filter radios. */
+	interface fieldset extends CommonLightDom {}
 	interface form extends CommonLightDom {
 		action?: string
 		method?: 'get' | 'post' | 'dialog'
@@ -222,6 +224,7 @@ declare namespace JSX {
 	}
 	interface h2 extends CommonLightDom {}
 	interface h3 extends CommonLightDom {}
+	interface footer extends CommonLightDom {}
 	interface header extends CommonLightDom {}
 	interface input extends CommonLightDom {
 		type?: string
@@ -229,6 +232,7 @@ declare namespace JSX {
 		value?: Reactive<string>
 		placeholder?: Reactive<string>
 		autocomplete?: string
+		checked?: Reactive<boolean>
 		min?: Reactive<string>
 		max?: Reactive<string>
 	}
@@ -236,6 +240,8 @@ declare namespace JSX {
 		/** The native attribute is `for` — there is no `htmlFor` here. */
 		for?: string
 	}
+	/** module-todo's per-item filter radios. */
+	interface legend extends CommonLightDom {}
 	interface code extends CommonLightDom {}
 	interface dd extends CommonLightDom {
 		/** A fixed-language island (module-colorinfo's `oklch(…)` line). */
@@ -273,6 +279,8 @@ declare namespace JSX {
 		'fill-rule'?: 'nonzero' | 'evenodd'
 	}
 	interface nav extends CommonLightDom {}
+	/** module-todo's item container. */
+	interface ol extends CommonLightDom {}
 	interface p extends CommonLightDom {}
 	interface pre extends CommonLightDom {}
 	interface span extends CommonLightDom, Microdata {}
@@ -291,10 +299,15 @@ declare namespace JSX {
 		start?: Reactive<number>
 	}
 	type BasicPluralizeAttrs = CommonLightDom & {
-		count: Reactive<number>
+		/** Optional because the pass is the other channel: module-todo authors
+		 * the raw tag and passes `count` (LT-111). */
+		count?: Reactive<number>
 		/** Config-only (built-in IDL property — never an exposed prop). */
 		lang?: string
 		ordinal?: Reactive<boolean>
+		/** A `.tsrx` leaf authored raw (module-todo's count): it declares a
+		 * pass surface for its `count` prop. */
+		'truc:pass'?: { count?: PassEntry }
 	}
 	type BasicNumberAttrs = CommonLightDom & {
 		value?: Reactive<number>
@@ -325,9 +338,21 @@ declare namespace JSX {
 	}
 	type BasicBlogmetaAttrs = CommonLightDom
 	/** A `.tsrx` leaf authored raw (module-list's buttons): it declares a
-	 * pass surface for its `disabled` prop. */
+	 * pass surface for its `disabled` prop; module-todo's clear-completed
+	 * button passes its `badge` too. */
 	type BasicButtonAttrs = CommonLightDom & {
-		'truc:pass'?: { disabled?: PassEntry }
+		'truc:pass'?: { disabled?: PassEntry; badge?: PassEntry }
+	}
+	/** A `.tsrx` leaf authored raw (module-todo's per-item checkbox): it
+	 * declares a pass surface for its `checked` prop. */
+	type FormCheckboxAttrs = CommonLightDom & {
+		'truc:pass'?: { checked?: PassEntry }
+	}
+	/** A `.tsrx` leaf authored raw (module-todo's filter): no pass surface —
+	 * the filter value is read, never written by the parent. */
+	type FormRadiogroupAttrs = CommonLightDom & {
+		name?: Reactive<string>
+		value?: Reactive<string>
 	}
 	type ModuleCarouselAttrs = CommonLightDom
 	type ModuleCatalogAttrs = CommonLightDom
@@ -345,6 +370,7 @@ declare namespace JSX {
 	type ModuleDialogAttrs = CommonLightDom
 	type ModuleListAttrs = CommonLightDom
 	type ModuleListnavAttrs = CommonLightDom
+	type ModuleTodoAttrs = CommonLightDom
 	type ModuleLazyloadAttrs = CommonLightDom & {
 		/** Parser-backed: read once at connect; the `src` property owns it after. */
 		src?: string | undefined
@@ -422,19 +448,23 @@ declare namespace JSX {
 		dialog: dialog
 		dl: dl
 		dt: dt
+		fieldset: fieldset
 		div: div
 		form: form
 		h2: h2
 		h3: h3
+		footer: footer
 		header: header
 		input: input
 		code: code
 		label: label
+		legend: legend
 		img: img
 		li: li
 		meta: meta
 		path: path
 		nav: nav
+		ol: ol
 		p: p
 		pre: pre
 		small: small
@@ -454,6 +484,8 @@ declare namespace JSX {
 		'basic-number': BasicNumberAttrs
 		'form-combobox': FormComboboxAttrs
 		'form-listbox': FormListboxAttrs
+		'form-checkbox': FormCheckboxAttrs
+		'form-radiogroup': FormRadiogroupAttrs
 		'module-codeblock': ModuleCodeblockAttrs
 		'module-carousel': ModuleCarouselAttrs
 		'module-catalog': ModuleCatalogAttrs
@@ -466,6 +498,7 @@ declare namespace JSX {
 		'module-pagination': ModulePaginationAttrs
 		'module-scrollarea': ModuleScrollareaAttrs
 		'module-splitview': ModuleSplitviewAttrs
+		'module-todo': ModuleTodoAttrs
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs
 		'css-probe': CssProbeAttrs

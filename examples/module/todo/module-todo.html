@@ -1,23 +1,32 @@
+<!-- Regenerated from the compiled server render (LT-111 cutover):
+     renderModuleTodo({}) from server/generated/components/module-todo.server.ts —
+     the demo serves exactly the markup the compiled client hydrates. The variant
+     set serves module-todo.tsx (ADR 0039); module-todo.tsrx and the
+     hand-written module-todo.ts stay as variants. The per-item steady state
+     (key-derived `id`/`for`, the item `data-key`) is clone-time: the client
+     sets it per cloned item, so the template carries none. The checkbox label
+     wraps the composed <form-inplace-edit>, whose display text arrives via
+     module-todo's per-item truc:pass into host.value. -->
 <module-todo>
 	<form action="#">
-		<form-textbox>
-			<label for="add-todo">What needs to be done?</label>
+		<form-textbox name="add-todo" value="">
+			<label for="add-todo-input">What needs to be done?</label>
 			<div class="input">
-				<input id="add-todo" type="text" value="">
+				<input type="text" id="add-todo-input" value="" autocomplete="off">
 				<button type="button" class="clear" aria-label="Clear input" hidden>
 					✕
 				</button>
 			</div>
 		</form-textbox>
 		<basic-button class="submit">
-			<button type="submit" class="constructive" disabled>
+			<button type="submit" disabled class="constructive">
 				<span class="label">Add Todo</span>
 			</button>
 		</basic-button>
 	</form>
 	<span role="status" class="visually-hidden"></span>
 	<ol data-container></ol>
-	<template>
+	<template data-list="0">
 		<li>
 			<button
 				type="button"
@@ -29,21 +38,25 @@
 			</button>
 			<form-checkbox class="todo">
 				<input type="checkbox" class="visually-hidden">
-				<!-- Compiled form-inplace-edit (LT-092 cutover): span.text +
-				     div.edit > form-textbox(name="") + toggle button; the label
-				     text arrives via module-todo's pass() into host.value -->
-				<form-inplace-edit>
-					<label class="label"><span class="text"><slot></slot></span></label>
-					<div class="edit" hidden>
-						<form-textbox name="">
-							<label for="-input">Edit</label>
-							<div class="input">
-								<input type="text" id="-input" autocomplete="off">
-							</div>
-						</form-textbox>
-					</div>
-					<button type="button" aria-label="Edit">✎</button>
-				</form-inplace-edit>
+				<label class="label">
+					<form-inplace-edit name="" value="">
+						<span class="text"></span>
+						<div hidden class="edit">
+							<form-textbox name="" value="">
+								<label for="-input">Edit</label>
+								<div class="input">
+									<input
+										type="text"
+										id="-input"
+										value=""
+										autocomplete="off"
+									>
+								</div>
+							</form-textbox>
+						</div>
+						<button type="button" aria-label="Edit">✎</button>
+					</form-inplace-edit>
+				</label>
 			</form-checkbox>
 			<basic-button class="remove">
 				<button
@@ -57,8 +70,6 @@
 		</li>
 	</template>
 	<footer>
-		<!-- LT-252: one ICU pattern — the compiled component fills the single
-		     .tasks span from `t.tasks`, so the page carries no word forms. -->
 		<basic-pluralize>
 			<p class="none">Well done, all done!</p>
 			<p class="some">
