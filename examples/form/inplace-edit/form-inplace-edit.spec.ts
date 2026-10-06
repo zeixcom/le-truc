@@ -50,9 +50,8 @@ test.describe('form-inplace-edit component', () => {
 		await page.locator('form-inplace-edit input').fill('Will be discarded')
 		await page.locator('form-inplace-edit input').press('Escape')
 		await expect(page.locator('form-inplace-edit .text')).toHaveText('Edit me')
-		// The compiled template keeps the edit box in the DOM and toggles
-		// hidden (the twin created/destroyed it dynamically)
-		await expect(page.locator('form-inplace-edit .edit')).toBeHidden()
+		// The edit arm is disposed on exit, not hidden (ADR 0037)
+		await expect(page.locator('form-inplace-edit .edit')).not.toBeAttached()
 	})
 
 	test('cancels on blur to external element', async ({ page }) => {
@@ -60,7 +59,7 @@ test.describe('form-inplace-edit component', () => {
 		await page.locator('form-inplace-edit input').fill('Will be discarded')
 		await page.locator('form-inplace-edit button').focus() // no cancel when focus moves to button
 		await page.locator('form-inplace-edit button').evaluate(el => el.blur()) // cancel when focus leaves component
-		await expect(page.locator('form-inplace-edit .edit')).toBeHidden()
+		await expect(page.locator('form-inplace-edit .edit')).not.toBeAttached()
 		await expect(page.locator('form-inplace-edit .text')).toHaveText('Edit me')
 	})
 
@@ -102,8 +101,8 @@ test.describe('form-inplace-edit component', () => {
 	})
 
 	test('restores the default value on form reset', async ({ page }) => {
-		// formAssociated()'s formResetCallback re-runs the retained initializer
-		// — the original .text snapshot taken at connect time.
+		// formAssociated()'s formResetCallback restores the baseline the
+		// retained Parser reads from the host's `value` attribute.
 		await page.evaluate(() => {
 			const form = document.createElement('form')
 			const el = document.querySelector('form-inplace-edit')
@@ -139,7 +138,7 @@ test.describe('form-inplace-edit component', () => {
 		await expect(page.locator('form-inplace-edit button')).toBeDisabled()
 
 		await page.locator('form-inplace-edit .text').dblclick()
-		await expect(page.locator('form-inplace-edit .edit')).toBeHidden()
+		await expect(page.locator('form-inplace-edit .edit')).not.toBeAttached()
 	})
 
 	test('a disabled ancestor fieldset disables the edit button', async ({
