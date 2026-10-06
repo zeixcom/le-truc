@@ -51,6 +51,16 @@ export function FormCheckbox(
 		name: string
 		label: string
 		checked?: boolean
+		/**
+		 * Compiler-consumed compose surface (truc:pass), never a render
+		 * arg — a parent's `truc:pass={{ checked: … }}` type-checks
+		 * against this key (ADR 0024 s10).
+		 */
+		'truc:pass'?: {
+			checked?:
+				| (() => boolean)
+				| { get: () => boolean; set: (value: boolean) => void }
+		}
 	},
 	{ host, first, expose }: FormFactoryContext<FormCheckboxProps>,
 ) {

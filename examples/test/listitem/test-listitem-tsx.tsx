@@ -10,7 +10,7 @@
  */
 import { createList, createStore, type MutableStore } from '@zeix/le-truc'
 import { css } from '@zeix/le-truc-compiler/macros'
-import { FormCheckbox } from '../../form/checkbox/form-checkbox.tsrx'
+import { FormCheckbox } from '../../form/checkbox/form-checkbox.tsx'
 
 export type TestListItemTask = {
 	id: string
