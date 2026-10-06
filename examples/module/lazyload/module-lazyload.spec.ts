@@ -424,21 +424,22 @@ test.describe('module-lazyload component', () => {
 			// The arms ship as inert `<template>`s beside the live winner (the
 			// pending arm renders live only until the first load settles), so
 			// the roles are read off the templates' content.
-				const roles = await loader.evaluate(el => {
-					const template = (key: string): HTMLTemplateElement | null =>
-						el.querySelector(`template[data-key="${key}"]`)
-					const read = (key: string, selector: string): string | null =>
-						template(key)?.content.querySelector(selector)?.getAttribute('role') ??
-						null
-					return {
-						loading: read('nil', 'p.loading'),
-						error: read('err', 'p.error'),
-						errorLive:
-							template('err')?.content
-								.querySelector('p.error')
-								?.getAttribute('aria-live') ?? null,
-					}
-				})
+			const roles = await loader.evaluate(el => {
+				const template = (key: string): HTMLTemplateElement | null =>
+					el.querySelector(`template[data-key="${key}"]`)
+				const read = (key: string, selector: string): string | null =>
+					template(key)
+						?.content.querySelector(selector)
+						?.getAttribute('role') ?? null
+				return {
+					loading: read('nil', 'p.loading'),
+					error: read('err', 'p.error'),
+					errorLive:
+						template('err')
+							?.content.querySelector('p.error')
+							?.getAttribute('aria-live') ?? null,
+				}
+			})
 			expect(roles.loading).toBe('status')
 			expect(roles.error).toBe('alert')
 			expect(roles.errorLive).toBe('assertive')
@@ -520,6 +521,42 @@ test.describe('module-lazyload component', () => {
 
 			// External elements shouldn't have the styled content's background
 			expect(externalBg).not.toContain('linear-gradient')
+		})
+
+		test('sanitizes a style tag that smuggles an event handler', async ({
+			page,
+		}) => {
+			// LT-449 review: a policy that splits `<style>` out around the
+			// sanitizer and re-concatenates lets this partial parse into a live
+			// `<style onload>`. The whole string must pass through DOMPurify.
+			// Served inline: the payload is malformed HTML by design.
+			await page.route('**/mocks/style-injection.html', route =>
+				route.fulfill({
+					contentType: 'text/html',
+					body: '<style a="</style>" onload=window.__lazyloadInjected=true <b>Injection probe</b></style><p>After the probe</p>',
+				}),
+			)
+			const loader = page.locator('#dynamic-src-test')
+			const content = loader.locator('.content')
+			await loader.evaluate(node => {
+				;(node as any).src = '/test/module-lazyload/mocks/style-injection.html'
+			})
+			// Wait on the ok arm, not the marker text: under a bypassed policy the
+			// marker is swallowed into the smuggled style's raw text, and the
+			// handler assertion below is the one that should report it.
+			await expect(content).toHaveCount(1, { timeout: 1000 })
+			const handlerAttrs = await content.evaluate(el =>
+				[...el.querySelectorAll('*')].flatMap(child =>
+					[...child.attributes]
+						.map(attr => attr.name)
+						.filter(name => name.startsWith('on')),
+				),
+			)
+			expect(handlerAttrs).toEqual([])
+			await expect(content).toContainText('After the probe')
+			expect(
+				await page.evaluate(() => (window as any).__lazyloadInjected),
+			).toBeUndefined()
 		})
 	})
 })

@@ -7,74 +7,27 @@
 // default is read per update, never captured at bind time, so that ordering
 // is safe.
 //
-// Two policy extensions the partials' contract needs:
-// - DOMPurify's default allowlist has no custom elements — it would unwrap
-//   every corpus tag a fetched partial carries (KEEP_CONTENT keeps their
-//   children, but the element and its upgrade are gone). The site's policy
-//   admits the tags it registers below, plus the demo partial's own
-//   `shake-hands` (inert: its defining script is stripped until LT-448).
-// - DOMPurify 3 refuses `<style>` outright (mXSS hardening, not addable via
-//   ADD_TAGS), and the partials carry component styles. The policy extracts
-//   style blocks, sanitizes the rest, and re-appends them — same-origin
-//   partials are trusted for CSS, which cannot execute.
+// Two policy options the partials' contract needs, both inside DOMPurify —
+// never split and re-concatenate around it, which voids its guarantee:
+// - `FORCE_BODY`: a partial's leading `<style>` would otherwise be hoisted
+//   into `<head>` by the body parse and dropped with it.
+// - `CUSTOM_ELEMENT_HANDLING`: the default allowlist has no custom elements
+//   and would unwrap every corpus tag a partial carries. Any valid custom
+//   element name passes — an undefined tag stays inert, so the demo
+//   partial's `shake-hands` renders without behavior until LT-448.
 import { configureHtmlSanitizer } from '@zeix/le-truc'
 import DOMPurify from 'dompurify'
 
-const SITE_TAGS = [
-	'basic-blogmeta',
-	'basic-button',
-	'basic-counter',
-	'basic-gauge',
-	'basic-hello',
-	'basic-number',
-	'basic-pluralize',
-	'card-callout',
-	'card-collapsible',
-	'card-colorscale',
-	'card-mediaqueries',
-	'context-media',
-	'form-checkbox',
-	'form-colorgraph',
-	'form-combobox',
-	'form-inplace-edit',
-	'form-listbox',
-	'form-radiogroup',
-	'form-spinbutton',
-	'form-textbox',
-	'form-tokenbox',
-	'module-blogarchive',
-	'module-carousel',
-	'module-catalog',
-	'module-codeblock',
-	'module-coloreditor',
-	'module-colorinfo',
-	'module-demo',
-	'module-dialog',
-	'module-lazyload',
-	'module-list',
-	'module-listnav',
-	'module-pagination',
-	'module-scrollarea',
-	'module-splitview',
-	'module-tabgroup',
-	'module-toc',
-	'section-hero',
-	'shake-hands',
-] as const
-
-configureHtmlSanitizer(html => {
-	const styles: string[] = []
-	const stripped = html.replace(
-		/<style(?=[\s>])[\s\S]*?<\/style\s*>/gi,
-		match => {
-			styles.push(match)
-			return ''
+configureHtmlSanitizer(html =>
+	DOMPurify.sanitize(html, {
+		FORCE_BODY: true,
+		CUSTOM_ELEMENT_HANDLING: {
+			tagNameCheck: /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/,
+			attributeNameCheck: /^[a-z][a-z0-9-]*$/,
+			allowCustomizedBuiltInElements: false,
 		},
-	)
-	return (
-		styles.join('') + DOMPurify.sanitize(stripped, { ADD_TAGS: [...SITE_TAGS] })
-	)
-})
+	}),
+)
 
 import '../server/generated/components/basic-blogmeta.client.ts'
 // Site cutover (LT-092): every migrated component mounts its COMPILED client

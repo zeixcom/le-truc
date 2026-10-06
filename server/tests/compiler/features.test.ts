@@ -11,6 +11,7 @@ import createDOMPurify, { type WindowLike } from 'dompurify'
 import { JSDOM } from 'jsdom'
 import { sanitizeHtml as librarySanitizeHtml } from '../../../src/bindings'
 import { compileComponent } from '../../compiler/frontend/tsrx'
+import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import { configureHtmlSanitizer } from '../../compiler/runtime'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
@@ -615,6 +616,53 @@ export function C({}: {})
 		// the pending arm (the shim's pending box never routes 'err').
 		expect(html).not.toContain('<p class="error" data-key="err"')
 		expect(html).not.toContain('<card-callout data-key="err"')
+	})
+
+	test('a catch read on the root beside a nested message element is refused (one text target per arm)', () => {
+		// Admitted, the err branch would write the root's `e.message` into
+		// the nested `<p>` and never write `e.name` (LT-449 review).
+		const source = component('deriveCell').replace(
+			'<card-callout class="danger"><p class="error">{e.message}</p></card-callout>',
+			'<card-callout class="danger">{e.message}<p class="error">{e.name}</p></card-callout>',
+		)
+		const { component: compiled, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(compiled).toBeNull()
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC005'])
+		expect(diagnostics[0]?.message).toContain(
+			'reads the catch parameter `e` both on its root and in a nested element',
+		)
+		expect(diagnostics[0]?.message).toContain('Keep one read of `e` per arm')
+
+		const tsx = compileComponentTsx(
+			`import { deriveCell } from '@zeix/le-truc'
+export function C({}: {}) {
+	const data = deriveCell(async () => 'loaded')
+	expose({ data: data.get })
+	return (
+		<c-el>
+			<truc:try
+				pending={<card-callout><p class="loading">Loading</p></card-callout>}
+				catch={e => (
+					<card-callout class="danger">{e.message}<p class="error">{e.name}</p></card-callout>
+				)}
+			>
+				<div class="content" truc:html={() => data.get()}></div>
+			</truc:try>
+		</c-el>
+	)
+}`,
+			'c.tsx',
+			new Set(),
+		)
+		expect(tsx.component).toBeNull()
+		expect(tsx.diagnostics.map(d => d.code)).toEqual(['LTC005'])
+		expect(tsx.diagnostics[0]?.message).toContain(
+			'reads the catch parameter `e` both on its root and in a nested element',
+		)
 	})
 })
 

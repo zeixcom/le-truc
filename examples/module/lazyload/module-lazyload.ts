@@ -1,10 +1,16 @@
 import {
 	asString,
+	bindStyle,
+	bindText,
 	createTask,
 	dangerouslyBindInnerHTML,
 	defineComponent,
+	isPending,
 	query,
+	reconcile,
+	sanitizeHtml,
 	schedule,
+	UnsetSignalValueError,
 } from '@zeix/le-truc'
 import {
 	fetchWithCache,
@@ -28,14 +34,19 @@ declare global {
  * Use it for lazy-loading content on demand — the `src` attribute should point to a
  * same-origin URL; cross-origin or `javascript:` URLs are rejected for security.
  * Untrusted HTML must be sanitised server-side; set `allow-scripts` only when required.
- * @attribute {boolean} [allow-scripts=false] - Permit inline scripts in the fetched content. Presence-only; read once at connect time.
+ *
+ * The hand-written spelling of the compiled `<truc:try>` boundary (LT-449):
+ * the page carries one live arm root plus one inert
+ * `<template data-arms data-key>` per arm (`ok`, `nil`, `err`), and
+ * `reconcile()` swaps arms by key — pending (`nil`) while the task has no
+ * value, `err` when it rejects, `ok` otherwise. Each arm's effects mount in
+ * the arm callback and die with the arm.
+ * @attribute {boolean} [allow-scripts=false] - Permit inline scripts in the fetched content. Presence-only; read once at connect time. Inert while the content is written through the configured `sanitizeHtml` (scripts stripped), pending the script-loading design (LT-448).
  * @demo {https://zeixcom.github.io/le-truc/examples.html#module-lazyload} Interactive preview and usage examples
  **/
 export default defineComponent<ModuleLazyloadProps>(
 	'module-lazyload',
-	({ expose, first, host, watch }) => {
-		const contentEl = first('.content', 'Needed to display content.')
-
+	({ expose, host, watch }) => {
 		const content = createTask<string>(async (_prev, abort) => {
 			const url = host.src
 			if (!url) throw new Error('No URL provided')
@@ -49,35 +60,24 @@ export default defineComponent<ModuleLazyloadProps>(
 			}
 		})
 
-		const { ok: setHTML } = dangerouslyBindInnerHTML(contentEl, {
-			allowScripts: host.hasAttribute('allow-scripts'),
-		})
-
 		expose({ src: asString() })
 
 		// Skip the scroll-to-heading on the very first load, so the page
 		// doesn't jump on initial mount — only on subsequent src changes.
+		// Component-lifetime state, so it lives here, not in the ok arm.
 		let hasLoaded = false
-		// Distinct key from `contentEl` (used by dangerouslyBindInnerHTML above)
-		// so this scroll task doesn't clobber the pending innerHTML write.
+		// Distinct key from any element-scoped scheduled task, so the scroll
+		// cannot clobber a pending content write.
 		const scrollTask = {}
 
-		const callout = first(
-			'card-callout',
-			'Needed to display loading state and error messages.',
-		)
-		const loading = first('.loading', 'Needed to display loading state.')
-		const errorEl = first('.error', 'Needed to display error messages.')
 		watch(content, {
-			ok: content => {
-				callout.hidden = true
-				loading.hidden = true
-				contentEl.hidden = false
-				setHTML(content)
-
+			ok: () => {
 				if (hasLoaded) {
 					schedule(scrollTask, () => {
-						query(contentEl, 'h1, h2, h3, h4, h5, h6')?.scrollIntoView({
+						query(
+							host,
+							'.content h1, .content h2, .content h3, .content h4, .content h5, .content h6',
+						)?.scrollIntoView({
 							behavior: 'smooth',
 							block: 'start',
 						})
@@ -85,30 +85,40 @@ export default defineComponent<ModuleLazyloadProps>(
 				}
 				hasLoaded = true
 			},
-			nil: () => {
-				callout.hidden = false
-				loading.hidden = false
-				contentEl.hidden = true
-			},
-			stale: () => {
-				contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
-				return () => {
-					contentEl.style.removeProperty('opacity')
-				}
-			},
-			err: error => {
-				callout.hidden = false
-				callout.classList.add('danger')
-				loading.hidden = true
-				errorEl.hidden = false
-				errorEl.textContent = error.message
-				contentEl.hidden = true
-				return () => {
-					callout.classList.remove('danger')
-					errorEl.hidden = true
-					errorEl.textContent = ''
-				}
-			},
 		})
+
+		reconcile(
+			host,
+			host.querySelectorAll<HTMLTemplateElement>(
+				':scope > template[data-arms]',
+			),
+			() => {
+				try {
+					content.get()
+				} catch (error) {
+					return error instanceof UnsetSignalValueError ? 'nil' : 'err'
+				}
+				return 'ok'
+			},
+			(armElement, armKey, first) => {
+				if (armKey === 'ok') {
+					// Dim the retained content while a re-fetch is in flight.
+					watch(
+						() => (isPending(content) ? 'var(--opacity-dimmed)' : null),
+						bindStyle(armElement, 'opacity'),
+					)
+					watch(
+						() => content.get(),
+						dangerouslyBindInnerHTML(armElement, { sanitize: sanitizeHtml }),
+					)
+				} else if (armKey === 'err') {
+					const errorEl = first('.error', 'Needed to display error messages.')
+					watch(content, {
+						ok: () => {},
+						err: error => bindText(errorEl)(error.message),
+					})
+				}
+			},
+		)
 	},
 )

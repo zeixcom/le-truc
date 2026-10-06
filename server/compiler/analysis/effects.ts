@@ -1547,6 +1547,20 @@ const handleAsyncBoundary = (
 		)
 		return
 	}
+	// One catch read per arm: the err branch writes a single text target, so
+	// a direct read on the root beside a nested message element would land
+	// the root's text in the nested element and drop the nested read.
+	if (directErrText !== null && errMsgEl !== null) {
+		diagnostics.push(
+			diagnostic.unsupported(
+				source,
+				errMsgEl.node,
+				`A ${wording.catchArm} that reads the catch parameter \`${catchParam ?? 'e'}\` both on its root and in a nested element`,
+				`Keep one read of \`${catchParam ?? 'e'}\` per arm — either directly in the root, for example \`{${catchParam ?? 'e'}.message}\`, or in one child element of the root.`,
+			),
+		)
+		return
+	}
 
 	const container = armContainer(fx, node, `a ${wording.boundary}`, scope)
 	if (container === null) return
