@@ -789,7 +789,11 @@ live initial winner beside inert arm templates for reactive conditionals and
 the async boundary — the winner's root keyed `then`/`else`/`case:<json>`/
 `default` or `ok`/`nil`/`err`, one `<template data-arms data-key>` per arm,
 client-written dynamic sites inside a losing arm's template baked empty,
-LT-385c — composition calls for `compose` nodes), and
+LT-385c; an arm root may itself be a compose site, its `data-key` spliced
+onto the child's rendered root through `composeHostAttrs` and the catch
+parameter's reads in the composed content riding the arm's value channel —
+written in the live arm, baked empty in the templates, rebound by the
+client's err watch — LT-460 — composition calls for `compose` nodes), and
 setup re-declared verbatim against the `runtime.ts` harness, where a signal
 is its initial value
 in a box (`.get()` reads once, `.set()` is a no-op) — "signals as plain

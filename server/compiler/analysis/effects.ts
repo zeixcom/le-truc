@@ -90,6 +90,7 @@ import {
 	isElement,
 	loopFor as loopForIn,
 	refOf,
+	resolveComposeContentSelector,
 	resolveExclusiveSelectorIn,
 	resolveScopedSelector,
 	resolveSelector as resolveSelectorIn,
@@ -533,36 +534,80 @@ const lazyChildOf = (el: ElementNode): ExprNode | undefined =>
 	)
 
 /**
- * The err arm's message element (LT-449): the first direct child element of
- * `el` whose direct reactive child reads the catch parameter (bare or a
- * member read). The ruled callout shape nests the message one level below
- * the arm root — `<card-callout class="danger"><p class="error">{e.message}
- * </p></card-callout>` — and the text write targets that element through an
- * arm-scoped `first()`. Null when the message sits on the root itself (the
- * depth-0 channel the boundary has always carried). Shared with
- * `emit-server.ts`, which must find the same live-arm child.
+ * An async-boundary arm root: a plain element, or — since LT-460 — a
+ * compose site, whose rendered root is the child's own element.
+ */
+export type BoundaryArmRoot = ElementNode | ComposeNode
+
+export const isBoundaryArmRoot = (
+	node: TemplateNode,
+): node is BoundaryArmRoot => node.kind === 'element' || node.kind === 'compose'
+
+/**
+ * Whether `target` sits inside composed content under `root` — a descendant
+ * of a compose node's children. Such elements are parent-authored markup
+ * spliced into the child's rendered DOM: real elements the arm-scoped query
+ * reaches, but invisible to the host-template selector counting, so their
+ * selectors resolve against the arm subtree instead (`resolveComposeContentSelector`).
+ */
+const isInsideCompose = (
+	root: TemplateNode,
+	target: TemplateNode,
+	inside = false,
+): boolean => {
+	if (root === target) return inside
+	const children = root.kind === 'compose' ? root.children : childNodes(root)
+	const childInside = inside || root.kind === 'compose'
+	for (const child of children)
+		if (isInsideCompose(child, target, childInside)) return true
+	return false
+}
+
+/**
+ * The err arm's message element (LT-449, compose-aware since LT-460): the
+ * first child element of `el` whose direct reactive child reads the catch
+ * parameter (bare or a member read) — reached either directly or through
+ * one compose hop, inside the composed content (a composed callout's
+ * message element: `<CardCallout class="danger"><p class="error">
+ * {e.message}</p></CardCallout>`). The text write targets that element
+ * through an arm-scoped `first()`. Null when the message sits on the root
+ * itself (the depth-0 channel the boundary has always carried). Shared
+ * with `emit-server.ts`, which must find the same live-arm child.
  */
 export const lazyCatchMessageEl = (
-	el: ElementNode,
+	el: BoundaryArmRoot,
 	catchParam: string | null,
 ): ElementNode | null => {
 	if (!catchParam) return null
-	for (const child of el.children) {
-		if (child.kind !== 'element') continue
+	const elementChildren = (children: readonly TemplateNode[]): ElementNode[] =>
+		children.filter((c): c is ElementNode => c.kind === 'element')
+	for (const child of elementChildren(el.children)) {
 		if (directLazyCatchRef(child, catchParam) !== null) return child
+	}
+	// One compose hop: the message element is parent-authored content
+	// spliced into the child's rendered markup — still inside the arm root,
+	// so the arm-scoped query reaches it (LT-096).
+	for (const child of el.children) {
+		if (child.kind !== 'compose') continue
+		for (const inner of elementChildren(child.children)) {
+			if (directLazyCatchRef(inner, catchParam) !== null) return inner
+		}
 	}
 	return null
 }
 
 /**
- * The offending construct below an async-boundary arm root, or null. Direct
- * reactive children stay the sanctioned depth-0 channel; the err arm's
- * message element is additionally exempt — its subtree may carry exactly
- * one lazy child reading the catch parameter, its own attrs stay static,
- * and no deeper element or second reactive child is allowed.
+ * The offending construct below an async-boundary arm root, or null.
+ * Compose-aware (LT-460): composed content is transparent one level — a
+ * parent-authored element in it may carry exactly one lazy child reading
+ * the catch parameter (the message element), its own attrs stay static,
+ * and no deeper element or second reactive child is allowed. A reactive
+ * expression directly inside composed content renders into the child's own
+ * markup, where no write can address it — an offender; on a plain element
+ * root a direct reactive child stays the sanctioned depth-0 channel.
  */
 const boundaryDeepConstructOf = (
-	el: ElementNode,
+	root: BoundaryArmRoot,
 	messageEl: ElementNode | null,
 	catchParam: string | null,
 ): TemplateNode | null => {
@@ -572,27 +617,47 @@ const boundaryDeepConstructOf = (
 			? { el: messageEl, param: catchParam }
 			: null
 	let seenLazyInner = false
-	for (const child of el.children) {
-		if (exempt !== null && child === exempt.el) {
-			if (child.attrs.some(isClientConstructAttr)) return child
-			for (const inner of child.children) {
-				if (inner.kind === 'element') return inner
-				if (inner.kind === 'expr' && inner.reactivity === 'reactive') {
-					if (seenLazyInner) return inner
-					seenLazyInner = true
-					if (directLazyCatchRef(exempt.el, exempt.param) === null) return inner
+	const visit = (
+		children: readonly TemplateNode[],
+		depth: number,
+	): TemplateNode | null => {
+		for (const child of children) {
+			if (exempt !== null && child === exempt.el) {
+				if (child.attrs.some(isClientConstructAttr)) return child
+				for (const inner of child.children) {
+					if (inner.kind === 'element') return inner
+					if (inner.kind === 'expr' && inner.reactivity === 'reactive') {
+						if (seenLazyInner) return inner
+						seenLazyInner = true
+						if (directLazyCatchRef(exempt.el, exempt.param) === null)
+							return inner
+					}
 				}
+				continue
 			}
-			continue
+			if (child.kind === 'compose') {
+				// Composed content: entered for the message exemption only —
+				// a nested composed element is refused at lowering.
+				const deeper = visit(child.children, depth + 1)
+				if (deeper !== null) return deeper
+				continue
+			}
+			if (child.kind === 'expr' && child.reactivity === 'reactive') {
+				// The depth-0 channel: a direct lazy child of a plain element
+				// root. Inside composed content it renders into the child's
+				// own markup, where no write can address it.
+				if (depth === 0 && root.kind === 'element') continue
+				return child
+			}
+			if (
+				child.kind === 'element' &&
+				(child.attrs.some(isClientConstructAttr) || hasDeepConstruct(child))
+			)
+				return child
 		}
-		if (child.kind === 'expr' && child.reactivity === 'reactive') continue
-		if (
-			child.kind === 'element' &&
-			(child.attrs.some(isClientConstructAttr) || hasDeepConstruct(child))
-		)
-			return child
+		return null
 	}
-	return null
+	return visit(root.children, 0)
 }
 
 /**
@@ -603,7 +668,7 @@ const boundaryDeepConstructOf = (
  * driver. Shared with `emit-server.ts`, which must name the same signal
  * the analysis admitted.
  */
-export const htmlThunkSignalName = (el: ElementNode): string | null => {
+export const htmlThunkSignalName = (el: BoundaryArmRoot): string | null => {
 	for (const attr of el.attrs) {
 		if (attr.kind !== 'html' || !attr.reactive) continue
 		const body = (attr.thunk as { body?: unknown }).body
@@ -1443,17 +1508,58 @@ const handleAsyncBoundary = (
 		badFreeNames: badNames,
 	} = fx
 	const wording = wordingOf(component)
-	const okRoot = node.children.find(isElement) as ElementNode
+	const okRoot = node.children.find(isBoundaryArmRoot) as BoundaryArmRoot
 	const pendingRoot = (node.pendingChildren as TemplateNode[]).find(
-		isElement,
-	) as ElementNode
-	const errRoot = node.catchChildren.find(isElement) as ElementNode
+		isBoundaryArmRoot,
+	) as BoundaryArmRoot
+	const errRoot = node.catchChildren.find(isBoundaryArmRoot) as BoundaryArmRoot
 	const catchParam = node.catchParam
 
 	const errMsgEl = lazyCatchMessageEl(errRoot, catchParam)
+	// A composed element's server args are evaluated where the render call
+	// is emitted — in the live arm AND in the arm templates, which sit
+	// outside the catch binding (LT-460). A child's own rendering of an arg
+	// has no client write channel, so a catch-parameter read in an arg has
+	// no lowering: the message must travel through composed content instead,
+	// where the arm's value channel writes it.
+	if (catchParam !== null) {
+		for (const [armRoot, which] of [
+			[okRoot, wording.tryBody],
+			[pendingRoot, wording.pendingArm],
+			[errRoot, wording.catchArm],
+		] as const) {
+			let offender: { at: AstNode; arg: string } | null = null
+			walkTemplate(
+				armRoot,
+				node => {
+					if (node.kind !== 'compose' || offender !== null) return
+					for (const attr of node.attrs) {
+						if (attr.kind !== 'arg' || attr.node === null) continue
+						if ([...freeIdentifiers(attr.node)].includes(catchParam)) {
+							offender = { at: attr.node, arg: attr.name }
+							return
+						}
+					}
+				},
+				{ intoCompose: false },
+			)
+			if (offender !== null) {
+				const { at, arg } = offender as { at: AstNode; arg: string }
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						at,
+						`A composed element's \`${arg}\` arg reading the catch parameter \`${catchParam}\` in the ${which} of an async boundary`,
+						`An arm template renders outside the catch binding, and the child's own rendering of an arg has no client write. Render the message through composed content instead: \`<CardCallout><p class="error">{${catchParam}.message}</p></CardCallout>\` — the arm's value channel writes it on flip.`,
+					),
+				)
+				return
+			}
+		}
+	}
 	if (
-		hasDeepConstruct(okRoot) ||
-		hasDeepConstruct(pendingRoot) ||
+		boundaryDeepConstructOf(okRoot, null, null) !== null ||
+		boundaryDeepConstructOf(pendingRoot, null, null) !== null ||
 		boundaryDeepConstructOf(errRoot, errMsgEl, catchParam) !== null
 	) {
 		diagnostics.push(
@@ -1466,7 +1572,11 @@ const handleAsyncBoundary = (
 		)
 		return
 	}
-	if (hasOwnConstruct(pendingRoot)) {
+	if (
+		pendingRoot.kind === 'element'
+			? hasOwnConstruct(pendingRoot)
+			: boundaryDeepConstructOf(pendingRoot, null, null) !== null
+	) {
 		diagnostics.push(
 			diagnostic.unsupported(
 				source,
@@ -1478,7 +1588,8 @@ const handleAsyncBoundary = (
 		return
 	}
 
-	const okLazyName = directLazyIdentifier(okRoot)
+	const okLazyName =
+		okRoot.kind === 'element' ? directLazyIdentifier(okRoot) : null
 	const htmlSignalName = htmlThunkSignalName(okRoot)
 	const driverName = okLazyName ?? htmlSignalName
 	const boundaryCandidates = component.signals.filter(
@@ -1501,8 +1612,15 @@ const handleAsyncBoundary = (
 	// The attribute channel (LT-449): the value reaches the arm root through
 	// the `truc:html` watch, so the root's own client constructs become the
 	// ok arm's effects. The child channel keeps the child-only contract.
-	const viaHtmlThunk = okLazyName === null && htmlSignalName !== null
-	if (!viaHtmlThunk && okRoot.attrs.some(isClientConstructAttr)) {
+	// Element-root vocabulary: a compose root carries no `truc:html`.
+	const okElement = okRoot.kind === 'element' ? okRoot : null
+	const viaHtmlThunk =
+		okElement !== null && okLazyName === null && htmlSignalName !== null
+	if (
+		!viaHtmlThunk &&
+		okRoot.kind === 'element' &&
+		okRoot.attrs.some(isClientConstructAttr)
+	) {
 		diagnostics.push(
 			diagnostic.unsupported(
 				source,
@@ -1513,7 +1631,7 @@ const handleAsyncBoundary = (
 		)
 		return
 	}
-	if (errRoot.attrs.some(isClientConstructAttr)) {
+	if (errRoot.kind === 'element' && errRoot.attrs.some(isClientConstructAttr)) {
 		diagnostics.push(
 			diagnostic.unsupported(
 				source,
@@ -1525,9 +1643,10 @@ const handleAsyncBoundary = (
 		return
 	}
 
-	const directErrText = catchParam
-		? directLazyCatchRef(errRoot, catchParam)
-		: null
+	const directErrText =
+		catchParam && errRoot.kind === 'element'
+			? directLazyCatchRef(errRoot, catchParam)
+			: null
 	const errText =
 		directErrText ??
 		(errMsgEl && catchParam ? directLazyCatchRef(errMsgEl, catchParam) : null)
@@ -1574,25 +1693,28 @@ const handleAsyncBoundary = (
 		effects: [],
 	})
 	const okArm = arm('ok')
-	if (viaHtmlThunk) {
+	if (viaHtmlThunk && okElement !== null) {
 		// The ok root's client constructs are the ok arm's effects (LT-449):
 		// the `truc:html` watch is the value channel, and a reactive
 		// style/class thunk rides beside it — both mounted inside
 		// `bindArm`'s ok branch, dying with the arm. No descendants: the
 		// deep-construct refusal above already kept the root the only
 		// construct-bearing element.
-		const rootName = uniqueName(usedNames, sanitizeVarName(okRoot.tag))
-		okArm.root = { name: rootName, tag: okRoot.tag }
-		fx.armSelectors.set(rootName, resolveSelector(fx, okRoot).selector)
-		emitConstructEffects(fx, okRoot, rootName, okArm.effects, badNames)
+		const rootName = uniqueName(usedNames, sanitizeVarName(okElement.tag))
+		okArm.root = { name: rootName, tag: okElement.tag }
+		fx.armSelectors.set(rootName, resolveSelector(fx, okElement).selector)
+		emitConstructEffects(fx, okElement, rootName, okArm.effects, badNames)
 	}
-	// The nested message element (LT-449) writes through an arm-scoped
-	// `first` local; the depth-0 channel keeps writing the root.
+	// The nested message element (LT-449, through composed content since
+	// LT-460) writes through an arm-scoped `first` local; the depth-0
+	// channel keeps writing the root.
 	const errArm = arm('err')
 	if (errMsgEl !== null) {
 		errArm.locals.push({
 			name: uniqueName(usedNames, 'errMessage'),
-			selector: resolveSelector(fx, errMsgEl).selector,
+			selector: isInsideCompose(component.root, errMsgEl)
+				? resolveComposeContentSelector(errMsgEl).selector
+				: resolveSelector(fx, errMsgEl).selector,
 			message: `the ${wording.catchArm}'s message element`,
 		})
 	}
@@ -1610,10 +1732,14 @@ const handleAsyncBoundary = (
 			boundary: {
 				signal,
 				errText,
-				okStart: startOf(lazyChildOf(okRoot)?.expr),
+				okStart: startOf(okElement ? lazyChildOf(okElement)?.expr : undefined),
 				errStart:
-					startOf(lazyChildOf(errMsgEl ?? errRoot)?.expr) ??
-					startOf(lazyChildOf(errRoot)?.expr),
+					startOf(
+						errMsgEl !== null ? lazyChildOf(errMsgEl)?.expr : undefined,
+					) ??
+					startOf(
+						errRoot.kind === 'element' ? lazyChildOf(errRoot)?.expr : undefined,
+					),
 			},
 		},
 	})
@@ -2217,13 +2343,18 @@ const handleReactiveConditional = (
 	)
 	if (containerQuery === null) return
 
-	// Arm shape: one root element per arm that renders anything.
+	// Arm shape: one root element per arm that renders anything. A compose
+	// site is an arm root too (LT-460) — its rendered root is the child's
+	// own element.
 	const label = isIf(node) ? wording.ifBranch : `${wording.caseLabel} arm`
 	for (const arm of node.arms) {
 		if (arm.children.length === 0) continue
-		const elements = arm.children.filter(isElement)
+		const elements = arm.children.filter(isBoundaryArmRoot)
 		const loose = arm.children.find(
-			c => c.kind !== 'element' && c.kind !== 'client-stmt',
+			c =>
+				c.kind !== 'element' &&
+				c.kind !== 'compose' &&
+				c.kind !== 'client-stmt',
 		)
 		if (elements.length !== 1 || loose) {
 			unsupported(
@@ -2300,7 +2431,7 @@ const handleReactiveConditional = (
 	const elementParam = uniqueName(usedNames, 'armElement')
 	const keyParam = uniqueName(usedNames, 'armKey')
 	const arms: ArmPlan[] = node.arms.map(arm => {
-		const root = arm.children.find(isElement) ?? null
+		const root = arm.children.find(isBoundaryArmRoot) ?? null
 		const plan: ArmPlan = {
 			key: arm.key,
 			caseText: arm.testText,
@@ -2311,12 +2442,24 @@ const handleReactiveConditional = (
 			effects: [],
 		}
 		if (root === null) return plan
-		const rootName = uniqueName(usedNames, sanitizeVarName(root.tag))
-		plan.root = { name: rootName, tag: root.tag }
+		// A compose arm root renders the child's own tag; the arm mount's
+		// typed local (when anything reads it) casts to that element.
+		const rootTag =
+			root.kind === 'compose'
+				? fx.composeRefs.mode === 'resolved'
+					? (fx.composeRefs.registry.get(root.source)?.tag ?? root.component)
+					: root.component
+				: root.tag
+		const rootName = uniqueName(usedNames, sanitizeVarName(rootTag))
+		plan.root = { name: rootName, tag: rootTag }
 		let rootUsed = false
-		fx.armSelectors.set(rootName, resolveSelector(fx, root).selector)
+		if (root.kind === 'element')
+			fx.armSelectors.set(rootName, resolveSelector(fx, root).selector)
 		const armScope = mountScope(fx, {
-			root,
+			// Composed content is never queried (its elements carry no
+			// constructs — `validateComposedChildren`), so the scope root's
+			// element-typed queries never touch the compose node.
+			root: root as ElementNode,
 			rootRef: () => {
 				rootUsed = true
 				return rootName
@@ -2324,7 +2467,7 @@ const handleReactiveConditional = (
 			locals: plan.locals,
 			sink: plan.effects,
 			keyAttrs: plan.keyAttrs,
-			label: `the arm root <${root.tag}>`,
+			label: `the arm root <${rootTag}>`,
 		})
 		for (const child of arm.children)
 			if (child.kind === 'client-stmt') {
@@ -2336,8 +2479,10 @@ const handleReactiveConditional = (
 					sourceEnd: child.node.end,
 				})
 			}
-		emitConstructEffects(fx, root, rootName, plan.effects, badNames)
-		collectKeyAttrs(fx, armScope, root)
+		if (root.kind === 'element') {
+			emitConstructEffects(fx, root, rootName, plan.effects, badNames)
+			collectKeyAttrs(fx, armScope, root)
+		}
 		const visitDescendants = (el: ElementNode): void => {
 			for (const child of el.children) {
 				if (planNested(fx, armScope, child)) continue
@@ -2358,7 +2503,9 @@ const handleReactiveConditional = (
 				visitDescendants(child)
 			}
 		}
-		visitDescendants(root)
+		// Composed content carries no constructs (`validateComposedChildren`),
+		// so the descent never plans against the compose node itself.
+		visitDescendants(root as ElementNode)
 		// The root local is only declared when something reads it.
 		if (
 			!rootUsed &&

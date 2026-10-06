@@ -577,6 +577,30 @@ export const resolveSelectorIn = (
 }
 
 /**
+ * Resolve the selector for a parent-authored element INSIDE composed
+ * content (LT-460: the async boundary's message element within a composed
+ * callout). The element is not part of the host's own template, so the
+ * probe cannot count it — `resolveSelectorIn`'s uniqueness proof does not
+ * apply, and its composed-child exclusions (`:not(child-tag *)`) would
+ * exclude the element's own rendered position. The runtime query still
+ * reaches it: an arm-scoped `first()` descends into the composed child's
+ * markup (LT-096). Candidates use `resolveSelectorIn`'s vocabulary over the
+ * element's own static attributes — role, then the class/id/data-*
+ * discriminators, then the bare tag last (most collision-prone inside
+ * markup the compiler cannot see); no uniqueness is claimed.
+ */
+export const resolveComposeContentSelector = (
+	el: ElementNode,
+): { selector: string; unique: boolean } => {
+	const candidates = [
+		buildSelector(el, 'role'),
+		...discriminatorCandidates(el),
+		buildSelector(el, 'bare'),
+	].filter((s): s is string => s !== null)
+	return { selector: candidates[0] ?? el.tag, unique: false }
+}
+
+/**
  * The `:scope >` child path from `tree` down to `element` (ADR 0046 s2) —
  * one bare-tag step per element on the way, control flow transparent (an
  * arm root or a list item is a DOM child of the element holding it) — or
