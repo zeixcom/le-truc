@@ -5,8 +5,10 @@
  *   list item, and a list inside a list item each compile clean on both
  *   surfaces, to byte-identical modules;
  * - the server renders a nested construct live inside a live scope and
- *   inert inside a template — a nested template rides inside the outer
- *   template's content, one copy per outer item;
+ *   inert inside a template; every list template is hoisted to the host's
+ *   end, one copy per instance at any depth, rendered with every enclosing
+ *   scope unbound, so a list container may be a Mount Scope root (ADR 0046
+ *   s2, LT-454) — arm templates stay beside their arm;
  * - the generated client adopts the server's markup at both levels without
  *   touching it, then clones at both levels as signals change;
  * - a selector bound in a scope matches nothing in a nested scope's
@@ -191,18 +193,23 @@ describe('a reactive list inside an arm', async () => {
 		expect(body(fromTsx.component?.clientCode)).toBe(body(component.clientCode))
 	})
 
-	test("the list binds in the arm's mount, its template queried from the arm root", () => {
+	test("the list binds in the arm's mount, its template queried from the host", () => {
 		expect(component.clientCode).toContain(
-			'reconcile(ul, section.querySelector<HTMLTemplateElement>(\':scope > template[data-list="0"]\')!, items,',
+			'reconcile(ul, host.querySelector<HTMLTemplateElement>(\':scope > template[data-list="0"]\')!, items,',
 		)
 	})
 
 	test('the live arm renders its items; the arm template renders none', () => {
-		const [live, template] = markup.split('<template data-arms="0"')
+		const [live, rest = ''] = markup.split('<template data-arms="0"')
+		const armTemplate = rest.slice(0, rest.indexOf('<template data-list="0">'))
 		expect(live).toContain('<li data-key="a">')
-		expect(template).not.toContain('data-key="a"')
-		// The nested list template rides inside the arm template.
-		expect(template).toContain('<template data-list="0">')
+		expect(armTemplate).not.toContain('data-key="a"')
+		// The list template is not copied into the live arm or the arm
+		// template: one copy, the host's last child (ADR 0046 s2).
+		expect(markup.split('<template data-list="0">').length - 1).toBe(1)
+		expect(markup).toMatch(
+			/<template data-list="0">[\s\S]*<\/template><\/c-el>$/,
+		)
 	})
 
 	test('connect adopts the arm and its items without touching them', () => {
@@ -321,9 +328,12 @@ describe('an arm set inside a list item', async () => {
 		)
 		const template = markup.slice(markup.indexOf('<template data-list="0">'))
 		expect(template).not.toContain('data-key="then" type')
+		// The arm templates stay beside their arm, inside the item template;
+		// the item template itself is the host's last child (ADR 0046 s2).
 		expect(template).toContain(
 			'<template data-arms="0" data-key="then"><button type="button" class="undo">',
 		)
+		expect(template).toMatch(/<\/li><\/template><\/c-el>$/)
 	})
 
 	test('the arm set switches in the item root, and the arm mount sets the key-derived attribute', () => {
@@ -551,12 +561,18 @@ describe('a list inside a list item', async () => {
 		expect(body(fromTsx.component?.clientCode)).toBe(body(component.clientCode))
 	})
 
-	test('the nested template rides inside every outer item and inside the outer template', () => {
-		expect(markup.split('<template data-list="1">').length - 1).toBe(3)
-		const outer = markup.slice(markup.indexOf('<template data-list="0">'))
-		// No items and no outer key inside the outer template.
-		expect(outer).not.toContain('data-key=')
-		expect(outer).not.toContain('data-group=')
+	test('each template renders once, at the host end, with every enclosing scope unbound', () => {
+		// One copy per instance — none in the live items, none inside the
+		// outer template (ADR 0046 s2) — in document order of N.
+		expect(markup.split('<template data-list="1">').length - 1).toBe(1)
+		const templates = markup.slice(markup.indexOf('<template data-list="0">'))
+		expect(templates).toMatch(
+			/^<template data-list="0">[\s\S]*<\/template><template data-list="1">[\s\S]*<\/template><\/c-el>$/,
+		)
+		// No items, and no outer key baked into the inner template: the inner
+		// mount writes `data-group` on every adopt and clone.
+		expect(templates).not.toContain('data-key=')
+		expect(templates).not.toContain('data-group=')
 	})
 
 	test("the item's own text binds through a synthesized child path", () => {
@@ -617,6 +633,230 @@ describe('a list inside a list item', async () => {
 		).height = 24
 		await settle()
 		expect(placeholder.style.height).toBe('24px')
+	})
+})
+
+/* === A list whose container is the item root (LT-454) === */
+
+const ROWS_IN_TBODY = {
+	tsrx: tsrx(
+		"import { createList } from '@zeix/le-truc'",
+		`const groups = createList<string>(['g1', 'g2'], { keyConfig: s => s })
+		const rows = createList<string>(['x', 'y'], { keyConfig: s => s })
+		expose({})`,
+		`
+				<button type="button" class="group" onClick={() => { groups.add('g3') }}>Group</button>
+				<button type="button" class="row" onClick={() => { rows.add('z') }}>Row</button>
+				<table class="grid">
+					@for (const group of groups; key g) {
+						<tbody>
+							@for (const row of rows; key r) {
+								<tr data-group={g}><td class="name">{row}</td><td class="act"><button type="button" onClick={() => { rows.remove(r) }}>x</button></td></tr>
+							} @empty {
+								<tr class="none"><td>none</td></tr>
+							}
+						</tbody>
+					}
+				</table>`,
+	),
+	tsx: tsx(
+		"import { createList } from '@zeix/le-truc'",
+		'{}',
+		`const groups = createList<string>(['g1', 'g2'], { keyConfig: s => s })
+	const rows = createList<string>(['x', 'y'], { keyConfig: s => s })
+	expose({})`,
+		`
+				<button type="button" class="group" onClick={() => { groups.add('g3') }}>Group</button>
+				<button type="button" class="row" onClick={() => { rows.add('z') }}>Row</button>
+				<table class="grid">
+					{groups.map((group, g) => (
+						<tbody>
+							{rows.length === 0 ? (
+								<tr class="none"><td>none</td></tr>
+							) : (
+								rows.map((row, r) => (
+									<tr data-group={g}><td class="name">{row}</td><td class="act"><button type="button" onClick={() => { rows.remove(r) }}>x</button></td></tr>
+								))
+							)}
+						</tbody>
+					))}
+				</table>`,
+	),
+}
+
+describe('a list whose container is the item root', async () => {
+	const { fromTsrx, fromTsx } = compileBoth(ROWS_IN_TBODY)
+	const component = fromTsrx.component
+	if (!component) throw new Error(JSON.stringify(fromTsrx.diagnostics))
+	const markup = await render(component.serverCode)
+	const { realm, html, diagnostics } = await mount(
+		'rows-in-tbody',
+		component.clientCode,
+		markup,
+	)
+	afterAll(() => realm.dispose())
+	const group = (key: string) =>
+		realm.document.querySelector(
+			`c-el table.grid > tbody[data-key="${key}"]`,
+		) as HTMLElement
+	const rowsOf = (key: string) =>
+		[...group(key).querySelectorAll(':scope > tr[data-key]')].map(
+			el =>
+				`${el.getAttribute('data-group')}:${el.querySelector('td.name')?.textContent}`,
+		)
+	const click = (selector: string) =>
+		(realm.document.querySelector(`c-el ${selector}`) as HTMLElement).click()
+
+	test('both surfaces compile clean, to the same modules', () => {
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		expect(body(fromTsx.component?.serverCode)).toBe(body(component.serverCode))
+		expect(body(fromTsx.component?.clientCode)).toBe(body(component.clientCode))
+	})
+
+	test('the inner list reconciles the item root, its template queried from the host', () => {
+		expect(component.clientCode).toMatch(
+			/reconcile\(tbody\d*, host\.querySelector<HTMLTemplateElement>\(':scope > template\[data-list="1"\]'\)!, rows,/,
+		)
+	})
+
+	test('the live items render their rows; the templates sit at the host end, unbound', () => {
+		expect(markup).toContain('<tr data-key="x" data-group="g1">')
+		expect(markup).toContain('<tr data-key="y" data-group="g2">')
+		const templates = markup.slice(markup.indexOf('<template data-list="0">'))
+		expect(templates).toMatch(/<\/template><\/c-el>$/)
+		expect(templates.split('<template data-list="1">').length - 1).toBe(1)
+		expect(templates).not.toContain('data-key=')
+		expect(templates).not.toContain('data-group=')
+		// No template is left inside the table.
+		expect(markup.slice(0, markup.indexOf('</table>'))).not.toContain(
+			'<template',
+		)
+	})
+
+	test('connect adopts both levels with no realm diagnostics', () => {
+		expect(diagnostics).toEqual([])
+		expect(html).toBe(serialized(markup))
+	})
+
+	test('an added row clones into every adopted group', async () => {
+		click('button.row')
+		await settle()
+		expect(rowsOf('g1')).toEqual(['g1:x', 'g1:y', 'g1:z'])
+		expect(rowsOf('g2')).toEqual(['g2:x', 'g2:y', 'g2:z'])
+	})
+
+	test('a cloned group reconciles its own rows, with the outer key set', async () => {
+		click('button.group')
+		await settle()
+		expect(rowsOf('g3')).toEqual(['g3:x', 'g3:y', 'g3:z'])
+		;(
+			group('g3').querySelector('tr[data-key="z"] button') as HTMLElement
+		).click()
+		await settle()
+		expect(rowsOf('g3')).toEqual(['g3:x', 'g3:y'])
+		expect(rowsOf('g1')).toEqual(['g1:x', 'g1:y'])
+		click('table.grid tr[data-key="x"] button')
+		await settle()
+		click('table.grid tr[data-key="y"] button')
+		await settle()
+		const none = group('g3').querySelector('tr.none') as HTMLElement
+		expect(none.hidden).toBe(false)
+	})
+})
+
+/* === A list whose container is the arm root (LT-454) === */
+
+const LIST_AS_ARM = {
+	tsrx: tsrx(
+		"import { createCell, createList } from '@zeix/le-truc'",
+		`const open = createCell(true)
+		const items = createList<string>(['a', 'b'], { keyConfig: s => s })
+		expose({ open })`,
+		`
+				<button type="button" class="add" onClick={() => { items.add('c') }}>Add</button>
+				<div class="box">
+					@if (open.get()) {
+						<ul class="list">
+							@for (const item of items) {
+								<li>{item}</li>
+							}
+						</ul>
+					}
+				</div>`,
+	),
+	tsx: tsx(
+		"import { createCell, createList } from '@zeix/le-truc'",
+		'{ open: boolean }',
+		`const open = createCell(true)
+	const items = createList<string>(['a', 'b'], { keyConfig: s => s })
+	expose({ open })`,
+		`
+				<button type="button" class="add" onClick={() => { items.add('c') }}>Add</button>
+				<div class="box">
+					{open.get() ? (
+						<ul class="list">
+							{items.map(item => (
+								<li>{item}</li>
+							))}
+						</ul>
+					) : null}
+				</div>`,
+	),
+}
+
+describe('a list whose container is the arm root', async () => {
+	const { fromTsrx, fromTsx } = compileBoth(LIST_AS_ARM)
+	const component = fromTsrx.component
+	if (!component) throw new Error(JSON.stringify(fromTsrx.diagnostics))
+	const markup = await render(component.serverCode)
+	const { realm, html, diagnostics } = await mount(
+		'list-as-arm',
+		component.clientCode,
+		markup,
+	)
+	afterAll(() => realm.dispose())
+	const items = () =>
+		[...realm.document.querySelectorAll('c-el .box ul.list > li')].map(
+			el => el.textContent,
+		)
+
+	test('both surfaces compile clean, to the same modules', () => {
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		expect(body(fromTsx.component?.serverCode)).toBe(body(component.serverCode))
+		expect(body(fromTsx.component?.clientCode)).toBe(body(component.clientCode))
+	})
+
+	test('the arm template stays beside its arm; the list template is hoisted', () => {
+		const box = markup.slice(markup.indexOf('<div class="box">'))
+		expect(box).toMatch(/^<div class="box"><ul data-key="then" class="list">/)
+		expect(box.slice(0, box.indexOf('</div>'))).toContain(
+			'<template data-arms="0" data-key="then"><ul class="list"></ul></template>',
+		)
+		expect(markup).toMatch(
+			/<\/div><template data-list="0"><li><\/li><\/template><\/c-el>$/,
+		)
+	})
+
+	test('connect adopts with no realm diagnostics', () => {
+		expect(diagnostics).toEqual([])
+		expect(html).toBe(serialized(markup))
+	})
+
+	test('re-entry clones the arm, and the list reconciles inside it', async () => {
+		const host = realm.document.querySelector('c-el') as HTMLElement & {
+			open: boolean
+		}
+		host.open = false
+		await settle()
+		expect(items()).toEqual([])
+		host.open = true
+		await settle()
+		expect(items()).toEqual(['a', 'b'])
+		;(realm.document.querySelector('c-el button.add') as HTMLElement).click()
+		await settle()
+		expect(items()).toEqual(['a', 'b', 'c'])
 	})
 })
 

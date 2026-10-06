@@ -361,9 +361,13 @@ describe('a nested list over an item-declared deriveList', async () => {
 		expect(markup).toContain(
 			'<ul class="tags"><li data-key="p" class="tag">p</li><li data-key="q" class="tag">q</li>',
 		)
-		const template = markup.slice(markup.indexOf('<template data-list="0">'))
+		const template = markup.slice(
+			markup.indexOf('<template data-list="0">'),
+			markup.indexOf('<template data-list="1">'),
+		)
 		expect(template).not.toContain('data-key="p"')
-		expect(template).toContain('<template data-list="1">')
+		// The nested template is hoisted beside the outer one (ADR 0046 s2).
+		expect(markup).toMatch(/<\/template><template data-list="1">/)
 	})
 
 	test('the nested list reconciles over the item-declared List in the item mount', () => {
@@ -371,7 +375,7 @@ describe('a nested list over an item-declared deriveList', async () => {
 			'const tags = deriveList(() => group.tags.get()',
 		)
 		expect(component.clientCode).toMatch(
-			/reconcile\(ul, li\.querySelector<HTMLTemplateElement>\(':scope > template\[data-list="1"\]'\)!, tags,/,
+			/reconcile\(ul, host\.querySelector<HTMLTemplateElement>\(':scope > template\[data-list="1"\]'\)!, tags,/,
 		)
 	})
 

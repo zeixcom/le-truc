@@ -516,8 +516,9 @@ adoption; a `requestContext` signal never appears: it has no DOM seed), and
 conditionals, the arm blocks of reactive conditionals and the async
 boundary — `reconcile()`'s arm form over the stamped templates with a key
 thunk and one mount per arm, ADR 0037 — and the item Mount Scope of a
-reactive list: a `ReconcilePlan` carries `listIndex` (the `data-list` stamp),
-the container's parent query, and an `itemScope` of root local, descendants,
+reactive list: a `ReconcilePlan` carries `listIndex` (the `data-list` stamp
+of the template queried from the host), the container, and an `itemScope` of
+root local, descendants,
 key-derived attributes and effects that `bindItem` mounts per entering item,
 ADR 0046 s1; the item's setup statements mount there first, ADR 0046 s5). Emission recurses (LT-424): an arm set, a reactive list or a
 server-data loop inside an arm or an item plans into that scope's effects
@@ -1341,9 +1342,14 @@ member.
   exempt — it has its own query and presence guard); composed children accept
   statics and server expressions only. The one-list-per-component limit is
   lifted (LT-423, ADR 0046 s2): each extracted list template is stamped
-  `data-list="N"` (its compile-time document-order index) and queried from
-  the list container's own parent, so repeated and sibling lists share no
-  selector.
+  `data-list="N"` (its compile-time document-order index), so repeated and
+  sibling lists share no selector. Every list template, at any nesting
+  depth, renders once per instance as a direct child of the host, after the
+  rendered content and in order of N, and is queried from the host
+  (LT-454). It renders with every enclosing scope's bindings unbound, so a
+  container can be any element, a Mount Scope root included (a `<tbody>`
+  item holding its rows). Arm templates stay beside their arm, because
+  `reconcile()`'s arm form anchors on them.
 - **One machinery, two front ends**: both surfaces run one driver
   (`front-end.ts`'s `runFrontEnd`, LT-233) and, after lowering, identical
   stages through `pipeline.ts`; the shared front-end stage modules

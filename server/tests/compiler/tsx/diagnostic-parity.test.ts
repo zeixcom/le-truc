@@ -2090,19 +2090,6 @@ const LISTS = `${LIST}\n\t\tconst others = createList<string>([], { keyConfig: '
 
 const NESTED_SCOPES: Case[] = [
 	{
-		// The item template sits after the container's close tag, which
-		// would put it outside the arm.
-		name: 'a reactive list directly under an arm root',
-		code: 'LTC005',
-		spec: {
-			pre: imports('createCell', 'createList'),
-			setup: `${LIST}\n\t\t${cell('open', 'true')}`,
-			body: '<div class="box">@if (open.get()) { <ul class="list">@for (const item of items) { <li>{item}</li> }</ul> }</div>',
-			tsx: '<div class="box">{open.get() ? <ul class="list">{items.map(item => <li>{item}</li>)}</ul> : null}</div>',
-		},
-		pins: ['directly under the arm root <ul>'],
-	},
-	{
 		name: 'a reactive list inside a server-data loop body',
 		code: 'LTC005',
 		spec: {
@@ -2145,8 +2132,28 @@ const NESTED_SCOPES: Case[] = [
 describe('diagnostic parity — nested Mount Scopes (LT-424)', () => {
 	runCases(NESTED_SCOPES)
 	// The refusals ADR 0046 s1 lifts: arm sets and lists inside arms and
-	// items, server-data loops and async boundaries inside items.
+	// items, server-data loops and async boundaries inside items — and, with
+	// the list template hoisted to the host's end (ADR 0046 s2, LT-454), a
+	// list whose container is the arm or item root.
 	test.each([
+		[
+			'a reactive list directly under an arm root',
+			{
+				pre: imports('createCell', 'createList'),
+				setup: `${LIST}\n\t\t${cell('open', 'true')}`,
+				body: '<div class="box">@if (open.get()) { <ul class="list">@for (const item of items) { <li>{item}</li> }</ul> }</div>',
+				tsx: '<div class="box">{open.get() ? <ul class="list">{items.map(item => <li>{item}</li>)}</ul> : null}</div>',
+			},
+		],
+		[
+			'a reactive list directly under a list item root',
+			{
+				pre: imports('createList'),
+				setup: LISTS,
+				body: '<table class="grid">@for (const item of items; key k) { <tbody>@for (const x of others) { <tr><td>{x}</td></tr> }</tbody> }</table>',
+				tsx: '<table class="grid">{items.map((item, k) => <tbody>{others.map(x => <tr><td>{x}</td></tr>)}</tbody>)}</table>',
+			},
+		],
 		[
 			'an arm set inside a list item',
 			{

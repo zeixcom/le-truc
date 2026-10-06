@@ -58,7 +58,9 @@ import {
 	armSetOf,
 	type ConditionalNode,
 	elseOf,
+	enclosingLists,
 	hasArmSet,
+	inNestedScope,
 	isIf,
 	listIndexOf,
 	thenOf,
@@ -180,12 +182,6 @@ type EmitContext = {
 	 * (ADR 0030 sub-design 2): pulls the `i18nRecord` import into the module.
 	 */
 	usedI18nRecord: boolean
-	/**
-	 * Extracted reactive-list templates, one pending queue per open element:
-	 * `<template>` is emitted after its container's close tag (outside the
-	 * reconciled container's children — ADR 0017 removes unkeyed children).
-	 */
-	templateQueue: CodeBuilder[][]
 	/**
 	 * LT-173 step 6: the render-scope names a host-derived fold may leave in
 	 * a spliced thunk — computed once per module, the same set the analyzer's
@@ -513,7 +509,7 @@ const hostDerivedExpr = (
 /**
  * The extracted `<template>` (ADR 0046 s2): stamped `data-list="N"` — the
  * list's compile-time document-order index, which the client's `reconcile`
- * call queries from the container's parent — statics render, and
+ * call queries from the host — statics render, and
  * server-known content folds in at render time as today. Item-dependent
  * sites bake EMPTY (ADR 0037 s1's losing-arm rule): a lazy child (the bare
  * `{item}` shorthand and its arrow spelling alike — the item mount writes
@@ -524,8 +520,8 @@ const hostDerivedExpr = (
  * push nothing. A server-known conditional inside the item renders its
  * winner — the winner is fixed per render call, so every clone carries the
  * same arm — and a composed child renders its child call into the template.
- * Written into a fork of the markup builder: the caller queues it for the
- * container's close tag, outside the container.
+ * Written into a fork of the markup builder: the caller appends it at the
+ * host's end (`emitListTemplates`), outside every container.
  */
 const listTemplate = (
 	ctx: EmitContext,
@@ -551,7 +547,8 @@ const listTemplate = (
 	if (loop.keyName !== null) cloneTime.add(loop.keyName)
 	// A nested arm set or loop (LT-424) renders through the main emitter in
 	// template mode — no live arm, no items, the enclosing items' bindings
-	// unbound — into this template, one copy per outer item.
+	// unbound — into this template. A nested list's own template is not
+	// copied in: it renders once, at the host's end (ADR 0046 s2).
 	const nested = (node: TemplateNode): void => {
 		const saved = {
 			out: ctx.out,
@@ -657,18 +654,61 @@ const listTemplate = (
 			}
 		}
 		pushTo(`${html.static('>')}`)
-		// A nested list's template flushes after its container's close tag,
-		// inside this one (LT-424).
-		ctx.templateQueue.push([])
 		for (const child of node.children) shape(child)
 		if (!isVoidElement(node.tag)) pushTo(jsString(`</${node.tag}>`))
-		for (const template of ctx.templateQueue.pop() ?? []) out.append(template)
 	}
 	out.depth++
 	shape(loop.output)
 	out.depth--
 	pushTo("'</template>'")
 	return out
+}
+
+/**
+ * Every reactive list's extracted template, as the host's last children, in
+ * document order of N (ADR 0046 s2): one copy per instance, whatever the
+ * nesting depth, so a list container may be any element — a Mount Scope
+ * root included — and the client queries it from the host. A nested list's
+ * template renders with every enclosing scope unbound: its enclosing items'
+ * names bake empty (the inner mount writes them on adopt and clone), and
+ * client-written sites bake empty as in an arm template (LT-385c).
+ */
+const emitListTemplates = (ctx: EmitContext): void => {
+	const { component } = ctx
+	const loops = [...component.fors.values()]
+		.filter((loop): loop is ReconcileForIR => loop.kind === 'reconcile')
+		.map(loop => ({
+			loop,
+			index: listIndexOf(component.root, component.fors, loop),
+		}))
+		.sort((a, b) => a.index - b.index)
+	for (const { loop, index } of loops) {
+		const unbound = enclosingLists(
+			component.root,
+			component.fors,
+			loop.output,
+		).flatMap(outer => [
+			outer.itemName,
+			...(outer.keyName === null ? [] : [outer.keyName]),
+			...outer.setup.flatMap(stmt => (stmt.name === null ? [] : [stmt.name])),
+		])
+		const saved = {
+			inArmTemplate: ctx.inArmTemplate,
+			templateUnbound: ctx.templateUnbound,
+		}
+		ctx.inArmTemplate = inNestedScope(
+			component.root,
+			component.fors,
+			loop.output,
+		)
+		ctx.templateUnbound = new Set(unbound)
+		try {
+			ctx.out.append(listTemplate(ctx, loop, index, component.serverKnown))
+		} finally {
+			ctx.inArmTemplate = saved.inArmTemplate
+			ctx.templateUnbound = saved.templateUnbound
+		}
+	}
 }
 
 /**
@@ -712,9 +752,9 @@ const emitItemSetup = (
 /**
  * Reactive `@for` over a declared List (ADR 0024 sub-design 5): initial
  * keyed items render in place (adopted children are complete) with
- * `data-key` from the shim's cause-effect-parity key generation, and the
- * item shape is extracted as a sibling `<template>` (`listTemplate`) whose
- * item-dependent sites bake empty.
+ * `data-key` from the shim's cause-effect-parity key generation. The item
+ * shape is extracted as a `<template>` at the host's end
+ * (`emitListTemplates`), whose item-dependent sites bake empty.
  */
 const emitListFor = (
 	ctx: EmitContext,
@@ -784,20 +824,8 @@ const emitListFor = (
 			pushClose(ctx, root.tag)
 		}
 	}
-
-	// Extracted template → the innermost open element's pending queue
-	// (flushed after that element's close tag — the container's, since the
-	// loop output renders inside it).
-	const queue = ctx.templateQueue.at(-1)
-	if (queue)
-		queue.push(
-			listTemplate(
-				ctx,
-				loop,
-				listIndexOf(ctx.component.root, ctx.component.fors, loop),
-				scope,
-			),
-		)
+	// The extracted template renders once, at the host's end
+	// (`emitListTemplates`, ADR 0046 s2).
 }
 
 /**
@@ -1470,10 +1498,6 @@ const emitPlainElement = (
 	scope: ReadonlySet<string>,
 	extraAttrs: AttributeIR[] = [],
 ): void => {
-	// Reactive-for templates flush after this element's close tag — the
-	// spec shape (adopted items, </container>, then <template>) keeps the
-	// template out of the reconciled container's children.
-	ctx.templateQueue.push([])
 	emitElement(ctx, node, scope, extraAttrs)
 	// truc:html={dataRef} renders as sanitized raw children before authored
 	// children (dependency-provable, else omitted for the client pass).
@@ -1486,7 +1510,6 @@ const emitPlainElement = (
 	}
 	for (const child of node.children) emit(ctx, child, scope)
 	pushClose(ctx, node.tag)
-	for (const template of ctx.templateQueue.pop() ?? []) ctx.out.append(template)
 }
 
 /* === Exported Functions === */
@@ -1557,7 +1580,6 @@ export const emitServerModule = (
 		armCounter: 0,
 		childrenCounter: 0,
 		usedI18nRecord: false,
-		templateQueue: [],
 		foldScope: foldableRenderScope(component),
 		inArmTemplate: false,
 		templateUnbound: new Set(),
@@ -1569,14 +1591,12 @@ export const emitServerModule = (
 	// assembly tail binds the identities directly; the mutable scalars
 	// (`buffer`, the counters, `usedI18nRecord`) stay
 	// ctx-only.
-	const { out, used, composeImports, templateQueue } = ctx
+	const { out, used, composeImports } = ctx
 	const { lines } = out
 
-	// Root-level reactive lists flush their template before the root close.
-	templateQueue.push([])
 	for (const child of component.root.children)
 		emit(ctx, child, component.serverKnown)
-	for (const template of templateQueue.pop() ?? []) out.append(template)
+	emitListTemplates(ctx)
 
 	// Root element opening: only static and server-definitive attributes
 	// render; reactive/event/ref constructs on the root are the client

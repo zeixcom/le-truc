@@ -642,11 +642,11 @@ test('a reactive list beside an arm set queries its own item template', () => {
 		),
 	)
 	expect(diagnostics).toEqual([])
-	// The item template is stamped `data-list` and queried from the
-	// container's parent (ADR 0046 s2) — `first('template')` could never
+	// The item template is stamped `data-list` and queried from the host
+	// (ADR 0046 s2) — `first('template')` could never
 	// tell it from the arm template beside it.
 	expect(component?.clientCode).toContain(
-		'querySelector<HTMLTemplateElement>(\':scope > template[data-list="0"]\')!',
+		'host.querySelector<HTMLTemplateElement>(\':scope > template[data-list="0"]\')!',
 	)
 })
 

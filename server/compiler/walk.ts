@@ -105,10 +105,10 @@ export const armSetOf = (root: TemplateNode, target: TemplateNode): number => {
  * A reactive list's index (ADR 0046 s2): its position among the component's
  * reconcile loops in document order (pre-order, so an outer list precedes
  * the lists nested in its item, LT-424). The server stamps it on the
- * extracted item template (`data-list`) and the client queries it from the
- * list container's parent (`:scope > template[data-list="N"]`), so both
- * emitters derive it from the IR, never from emitter state — the same rule
- * as `armSetOf`, and what lifts the one-list-per-component limit.
+ * extracted item template (`data-list`), hoisted to the host's end, and the
+ * client queries it from the host (`:scope > template[data-list="N"]`), so
+ * both emitters derive it from the IR, never from emitter state — the same
+ * rule as `armSetOf`, and what lifts the one-list-per-component limit.
  */
 export const listIndexOf = (
 	root: TemplateNode,
@@ -126,6 +126,36 @@ export const listIndexOf = (
 		if (node === target.output) found = index
 	})
 	return found
+}
+
+/**
+ * The reactive lists whose item holds `target`, outermost first (ADR 0046
+ * s2): their item and key bindings are unbound wherever `target`'s list
+ * template renders, because that template renders once, at the host's end.
+ * A list is not counted as enclosing its own output.
+ */
+export const enclosingLists = (
+	root: TemplateNode,
+	fors: ReadonlyMap<unknown, ForIR>,
+	target: TemplateNode,
+): ReconcileForIR[] => {
+	const byOutput = new Map<TemplateNode, ReconcileForIR>()
+	for (const loop of fors.values())
+		if (loop.kind === 'reconcile') byOutput.set(loop.output, loop)
+	const search = (
+		node: TemplateNode,
+		stack: ReconcileForIR[],
+	): ReconcileForIR[] | null => {
+		if (node === target) return stack
+		const own = byOutput.get(node)
+		const inner = own ? [...stack, own] : stack
+		for (const child of childNodes(node)) {
+			const found = search(child, inner)
+			if (found !== null) return found
+		}
+		return null
+	}
+	return search(root, []) ?? []
 }
 
 /**

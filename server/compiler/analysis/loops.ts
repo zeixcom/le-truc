@@ -530,7 +530,6 @@ const runReconcileLoops = (
 				tag: component.tag,
 				container: '',
 				listIndex: listIndexOf(component.root, component.fors, loop),
-				parent: '',
 				signal: loop.listSignal,
 				itemParam: loop.itemName,
 				keyParam: loop.keyName,
@@ -582,42 +581,17 @@ const runReconcileLoops = (
 			'one',
 		)
 
-		// The extracted `<template>` sits OUTSIDE the container (after its
-		// close tag), stamped `data-list="N"` (ADR 0046 s2) and queried from
-		// the container's PARENT as `:scope > template[data-list="N"]` — the
-		// direct-child step keeps any other component's markup from answering,
-		// the stamp lifts the one-list-per-component limit. The parent is the
-		// host itself when the container is the root's child.
-		const containerParent = parentOf(container)
-		let parentName: string | null = null
-		if (containerParent === component.root) {
-			shared.ambient.add('host')
-			parentName = 'host'
-		} else if (containerParent) {
-			const resolved = resolveSelector(containerParent)
-			if (!resolved.unique) {
-				diagnostics.push(
-					diagnostic.unaddressableElement(
-						source,
-						containerParent.node,
-						`No unique selector for <${containerParent.tag}>, which holds the ${wording.loop}'s container — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
-					),
-				)
-			} else {
-				parentName = addQuery(
-					sanitizeVarName(containerParent.tag),
-					resolved.selector,
-					'one',
-				)
-			}
-		}
-		if (parentName === null) continue
+		// The extracted `<template>` is a direct child of the host (ADR 0046
+		// s2), queried as `:scope > template[data-list="N"]` — the
+		// direct-child step keeps any other component's markup from
+		// answering, the stamp lifts the one-list-per-component limit.
+		shared.ambient.add('host')
 
 		checkContainerSiblings(shared, loop, container)
 
 		// The extracted template is stamped `data-list="N"` (ADR 0046 s2) and
-		// queried from the container's parent inside the generated `reconcile`
-		// call — no factory query for the template itself, and no
+		// queried from the host inside the generated `reconcile` call — no
+		// factory query for the template itself, and no
 		// one-list-per-component limit: the stamp tells same-container and
 		// sibling lists apart.
 		const listIndex = listIndexOf(component.root, component.fors, loop)
@@ -647,7 +621,6 @@ const runReconcileLoops = (
 			tag: component.tag,
 			container: containerName,
 			listIndex,
-			parent: parentName,
 			signal: loop.listSignal,
 			itemParam: loop.itemName,
 			keyParam: loop.keyName,
