@@ -27,7 +27,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 2. **LT-461 is implementation, not a session.** The owner ruled its design on 2026-10-06, so its
    area flips from `design` to `compiler` and it becomes pickable. LTC081 is reserved for its
    rule 6.
-3. **Compose enablers run one at a time** (track E): LT-460 → LT-470 → LT-481 → LT-482 → LT-461 all change
+3. **Compose enablers run one at a time** (track E): LT-460 → LT-470 → LT-481 → LT-482 → LT-488 → LT-461 all change
    compose-site lowering and its Mount Scope placement. Run in parallel, they would conflict at
    integration.
 4. **LT-463 is split (owner).** Its two sites that need the children contract
@@ -73,15 +73,20 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-481 → LT-482 → LT-461.
-- **S — children-contract spike** — fed the LT-462 session (ruling 10). LT-465.
-- **T — module-todo** — ruling 5. LT-466 → LT-467.
+  LT-481 → LT-482 → LT-488 → LT-461. LT-460 through LT-482 are integrated (2026-10-07); LT-488
+  is next.
+
+  LT-481 and LT-482 joined from the reviews of LT-470 and LT-481: the arm-root pass planning,
+  and the server-only `try` as a server-rendered branch. LT-488 rewords LT-470's remedy for a
+  `try` site.
+- **S — children-contract spike** — fed the LT-462 session (ruling 10). LT-465. Done.
+- **T — module-todo** — ruling 5. LT-466 → LT-467. Done (2026-10-07).
 - **G — layout graph** — the variant sets `main.ts` still registers through their `.ts` twins,
-  so `test:variants` has never measured their compiled clients. Before LT-463, which converts
-  them. LT-485.
+  so `test:variants` has never measured their compiled clients (found in LT-467's rework). It
+  runs before LT-463, which converts them; LT-463 needs it. LT-485. Pickable now.
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469.
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
-- **K — composition** — after tracks E and T (ruling 4). LT-463.
+- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463.
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
@@ -98,7 +103,8 @@ census by design, and LT-246, which needs a settled census. The fetched-partials
 **Exit criterion.** Every chain task except the two design sessions is reviewed and
 integrated. LT-462 has ruled into ADR 0048, or its open state is recorded here (ruling 7). The
 compiled corpus composes every site LT-463 names, and every example folder is served compiled,
-section-menu included. No compose-lowering miscompile LT-460, LT-470, LT-481 or LT-482 names remains. The tier
+section-menu included, and `examples/main.ts` registers no variant set through its `.ts` twin
+(LT-485). No compose-lowering miscompile LT-460, LT-470, LT-481 or LT-482 names remains. The tier
 census and the warning baseline are unchanged from the opening measurement below, except where
 a task states a by-design change: LT-469 adds `section-menu: folded`, LT-467 removes
 basic-pluralize's entry, and LT-093 may move components from Simulated to Folded. The warning
@@ -112,7 +118,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-488.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-489.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -125,6 +131,35 @@ LTC056 is LT-358's).
 <!-- entries -->
 
 ### E — compose enablers
+
+- [ ] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy.
+  **Area:** compiler
+  **Needs:** LT-482
+  **Gates:** test:server
+  **Area:** compiler
+  **Needs:** LT-482
+  **Filed (Architect, 2026-10-07, from LT-482's review):** LT-482 made a server-only `try`'s body
+  and catch arm server-rendered branches, so a `truc:pass` compose there now draws LT-470's
+  LTC005 from `validateArmSetPlacement`. The fix part reads "make the condition reactive: the
+  composed child then renders as its arm's root". A `try` has no condition, and the actual
+  remedies differ by arm:
+  - **catch arm:** add a pending arm (`@pending` / `pending={…}`). The `try` then becomes an
+    async boundary, whose catch root plans its pass entries (LT-481).
+  - **body:** no in-boundary remedy. An async boundary's ok arm cannot have a compose root (the
+    task read must sit on an element root). Move the compose out of the `try`, or wrap it in an
+    element and pass from a reactive conditional inside.
+  **Change:** in `validateArmSetPlacement`, track which enclosure set `inServerBranch` (a
+  server `conditional`, or a `try`'s body vs its catch arm). Word the refusal per enclosure
+  and keep the subject head "A `truc:pass` onto a composed child in a server-rendered branch":
+  - conditional: today's fix, unchanged;
+  - try body: "the `try` renders its body once per render, and its body cannot hold the pass;
+    move the composed child out of the `try`";
+  - try catch arm: "add a pending arm, which makes the `try` an async boundary whose catch arm
+    binds the pass".
+  Write the copy against `writer/references/error-messages.md` (three parts, tier 1).
+  **Check:** LT-482's tests assert the per-arm fix text on both surfaces. LT-470's conditional
+  tests are unchanged. The `errors.md` LTC005 face gains the `try` remedy in its parenthesis.
+  **Channel/tier:** compiler message copy only; tier 1 Prevented; no runtime check.
 
 - [ ] LT-461: Handler args — an `on`-prefixed function arg the child places on an owned element lowers to a parent-side `on()`.
   **Area:** compiler
@@ -173,7 +208,101 @@ LTC056 is LT-358's).
   LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
   converted list remove button.
 
+- [ ] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy.
+  **Area:** compiler
+  **Needs:** LT-482
+  **Gates:** test:server
+  **Area:** compiler
+  **Needs:** LT-482
+  **Filed (Architect, 2026-10-07, from LT-482's review):** LT-482 made a server-only `try`'s body
+  and catch arm server-rendered branches, so a `truc:pass` compose there now draws LT-470's
+  LTC005 from `validateArmSetPlacement`. The fix part reads "make the condition reactive: the
+  composed child then renders as its arm's root". A `try` has no condition, and the actual
+  remedies differ by arm:
+  - **catch arm:** add a pending arm (`@pending` / `pending={…}`). The `try` then becomes an
+    async boundary, whose catch root plans its pass entries (LT-481).
+  - **body:** no in-boundary remedy. An async boundary's ok arm cannot have a compose root (the
+    task read must sit on an element root). Move the compose out of the `try`, or wrap it in an
+    element and pass from a reactive conditional inside.
+  **Change:** in `validateArmSetPlacement`, track which enclosure set `inServerBranch` (a
+  server `conditional`, or a `try`'s body vs its catch arm). Word the refusal per enclosure
+  and keep the subject head "A `truc:pass` onto a composed child in a server-rendered branch":
+  - conditional: today's fix, unchanged;
+  - try body: "the `try` renders its body once per render, and its body cannot hold the pass;
+    move the composed child out of the `try`";
+  - try catch arm: "add a pending arm, which makes the `try` an async boundary whose catch arm
+    binds the pass".
+  Write the copy against `writer/references/error-messages.md` (three parts, tier 1).
+  **Check:** LT-482's tests assert the per-arm fix text on both surfaces. LT-470's conditional
+  tests are unchanged. The `errors.md` LTC005 face gains the `try` remedy in its parenthesis.
+  **Channel/tier:** compiler message copy only; tier 1 Prevented; no runtime check.
+
+- [ ] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy.
+  **Area:** compiler
+  **Needs:** LT-482
+  **Gates:** test:server
+  **Area:** compiler
+  **Needs:** LT-482
+  **Filed (Architect, 2026-10-07, from LT-482's review):** LT-482 made a server-only `try`'s body
+  and catch arm server-rendered branches, so a `truc:pass` compose there now draws LT-470's
+  LTC005 from `validateArmSetPlacement`. The fix part reads "make the condition reactive: the
+  composed child then renders as its arm's root". A `try` has no condition, and the actual
+  remedies differ by arm:
+  - **catch arm:** add a pending arm (`@pending` / `pending={…}`). The `try` then becomes an
+    async boundary, whose catch root plans its pass entries (LT-481).
+  - **body:** no in-boundary remedy. An async boundary's ok arm cannot have a compose root (the
+    task read must sit on an element root). Move the compose out of the `try`, or wrap it in an
+    element and pass from a reactive conditional inside.
+  **Change:** in `validateArmSetPlacement`, track which enclosure set `inServerBranch` (a
+  server `conditional`, or a `try`'s body vs its catch arm). Word the refusal per enclosure
+  and keep the subject head "A `truc:pass` onto a composed child in a server-rendered branch":
+  - conditional: today's fix, unchanged;
+  - try body: "the `try` renders its body once per render, and its body cannot hold the pass;
+    move the composed child out of the `try`";
+  - try catch arm: "add a pending arm, which makes the `try` an async boundary whose catch arm
+    binds the pass".
+  Write the copy against `writer/references/error-messages.md` (three parts, tier 1).
+  **Check:** LT-482's tests assert the per-arm fix text on both surfaces. LT-470's conditional
+  tests are unchanged. The `errors.md` LTC005 face gains the `try` remedy in its parenthesis.
+  **Channel/tier:** compiler message copy only; tier 1 Prevented; no runtime check.
+
 ### G — layout graph
+
+- [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
+  **Area:** examples
+  **Needs:** LT-460, LT-461, LT-466, LT-467, LT-485
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
+  child component's markup by hand (`<basic-button><button>…</button></basic-button>`) instead of
+  composing it (`<BasicButton … />`), duplicating markup the child owns. Composition is allowed
+  to be raw, but the corpus should model ownership: the child's template renders its markup, the
+  parent passes args, `class` discriminators and `truc:pass`. Convert each site below in every
+  variant-set member (`.tsx` and `.tsrx` twin together; CSS must stay byte-identical, ADR 0039);
+  the `.ts` twins are hand-written runtime sources and stay as they are.
+  **Sites:**
+  - `module-lazyload` — pending/catch callouts → `<CardCallout>` / `<CardCallout kind="danger">`
+    (needs LT-460).
+  - `module-dialog`, `module-splitview` — `<module-scrollarea>` → `<ModuleScrollarea>`; no parent
+    reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
+    documented reason stands).
+  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers become
+    `onClick` args (LT-461).
+  - `module-list`, `module-todo` — submit buttons and list-item remove buttons → `<BasicButton>`
+    with `type`, `ariaLabel` and `onClick` args (LT-461). `module-todo`'s clear-completed → `<BasicButton>` with its
+    existing `truc:pass`.
+  - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
+    `class="split-button"`.
+  `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
+  in prose.
+  **Split (owner, planning 2026-10-06):** the two sites that need the children contract —
+  `module-codeblock`'s `<module-scrollarea>` and `module-todo`'s `<form-checkbox>` with its label as
+  children — moved to LT-462's implementation tasks. Leave both raw here. `module-todo` is touched
+  after LT-466 and LT-467 land, so the three edits to it run in sequence.
+  **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
+  or changes the rendered DOM or a spec's expectation beyond the composed root's attributes,
+  stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
+  **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
 
 - [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
   **Area:** examples

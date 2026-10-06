@@ -546,74 +546,36 @@ Full entry text: `git log -p -- DONE.md`.
   **Review:** Approved. The review probed list-item nesting: a reactive arm root and a pending
   root passing `() => item.get()` both bind.
 
-- [x] LT-482: A server-only `@try` is a server-rendered branch the plan walks don't treat as one — a `truc:pass` compose in its body compiles clean and never binds. — done, pending review ⏳
+- [x] LT-482: A server-only `@try` is a server-rendered branch the plan walks don't treat as one — a `truc:pass` compose in its body compiles clean and never binds. — reviewed ✓
   **Area:** compiler
   **Needs:** LT-470
   **Gates:** test:server
   **Area:** compiler
-  **Needs:** LT-470
-  **Filed (Architect, 2026-10-06, from LT-470's rework residue, reproduced in review):** a `try`
-  with no `pending` arm is not an arm set (`hasArmSet` in `server/compiler/walk.ts`): the server
-  folds it once per render into its body or its catch arm. Both are server-rendered branches,
-  but LT-470's host refusal (`validateArmSetPlacement`) keys `inServerBranch` on a
-  `conditional` with `mode === 'server'` only, so `@try { <BasicChild truc:pass={…} /> } @catch
-  (e) { … }` at the host compiles with no diagnostic and emits no `pass()`. The silent drop
-  LT-470 closed for `@if` is still open one node kind over. The item walk
-  (`planReconcileItem`'s `visitElements`) recurses only into server `conditional` arms, so
-  inside a reactive-list item a server-only `try` is not descended at all. That walk also
-  carries LT-468's construct refusal, so constructs there may be unplanned too.
-  **Ruling (Architect):** a server-only `try`'s body and catch arm are server-rendered branches
-  in every walk that tracks one. LT-468's and LT-470's refusals apply to them unchanged, with
-  the same wording and remedy. No new diagnostic family and no new code.
-  **Probe first:** probe the shapes below on both surfaces where the surface can spell a
-  server-only boundary, and record what each one does today in this entry: (a) a `truc:pass`
-  compose in a server-only `try` at the host; (b) the same inside a reactive-list item; (c) a
-  client construct (reactive attribute, handler) on an element in a server-only `try` inside an
-  item; (d) the same at the host; (e) a compose site as the root of a server-only `try`'s body or
-  catch arm carrying `truc:pass` (LT-481's residue: `handleOptionalBranch` filters `isElement`
-  and never sees a compose root, so the entries compile clean and never bind; probed live by
-  LT-481's author). A shape that is already refused, or that already plans
-  correctly, stays as it is. Fix only the shapes the probe shows silently unplanned or throwing
-  at mount.
-  **Change:** at the host, set `inServerBranch` for a `try` that is not an arm set. In the item
-  walk, descend a server-only `try`'s body and catch children with `inBranch = true`, the way it
-  descends server `conditional` arms. Mirror the item walk's key-attribute descent
-  (`collectKeySites`, `collectBranchKeyAttrs`) only if the probe shows a key-derived attribute
-  there is lost.
-  Shape (e) is a fold-fixed branch like the others, so it takes LT-470's refusal. A server-only
-  `try` arm is not an arm mount, so LT-481's arm-mount planning does not reach it.
-  **Check:** each probed shape the change touches gets a both-surface test: refused with the
-  LT-468/LT-470 message, or bound. A pass-less compose in a server-only `try` still compiles.
-  Add a CHANGELOG Fixed line only if a shape that was silently dropped now fails the compile.
-  **Channel/tier:** compiler check, tier 1 Prevented; no runtime check.
-  **Probe (2026-10-07, both surfaces agree on every shape):**
-  (a) pass compose in a server-only `try` at the host — compiles clean, no query, no `pass()`:
-  **silently unplanned → fixed** (the refusal below now fires).
-  (b) the same inside a reactive-list item — **already refused**: `validateListBody`
-  (`lower-shared.ts`) refuses any server-only `try` inside a reactive-list body outright
-  ("A boundary inside a reactive-list `@for` body is outside the supported subset"), so the
-  shape never reaches the item walk. Stays as is.
-  (c) a client construct on an element in a server-only `try` inside an item — **already
-  refused** by the same `validateListBody` boundary refusal (the `try` itself is the offense;
-  the walk's descent misses nothing because no `try` survives the front end anywhere in an
-  item, its `@empty` arms excepted — probed separately, also refused: "A client construct …
-  inside an `@empty` arm"). Stays as is. The entry's Change clause premised the item-walk
-  descent on the `try` reaching `planReconcileItem`; the probe disproves that premise, so the
-  descent is **not added** (it would be dead code behind `validateListBody`'s refusal).
-  (d) a client construct on an element in a server-only `try` at the host — **already plans
-  correctly**: `handleOptionalBranch` lowers the guarded shape (`first('em', …, 'maybe')` +
-  `if (em) { on(em, 'click', …) }`). Stays as is.
-  (e) a compose site as the root of the body or catch arm carrying `truc:pass` — compiles
-  clean, entries never bind (LT-481's residue, reproduced): **silently unplanned → fixed** by
-  the same flag (the host walk reaches compose roots through `childNodes`).
-  Also probed: a pass compose in a server-only `try` nested in a reactive conditional's arm —
-  already refused (`unmountableInArm`); a reactive list in a server-only `try` body at the
-  host — already refused (`handleOptionalBranch`'s deep-construct check). No key-derived
-  attribute is lost anywhere: key names are in scope only inside the item walk, where no
-  `try` survives the front end.
+  **Filed (Architect, 2026-10-06, from LT-470's rework residue; widened by LT-481's residue 1):**
+  a `try` with no `pending` arm is not an arm set. It folds once per render into its body or its
+  catch arm, but the walks treated only server `conditional`s as server-rendered branches.
+  **Ruling (Architect):** a server-only `try`'s body and catch arm are server-rendered branches,
+  so LT-468's and LT-470's refusals apply unchanged.
 
-  **Changed:** a server-only `@try` (no `pending` arm) now sets the host walk's `inServerBranch` flag in `validateArmSetPlacement`, so a `truc:pass`-carrying compose in its body or catch arm fails the compile with LT-470's exact message and remedy (LTC005, tier 1 Prevented) instead of compiling clean with the entries silently unplanned. The pass-less compose stays legal and renders. No new diagnostic, no runtime check.
+  **Probe (both surfaces agree on every shape):** (a) a pass compose in a server-only `try` at
+  the host compiled clean and never bound: fixed. (b) and (c), a pass compose or a client
+  construct in a server-only `try` inside a reactive-list item: already refused, because
+  `validateListBody` (`lower-shared.ts`) refuses any boundary in a reactive-list body, so no
+  `try` reaches the item walk and the entry's item-walk descent would be dead code (not added).
+  (d) a client construct in a server-only `try` at the host: already plans the guarded binding
+  through `handleOptionalBranch`. (e) a compose as the body or catch-arm root carrying
+  `truc:pass`: compiled clean and never bound, fixed by the same change. Also already refused:
+  a pass compose in a server-only `try` nested in a reactive arm (`unmountableInArm`), and a
+  reactive list in a server-only `try` body.
 
-  **How:** the probe (recorded in `queue/LT-482.md`, both surfaces agreeing on every shape) showed only two of the five listed shapes silently unplanned — (a) a pass compose in a server-only `try` at the host and (e) a compose as the body/catch-arm root (LT-481's residue, reproduced). One flag line in `validateArmSetPlacement` fixes both, since the walk reaches compose roots through `childNodes`. The entry's Change clause premised the item-walk descent on a server-only `try` reaching `planReconcileItem`; the probe disproves that premise — `validateListBody` (`lower-shared.ts`) refuses any server-only `try` inside a reactive-list body outright, and the other placements are refused too (`unmountableInArm` in a reactive arm, the deep-construct check under a try root, the `@empty`-arm refusal) — so the descent and the key-attribute mirroring are deliberately **not added** (dead code behind the front-end refusal). Shapes (b), (c) were already refused; (d) already plans the guarded binding (`first(…, 'maybe')` + `if (em) { on(…) }`). Docs updated in the same change: `LE_TRUC_COMPILER.md`'s LT-470 sentence now enumerates the host's server branches including the server-only `try`'s arms; CHANGELOG Fixed line added (a silently-dropped shape now fails the compile, per the entry's Check).
+  **Changed:** `validateArmSetPlacement` sets `inServerBranch` for a `try` that is not an arm
+  set, so (a) and (e) fail the compile with LT-470's message (LTC005). A pass-less compose in a
+  `try` stays legal and renders. The refusal fires once per offending compose site.
+  LE_TRUC_COMPILER.md's LT-470 sentence names the server-only `try`'s arms. CHANGELOG Fixed
+  entry. Tests in `server/tests/compiler/mount-scopes.test.ts`.
 
-  **Check:** `test:server` 3412 pass / 0 fail after `build:docs` (the worktree's first run drew 27 fails, all serve/route tests, from the fresh-worktree no-`docs/` hazard — gone once built; unrunnable-gate rule not invoked). `lint:server` no fixes; `typecheck`, `check:contract` (public contract holds), `check:corpus` (42 components, 0 translation gaps), `check:links` (771 links) all green. New both-surface tests in `mount-scopes.test.ts`: body-root and catch-arm-root composes refused with the LT-470 message and nothing minted, a pass-less compose compiling and rendering. Doubt for review: the refusal fires once per offending compose site — a compose root in each arm draws two LTC005s (pinned by count parity across surfaces, not by an exact count).
+  **Handoffs:** LT-488 rewords the remedy for a `try` site. "Make the condition reactive" names
+  a condition a `try` does not have.
+
+  **Review:** Approved. The ruling's "same wording and remedy" was the Architect's error for a
+  `try` and is not held against the task; LT-488 corrects it.
