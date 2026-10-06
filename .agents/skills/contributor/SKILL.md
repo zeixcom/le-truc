@@ -58,7 +58,8 @@ Run the area's gates before you mark a task done. Add any that the task's `gates
 - **Run gates inside the worktree** as `bun run --cwd <worktree> <script>` or `bun test --cwd <worktree> <paths>`. Never `bun --cwd <worktree> run <script>`: bun silently runs nothing and exits 0.
 - **The lint scripts run `biome --write`** over whole trees. Rewrites outside your changed paths become residue that integration refuses, so check with `bunx biome check <paths>` and write only your own paths.
 - **A fresh worktree has no built `docs/`.** Run `bun run --cwd <worktree> build:docs` before a gate that reads it (`check:links`, the `test:server` serve tests).
-- **Give each gate at most 10 minutes.** One that hangs on a port or a server that never becomes ready is unrunnable, not something to wait out.
+- **Browser gates run outside the sandbox only in their bare form.** Chromium and WebKit cannot launch inside Claude Code's sandbox: every test times out in `beforeEach`. The owner's `sandbox.excludedCommands` exempts commands that *start with* `bun run test:component `, `bun run test:variants `, `node node_modules/.bin/playwright ` or `bunx playwright `. A prefix (`cd … &&`, `timeout …`, `--cwd <worktree>`) breaks the match, and `bun run test` is not listed. So first set the shell's directory with a call that is only `cd <worktree>` (it persists), then run the bare command, e.g. `bun run test:component form-inplace-edit`; for the `bun run test` gate run `bun test src/tests` and `node node_modules/.bin/playwright test examples` separately. Only a browser gate that still fails this way is unrunnable.
+- **Give each gate at most 5 minutes.** One that hangs on a port or a server that never becomes ready is unrunnable, not something to wait out.
 
 The **full gate**, required before an iteration milestone, is: `typecheck`, the server suite, `check:contract`, `check:corpus`, `build:docs` and `check:links`, all green on one commit.
 
