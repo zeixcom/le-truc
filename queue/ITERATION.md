@@ -84,7 +84,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **G — layout graph** — the variant sets `main.ts` still registers through their `.ts` twins,
   so `test:variants` has never measured their compiled clients (found in LT-467's rework). It
   runs before LT-463, which converts them; LT-463 needs it. LT-485. Pickable now.
-- **M — section-menu** — the last uncompiled example folder, beside everything. LT-469.
+- **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done (2026-10-07).
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
 - **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463.
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
