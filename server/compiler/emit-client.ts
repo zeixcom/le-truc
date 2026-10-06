@@ -1092,6 +1092,8 @@ export const emitClientModule = (
 		// an object result or a bare `{e}` is a tsc error at its child.
 		// The boundary plans exactly three arms — `[ok, nil, err]`.
 		const okArm = plan.arms[0] as ArmPlan
+		const nilArm = plan.arms[1] as ArmPlan
+		const errArm = plan.arms[2] as ArmPlan
 		const okViaHtml = okArm.effects.some(e => e.kind === 'watch-html')
 		out.open(`if (${plan.keyParam} === 'ok') {`)
 		if (okArm.root) {
@@ -1117,27 +1119,49 @@ export const emitClientModule = (
 				),
 			)
 		}
-		if (boundary.errText !== null) {
-			const bindText = imports.use('bindText')
-			const errArm = plan.arms[2] as ArmPlan
+		// LT-481: the pending and catch arms can be compose sites whose
+		// `truc:pass` entries plan in the arm's mount — their branches mount
+		// like any arm's, the pass swapping the signal into the child's slot
+		// until the arm flips and its effects are disposed.
+		if (nilArm.effects.length > 0) {
+			out.between(`} else if (${plan.keyParam} === 'nil') {`)
+			if (nilArm.root) {
+				needsElementType = true
+				out.line(
+					`const ${nilArm.root.name} = ${plan.elementParam} as ElementFromSelector<${jsString(nilArm.root.tag)}>`,
+				)
+			}
+			for (const inner of nilArm.effects) emitTopEffect(inner)
+		}
+		if (boundary.errText !== null || errArm.effects.length > 0) {
 			out.between(`} else if (${plan.keyParam} === 'err') {`)
+			if (errArm.root) {
+				needsElementType = true
+				out.line(
+					`const ${errArm.root.name} = ${plan.elementParam} as ElementFromSelector<${jsString(errArm.root.tag)}>`,
+				)
+			}
 			for (const local of errArm.locals)
 				out.line(
 					`const ${local.name} = first(${jsString(local.selector)}, ${jsString(local.message)})`,
 				)
-			// The nested message element (LT-449) writes through its arm-
-			// scoped local; the depth-0 channel keeps writing the arm root.
-			const target = errArm.locals[0]?.name ?? plan.elementParam
-			const sink = `${bindText}(${target})(`
-			out.line(
-				`${watch}(${boundary.signal}, { ok: () => {}, err: error => ${sink}${boundary.errText}) })`,
-				boundary.errStart === undefined
-					? []
-					: [
-							{ text: sink, start: boundary.errStart },
-							{ text: boundary.errText, start: boundary.errStart },
-						],
-			)
+			for (const inner of errArm.effects) emitTopEffect(inner)
+			if (boundary.errText !== null) {
+				const bindText = imports.use('bindText')
+				// The nested message element (LT-449) writes through its arm-
+				// scoped local; the depth-0 channel keeps writing the arm root.
+				const target = errArm.locals[0]?.name ?? plan.elementParam
+				const sink = `${bindText}(${target})(`
+				out.line(
+					`${watch}(${boundary.signal}, { ok: () => {}, err: error => ${sink}${boundary.errText}) })`,
+					boundary.errStart === undefined
+						? []
+						: [
+								{ text: sink, start: boundary.errStart },
+								{ text: boundary.errText, start: boundary.errStart },
+							],
+				)
+			}
 		}
 		out.close()
 		out.close('})')

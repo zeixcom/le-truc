@@ -1757,6 +1757,34 @@ const handleAsyncBoundary = (
 			message: `the ${wording.catchArm}'s message element`,
 		})
 	}
+	// LT-481: a compose arm root's `truc:pass` entries plan in the arm's
+	// mount against the arm element parameter. The ok arm is absent here on
+	// purpose: a compose try-body root cannot reach planning at all — the
+	// driver detection above refuses a try body with no lazy-child or
+	// `truc:html` channel, and a compose root has neither.
+	const nilArm = arm('nil')
+	if (pendingRoot.kind === 'compose') {
+		const pendingTag = composeArmRootTag(fx, pendingRoot)
+		planArmRootComposePass(
+			fx,
+			pendingRoot,
+			uniqueName(usedNames, sanitizeVarName(pendingTag)),
+			nilArm,
+			badNames,
+			`a ${wording.boundary}`,
+		)
+	}
+	if (errRoot.kind === 'compose') {
+		const errTag = composeArmRootTag(fx, errRoot)
+		planArmRootComposePass(
+			fx,
+			errRoot,
+			uniqueName(usedNames, sanitizeVarName(errTag)),
+			errArm,
+			badNames,
+			`a ${wording.boundary}`,
+		)
+	}
 	;(scope?.sink ?? fx.effects).push({
 		kind: 'arms',
 		arms: {
@@ -1767,7 +1795,7 @@ const handleAsyncBoundary = (
 			sourceStart: undefined,
 			elementParam: uniqueName(usedNames, 'armElement'),
 			keyParam: uniqueName(usedNames, 'armKey'),
-			arms: [okArm, arm('nil'), errArm],
+			arms: [okArm, nilArm, errArm],
 			boundary: {
 				signal,
 				errText,
@@ -1916,6 +1944,78 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 		checkPassEntries(fx, entries, childTag, node.node)
 		emitPassEntries(fx, entries, query)
 	}
+}
+
+/**
+ * An arm root compose site's rendered tag (LT-460): the child's registry
+ * tag, or the authored component name while compose resolution is skipped
+ * (the registry-discovery pass, which plans nothing against the site).
+ */
+const composeArmRootTag = (fx: EffectsContext, node: ComposeNode): string =>
+	fx.composeRefs.mode === 'resolved'
+		? (fx.composeRefs.registry.get(node.source)?.tag ?? node.component)
+		: node.component
+
+/**
+ * A compose site as an arm root carrying client addressing (LT-481): its
+ * `truc:pass` entries plan as `pass()` effects in the arm's mount against
+ * the arm element parameter — the arm root IS the child's rendered
+ * element, so no query or local is minted. Same entry lowering as a
+ * host-level or item-level compose: `checkPassEntries` plus
+ * `emitPassEntries`, no fork. A `first()` on the site stays refused — the
+ * arm is adopted or cloned afresh on every flip, so a connect-time
+ * reference goes stale, the same trap the reactive-list item walk refuses
+ * (LT-423) — while an ambiguous `first()` keeps LTC027 as its one
+ * diagnostic. Registry-discovery tolerance (LT-015): that pass has no
+ * `composeRegistry` and needs only this component's own entry, so a site
+ * it cannot resolve says nothing. `where` names the arm set in the
+ * refusal's subject.
+ */
+const planArmRootComposePass = (
+	fx: EffectsContext,
+	node: ComposeNode,
+	rootName: string,
+	plan: ArmPlan,
+	badNames: (node: AstNode) => string[],
+	where: string,
+): void => {
+	if (fx.composeRefs.mode === 'skipped') return
+	const { registry, ambiguous } = fx.composeRefs
+	const childTag = registry.get(node.source)?.tag ?? null
+	if (!childTag) {
+		fx.diagnostics.push(
+			diagnostic.composedComponentNotCompiled(
+				fx.source,
+				node.node,
+				node.component,
+				node.source,
+			),
+		)
+		return
+	}
+	const refAttr = refOf(node)
+	if (refAttr && !ambiguous.has(node))
+		fx.diagnostics.push(
+			diagnostic.unsupported(
+				fx.source,
+				node.node,
+				`A \`first()\` reference to <${childTag}> as the root of an arm of ${where}`,
+				"The arm is adopted or cloned afresh on every flip, so a reference taken at connect goes stale — pass the child its props with `truc:pass` instead: its entries plan in the arm's mount.",
+			),
+		)
+	const passAttrs = node.attrs.filter(
+		(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
+			a.kind === 'pass',
+	)
+	if (passAttrs.length === 0) return
+	const entries = passAttrs.flatMap(a => a.entries)
+	checkPassEntries(fx, entries, childTag, node.node)
+	// Type-flow import: the composed child's tag-map augmentation must
+	// reach the client module even though no factory query names it.
+	if (childTag !== fx.component.tag && fx.registry.has(childTag))
+		fx.childTags.add(childTag)
+	plan.root = { name: rootName, tag: childTag }
+	emitPassEntries(fx, entries, rootName, plan.effects, badNames)
 }
 
 /**
@@ -2531,11 +2631,7 @@ const handleReactiveConditional = (
 		// A compose arm root renders the child's own tag; the arm mount's
 		// typed local (when anything reads it) casts to that element.
 		const rootTag =
-			root.kind === 'compose'
-				? fx.composeRefs.mode === 'resolved'
-					? (fx.composeRefs.registry.get(root.source)?.tag ?? root.component)
-					: root.component
-				: root.tag
+			root.kind === 'compose' ? composeArmRootTag(fx, root) : root.tag
 		const rootName = uniqueName(usedNames, sanitizeVarName(rootTag))
 		plan.root = { name: rootName, tag: rootTag }
 		let rootUsed = false
@@ -2568,6 +2664,18 @@ const handleReactiveConditional = (
 		if (root.kind === 'element') {
 			emitConstructEffects(fx, root, rootName, plan.effects, badNames)
 			collectKeyAttrs(fx, armScope, root)
+		} else {
+			// LT-481: the arm root IS the child's rendered element — its
+			// `truc:pass` entries plan in the arm's mount against the arm
+			// element parameter, and a `first()` on the site stays refused.
+			planArmRootComposePass(
+				fx,
+				root,
+				rootName,
+				plan,
+				badNames,
+				'a condition that reads a signal',
+			)
 		}
 		const visitDescendants = (el: ElementNode): void => {
 			for (const child of el.children) {

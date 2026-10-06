@@ -544,7 +544,13 @@ A `truc:pass`-carrying compose in such a branch is refused too (LT-470):
 the item walk refuses it at the local-minting site in `collectCompose`, and
 the arm-set placement walk refuses it for the host's own server branches,
 where the branch handlers never reach a compose node and the entries would
-be silently unplanned.
+be silently unplanned. A compose site as an ARM root is the sanctioned
+shape (LT-460): since LT-481 its `truc:pass` entries plan as `pass()`
+effects in the arm's mount against the arm element parameter — the arm root
+IS the child's rendered element, so no query or local is minted (same
+`checkPassEntries` + `emitPassEntries` lowering as every other compose
+path) — and a `first()` on the site is refused, the arm being recreated on
+every flip.
 Every plan node carries source spans for the remapping tables.
 The passes run as functions over a typed shared environment (`PassShared` —
 the order-carrying accumulators: queries, used names, ambients, child tags,
