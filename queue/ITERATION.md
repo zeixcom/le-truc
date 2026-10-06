@@ -56,6 +56,11 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
     Track C serializes after track E (LT-472 needs LT-461), because the region marker changes
     compose-site lowering (ruling 3). LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477.
+11. **LT-471 ruled D-32 (owner, 2026-10-06).** There is one published entry point, the corpus
+    pass. It writes to `outDir`. `RegistryEntry` is narrowed to a public projection, and the
+    generated-module API is under semver (`argsFromAttrs` excluded). The reshape is LT-480,
+    banded P1. It opens the next iteration ahead of LT-254 and stays out of this chain, because
+    P1 waits for this round.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0, unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -79,9 +84,9 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282.
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
-  LT-471 (D-32, any time).
+  LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
 
-**Deliberately not here.** P1 waits for this round: LT-254 now also needs LT-471. The
+**Deliberately not here.** P1 waits for this round: LT-254 now also needs LT-471 (ruled) and LT-480, its reshape, banded P1. The
 CSS-departures cluster (LT-405, LT-407, LT-408 behind the LT-409 session) and the rest of P2b
 stay in the backlog. So do LT-381, which needs the owner's sign-off because it changes the
 census by design, and LT-246, which needs a settled census. The fetched-partials sessions
@@ -104,7 +109,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-480.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-481.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

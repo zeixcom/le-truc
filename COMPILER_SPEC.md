@@ -133,7 +133,7 @@ The corpus pass is the one stage that sees more than one component; the dashed a
 
 Incremental builds therefore MUST invalidate per module **and** along compose edges. A catalog change MUST NOT re-run the front end.
 
-**Dev loop.** The compiler SHOULD expose a per-module incremental API that watch mode and HMR build on. Whether Bun and Vite plugins are first-party is open (O-8).
+**Dev loop.** The compiler SHOULD expose a per-module incremental API that watch mode and HMR build on. It is not part of the 3.0 contract; it ships later as an additive minor next to the corpus entry point (D-32). Whether Bun and Vite plugins are first-party is open (O-8).
 
 **Engine.** v1 builds on the TypeScript 6 compiler API. TypeScript 7 shipped without a stable programmatic API (expected in 7.1). Supporting it, and native parsers after that, is a stated goal. So `ts.Node` and all TypeScript types MUST stay out of every public contract. Parser access is confined to one converter leaf (ADR 0032 s4; O-2, answered).
 
@@ -580,15 +580,23 @@ Emitted bytes are not contract. Everything else under the compiler is internal.
 | Published | Role |
 | --- | --- |
 | The host-profile TSX dialect, versioned | What authors write and adapters target; grows only through the ADR 0041 gate |
-| `compileComponentTsx(source, { sourceMap? })` | The one entry point |
-| `CompileFileResult`, `CompiledComponent`, `RegistryEntry` | The consumer half |
+| The corpus entry point (`compileCorpus(config)`) | The one entry point: compiles a whole corpus and writes the artifacts to `outDir` |
+| The corpus result, `RegistryEntry` (public projection) | The consumer half: diagnostics and the registry the run wrote |
 | `CompileDiagnostic`, `DiagnosticCode`, `DiagnosticLocation`, `DiagnosticFix`, `DiagnosticEdit` | Diagnostics (ADR 0044) |
-| `EmitPaths`, `le-truc.config.json` | Emit-path facts and the configuration surface |
-| The generated-module API | `render<Name>`, the client default export, the manifest |
+| `le-truc.config.json` and its type | The configuration surface (ADR 0036) |
+| The generated-module API | `render<Name>`, the client module's default export, the `i18n` module's shape, the `registry.json` schema |
+
+**The entry point is the corpus, not the file** (D-32, owner 2026-10-06). A component's artifacts depend on other components (section 2): compose legality, tier contamination over the compose graph, variant sets. A per-file entry point would hand every consumer that orchestration to rebuild, and one that skips the contamination fixpoint ships wrong tiers without an error. So the published entry point runs both corpus passes and writes the artifacts, `registry.json` and the `i18n` modules to the configured `outDir`. It returns the diagnostics and a summary; the artifacts are files, not return values. `compileComponentTsx`, the per-file front end, stays internal. The incremental API (section 2, O-8) is not part of 3.0; when it ships it is an additive minor.
+
+**`RegistryEntry` is narrowed, not widened.** The public type carries the fields a consumer reads: the tag, the component name, the module paths, the CSS path, the props type, `exposedProps`, the tier and the composed tags. The fields only the compiler reads (`renderedShapes`, `suppressedSites`, `composeReadTags`, `routingSignals`) stay on an internal type, so `RenderedShape` (an IR type, D-25) and `SuppressedSite` (behind the simulation seam, ADR 0035) never become public. The public projection is also the `registry.json` schema.
+
+**The generated-module API is under semver** (ADR 0034 s8 stands). It covers names and signatures, never bytes: `render<Name>` in each `*.server.ts`, the client module's default export, the `i18n` module's shape and the `registry.json` schema. A rename, a removal or a tightened signature is a major. `argsFromAttrs` is internal: only the compiler's own composition and audit code calls it. Making it public later is a minor.
+
+**The input source map for adapters needs no new public signature.** An adapter writes host-profile `.tsx` with a `.tsx.map` sidecar next to it, and the corpus entry point picks the sidecar up (LT-376).
 
 ## 13. Decision log
 
-33 decisions, after the team review of 2026-10-01: 29 Ratified (D-16 and D-23 superseded by ADR 0043 while Proposed; nine more endorsed and recorded the same day), 1 Endorsed (D-01, whose REQUIREMENTS wording waits for O-9), 1 Parked (D-04) and 2 Deferred to design sessions (D-28, D-32). Open questions are in section 15.
+33 decisions, after the team review of 2026-10-01: 30 Ratified (D-16 and D-23 superseded by ADR 0043 while Proposed; nine more endorsed and recorded the same day; D-32 at its design session on 2026-10-06), 1 Endorsed (D-01, whose REQUIREMENTS wording waits for O-9), 1 Parked (D-04) and 1 Deferred to a design session (D-28). Open questions are in section 15.
 
 | # | Decision | Status | Source | § |
 | --- | --- | --- | --- | --- |
@@ -623,7 +631,7 @@ Emitted bytes are not contract. Everything else under the compiler is internal.
 | D-29 | Readable, ejectable client; harvested state; connect is a fixed point | Ratified | ADR 0024, 0027 | 10 |
 | D-30 | Structured, source-mapped diagnostics; JSON and SARIF | Ratified — endorsed 2026-10-01 and recorded | ADR 0044 | 11.2 |
 | D-31 | Compiler first, runtime backstop (tiered surfacing) | Ratified | ADR 0028 | 11.2 |
-| D-32 | Public contract = dialect + one entry point + consumer half | Deferred — design session; one entry point vs. the corpus pass and incremental API (§2) | PROPOSAL D4; team 2026-10-01 | 12 |
+| D-32 | Public contract = dialect + one entry point + consumer half | Ratified — the one entry point is the corpus pass and writes to `outDir`; `RegistryEntry` narrowed to a public projection; the generated-module API is under semver, `argsFromAttrs` excluded; incremental API deferred to a later minor (LT-471) | PROPOSAL D4; team 2026-10-01; owner 2026-10-06 | 12 |
 | D-33 | TS 6 API for v1; TS types never public; TS 7.1 / native parsers a goal | Ratified — endorsed 2026-10-01 and recorded | ADR 0034 s8, ADR 0032 s4 | 2 |
 
 ## 14. Design review
@@ -672,7 +680,7 @@ Cheap to reverse because delegated or internal: bundling, eager registration, in
 
 | # | Question | Considerations |
 | --- | --- | --- |
-| O-1 | **Demand for adapters.** Is there a named persona or pioneer for third-party adapters? | If not, the seam shrinks to "document the dialect as a target and add the `sourceMap` option", with no conformance suite until someone asks. |
+| O-1 | **Demand for adapters.** Is there a named persona or pioneer for third-party adapters? | If not, the seam shrinks to "document the dialect as a target and read the `.tsx.map` sidecar" (D-32), with no conformance suite until someone asks. |
 | O-2 | **Parser confinement.** Should the machinery hold native `ts.Node`, or keep parser access behind one converter leaf? | **Answered — the converter leaf** (ADR 0032 s4): `typescript` API use is confined to the TS → estree converter, which a maintained library implements (`@typescript-eslint/typescript-estree`), and the machinery walks estree, not `ts.Node`. The remaining TS 7 risk is the converter's `typescript` peer range following TypeScript (LT-254 rider; LT-377 pins that no TypeScript type is published). |
 | O-3 | **Emitter-facing IR.** Are template targets first-party only (Twig, HTL), or does the emitter interface publish a serialized, versioned shape? | Publishing would let backends be written in other languages. |
 | O-4 | **Trusted-fragment holes.** Named slots and CMS-supplied markup need an unescaped hole class. Accept a slots-less v1 until then? | A security ADR beside ADR 0010, with its channel and tier. Shadow mode's native `<slot>` is unaffected. |
@@ -712,24 +720,24 @@ Illustrative, not part of any decision: a first read of each source format as a 
 
 ## Appendix B — Distance from today
 
-As of 2026-09-29, for orientation only; it ages quickly. The current architecture is described in `server/compiler/LE_TRUC_COMPILER.md`.
+As of 2026-10-06, for orientation only; it ages quickly. The current architecture is described in `server/compiler/LE_TRUC_COMPILER.md`.
 
 | § | Progress | Built | Partial or missing |
 | --- | --- | --- | --- |
-| 2 Pipeline | Partial | One IR, shared pipeline, two-pass corpus | Missing: incremental API, source maps (LT-247), dev-loop plugins |
+| 2 Pipeline | Partial | One IR, shared pipeline, two-pass corpus | Partial: the corpus pass lives in `server/`, outside the package (LT-480). Missing: incremental API (a later minor, D-32), input source maps (LT-376), output source maps (LT-247, parked), dev-loop plugins (O-8) |
 | 3.1 Module shape | Done | Typed factory context; root-is-host enforced (LTC060, LT-375) |  |
 | 3.2 Shadow mode | Missing |  | Missing: unbuilt, unscheduled |
 | 3.3 Bindings | Done | All |  |
-| 3.4 Vocabulary | Partial | `truc:try` (template-cloned arms, ADR 0037 s4), `truc:pass`, `truc:html` | Missing: `truc:element` |
-| 3.5 Control flow | Partial | Server-known conditions, loops, empty arm | Missing: reactive conditions (LT-274) |
+| 3.4 Vocabulary | Partial | `truc:try` (template-cloned arms, ADR 0037 s4), `truc:pass`, `truc:html` | Missing: `truc:element`, built when a migration needs it; the children contract (ADR 0048, track C) |
+| 3.5 Control flow | Done | Server-known conditions, loops, empty arm; reactive conditions as template-cloned arm sets (ADR 0037, LT-274, LT-276); nested arm sets and reactive lists (ADR 0046) |  |
 | 3.7 Trust | Partial |  | Partial: server sanitizer configurable; one shared policy blocked on TypeScript's DOM lib |
 | 3.8 Fold inputs / portable subset | Partial | LTC054 | Missing: portable subset |
-| 4 Adapters | Missing |  | Missing: no adapter seam (LT-376); the IR-level seam left `contract.ts` at LT-370; `.tsrx` is a second first-party front end with variant sets and parity suites |
-| 5 Evaluation | Partial | Three tiers, simulation seam, census | Partial: jsdom still a hard dependency |
+| 4 Adapters | Missing |  | Missing: no adapter seam (LT-376, P7; its input map rides a `.tsx.map` sidecar, D-32); `.tsrx` is a second first-party front end with variant sets and parity suites |
+| 5 Evaluation | Done | Three tiers, simulation seam, census; jsdom an optional peer dependency (M28) |  |
 | 6 i18n | Partial | MF1, per-key types, client message channel, censuses, MF2 exit pin | Missing: template-target translation |
-| 7 Styling | Missing |  | Missing: verbatim, tag-led CSS until LT-268 / LT-304 / LT-306; ADR 0042 checks unbuilt |
-| 8 IR | Partial |  | Partial: Estree `AstNode`, internal since LT-370; typed unions pending (LT-287, LT-289); no reactivity-class annotation as such |
+| 7 Styling | Partial | Scoped CSS: native `@scope` or the flat-selector lowering (LT-268, LT-304, LT-306) | Missing: ADR 0042 checks (LT-214 and LT-269 gated on need, LT-270 open); children style scope (ADR 0048) |
+| 8 IR | Partial | Internal (D-25); typed unions (LT-287, LT-289) | Missing: no reactivity-class annotation as such |
 | 9 HTML | Partial | SSG | Missing: template emission (LT-257, release-gating) |
 | 10 Client | Done | All |  |
-| 11 Diagnostics | Partial |  | Partial: \~118 codes; record is `{ code, severity, message, location, related, fix? }` (ADR 0044 s1, LT-371); terminal only |
-| 12 Public contract | Partial |  | Partial: not yet published (LT-254) |
+| 11 Diagnostics | Partial | ~77 codes; record is `{ code, severity, message, location, related, fix? }` (ADR 0044 s1, LT-371) | Partial: terminal only |
+| 12 Public contract | Partial | Ruled (D-32, 2026-10-06) | Missing: the contract reshape (LT-480), then the publish (LT-254) |

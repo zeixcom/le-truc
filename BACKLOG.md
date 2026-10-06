@@ -37,7 +37,23 @@ and runs during the P6 round, so the band opens unblocked.
 
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-370, LT-371 and LT-375** (the pre-publish reshapes of what stays public: the IR leaves the contract, the diagnostic record takes its published shape, the root-is-host dialect is enforced) **and on the D-32 design session** (which compiler entry points and result types are public, `COMPILER_SPEC.md` §12). *Re-gated 2026-10-01:* the IR is internal (ADR 0034 s8, D-25), so the ADR 0040 reshapes (LT-288, LT-274, LT-276) no longer gate the publish.
   **Area:** compiler
-  **Needs:** LT-370, LT-371, LT-375, LT-471
+  **Needs:** LT-370, LT-371, LT-375, LT-471, LT-480
+  **Re-scoped by D-32 (LT-471 design session, owner 2026-10-06; `COMPILER_SPEC.md` §12):** the
+  package's one entry point is the **corpus pass**. It writes the artifacts to `outDir` and
+  returns the diagnostics and a summary. `compileComponentTsx` is not published. LT-480 does the
+  reshape first: it moves `compileCorpus` into the compiler, narrows `RegistryEntry` and
+  rewrites the stability policy. This task then publishes whatever `contract.ts` names. The
+  D-32 rider below is discharged as follows:
+  - the generated-module API is under semver (ADR 0034 s8 stands; LT-480 rewrites the policy);
+  - `RegistryEntry` is narrowed (LT-480);
+  - Appendix B is refreshed.
+
+  The `typescript-estree` rider stays here: its answer does not depend on the entry-point
+  shape, since the converter leaf is the same under every option.
+  The `./macros` subpath, the peer floor and the `runtimeImport` default stand as written.
+  **Check, amended:** the tarball installs into an empty project and builds a two-component
+  corpus through the published entry point, one component composing the other, with no
+  `@tsrx/core` in the dependency tree.
   **Rider (LT-429 design session, 2026-10-05):** the package exports a `./macros` subpath (ADR 0034
   s1): the compile-time markers, types plus throwing stubs, built in-repo by LT-442 as
   `server/compiler/macros.ts` behind a `tsconfig.json` `paths` entry. It must resolve without
@@ -206,6 +222,69 @@ and runs during the P6 round, so the band opens unblocked.
   **Channel/tier:** none (a build check).
   **Verification:** the check fails on a planted `ts.Node` in a public type; full gates.
 
+
+- [ ] LT-480: Reshape the compiler's public contract to the D-32 ruling — the corpus entry point moves into the compiler, `RegistryEntry` narrows to a public projection, and the stability policy names the generated-module API.
+  **Area:** compiler
+  **Needs:** LT-471
+  **Gates:** LT-254
+  **Area:** compiler
+  **Filed (Architect, LT-471 design session, 2026-10-06):** D-32 is ruled (`COMPILER_SPEC.md`
+  §12). This is the pre-publish reshape it implies, in the pattern of LT-370, LT-371 and LT-375:
+  the package (LT-254) publishes whatever `contract.ts` names, so the set must be right first.
+  **Rulings (owner, 2026-10-06):**
+  1. **One entry point, the corpus pass.** `compileCorpus` moves from `server/corpus-compile.ts`
+     into `server/compiler/` along with what it needs to run in an installing project:
+     - the config loader (`loadCorpusConfig`, `resolveCorpusConfig`);
+     - the sibling-module collection;
+     - the `i18n` module writer;
+     - the census.
+
+     It must not depend on `REPO_CONFIG`, `REPO_ROOT` or the dev server's `io` runtime shim
+     beyond a file-system seam the package owns. It **writes** the artifacts, `registry.json`
+     and the `i18n` modules to `config.outDir`, and **returns** the diagnostics and a summary.
+     Name the summary type. The repo's `server/corpus-compile.ts`, `scripts/build-corpus.ts`,
+     `scripts/check-corpus.ts`, `scripts/i18n-sync.ts` and the build effect become thin callers.
+     `compileComponentTsx` leaves `contract.ts`: it stays exported internally for the corpus
+     pass and the tests.
+  2. **`RegistryEntry` narrows.** The public type is the projection a consumer reads: `tag`,
+     `name`, `source`, `serverModule`, `clientModule`, `css`, `propsType`, `exposedProps`,
+     `tier` and `composesTags`. `renderedShapes`, `suppressedSites`, `composeReadTags` and
+     `routingSignals` move to an internal type the corpus pass and compose validation use.
+     `registry.json` serializes the public projection only. Check first that no in-repo
+     consumer of `registry.json` (CEM build, docs pipeline, dev server) reads a dropped field.
+     If one does, move it to the internal type or, if it is genuinely consumer-facing, flag it
+     in `NOTES.md` instead of widening the set.
+  3. **The stability policy names the generated-module API.** Rewrite the policy in
+     `contract.ts`'s header so that semver applies to the designated set **and** to the
+     generated-module API, by name and signature, never by bytes:
+     - `render<Name>` in each `*.server.ts`;
+     - the client module's default export;
+     - the `i18n` module's shape;
+     - the `registry.json` schema.
+
+     Say that `argsFromAttrs` is internal. The "and to nothing else" sentence goes. ADR 0034 s8
+     already reads this way; this brings the policy in line with it.
+
+  **Out of scope:** the incremental API (a later minor, D-32); the input source map (LT-376);
+  the package manifest and `exports` map (LT-254).
+  **Contract set after this task** (`contract.test.ts` pins it):
+  - the corpus entry point and its config, result and summary types;
+  - the public `RegistryEntry`, `ExposeKind`;
+  - the five `Diagnostic*`/`CompileDiagnostic` shapes;
+  - `EvaluationTier`.
+
+  Settle whether `RoutingSignal`, `RoutingSignalOrigin`, `Resolution` and `UnresolvableLimb` stay.
+  They stay only if a public type still names them once `routingSignals` leaves `RegistryEntry`.
+  Otherwise they leave too: shrinking the set before first publish is free. Do the same for
+  `CompiledComponent`, `CompileFileResult`, `SourceSpan`, `EmitPaths` and `DEFAULT_EMIT_PATHS`,
+  which belong to the per-file front end.
+  **Docs:** `LE_TRUC_COMPILER.md` §2 (the public-contract table and the "result" paragraph) and §7
+  (where the corpus orchestration lives) follow the code. Hand the copy to `writer` if the
+  rewrite is more than the table.
+  **Channel/tier:** none. This task is a contract reshape and adds no new check.
+  **Verification:** `contract.test.ts` pins the new set. The corpus builds byte-identically
+  before and after (the goldens are unchanged). `registry.json` carries only the public fields.
+  Full gates.
 ## P2 — Internationalization follow-ups (ADR 0030)
 
 Residue of the ICU MessageFormat switch: LT-352 pins the examples' hand-copied `i18n`
@@ -988,18 +1067,18 @@ else moves up only by owner direction.
 
 - [ ] LT-376: The source-to-source adapter seam, experimental (D-17, D-18; ADR 0032 s6).
   **Area:** compiler
-  **Needs:** LT-371
+  **Needs:** LT-371, LT-480
   **Context:** ADR 0032 s6 (2026-10-01): the external extension point is an **adapter** that
   translates another format into host-profile `.tsx` plus a source map back to its input; the
   compiler remaps diagnostics through that map (ADR 0044 s2). Only a component translated with no
   error mixes with native ones; no plugin machinery; experimental until a first-class reference
-  adapter ships. Deliverables: accept an input source map on the `.tsx` entry point; remap
+  adapter ships. Deliverables: read an input source map from a `.tsx.map` sidecar next to the adapter's `.tsx` output (D-32: the public entry point is the corpus pass, so the map rides the file system, not a new parameter); remap
   diagnostic locations to the adapter's input; a declared host-profile version the adapter
   targets; a toy conformance adapter in the test suite (emits `.tsx` plus a map, compiles through
   every tier, proves errors remap to the toy source). This also gives LT-247 a real source-map
   consumer for its reopen condition (input maps, not output maps — check whether that changes its
   ruling).
-  **Gated on** the D-32 design session (the entry-point shape the source map rides on), LT-371
+  **Gated on** LT-480 (the corpus entry point the sidecar is read by; D-32 ruled 2026-10-06), LT-371
   (`location`), and section 15's O-1 (is there adapter demand), O-7 (diagnostic wording) and O-10
   (type access). D-04 is parked, so `.tsrx` is not the reference adapter by default.
   **Channel/tier:** none until designed; adapter-side refusals stay in the adapter's own channel
