@@ -194,22 +194,4 @@ recorded against the 30.4k opening measurement.
 
 <!-- entries -->
 
-### C — corpus port
 
-- [ ] LT-446: Scope the `section-menu` migration (site chrome: external toggle by document id, imperative backdrop, layout-wide registration) — decide, then write the implementation task. — in progress ⚙
-  **Area:** design
-  **Area:** design
-  **Updated (Architect, 2026-10-05):** filed from LT-111's sweep report (ruling 5) — the last
-  component folder the "every example folder served compiled" exit criterion cannot close
-  without, and NOT a mechanical migration: `section-menu` is the site's sidebar navigation,
-  rendered by `server/templates/menu.ts` into every page layout, with four shapes the compiled
-  surface has never carried together. A contributor who guesses at these is guessing wrong;
-  rule first.
-  **Design questions:**
-  1. **The external toggle.** The hand-written twin wires `document.getElementById('sidebar-toggle')` — an element OUTSIDE the host — with `on(toggle, 'click')` + `bindAria(toggle, 'ariaExpanded')`. Does that wiring belong in the compiled component (a client-only setup side effect reading `document`, which is JS_GLOBAL) or moves to the layout template beside the button? The component-coupling argument cuts both ways: the id is a documented contract (`TOGGLE_ID`'s docblock cites LT-001 and the layout).
-  2. **The imperative backdrop.** Created at connect (`createElement` + `prepend`) because it is meaningless without JS. Keep it imperative (a client-only setup side effect), or author it `hidden` in the template and let CSS/JS reveal it — the second changes the no-JS DOM shape, which the progressive-enhancement contract (no `.js` class → normal flow) currently keeps clean.
-  3. **`expose({ open })` of a live State.** The twin exposes a `createState(false)` as the public prop (the toggle handler returns `{ open: !open.get() }`). Pin which compiled expose form carries a writable State-backed prop (not a Parser), and what the generated tag-map entry types (`HTMLElement & SectionMenuProps` — the members' entries must not diverge, TS 2717).
-  4. **`.js`/`.ready` class sequencing.** `host.classList.add('js')` at connect, `.ready` one `requestAnimationFrame` later (gates the drawer's first-paint transition). Confirm both are client-only setup statements on the compiled path and that the rAF callback is a function-const/readable-client shape.
-  5. **Layout-wide registration.** The migration flips the tag every docs page serves onto the compiled client. Verify the page bundle registers it (it is in the registry like any other corpus tag) and that `section-menu.spec.ts` runs unchanged against the served surface — plus which surface the LAYOUT pages get (the canonical artifacts, not a variant route).
-  Decide each, then write the implementation task with the standard prerequisite set (LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429). The `.spec.ts` is unchanged; `test:variants` covers the folder once the set exists.
-  ---

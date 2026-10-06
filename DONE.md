@@ -1512,6 +1512,44 @@ Full entry text: `git log -p -- DONE.md`.
   **Changed:** `module-cem-list` is a compiled variant set — `module-cem-list.tsx` (served) beside a `module-cem-list.tsrx` twin; the hand-written `.ts` stays as the set's `.ts` twin (ruling 5). Both members take `children = ''` and wrap the page-authored `{% cem-list %}` output; `module-cem-list.html` is unchanged. `examples/main.css` imports the generated stylesheet; host profile gains `ModuleCemListAttrs`; tier map +`module-cem-list: folded` (census 33 Folded / 8 Simulated). Setup is one filter State, `on(first('form-textbox'), 'input', …)` and ONE `watch` whose source reads the filter and `all('card-collapsible')` inline; the sheet is `:host`-led with no `:global` (no custom element in the template, so no scope boundary — ADR 0033 s7).
   **Review:** Approved (Architect, 2026-10-06). Ruling on the doubt: reading `all()` in the watch source rather than the handler is accepted — it is the pin's "one watch that re-reads the cards per run", and it also filters cards added after connect. Each run builds a fresh element memo and observer (`all()` does not memoize per selector) and the superseded one disconnects unwatched; `module-catalog` sets the precedent. Gates re-run green on the branch (typecheck, check:corpus, test:server 3328/0). Owner-run legs: `test:variants` and the live demo filter.
 
+- [x] LT-446: Scope the `section-menu` migration (site chrome: external toggle by document id, imperative backdrop, layout-wide registration) — decide, then write the implementation task. — reviewed ✓
+  **Area:** design
+  **Area:** design
+  **Updated (Architect, 2026-10-05):** filed from LT-111's sweep report (ruling 5) — the last
+  component folder the "every example folder served compiled" exit criterion cannot close
+  without, and NOT a mechanical migration: `section-menu` is the site's sidebar navigation,
+  rendered by `server/templates/menu.ts` into every page layout, with four shapes the compiled
+  surface has never carried together. A contributor who guesses at these is guessing wrong;
+  rule first.
+  **Design questions:**
+  1. **The external toggle.** The hand-written twin wires `document.getElementById('sidebar-toggle')` — an element OUTSIDE the host — with `on(toggle, 'click')` + `bindAria(toggle, 'ariaExpanded')`. Does that wiring belong in the compiled component (a client-only setup side effect reading `document`, which is JS_GLOBAL) or moves to the layout template beside the button? The component-coupling argument cuts both ways: the id is a documented contract (`TOGGLE_ID`'s docblock cites LT-001 and the layout).
+  2. **The imperative backdrop.** Created at connect (`createElement` + `prepend`) because it is meaningless without JS. Keep it imperative (a client-only setup side effect), or author it `hidden` in the template and let CSS/JS reveal it — the second changes the no-JS DOM shape, which the progressive-enhancement contract (no `.js` class → normal flow) currently keeps clean.
+  3. **`expose({ open })` of a live State.** The twin exposes a `createState(false)` as the public prop (the toggle handler returns `{ open: !open.get() }`). Pin which compiled expose form carries a writable State-backed prop (not a Parser), and what the generated tag-map entry types (`HTMLElement & SectionMenuProps` — the members' entries must not diverge, TS 2717).
+  4. **`.js`/`.ready` class sequencing.** `host.classList.add('js')` at connect, `.ready` one `requestAnimationFrame` later (gates the drawer's first-paint transition). Confirm both are client-only setup statements on the compiled path and that the rAF callback is a function-const/readable-client shape.
+  5. **Layout-wide registration.** The migration flips the tag every docs page serves onto the compiled client. Verify the page bundle registers it (it is in the registry like any other corpus tag) and that `section-menu.spec.ts` runs unchanged against the served surface — plus which surface the LAYOUT pages get (the canonical artifacts, not a variant route).
+  Decide each, then write the implementation task with the standard prerequisite set (LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429). The `.spec.ts` is unchanged; `test:variants` covers the folder once the set exists.
+  ---
+
+  **Changed:** LT-446 is decided and its implementation task is filed as `queue/LT-469.md` (open, standard prerequisite set — all seven `reviewed`). Session note: `start-task` refused LT-446 by contract (`Area: design` tasks are never auto-picked); the owner named the task explicitly, so the session ran it as a design session in the main checkout, claiming it (`in-progress` → `pending-review`) and leaving the queue-store edits uncommitted for the Architect's bookkeeping pass, per the contributor/Architect division — a parallel session's LT-468 review claim is in flight in the same tree. `queue:build` is owed on that pass.
+
+  **How:** each of the five questions was ruled AND probe-verified — a scratch section-menu-shaped source was compiled through both front ends (`compileComponentTsx`/`compileComponent`) until it emitted clean, byte-identical client/server modules on both surfaces. Rulings: (1) the external toggle stays component-owned; the lookups inline as `on()`/`watch()` call arguments and the guard lives in the helpers — `on()` accepts `Falsy` targets and no-ops, `bindAria` accepts nullish and no-ops, so the twin's `if (toggle)` is runtime-owned; a setup const holding the element is a build error (LTC054, page context) and `watch`/`on` inside a function const is LTC045. (2) the backdrop stays imperative (`ensureBackdrop()` function const returning the element, wired by `on(ensureBackdrop(), 'click', …)`); authoring it `hidden` would change the no-JS DOM shape for nothing. (3) `expose({ open })` of the live `createState(false)` compiles verbatim (kind `slot`); every member declares the identical `HTMLElement & SectionMenuProps` tag-map entry. (4) `.js`/`.ready` are two bare client-only setup statements (probe: absent from the server render, so no-JS DOM stays clean); the name constants move from module scope into setup. (5) cutover flips `examples/main.ts` + `main.css` to the canonical generated artifacts; layout pages get the canonical `.tsx` surface; `menu.ts` stays hand-written and byte-compatible; the authored `.html` regenerates from the compiled render; the spec is unchanged across `ts`/`tsrx`/`tsx`. Residues found while probing, both carried in LT-469: the compiler's `JS_GLOBALS` set lacks `HTMLAnchorElement` (the twin's `instanceof` check is a false unknown name → LTC005; rider adds it + a globals-test pin), and the sheet re-authors to ADR 0033 form (`:host`-led; page-shell rules via `:global { @media … }`, module-dialog precedent). The component stays Folded (no LTC013 routing) — census pins +`section-menu: folded`.
+
+  **Check:** no code changed in this task — the checks that matter are LT-469's, and the shapes they verify are already probe-proven (both surfaces clean, modules byte-identical, server render `<section-menu>{children}</section-menu>` with no `.js` class, no backdrop, no toggle wiring). Doubts for review: (1) the rulings are recorded in LT-469's entry for the implementer; if the Architect disagrees with any (most plausibly Q1's component-owned toggle or the `:global` page-shell CSS), LT-469 needs the amendment before a session picks it, not a mid-flight rework; (2) the server module emits the client-only `ensureBackdrop` function const as dead code (declared, never called) — matches the scrollarea precedent, harmless, but flag if you want `computeClientNeededNames` to drop it; (3) `queue/LT-469.md` is uncommitted by design (see Changed).
+
+  **Review:** Approved (Architect, 2026-10-06). All five rulings verified against the source and
+  adopted into LT-469 as filed. The runtime claims check out: `on()`'s target is typed
+  `E | Falsy` (src/helpers/events.ts) and `bindAria` makes every handler a no-op on a nullish
+  target (src/bindings.ts), so the inline-lookup idiom needs no twin-style guard; LTC045 is
+  exactly the deferred-collector-helper error and LTC054 the page-context error the rulings
+  cite; `JS_GLOBALS` confirmed to lack `HTMLAnchorElement` (server/compiler/vocabulary.ts), so
+  the rider is real. Q1's component-owned toggle is the right call — the drawer state has one
+  owner (the component's Slot) and the id is the documented chrome contract. Doubt (2)
+  resolved: leave the dead `ensureBackdrop` const in the server module — the scrollarea
+  precedent stands, and the server module's size is no payload concern worth new machinery in
+  `computeClientNeededNames`. The bookkeeping pass committed LT-469 as filed and rebuilt the
+  views; the cancelled contributor pick-ups left no residue (no worktrees, no branches, no
+  claims — both entries back to `open`).
+
 - [x] LT-447: A host-declared `deriveList` consumed only inside a reactive-list body compiles to a server `ReferenceError` with no diagnostic — emit the declaration or refuse the shape. — reviewed ✓
   **Area:** compiler
   **Area:** compiler
@@ -1772,7 +1810,7 @@ Full entry text: `git log -p -- DONE.md`.
   addressing (the fold is fixed per render), the trap LTC005 prevents at host level; only the
   item walk descended and emitted there.
 
-- [x] LT-468: A client construct on an element in a server-rendered branch of a list item compiles clean, then throws in every item mount — refuse it, as every other scope does. — done, pending review ⏳
+- [x] LT-468: A client construct on an element in a server-rendered branch of a list item compiles clean, then throws in every item mount — refuse it, as every other scope does. — reviewed ✓
   **Area:** compiler
   **Needs:** LT-455
   **Area:** compiler
@@ -1819,3 +1857,21 @@ Full entry text: `git log -p -- DONE.md`.
   **How:** in `planReconcileItem`'s `visitElements` (`server/compiler/analysis/effects.ts`), the `inBranch` path LT-455 threaded now routes `hasOwnConstruct` elements to the refusal instead of `scope.localFor` + `emitConstructEffects`. The container case is the same walk site: to this walk a nested list's container is a plain element (`planNested` catches only loop outputs), and its construct was the required request that upgraded LT-455's optional local back to required. Untouched by design: key-derived attribute binding (`collectKeySites`/`collectKeyAttrs`, still optional in branches), nested-list guarded mounts (`planNestedList`), reactive conditionals and boundaries in the item (`planNested` precedes the check), and a nested list's own item root (it exists inside the extracted template the guarded mount stamps). Docs updated in the same change: HOST_PROFILE.md's item/Mount-Scope passage, LE_TRUC_COMPILER.md's item-walk passage, AGENTS.md's conditional-placement paragraph, `skills/le-truc/references/errors.md`'s LTC005 Arm/branch faces, and a CHANGELOG Fixed entry. Channel/tier per the entry: compiler check, tier 1 Prevented, no runtime check — no new diagnostic code, so no ADR 0028 inventory change.
 
   **Check:** gates, all inside the worktree: `test:server` 3380 pass / 0 fail; `typecheck`, `check:contract`, `check:corpus`, `build:docs`, `check:links` all exit 0; `bunx biome check` clean on the two changed TS paths (the whole-tree lint scripts were not run). New tests in `mount-scopes.test.ts` pin both refusal shapes on both surfaces — message fragments, surface parity of the LTC005 count, and no `first('em.mark'` query or click-listener emission — and the LT-455 suite in the same file stays green (the placeholder `<li>` carries no construct); `ARM_IN_ITEM` keeps proving a reactive conditional with constructs in an item compiles and binds. Doubt for review: the item walk's `collectCompose` still mints an unguarded local for a composed child in a server branch of an item — outside this entry's scope (it names constructs), unverified at runtime here, and I found no refusal of that shape elsewhere; please file if the review confirms it.
+
+  **Review:** Approved (Architect, 2026-10-06), integrated. The change is exactly the ruling:
+  the refusal sits at the `inBranch` site in `visitElements`, fires for the branch roots and the
+  branch-held container through the same path (a container is a plain element to this walk), and
+  mints nothing below a branch root. Statically verified the near-misses: `planNested` precedes
+  the check, so reactive conditionals and boundaries in the item keep planning as their own
+  scopes; the walk cannot miss a construct behind a fragment (no fragment node kind exists in
+  the IR — fragments dissolve at lowering); a construct inside a server-data loop body dies
+  upstream in the LTC005 server-only face (a server-loop binding read in a client position), so
+  `planNestedEach` not taking `inBranch` is safe; a nested list's own item root emits into the
+  guarded nested mount (LT-455), untouched by design. `wording.loop` matches the established
+  item-label vocabulary on both surfaces. The flagged doubt is CONFIRMED statically:
+  `visitElements` reaches compose nodes inside server branches with no `inBranch` awareness and
+  `collectCompose` mints a required local (no `optional` flag) whose mount query throws with its
+  "missing" message when the branch folded off — `truc:pass` onto a fold-fixed branch's child is
+  the same once-only addressing. Filed as LT-470, ruled refuse after this task's manner. Gates
+  re-run in the worktree: test:server 3380 pass / 0 fail, typecheck, check:corpus (42
+  components, 0 census gaps), biome clean on both changed TS paths.
