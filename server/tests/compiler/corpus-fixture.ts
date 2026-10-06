@@ -22,6 +22,28 @@ const ROOT = path.resolve(import.meta.dir, '../../..')
 export const loadCorpus = async (): Promise<FileInfo[]> =>
 	collectCorpusSources(resolveCorpusConfig(ROOT))
 
+/** The `c-plural` fixture's repo-relative path (LT-467). */
+export const C_PLURAL_FIXTURE =
+	'server/tests/compiler/fixtures/plural/c-plural.tsrx'
+
+/**
+ * The `c-plural` compiler fixture as a `FileInfo` — the retired
+ * basic-pluralize example, kept outside the corpus for the i18n coverage it
+ * carried (LT-467). Compile it with `compileCorpus([cPluralFixture()], …)`.
+ */
+export const cPluralFixture = (): FileInfo => {
+	const full = path.join(ROOT, C_PLURAL_FIXTURE)
+	return {
+		path: full,
+		filename: C_PLURAL_FIXTURE,
+		content: readFileSync(full, 'utf8'),
+		hash: '',
+		lastModified: 0,
+		size: 0,
+		exists: true,
+	}
+}
+
 /**
  * Front-end-only compile of one corpus file, the surface chosen by
  * extension — the same dispatch `compileCorpus` makes (ADR 0039 variant

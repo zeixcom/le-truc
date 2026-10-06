@@ -1,4 +1,6 @@
-import { expect, type Locator, test } from '@playwright/test'
+import { expect, type Locator, type Page, test } from '@playwright/test'
+import { i18nRecord } from '../../../server/generated/components/i18n'
+import { renderModuleTodo } from '../../../server/generated/components/module-todo.server'
 
 /**
  * Check a form-checkbox's `:has(input:checked)` CSS hook — reads the native
@@ -20,6 +22,32 @@ function hasState(element: Locator, state: string): Promise<boolean> {
 		(el: Element, s: string) => el.matches(`:state(${s})`),
 		state,
 	)
+}
+
+/** The source-locale wording of module-todo's `remaining` message. */
+const ALL_DONE = 'Well done, all done!'
+const remaining = (n: number): string =>
+	`${n} ${n === 1 ? 'task' : 'tasks'} remaining`
+
+/** Add `n` todos through the form, numbered from `from`. */
+async function addTodos(page: Page, n: number, from = 1): Promise<void> {
+	const input = page.locator('module-todo form > form-textbox input')
+	for (let i = from; i < from + n; i++) {
+		await input.fill(`Task ${i}`)
+		await input.press('Enter')
+	}
+	await expect(page.locator('module-todo [data-container] li')).toHaveCount(
+		from - 1 + n,
+	)
+}
+
+/**
+ * The surface the test server registers (`TEST_SURFACE`, set per spelling
+ * by `test:variants`; `default` serves the selected compiled member).
+ */
+async function servedSurface(page: Page): Promise<string> {
+	const status = await page.request.get('/api/status')
+	return ((await status.json()) as { surface: string }).surface
 }
 
 /**
@@ -49,7 +77,7 @@ function hasState(element: Locator, state: string): Promise<boolean> {
  * - Uses form-checkbox components for item state
  * - Implements a keyed list to track active/completed items
  * - Uses form-radiogroup for filtering
- * - Uses basic-pluralize for count display
+ * - Words the active count through its own ICU plural message (`.remaining`)
  *
  * List reactivity:
  * - The list properly updates when checkbox state changes
@@ -68,7 +96,7 @@ test.describe('module-todo component', () => {
 			const textbox = todo.locator('form-textbox')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 			const filter = todo.locator('form-radiogroup')
 			const clearButton = todo.locator('basic-button.clear-completed')
 
@@ -80,8 +108,7 @@ test.describe('module-todo component', () => {
 			await expect(list.locator('li')).toHaveCount(0)
 
 			// Should show "all done" message
-			await expect(count.locator('.none')).toBeVisible()
-			await expect(count.locator('.some')).not.toBeVisible()
+			await expect(count).toHaveText(ALL_DONE)
 
 			// Should have "All" filter selected by default
 			await expect(filter.locator('input[value="all"]')).toBeChecked()
@@ -197,29 +224,24 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			// Initially should show "all done"
-			await expect(count.locator('.none')).toBeVisible()
-			await expect(count.locator('.some')).not.toBeVisible()
+			await expect(count).toHaveText(ALL_DONE)
 
 			// Add first todo
 			await textboxInput.fill('Task 1')
 			await submitButton.click()
 
 			// Should show count with singular "task"
-			await expect(count.locator('.none')).not.toBeVisible()
-			await expect(count.locator('.some')).toBeVisible()
-			await expect(count.locator('.count')).toHaveText('1')
-			await expect(count.locator('.tasks')).toHaveText('task')
+			await expect(count).toHaveText(remaining(1))
 
 			// Add second todo
 			await textboxInput.fill('Task 2')
 			await submitButton.click()
 
 			// Should show count with plural "tasks"
-			await expect(count.locator('.count')).toHaveText('2')
-			await expect(count.locator('.tasks')).toHaveText('tasks')
+			await expect(count).toHaveText(remaining(2))
 		})
 
 		test('count updates when todos are completed', async ({ page }) => {
@@ -227,7 +249,7 @@ test.describe('module-todo component', () => {
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			// Add two todos
 			await textboxInput.fill('Task 1')
@@ -236,8 +258,7 @@ test.describe('module-todo component', () => {
 			await submitButton.click()
 
 			// Initially should show 2 tasks
-			await expect(count.locator('.count')).toHaveText('2')
-			await expect(count.locator('.tasks')).toHaveText('tasks')
+			await expect(count).toHaveText(remaining(2))
 
 			// Complete first task
 			const firstCheckboxLabel = list
@@ -247,8 +268,7 @@ test.describe('module-todo component', () => {
 			await firstCheckboxLabel.click()
 
 			// Should show 1 task remaining
-			await expect(count.locator('.count')).toHaveText('1')
-			await expect(count.locator('.tasks')).toHaveText('task')
+			await expect(count).toHaveText(remaining(1))
 
 			// Complete second task
 			const secondCheckboxLabel = list
@@ -258,8 +278,7 @@ test.describe('module-todo component', () => {
 			await secondCheckboxLabel.click()
 
 			// Should show "all done"
-			await expect(count.locator('.none')).toBeVisible()
-			await expect(count.locator('.some')).not.toBeVisible()
+			await expect(count).toHaveText(ALL_DONE)
 		})
 
 		test('count updates when completed todos are unchecked', async ({
@@ -269,7 +288,7 @@ test.describe('module-todo component', () => {
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
 			const list = todo.locator('[data-container]')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			// Add and complete a todo
 			await textboxInput.fill('Task 1')
@@ -282,15 +301,13 @@ test.describe('module-todo component', () => {
 			await checkboxLabel.click()
 
 			// Should show "all done"
-			await expect(count.locator('.none')).toBeVisible()
+			await expect(count).toHaveText(ALL_DONE)
 
 			// Uncheck the task
 			await checkboxLabel.click()
 
 			// Should show 1 task again
-			await expect(count.locator('.none')).not.toBeVisible()
-			await expect(count.locator('.some')).toBeVisible()
-			await expect(count.locator('.count')).toHaveText('1')
+			await expect(count).toHaveText(remaining(1))
 		})
 	})
 
@@ -419,7 +436,7 @@ test.describe('module-todo component', () => {
 			await expect(todo.locator('basic-button.submit')).toBeAttached()
 			await expect(todo.locator('[data-container]')).toBeAttached()
 			await expect(todo.locator('template')).toBeAttached()
-			await expect(todo.locator('basic-pluralize')).toBeAttached()
+			await expect(todo.locator('.remaining')).toBeAttached()
 			await expect(todo.locator('form-radiogroup')).toBeAttached()
 			await expect(todo.locator('basic-button.clear-completed')).toBeAttached()
 		})
@@ -459,7 +476,7 @@ test.describe('module-todo component', () => {
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('basic-button.submit button')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			// Add a todo
 			await textboxInput.fill('Test task')
@@ -483,7 +500,7 @@ test.describe('module-todo component', () => {
 			// Should end up checked after 5 clicks (starting from unchecked)
 			await expect(checkbox).toBeChecked()
 			// Count should show "all done" since the only task is completed
-			await expect(count.locator('.none')).toBeVisible()
+			await expect(count).toHaveText(ALL_DONE)
 		})
 	})
 
@@ -495,22 +512,22 @@ test.describe('module-todo component', () => {
 		test('Checking the only item decreases active count', async ({ page }) => {
 			// Verifies the full chain for a single item:
 			// label click → checkbox.change → slot setter → list.completed.set
-			// → completedCount memo → activeCount → pass(count) → basic-pluralize
+			// → completedCount memo → activeCount → the `remaining` message
 			const todo = page.locator('module-todo')
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			await textboxInput.fill('only task')
 			await submitButton.click()
-			await expect(count.locator('.count')).toHaveText('1')
+			await expect(count).toHaveText(remaining(1))
 
 			await todo
 				.locator('li[data-key]')
 				.first()
 				.locator('form-checkbox label')
 				.click()
-			await expect(count.locator('.none')).toBeVisible()
+			await expect(count).toHaveText(ALL_DONE)
 		})
 
 		test('Checking the SECOND item (after two are added) decreases count', async ({
@@ -523,17 +540,17 @@ test.describe('module-todo component', () => {
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			await textboxInput.fill('first task')
 			await submitButton.click()
 			await textboxInput.fill('second task')
 			await submitButton.click()
 			await expect(items).toHaveCount(2)
-			await expect(count.locator('.count')).toHaveText('2')
+			await expect(count).toHaveText(remaining(2))
 
 			await items.nth(1).locator('form-checkbox label').click()
-			await expect(count.locator('.count')).toHaveText('1')
+			await expect(count).toHaveText(remaining(1))
 		})
 
 		test('Checking the FIRST item still works after a second item is added', async ({
@@ -545,17 +562,17 @@ test.describe('module-todo component', () => {
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			await textboxInput.fill('first task')
 			await submitButton.click()
 			await textboxInput.fill('second task')
 			await submitButton.click()
 			await expect(items).toHaveCount(2)
-			await expect(count.locator('.count')).toHaveText('2')
+			await expect(count).toHaveText(remaining(2))
 
 			await items.nth(0).locator('form-checkbox label').click()
-			await expect(count.locator('.count')).toHaveText('1')
+			await expect(count).toHaveText(remaining(1))
 		})
 
 		test('form-checkbox enters :has(input:checked) when item is marked complete', async ({
@@ -595,7 +612,7 @@ test.describe('module-todo component', () => {
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			await textboxInput.fill('first task')
 			await submitButton.click()
@@ -604,7 +621,7 @@ test.describe('module-todo component', () => {
 			await expect(items).toHaveCount(2)
 
 			await items.nth(0).locator('form-checkbox label').click()
-			await expect(count.locator('.count')).toHaveText('1')
+			await expect(count).toHaveText(remaining(1))
 			expect(await isHostChecked(items.nth(0).locator('form-checkbox'))).toBe(
 				true,
 			)
@@ -646,18 +663,18 @@ test.describe('module-todo component', () => {
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			await textboxInput.fill('first task')
 			await submitButton.click()
 			await textboxInput.fill('second task')
 			await submitButton.click()
 			await expect(items).toHaveCount(2)
-			await expect(count.locator('.count')).toHaveText('2')
+			await expect(count).toHaveText(remaining(2))
 
 			// Check second item BEFORE any reorder — should work
 			await items.nth(1).locator('form-checkbox label').click()
-			await expect(count.locator('.count')).toHaveText('1')
+			await expect(count).toHaveText(remaining(1))
 
 			// Reorder: move second item to top
 			const reorderBtn = items.nth(1).locator('button.reorder')
@@ -666,7 +683,7 @@ test.describe('module-todo component', () => {
 			await page.waitForTimeout(100)
 
 			// After reorder, the item that was second is now first; it should still be checked
-			await expect(count.locator('.count')).toHaveText('1')
+			await expect(count).toHaveText(remaining(1))
 			expect(await isHostChecked(items.nth(0).locator('form-checkbox'))).toBe(
 				true,
 			)
@@ -720,23 +737,23 @@ test.describe('module-todo component', () => {
 			const textboxInput = todo.locator('form > form-textbox input')
 			const submitButton = todo.locator('.submit button')
 			const items = todo.locator('li[data-key]')
-			const count = todo.locator('basic-pluralize')
+			const count = todo.locator('.remaining')
 
 			for (const label of ['task A', 'task B', 'task C']) {
 				await textboxInput.fill(label)
 				await submitButton.click()
 			}
 			await expect(items).toHaveCount(3)
-			await expect(count.locator('.count')).toHaveText('3')
+			await expect(count).toHaveText(remaining(3))
 
 			await items.nth(2).locator('form-checkbox label').click()
-			await expect(count.locator('.count')).toHaveText('2')
+			await expect(count).toHaveText(remaining(2))
 
 			await items.nth(0).locator('form-checkbox label').click()
-			await expect(count.locator('.count')).toHaveText('1')
+			await expect(count).toHaveText(remaining(1))
 
 			await items.nth(1).locator('form-checkbox label').click()
-			await expect(count.locator('.none')).toBeVisible()
+			await expect(count).toHaveText(ALL_DONE)
 		})
 	})
 
@@ -843,6 +860,52 @@ test.describe('module-todo component', () => {
 
 			await expect(edit.locator('.text')).toHaveText('renamed task')
 			await expect(checkbox).toHaveAccessibleName('renamed task')
+		})
+	})
+
+	test.describe('Remaining count message (LT-467)', () => {
+		// One leg per count class: the `=0` arm, CLDR `one`, CLDR `other`.
+		test('en: 0 → the =0 arm, 1 → one, 5 → other', async ({ page }) => {
+			const count = page.locator('module-todo .remaining')
+			await expect(count).toHaveText(ALL_DONE)
+			await addTodos(page, 1)
+			await expect(count).toHaveText('1 task remaining')
+			await addTodos(page, 4, 2)
+			await expect(count).toHaveText('5 tasks remaining')
+		})
+
+		// pl spells {one, few, many, other}. The instance is the compiled
+		// server render at `pl` — its `i18n` attribute carries the catalog
+		// pattern, so nothing here is a hand copy that could go stale. The
+		// hand-written `.ts` twin has no ICU evaluator and speaks the source
+		// locale only.
+		test('pl: 0 → the =0 arm, 1 → one, 2 → few, 5 → many', async ({ page }) => {
+			test.skip(
+				(await servedSurface(page)) === 'ts',
+				'the hand-written twin speaks the source locale only',
+			)
+			const html = renderModuleTodo({ i18n: i18nRecord('module-todo', 'pl') })
+			await page.evaluate(markup => {
+				const old = document.querySelector('module-todo')
+				old?.insertAdjacentHTML('afterend', markup)
+				old?.remove()
+			}, html)
+			await expect(page.locator('module-todo')).toHaveAttribute('lang', 'pl')
+			const count = page.locator('module-todo .remaining')
+			await expect(count).toHaveText('Wszystko gotowe!')
+			const input = page.locator('module-todo form > form-textbox input')
+			const expected: Array<[number, string]> = [
+				[1, 'Pozostało 1 zadanie'], // one
+				[2, 'Pozostały 2 zadania'], // few
+				[3, 'Pozostały 3 zadania'], // few
+				[4, 'Pozostały 4 zadania'], // few
+				[5, 'Pozostało 5 zadań'], // many
+			]
+			for (const [n, text] of expected) {
+				await input.fill(`Zadanie ${n}`)
+				await input.press('Enter')
+				await expect(count).toHaveText(text)
+			}
 		})
 	})
 })

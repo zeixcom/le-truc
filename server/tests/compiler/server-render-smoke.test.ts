@@ -29,7 +29,7 @@ import { compileCorpus } from '../../corpus-compile'
 import { collectCorpusSources } from '../../corpus-sources'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-corpus'
-import { inlineI18n, PLURALIZE_I18N } from './corpus-args'
+import { inlineI18n, MODULE_TODO_I18N } from './corpus-args'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -100,7 +100,7 @@ const ARGS: Record<string, Record<string, unknown>> = {
 	'card-callout': { title: 'Heads up' },
 	'card-collapsible': { title: 'Details' },
 	'basic-button': { label: 'Add' },
-	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
+	'module-todo': { i18n: MODULE_TODO_I18N },
 	'module-catalog': {
 		products: [{ id: 'product-1', name: 'Product 1', max: 10 }],
 	},

@@ -27,7 +27,7 @@ import {
 /**
  * MF1 lets one argument drive selectors of different types in different
  * arms — `{type, select, ordinal {{count, selectordinal, …}} other
- * {{count, plural, …}}}`, basic-pluralize's `tasks` since LT-252. The
+ * {{count, plural, …}}}`, the `c-plural` fixture's `tasks` (LT-252). The
  * converter lifts each into its own `.input {$count …}`, and MF2 forbids
  * declaring a variable twice (`duplicate-declaration`). Rewrite every
  * input of a repeated variable as a `.local $count__N = {$count …}` over

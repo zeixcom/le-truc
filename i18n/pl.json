@@ -3,9 +3,6 @@
 	"basic-blogmeta.minRead": "min czytania",
 	"basic-blogmeta.unknownDate": "nieznana data",
 	"basic-blogmeta.updatedOn": "zaktualizowano",
-	"basic-pluralize.done": "Wszystko gotowe!",
-	"basic-pluralize.remaining": "pozostało",
-	"basic-pluralize.tasks": "{type, select, ordinal {{count, selectordinal, other {zadania}}} other {{count, plural, one {zadanie} few {zadania} many {zadań} other {zadania}}}}",
 	"form-colorgraph.drag": "",
 	"form-colorgraph.outOfGamut": "",
 	"form-combobox.clearInput": "",
@@ -17,5 +14,12 @@
 	"form-tokenbox.added": "",
 	"form-tokenbox.duplicate": "",
 	"form-tokenbox.remove": "",
-	"form-tokenbox.removed": ""
+	"form-tokenbox.removed": "",
+	"module-todo.active": "Aktywne",
+	"module-todo.addTodo": "Dodaj zadanie",
+	"module-todo.all": "Wszystkie",
+	"module-todo.clearCompleted": "Usuń ukończone",
+	"module-todo.completed": "Ukończone",
+	"module-todo.filter": "Filtr",
+	"module-todo.remaining": "{count, plural, =0 {Wszystko gotowe!} one {Pozostało # zadanie} few {Pozostały # zadania} many {Pozostało # zadań} other {Pozostało # zadania}}"
 }

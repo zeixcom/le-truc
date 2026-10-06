@@ -51,10 +51,10 @@ None. This component orchestrates behavior by passing state and events between d
 - **required**
 - Live region for screen reader reorder announcements, written by the shared reorder helper
 ---
-- `first('basic-pluralize')`
-- `HTMLElement & BasicPluralizeProps`
+- `p.remaining`
+- `HTMLParagraphElement`
 - **required**
-- Remaining active-item counter; `count` arrives via `truc:pass`
+- Remaining active-item count, worded by module-todo's own ICU `plural` message (`=0`, `one`, `other` in the source locale; each catalog spells its locale's categories)
 ---
 - `first('form-radiogroup')`
 - `HTMLElement & FormRadiogroupProps`

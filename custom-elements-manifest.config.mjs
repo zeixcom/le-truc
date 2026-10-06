@@ -16,7 +16,8 @@ let typeChecker
 // cutover (LT-092) the hand-written .ts twins are deleted per component, so
 // nearly all exclusions are gone — main.ts imports the generated clients
 // directly and every compiled component declares its tag exactly once.
-// basic-gauge and basic-pluralize were cut over in LT-115, basic-number in
+// basic-gauge was cut over in LT-115 (basic-pluralize too, retired in
+// LT-467), basic-number in
 // LT-114, form-radiogroup in LT-116 (the loop-body dirty-flag dispatch
 // widening), basic-button in LT-117 (enhancer mode — the template-less
 // light-DOM enhancer contract).

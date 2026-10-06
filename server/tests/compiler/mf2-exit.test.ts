@@ -22,6 +22,7 @@ import {
 import { formatMessage } from '../../compiler/icu/evaluate'
 import { type MessageArg, parseMessage } from '../../compiler/icu/parse'
 import { corpusPatterns } from './corpus-fixture'
+import { C_PLURAL_CATALOG } from './fixtures/plural/c-plural-catalog'
 import { compileMF2, mf1Tokens, toMF2, toMF2Data } from './mf2-exit'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -222,10 +223,11 @@ describe('nested-to-flat arm expansion', () => {
 	})
 
 	test('arm count is the product of each locale’s spelled key sets', () => {
-		// basic-pluralize's cy catalog: six cardinal arms, six ordinal arms,
+		// The retired basic-pluralize's cy `tasks` (now the `c-plural`
+		// fixture's catalog, LT-467): six cardinal arms, six ordinal arms,
 		// both under `type`.
-		const cy = JSON.parse(readFileSync(path.join(ROOT, 'i18n/cy.json'), 'utf8'))
-		const pattern: string = cy['basic-pluralize.tasks']
+		const pattern = C_PLURAL_CATALOG.cy?.tasks
+		if (!pattern) throw new Error('c-plural-catalog lacks cy.tasks')
 		const data = toMF2Data(pattern)
 		if (data.type !== 'select') throw new Error('expected a select message')
 		// type {ordinal, *} × ordinal {6} × cardinal {6}
@@ -282,7 +284,7 @@ describe('escaping', () => {
 	})
 })
 
-describe('one argument, more than one selector type (basic-pluralize `tasks`)', () => {
+describe('one argument, more than one selector type (the `c-plural` fixture’s `tasks`)', () => {
 	const TASKS =
 		'{type, select, ordinal {{count, selectordinal, one {st} other {th}}} other {{count, plural, one {task} other {tasks}}}}'
 
@@ -313,6 +315,14 @@ describe('one argument, more than one selector type (basic-pluralize `tasks`)', 
 			].join('\n'),
 		)
 		for (const lang of ['en', ...LOCALES]) expectRoundTrip(lang, TASKS)
+	})
+
+	test('every locale’s nested pattern round-trips (the retired catalogs, LT-467)', () => {
+		// The corpus walk no longer carries a select-over-selectordinal/plural
+		// pattern since basic-pluralize retired; the fixture's six catalog
+		// entries keep that shape in the matrix, each in its own locale.
+		for (const [lang, { tasks }] of Object.entries(C_PLURAL_CATALOG))
+			expectRoundTrip(lang, tasks)
 	})
 
 	test('a `#` in a deduplicated selector’s arm still renders the count', () => {

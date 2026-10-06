@@ -3,11 +3,13 @@
  * ADR 0027 turned four former compiler fold-route tasks into pinning tasks —
  * "does the simulated render come out right", not "can the compiler prove it
  * statically". `sim-driver.test.ts` already exercises the whole corpus
- * (including `basic-pluralize`, `basic-number`, `basic-gauge` and
- * `form-listbox`) through the driver; this file adds the fixtures those four
- * tasks specifically call for that the corpus's default ARGS don't exercise
- * (several `count` values, the `{host.count}`/`{count}` spelling pair, and
- * `form-listbox`'s `filterable` clear button).
+ * (including `basic-number`, `basic-gauge` and `form-listbox`) through the
+ * driver; this file adds the fixtures those four tasks specifically call for
+ * that the corpus's default ARGS don't exercise (several `count` values, the
+ * `{host.count}`/`{count}` spelling pair, and `form-listbox`'s `filterable`
+ * clear button). The LT-143/LT-144 legs pinned the corpus's
+ * `basic-pluralize`; since its retirement (LT-467) they compile the same
+ * source as the `c-plural` compiler fixture.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
@@ -20,8 +22,9 @@ import {
 } from '../../compiler/sim/realm'
 import { compileCorpus } from '../../corpus-compile'
 import { createGeneratedDir } from '../helpers/generated-corpus'
-import { argMessage, inlineI18n, PLURALIZE_I18N } from './corpus-args'
-import { loadCorpus } from './corpus-fixture'
+import { argMessage, C_PLURAL_I18N, inlineI18n } from './corpus-args'
+import { cPluralFixture, loadCorpus } from './corpus-fixture'
+import { C_PLURAL_CATALOG } from './fixtures/plural/c-plural-catalog'
 
 const generated = createGeneratedDir('gate-wave')
 afterAll(() => generated.cleanup())
@@ -79,49 +82,51 @@ const loadRealm = async (
 	return realm
 }
 
-/* === LT-143 — basic-pluralize renders correctly (LT-173: Folded; LT-252: one ICU pattern) === */
+/* === LT-143 — c-plural renders correctly (LT-173: Folded; LT-252: one ICU pattern) === */
 
-const pluralize = await compileSubset(['basic-pluralize'])
-const pluralizeInfo = pluralize.compiled.find(
-	entry => entry.tag === 'basic-pluralize',
+const pluralizeCompiled = await compileCorpus(
+	[cPluralFixture()],
+	generated.path,
 )
-if (!pluralizeInfo) throw new Error('basic-pluralize did not compile')
-const pluralizeRealm = await loadRealm(pluralize.registry, [pluralizeInfo])
+const pluralizeRegistry = JSON.parse(
+	await Bun.file(`${generated.path}/registry.json`).text(),
+) as ComponentRegistry
+const pluralizeInfo = pluralizeCompiled.find(entry => entry.tag === 'c-plural')
+if (!pluralizeInfo) throw new Error('c-plural did not compile')
+const pluralizeRealm = await loadRealm(pluralizeRegistry, [pluralizeInfo])
 
 /**
- * The reserved `i18n` record a fixture passes for basic-pluralize (the
+ * The reserved `i18n` record a fixture passes for c-plural (the
  * compiler supplies the real one at every render boundary; see
  * `corpus-args.ts` for the shared copy's rationale). `en`, cardinal (no
  * `ordinal` arg).
  */
-const PLURALIZE_ARGS = (count: number): Record<string, unknown> => ({
+const C_PLURAL_ARGS = (count: number): Record<string, unknown> => ({
 	count,
-	i18n: PLURALIZE_I18N,
+	i18n: C_PLURAL_I18N,
 })
 
-const REPO_ROOT = path.resolve(import.meta.dir, '../../..')
-
-/** A committed catalog's entry for `basic-pluralize.<key>`. */
-const catalogEntry = (locale: string, key: string): string => {
-	const catalog = JSON.parse(
-		readFileSync(path.join(REPO_ROOT, 'i18n', `${locale}.json`), 'utf8'),
-	) as Record<string, string>
-	const entry = catalog[`basic-pluralize.${key}`]
+/** The fixture catalog's entry for `<key>` at `locale`. */
+const catalogEntry = (
+	locale: string,
+	key: 'done' | 'remaining' | 'tasks',
+): string => {
+	const entry = C_PLURAL_CATALOG[locale]?.[key]
 	if (entry === undefined)
-		throw new Error(`i18n/${locale}.json lacks basic-pluralize.${key}`)
+		throw new Error(`c-plural-catalog lacks ${locale}.${key}`)
 	return entry
 }
 
 /**
- * The record `i18nRecord('basic-pluralize', locale)` resolves: the
- * committed catalog's strings, and its `tasks` pattern as an argument
+ * The record `i18nRecord('c-plural', locale)` would resolve: the
+ * fixture catalog's strings, and its `tasks` pattern as an argument
  * message baked with the locale's plural rules.
  */
 const localeArgs = (locale: string, overrides?: Record<string, unknown>) => ({
-	...PLURALIZE_ARGS(1),
+	...C_PLURAL_ARGS(1),
 	lang: locale,
 	i18n: {
-		...PLURALIZE_I18N,
+		...C_PLURAL_I18N,
 		lang: locale,
 		t: {
 			done: catalogEntry(locale, 'done'),
@@ -138,11 +143,21 @@ const tasksSpansOf = (html: string): string[] =>
 		match => match[1] ?? '',
 	)
 
-describe('LT-143 — basic-pluralize renders correctly under simulation', () => {
+describe('LT-143 — c-plural renders correctly under simulation', () => {
 	afterAll(() => pluralizeRealm.dispose())
 
+	test('LT-173 acceptance: classifies Folded — no standing routing signals', () => {
+		// The reserved `i18n` parameter (ADR 0030) makes the locale
+		// server-known, so `Intl.PluralRules` folds (LT-142) and the six
+		// LTC034 routing signals the six-span shape carried are gone. If a NEW
+		// signal appears here, the fold rule or the classifier moved underneath
+		// the fixture; investigate rather than reclassify.
+		expect(pluralizeRegistry['c-plural']?.tier).toBe('folded')
+		expect(pluralizeRegistry['c-plural']?.routingSignals).toHaveLength(0)
+	})
+
 	test('LT-252: an en page renders ONE plural span — no per-category alternatives', async () => {
-		const html = await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(1))
+		const html = await serverMarkupOf(pluralizeInfo, C_PLURAL_ARGS(1))
 		expect(tasksSpansOf(html)).toEqual(['task'])
 		expect(html).not.toMatch(/class="(zero|one|two|few|many|other)"/)
 		expect(html).not.toContain('truc:case')
@@ -157,10 +172,14 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		// (`count`) would put the pattern's parsed AST on the root `i18n`
 		// attribute (ADR 0030 s9), but at the source locale it equals the
 		// preamble's inlined source record, so the attribute is left out
-		// (LT-354; LT-252 measured 539 bytes of it, 728 in total).
-		const html = await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(1))
+		// (LT-354; LT-252 measured 539 bytes of it, 728 in total). The
+		// measurements were taken on `<basic-pluralize>`; the fixture's
+		// `<c-plural>` tag is 7 bytes shorter in both the open and the close
+		// tag (LT-467), so every total below is 14 bytes under them.
+		const TAG_DELTA = 2 * ('basic-pluralize'.length - 'c-plural'.length)
+		const html = await serverMarkupOf(pluralizeInfo, C_PLURAL_ARGS(1))
 		expect(html).not.toContain(' i18n=')
-		expect(Buffer.byteLength(html)).toBe(226 - 37)
+		expect(Buffer.byteLength(html)).toBe(226 - 37 - TAG_DELTA)
 		// A translated locale still pays for it: cy carries both arms' six
 		// categories. Without a locale per node (ADR 0030 s6) the total is
 		// 957 bytes, down from LT-252's 1015.
@@ -168,19 +187,19 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		const attribute = / i18n="[^"]*"/.exec(welsh)?.[0] ?? ''
 		expect(attribute).not.toContain('&quot;l&quot;')
 		expect(Buffer.byteLength(attribute)).toBe(769)
-		expect(Buffer.byteLength(welsh)).toBe(957)
+		expect(Buffer.byteLength(welsh)).toBe(957 - TAG_DELTA)
 	})
 
 	test('LT-252: ordinal selection lives inside the pattern (selectordinal)', async () => {
 		const render = (count: number) =>
-			serverMarkupOf(pluralizeInfo, { ...PLURALIZE_ARGS(count), ordinal: true })
+			serverMarkupOf(pluralizeInfo, { ...C_PLURAL_ARGS(count), ordinal: true })
 		// en ordinal: 1 → one, 2 → two, 3 → few, 11 → other, 21 → one
 		expect(tasksSpansOf(await render(1))).toEqual(['task'])
 		expect(tasksSpansOf(await render(2))).toEqual(['tasks'])
 		expect(tasksSpansOf(await render(21))).toEqual(['task'])
 		// …and the same counts under cardinal rules differ where en does
 		expect(
-			tasksSpansOf(await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(21))),
+			tasksSpansOf(await serverMarkupOf(pluralizeInfo, C_PLURAL_ARGS(21))),
 		).toEqual(['tasks'])
 	})
 
@@ -246,8 +265,8 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		'count=%d connects to one plural span and the count text',
 		async count => {
 			const { html } = await pluralizeRealm.render({
-				markup: await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(count)),
-				component: 'basic-pluralize',
+				markup: await serverMarkupOf(pluralizeInfo, C_PLURAL_ARGS(count)),
+				component: 'c-plural',
 			})
 			expect(tasksSpansOf(html)).toEqual([
 				new Intl.PluralRules('en').select(count) === 'one' ? 'task' : 'tasks',
@@ -262,26 +281,26 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		// materializes. With no `i18n` attribute the instance speaks the
 		// source locale (ADR 0030 s9): Welsh 2 is `two`, which the en
 		// pattern does not spell, so it falls to `other`.
-		const markup = `<div lang="cy"><basic-pluralize count="2">
+		const markup = `<div lang="cy"><c-plural count="2">
 			<p class="none">none</p>
 			<p class="some"><span class="count"></span><span class="tasks"></span></p>
-		</basic-pluralize></div>`
+		</c-plural></div>`
 		const { html } = await pluralizeRealm.render({
 			markup,
-			component: 'basic-pluralize',
+			component: 'c-plural',
 		})
-		expect(html).toContain('<basic-pluralize count="2" lang="cy"')
+		expect(html).toContain('<c-plural count="2" lang="cy"')
 		expect(tasksSpansOf(html)).toEqual(['tasks'])
 	})
 
 	test('LT-191: an own lang attribute beats the nearest ancestor', async () => {
-		const markup = `<div lang="cy"><basic-pluralize count="1" lang="en">
+		const markup = `<div lang="cy"><c-plural count="1" lang="en">
 			<p class="none">none</p>
 			<p class="some"><span class="count"></span><span class="tasks"></span></p>
-		</basic-pluralize></div>`
+		</c-plural></div>`
 		const { html } = await pluralizeRealm.render({
 			markup,
-			component: 'basic-pluralize',
+			component: 'c-plural',
 		})
 		expect(html).toContain('lang="en"')
 		expect(tasksSpansOf(html)).toEqual(['task'])
@@ -292,12 +311,12 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		// recomputed from the pattern, not selected among pre-rendered
 		// alternatives.
 		const { html } = await pluralizeRealm.render({
-			markup: await serverMarkupOf(pluralizeInfo, PLURALIZE_ARGS(1)),
-			component: 'basic-pluralize',
+			markup: await serverMarkupOf(pluralizeInfo, C_PLURAL_ARGS(1)),
+			component: 'c-plural',
 		})
 		expect(tasksSpansOf(html)).toEqual(['task'])
-		const host = pluralizeRealm.document.querySelector('basic-pluralize')
-		if (!host) throw new Error('rendered basic-pluralize not found')
+		const host = pluralizeRealm.document.querySelector('c-plural')
+		if (!host) throw new Error('rendered c-plural not found')
 		;(host as unknown as { count: number }).count = 2
 		await new Promise(resolve => setTimeout(resolve, 0))
 		expect(tasksSpansOf(host.outerHTML)).toEqual(['tasks'])
@@ -309,11 +328,11 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 				pluralizeInfo,
 				localeArgs('de', { count: 3 }),
 			),
-			component: 'basic-pluralize',
+			component: 'c-plural',
 		})
 		expect(tasksSpansOf(html)).toEqual(['Aufgaben'])
-		const host = pluralizeRealm.document.querySelector('basic-pluralize')
-		if (!host) throw new Error('rendered basic-pluralize not found')
+		const host = pluralizeRealm.document.querySelector('c-plural')
+		if (!host) throw new Error('rendered c-plural not found')
 		;(host as unknown as { count: number }).count = 1
 		await new Promise(resolve => setTimeout(resolve, 0))
 		expect(tasksSpansOf(host.outerHTML)).toEqual(['Aufgabe'])
@@ -330,10 +349,10 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 					pluralizeInfo,
 					localeArgs(locale, { count: from }),
 				),
-				component: 'basic-pluralize',
+				component: 'c-plural',
 			})
-			const host = pluralizeRealm.document.querySelector('basic-pluralize')
-			if (!host) throw new Error('rendered basic-pluralize not found')
+			const host = pluralizeRealm.document.querySelector('c-plural')
+			if (!host) throw new Error('rendered c-plural not found')
 			expect(tasksSpansOf(host.outerHTML)).toEqual([fromText])
 			;(host as unknown as { count: number }).count = to
 			await new Promise(resolve => setTimeout(resolve, 0))
@@ -341,42 +360,50 @@ describe('LT-143 — basic-pluralize renders correctly under simulation', () => 
 		},
 	)
 
-	test('LT-252: the raw test page — every locale instance connects to its own wording', async () => {
-		// /test/basic-pluralize serves the page raw (the page renderer never
-		// runs there), so each locale instance carries a hand-copied `i18n`
-		// attribute. Connect the whole page and read each instance, the way
-		// basic-pluralize.spec.ts does in a browser.
-		await pluralizeRealm.render({
-			markup: readFileSync(
-				path.join(REPO_ROOT, 'examples/basic/pluralize/basic-pluralize.html'),
-				'utf8',
+	test('LT-252: a page of per-locale renders — every instance connects to its own wording', async () => {
+		// The retired example page's shape (LT-467): one instance per locale,
+		// each carrying the `i18n` attribute its server render wrote, plus a
+		// client-authored instance that inherits `cy` from an ancestor.
+		// Connect them together and read each, as its Playwright spec did.
+		const instances: Array<[string, string, number]> = [
+			['de', 'german', 3],
+			['zh', 'chinese', 5],
+			['ar', 'arabic', 2],
+			['pl', 'polish', 5],
+			['lv', 'latvian', 10],
+			['cy', 'welsh', 0],
+		]
+		const rendered = await Promise.all(
+			instances.map(async ([locale, id, count]) =>
+				(
+					await serverMarkupOf(pluralizeInfo, localeArgs(locale, { count }))
+				).replace('<c-plural ', `<c-plural id="${id}" `),
 			),
-			component: 'basic-pluralize',
+		)
+		await pluralizeRealm.render({
+			markup: `${rendered.join('\n')}
+<div lang="cy"><c-plural id="welsh-ancestor" count="2">
+	<p class="none">none</p>
+	<p class="some"><span class="count"></span><span class="tasks"></span></p>
+</c-plural></div>`,
+			component: 'c-plural',
 		})
 		const doc = pluralizeRealm.document
 		const tasksOf = (id: string) =>
 			doc.querySelector(`#${id} .tasks`)?.textContent ?? null
-		expect(doc.querySelectorAll('basic-pluralize .tasks').length).toBe(
-			doc.querySelectorAll('basic-pluralize').length,
-		)
-		expect(tasksOf('plural-test')).toBe('task')
-		expect(tasksOf('welsh-ancestor-test')).toBe('tasks')
-		expect(tasksOf('german-test')).toBe('Aufgaben')
-		expect(tasksOf('chinese-test')).toBe('个任务')
-		expect(tasksOf('arabic-test')).toBe('مهمتان')
-		expect(tasksOf('polish-test')).toBe('zadań')
-		expect(tasksOf('latvian-test')).toBe('uzdevumu')
-		expect(tasksOf('ordinal-test')).toBe('task')
-		expect(tasksOf('pluralize-2')).toBe('tasks')
-		const welsh = doc.querySelector('#welsh-test') as unknown as {
-			count: number
-		}
+		expect(tasksOf('german')).toBe('Aufgaben')
+		expect(tasksOf('chinese')).toBe('个任务')
+		expect(tasksOf('arabic')).toBe('مهمتان')
+		expect(tasksOf('polish')).toBe('zadań')
+		expect(tasksOf('latvian')).toBe('uzdevumu')
+		expect(tasksOf('welsh-ancestor')).toBe('tasks')
+		const welsh = doc.querySelector('#welsh') as unknown as { count: number }
 		welsh.count = 2
 		await new Promise(resolve => setTimeout(resolve, 0))
-		expect(tasksOf('welsh-test')).toBe('dasg')
-		expect(
-			doc.querySelector('#welsh-ancestor-test')?.getAttribute('lang'),
-		).toBe('cy')
+		expect(tasksOf('welsh')).toBe('dasg')
+		expect(doc.querySelector('#welsh-ancestor')?.getAttribute('lang')).toBe(
+			'cy',
+		)
 	})
 })
 
@@ -429,10 +456,7 @@ describe('LT-133 — basic-number renders the formatted value under simulation',
 
 /* === LT-144 — {host.count} and {count} converge on the same initial render === */
 
-const withArgSource = corpus.find(file =>
-	file.filename.endsWith('/basic-pluralize.tsrx'),
-)
-if (!withArgSource) throw new Error('basic-pluralize.tsrx fixture missing')
+const withArgSource = cPluralFixture()
 
 const spellingVariant = (tag: string, spelling: 'host.count' | 'count') => ({
 	...withArgSource,
@@ -443,9 +467,9 @@ const spellingVariant = (tag: string, spelling: 'host.count' | 'count') => ({
 	path: `${withArgSource.path}.${tag}`,
 	filename: `examples/synth/${tag}/${tag}.tsrx`,
 	content: withArgSource.content
-		.replace(/<basic-pluralize\b/g, `<${tag}`)
-		.replace(/<\/basic-pluralize>/g, `</${tag}>`)
-		.replace('function BasicPluralize(', `function ${pascal(tag)}(`)
+		.replace(/<c-plural\b/g, `<${tag}`)
+		.replace(/<\/c-plural>/g, `</${tag}>`)
+		.replace('function CPlural(', `function ${pascal(tag)}(`)
 		.replace(
 			'<span class="count">{host.count}</span>',
 			`<span class="count">{${spelling}}</span>`,
@@ -472,11 +496,11 @@ describe('LT-144 — {host.count} and {count} converge on the same initial rende
 		'count=%d renders identical text for both spellings after simulated connect',
 		async count => {
 			const { html: hostHtml } = await spellingRealm.render({
-				markup: await serverMarkupOf(hostVariant, PLURALIZE_ARGS(count)),
+				markup: await serverMarkupOf(hostVariant, C_PLURAL_ARGS(count)),
 				component: 'c-count-host',
 			})
 			const { html: bareHtml } = await spellingRealm.render({
-				markup: await serverMarkupOf(bareVariant, PLURALIZE_ARGS(count)),
+				markup: await serverMarkupOf(bareVariant, C_PLURAL_ARGS(count)),
 				component: 'c-count-bare',
 			})
 			const countTextOf = (html: string) =>

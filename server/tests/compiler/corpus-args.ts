@@ -43,20 +43,21 @@ export const argMessage = (pattern: string, lang = 'en') => {
  * An inline reserved-`i18n` record for the fixture args (ADR 0030, LT-173).
  * The compiler supplies the real record at every render boundary; a fixture
  * builds its own so the args tables stay dependency-free (they are shared
- * by tests that compile into per-run temp directories). Values mirror what
- * `i18nRecord('basic-pluralize', 'en')` resolves at the current corpus —
- * since LT-252 the plural morphology is one ICU pattern (`tasks`), a
- * client-referenced message, so it is an {@link argMessage}.
+ * by tests that compile into per-run temp directories). Values mirror the
+ * `en` source record of the `c-plural` compiler fixture
+ * (`fixtures/plural/c-plural.tsrx`, the retired basic-pluralize kept for its
+ * coverage, LT-467) — since LT-252 the plural morphology is one ICU pattern
+ * (`tasks`), a client-referenced message, so it is an {@link argMessage}.
  */
-export const PLURALIZE_TASKS =
+export const C_PLURAL_TASKS =
 	'{type, select, ordinal {{count, selectordinal, one {task} other {tasks}}} other {{count, plural, one {task} other {tasks}}}}'
 
-export const PLURALIZE_I18N = {
+export const C_PLURAL_I18N = {
 	lang: 'en',
 	t: {
 		done: 'Well done, all done!',
 		remaining: 'remaining',
-		tasks: argMessage(PLURALIZE_TASKS),
+		tasks: argMessage(C_PLURAL_TASKS),
 	},
 	timeZone: 'UTC',
 	currency: 'USD',
@@ -65,7 +66,7 @@ export const PLURALIZE_I18N = {
 
 /**
  * An inline record for one component's declared keys (same posture as
- * `PLURALIZE_I18N`): mirrors what `i18nRecord(tag, 'en')` resolves at the
+ * `C_PLURAL_I18N`): mirrors what `i18nRecord(tag, 'en')` resolves at the
  * current corpus — every key at its source-locale string, since the source
  * locale has no override file. Kept explicit per component so a key or
  * source-string edit fails the render fixtures that need updating.
@@ -76,6 +77,24 @@ export const inlineI18n = (t: Record<string, unknown>) => ({
 	timeZone: 'UTC',
 	currency: 'USD',
 	dir: 'ltr',
+})
+
+/**
+ * module-todo's record (LT-467): its labels, and the `remaining` count as an
+ * {@link argMessage} — the pattern is client-referenced (`activeCount` is a
+ * client memo), so the render serializes it when it differs from the source.
+ */
+export const MODULE_TODO_REMAINING =
+	'{count, plural, =0 {Well done, all done!} one {# task remaining} other {# tasks remaining}}'
+
+export const MODULE_TODO_I18N = inlineI18n({
+	addTodo: 'Add Todo',
+	filter: 'Filter',
+	all: 'All',
+	active: 'Active',
+	completed: 'Completed',
+	clearCompleted: 'Clear Completed',
+	remaining: argMessage(MODULE_TODO_REMAINING),
 })
 
 /**
@@ -225,5 +244,5 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 		],
 	},
 	'basic-button': { label: 'Add' },
-	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
+	'module-todo': { i18n: MODULE_TODO_I18N },
 }

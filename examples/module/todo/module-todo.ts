@@ -142,11 +142,21 @@ export default defineComponent(
 		)
 		pass(submit, { disabled: () => !textbox.length })
 
-		const count = first(
-			'basic-pluralize',
-			'Add <basic-pluralize> component to display the number of todo items.',
+		// The compiled spellings word the count through their ICU message
+		// (`remaining`); this hand-written twin has no ICU evaluator, so it
+		// selects the same source-locale arms with Intl.PluralRules (LT-467).
+		const remaining = first(
+			'.remaining',
+			'Add a .remaining element to display the number of todo items.',
 		)
-		pass(count, { count: () => activeCount.get() })
+		const pluralRules = new Intl.PluralRules('en')
+		const numberFormat = new Intl.NumberFormat('en')
+		watch(() => {
+			const count = activeCount.get()
+			if (count === 0) return 'Well done, all done!'
+			const noun = pluralRules.select(count) === 'one' ? 'task' : 'tasks'
+			return `${numberFormat.format(count)} ${noun} remaining`
+		}, bindText(remaining))
 
 		const clearCompleted = first(
 			'basic-button.clear-completed',

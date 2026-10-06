@@ -21,7 +21,6 @@ layout: 'page'
   - [Gauge](./examples/basic-gauge.html)
   - [Hello](./examples/basic-hello.html)
   - [Number](./examples/basic-number.html)
-  - [Pluralize](./examples/basic-pluralize.html)
 - Card
   - [Blogpost](./examples/card-blogpost.html)
   - [Callout](./examples/card-callout.html)

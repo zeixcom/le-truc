@@ -117,8 +117,8 @@ const reportLoopsInBranches = (
  *   genuine compile warning that converges to zero — unlike a missing
  *   translation, which rides the build report's translation census instead.
  *   Two or more adjacent letters is the prose test: a single-letter fragment
- *   (basic-pluralize's `s` suffix spans) is per-instance page data, not
- *   catalog material.
+ *   (a plural `s` suffix span) is per-instance page data, not catalog
+ *   material.
  * - LTC055 (LT-250, ADR 0030 s4): every `t.<key>` site against the key's
  *   parsed ICU pattern — called with exactly its arguments, or read bare
  *   when it takes none (`reportMessageCallSites`, i18n.ts).

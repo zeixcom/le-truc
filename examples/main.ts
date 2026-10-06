@@ -45,17 +45,16 @@ import '../server/generated/components/basic-blogmeta.client.ts'
 // page may also author the markup itself, in whole or in part.
 import '../server/generated/components/basic-button.client.ts'
 import '../server/generated/components/basic-counter.client.ts'
-// basic-gauge and basic-pluralize cut over in LT-115: the arg→DOM
-// substitution now routes derived signals through the exposed prop's Slot
-// (a tracked source — post-connect writes re-derive instead of freezing),
-// and root harvest sites read the ambient `host` instead of an illegal
-// `first('<own-tag>')` self-query. Both components were reshaped to their
-// twins' contracts (gauge: meter-fallback harvest + observedAttributes;
-// pluralize: getLocale thunks, no setup signals) — see their .tsrx headers.
+// basic-gauge cut over in LT-115: the arg→DOM substitution now routes
+// derived signals through the exposed prop's Slot (a tracked source —
+// post-connect writes re-derive instead of freezing), and root harvest
+// sites read the ambient `host` instead of an illegal `first('<own-tag>')`
+// self-query. It was reshaped to its twin's contract (meter-fallback
+// harvest + observedAttributes) — see its .tsrx header. basic-pluralize
+// (cut over in the same task) was retired in LT-467.
 import '../server/generated/components/basic-gauge.client.ts'
 import '../server/generated/components/basic-number.client.ts'
 import '../server/generated/components/basic-hello.client.ts'
-import '../server/generated/components/basic-pluralize.client.ts'
 import '../server/generated/components/card-collapsible.client.ts'
 import '../server/generated/components/card-colorscale.client.ts'
 import '../server/generated/components/card-mediaqueries.client.ts'

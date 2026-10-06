@@ -725,7 +725,9 @@ const planHarvests = (
 	 *    read `host.<prop>`: a TRACKED reactive source, so the derived signal
 	 *    re-runs on later property writes and `observedAttributes` re-parses
 	 *    instead of freezing on the untracked `getAttribute` read (NOTES
-	 *    LT-092, the frozen basic-gauge/basic-pluralize `deriveCell`s).
+	 *    LT-092, the frozen basic-gauge/basic-pluralize `deriveCell`s; pinned
+	 *    by root-harvest.test.ts and basic-gauge since basic-pluralize's
+	 *    retirement, LT-467).
 	 * 2. a host-prop mirror (`value={() => host.value}` where the root renders
 	 *    the parser-exposed prop from this arg) — read the target element's
 	 *    property;

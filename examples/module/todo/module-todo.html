@@ -8,8 +8,11 @@
      composed <form-inplace-edit> sits beside the <form-checkbox>, not inside
      its label (interactive content in a label leaks activation); the label
      keeps only a visually-hidden text bound to the item label, whose display
-     text arrives via module-todo's per-item truc:pass into host.value. -->
-<module-todo>
+     text arrives via module-todo's per-item truc:pass into host.value. Since
+     LT-467 the remaining count is module-todo's own ICU message (the `=0` arm
+     folds server-side); the root `lang` is the client evaluator's locale, and
+     at the source locale no `i18n` attribute is written. -->
+<module-todo lang="en">
 	<form action="#">
 		<form-textbox name="add-todo" value="">
 			<label for="add-todo-input">What needs to be done?</label>
@@ -74,14 +77,7 @@
 		</li>
 	</template>
 	<footer>
-		<basic-pluralize>
-			<p class="none">Well done, all done!</p>
-			<p class="some">
-				<span class="count"></span>
-				<span class="tasks"></span>
-				remaining
-			</p>
-		</basic-pluralize>
+		<p class="remaining">Well done, all done!</p>
 		<!-- form-radiogroup serves its compiled client since LT-116 — the
 		     labels carry the item's value in data-value, the compiled each()
 		     addressing channel the hand-written enhancer didn't need. -->

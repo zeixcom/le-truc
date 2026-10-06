@@ -118,14 +118,11 @@ module-todo {
 		gap: var(--space-m);
 		margin: 0;
 
-		& basic-pluralize {
+		& .remaining {
 			grid-area: count;
 			justify-self: start;
-
-			& p {
-				font-size: var(--font-size-s);
-				margin: 0;
-			}
+			font-size: var(--font-size-s);
+			margin: 0;
 		}
 
 		.split-button {

@@ -9,7 +9,8 @@
  * 1. `paramDomRead`'s attribute-site walk (ADR 0024 sub-design 12) matched the
  *    root's own server attributes first — the usual case, since args render as
  *    root attributes — planning a query named after the component's own tag
- *    (basic-pluralize / basic-gauge both hit this; a regrouping-era edit had
+ *    (basic-gauge and the since-retired basic-pluralize both hit this; a
+ *    regrouping-era edit had
  *    dropped LT-024's `site.el !== component.root` guard).
  * 2. Pass 3's direct text-site branch for a signal-IDENTIFIER lazy root child
  *    (`<my-el>{sig}</my-el>`, LT-114's interplay note) — the same self-query,

@@ -1,38 +1,18 @@
 /**
- * Unified-format migration: basic-pluralize (LT-115 cutover; re-cut onto the
- * reserved `i18n` parameter in LT-173, ADR 0030; one ICU pattern since
- * LT-252). The component declares `i18n` and receives the
- * compiler-supplied locale record — callers never pass it — so the locale
- * is a build-time fact and the component is Folded-tier. The noun is ONE
- * message, `tasks`, whose plural arms live inside each locale's pattern:
- * the server folds the initial form into the single `.tasks` span, and
- * because `count` is client-reactive the pattern's parsed AST rides the
- * root `i18n` attribute and the client re-evaluates it on change (ADR 0030
- * s6/s9).
- *
- * Contract notes (LT-173 migration of the LT-115 contract; LT-191 restored
- * the ancestor walk):
- * - The locale INHERITS, and `lang` is a CONFIG attribute only (not a
- *   reactive property — it is a built-in IDL property, so expose() could
- *   never install an accessor over it). The walked effective locale
- *   (`getLocale(host)` — own attribute first, else the nearest ancestor
- *   `[lang]`, else `en`) MATERIALIZES onto the attribute at connect,
- *   exactly what the server render does for SSR'd instances, so both paths
- *   converge on one DOM shape. NOT restored: re-walking on ancestor
- *   changes — the locale is fixed at connect, because the catalog never
- *   ships; a client-created instance with no `i18n` attribute speaks the
- *   source locale.
- * - `ordinal` is a Parser-exposed prop (presence), read once at connect.
- *   It selects the pattern's arm through the `type` select argument —
- *   `selectordinal` for 1st/2nd/3rd rules, `plural` otherwise.
- * - "remaining" / "Well done, all done!" are catalog keys, and so is the
- *   noun: it is not "singular plus s" — Welsh tasg/dasg/tasgiau, Arabic's
- *   six forms. The catalog carries the component's own noun in every
- *   locale; the page's light DOM carries no word forms.
+ * The retired `basic-pluralize` example (LT-467), kept as a compiler test
+ * fixture under the tag `c-plural`: module-todo now words its own count, but
+ * the shape below is the coverage the corpus lost with it — a reserved `i18n`
+ * record whose client-referenced pattern nests `selectordinal` and `plural`
+ * under a `select` on one argument (LT-252), a Parser-exposed `count` read on
+ * the root (`{host.count}`), a presence `ordinal`, and the LT-191 walked-locale
+ * materialization onto the root `lang` attribute (a built-in IDL property,
+ * so a config attribute only). Its per-locale catalog is
+ * `c-plural-catalog.ts` beside it; the gate-wave, i18n and diagnostics suites
+ * compile it through `compileCorpus`.
  */
 
 import { asBoolean, asClampedInteger } from '@zeix/le-truc'
-import { getLocale } from '../../_common/getLocale'
+import { getLocale } from '../../../../../examples/_common/getLocale'
 
 export const i18n = {
 	done: 'Well done, all done!',
@@ -44,7 +24,7 @@ export const i18n = {
 		'{type, select, ordinal {{count, selectordinal, one {task} other {tasks}}} other {{count, plural, one {task} other {tasks}}}}',
 } as const
 
-export type BasicPluralizeProps = {
+export type CPluralProps = {
 	/** The count to pluralize. Clamped to a non-negative integer. */
 	count: number
 	/** Config attribute only (not a reactive property — `lang` is a built-in IDL property). BCP 47 locale tag; the element's own attribute wins, else the nearest ancestor's, else `en`. The server renders the effective locale onto it; the client materializes the walked locale at connect. */
@@ -55,7 +35,7 @@ export type BasicPluralizeProps = {
 
 declare global {
 	interface HTMLElementTagNameMap {
-		'basic-pluralize': HTMLElement & BasicPluralizeProps
+		'c-plural': HTMLElement & CPluralProps
 	}
 }
 
@@ -67,9 +47,8 @@ declare global {
  *
  * @attribute {string} [lang] - Config attribute only (not a reactive property). BCP 47 locale tag; the element's own attribute wins, else the nearest ancestor's, else `en`. The server renders the effective locale onto it; the client materializes the walked locale at connect.
  * @attribute {boolean} [ordinal=false] - Use ordinal plural rules (1st, 2nd, 3rd, ...) instead of cardinal. Presence-only; read once at connect time.
- * @demo {https://zeixcom.github.io/le-truc/examples.html#basic-pluralize} Interactive preview and usage examples
  **/
-export function BasicPluralize(
+export function CPlural(
 	{ count, lang = 'en', ordinal = false, i18n: { t } }: {
 		count: number
 		lang?: string
@@ -100,7 +79,7 @@ export function BasicPluralize(
 			ordinal: asBoolean(),
 		})
 
-			<basic-pluralize {count} {lang} {ordinal}>
+			<c-plural {count} {lang} {ordinal}>
 				<p class="none" hidden={() => host.count !== 0}>{t.done}</p>
 				<p class="some" hidden={() => host.count === 0}>
 					<span class="count">{host.count}</span>
@@ -112,5 +91,5 @@ export function BasicPluralize(
 			:host {
 				display: block;
 			}</style>
-			</basic-pluralize>
+			</c-plural>
 	}

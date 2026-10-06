@@ -65,16 +65,9 @@ describe('tier assignment over the migrated corpus', () => {
 			expect(registry[tag]?.tier).toBe('folded')
 	})
 
-	test('LT-173 acceptance: basic-pluralize classifies Folded — the six standing signals dissolved', () => {
-		// The flip this pin always anticipated: the reserved `i18n` parameter
-		// (ADR 0030) makes the locale server-known, so `Intl.PluralRules` folds
-		// (LT-142) and the six LTC034 routing signals — one per category
-		// span's `hidden` thunk, each "locale read from the DOM" — are gone.
-		// If a NEW signal ever appears here, the fold rule or the classifier
-		// moved underneath the component; investigate rather than reclassify.
-		expect(registry['basic-pluralize']?.tier).toBe('folded')
-		expect(registry['basic-pluralize']?.routingSignals).toHaveLength(0)
-	})
+	// The LT-173 acceptance (basic-pluralize classifies Folded) moved with
+	// the retired component to the `c-plural` fixture in
+	// gate-wave-verification.test.ts (LT-467).
 
 	test('contamination reached form-combobox through a compose READ', () => {
 		// The only corpus instance of sub-design 3 today: form-combobox reads
@@ -107,7 +100,6 @@ describe('tier assignment over the migrated corpus', () => {
 				'basic-gauge',
 				'basic-hello',
 				'basic-number',
-				'basic-pluralize',
 				'card-blogpost',
 				'card-callout',
 				'card-collapsible',

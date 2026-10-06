@@ -139,7 +139,7 @@ generated.emit('c-el.tsx.server.ts', tsx.component.serverCode)
 const clientPath = generated.emit('c-el.client.ts', tsrx.component.clientCode)
 
 // The same component under `c-lm`, materializing `de` onto its own root in
-// a client-only setup statement (basic-pluralize's shape).
+// a client-only setup statement (the `c-plural` fixture's shape, LT-191).
 const materializing = compileComponent(
 	tsrxSource(
 		body,
