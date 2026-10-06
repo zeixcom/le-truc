@@ -993,8 +993,8 @@ export function BasicChild({ label }: { label: string }, { expose }: FactoryCont
 	)
 }`
 
-/** Both surfaces compiled against their own surface's child registry. */
-const compileComposeBoth = (sources: { tsrx: string; tsx: string }) => {
+/** The pass child compiled on both surfaces (the registries' sole entry). */
+const compilePassChildren = () => {
 	const childTsrx = compileComponent(
 		PASS_CHILD_TSRX,
 		'examples/child/basic-child.tsrx',
@@ -1013,19 +1013,25 @@ const compileComposeBoth = (sources: { tsrx: string; tsx: string }) => {
 		throw new Error(
 			`child must compile: ${JSON.stringify(childTsx.diagnostics)}`,
 		)
+	return { childTsrx: childTsrx.component, childTsx: childTsx.component }
+}
+
+/** Both surfaces compiled against their own surface's child registry. */
+const compileComposeBoth = (sources: { tsrx: string; tsx: string }) => {
+	const { childTsrx, childTsx } = compilePassChildren()
 	const fromTsrx = compileComponent(
 		sources.tsrx,
 		'examples/parent/basic-parent.tsrx',
 		new Set(),
 		undefined,
-		new Map([[childTsrx.component.entry.source, childTsrx.component.entry]]),
+		new Map([[childTsrx.entry.source, childTsrx.entry]]),
 	)
 	const fromTsx = compileComponentTsx(
 		sources.tsx,
 		'examples/parent/basic-parent.tsx',
 		new Set(),
 		undefined,
-		new Map([[childTsx.component.entry.source, childTsx.component.entry]]),
+		new Map([[childTsx.entry.source, childTsx.entry]]),
 	)
 	return { fromTsrx, fromTsx, childTsrx, childTsx }
 }
@@ -1131,7 +1137,7 @@ describe('a `truc:pass` compose in a server branch is refused (LT-470)', () => {
 		// The branch folds per render call: shown, the composed child renders
 		// into the item; hidden, the item mounts without it and nothing
 		// queries for it.
-		generated.emit('basic-child.server.ts', childTsrx.component!.serverCode)
+		generated.emit('basic-child.server.ts', childTsrx.serverCode)
 		const shown = await render(fromTsrx.component!.serverCode, { show: true })
 		expect(shown).toContain('<basic-child class="branched">hi</basic-child>')
 		const hidden = await render(fromTsrx.component!.serverCode, {
@@ -1178,6 +1184,105 @@ describe('a `truc:pass` compose in a server branch is refused (LT-470)', () => {
 			expect(component?.clientCode).toContain(
 				"pass(basicChild, { value: { get: () => 'x' } })",
 			)
+		}
+	})
+
+	test('a pass compose in composed content reports the LTC011 nesting refusal alone (review pin)', () => {
+		// `enclosed` is also true inside composed content; the refusal keys
+		// on the separate server-branch flag, so the wrong-enclosure LTC005
+		// never joins the nesting refusal the content already draws.
+		const outerTsrx = `export function OuterChild({ label, children }: {
+	label: string
+	children?: string
+})
+	@{
+		expose({})
+			<outer-child>{label}{children}
+				<style>:host {
+	  display: block;
+	}</style>
+			</outer-child>
+	}`
+		const outerTsx = `import { css } from '@zeix/le-truc-compiler/macros'
+import type { FactoryContext } from '@zeix/le-truc'
+
+export function OuterChild({ label, children }: {
+	label: string
+	children?: string
+}, { expose }: FactoryContext<{ label: string }>) {
+	expose({})
+	return (
+		<outer-child>{label}{children}
+			<style>{css\`:host {
+	  display: block;
+	}\`}</style>
+		</outer-child>
+	)
+}`
+		const outerFromTsrx = compileComponent(
+			outerTsrx,
+			'examples/outer/outer-child.tsrx',
+			new Set(),
+		)
+		if (!outerFromTsrx.component)
+			throw new Error(
+				`outer must compile: ${JSON.stringify(outerFromTsrx.diagnostics)}`,
+			)
+		const outerFromTsx = compileComponentTsx(
+			outerTsx,
+			'examples/outer/outer-child.tsx',
+			new Set(),
+		)
+		if (!outerFromTsx.component)
+			throw new Error(
+				`outer must compile: ${JSON.stringify(outerFromTsx.diagnostics)}`,
+			)
+		const { childTsrx, childTsx } = compilePassChildren()
+		const nested = {
+			tsrx: tsrx(
+				"import { BasicChild } from '../child/basic-child.tsrx'\nimport { OuterChild } from '../outer/outer-child.tsrx'",
+				'expose({})',
+				`
+				<OuterChild label="outer">
+					<BasicChild label="inner" truc:pass={{ value: () => 'x' }} />
+				</OuterChild>`,
+				'{ label }: { label: string }',
+			),
+			tsx: tsx(
+				"import { BasicChild } from '../child/basic-child.tsx'\nimport { OuterChild } from '../outer/outer-child.tsx'",
+				'{ label: string }',
+				'expose({})',
+				`
+				<OuterChild label="outer">
+					<BasicChild label="inner" truc:pass={{ value: () => 'x' }} />
+				</OuterChild>`,
+				'{ label }: { label: string }',
+			),
+		}
+		const fromTsrx = compileComponent(
+			nested.tsrx,
+			'examples/parent/basic-parent.tsrx',
+			new Set(),
+			undefined,
+			new Map([
+				[childTsrx.entry.source, childTsrx.entry],
+				[outerFromTsrx.component.entry.source, outerFromTsrx.component.entry],
+			]),
+		)
+		const fromTsx = compileComponentTsx(
+			nested.tsx,
+			'examples/parent/basic-parent.tsx',
+			new Set(),
+			undefined,
+			new Map([
+				[childTsx.entry.source, childTsx.entry],
+				[outerFromTsx.component.entry.source, outerFromTsx.component.entry],
+			]),
+		)
+		for (const { diagnostics } of [fromTsrx, fromTsx]) {
+			expect(diagnostics).toHaveLength(1)
+			expect(diagnostics[0]?.code).toBe('LTC011')
+			expect(diagnostics.some(d => d.code === 'LTC005')).toBe(false)
 		}
 	})
 })

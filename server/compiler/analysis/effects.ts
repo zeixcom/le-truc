@@ -2294,6 +2294,7 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 	const visit = (
 		node: TemplateNode,
 		enclosed: boolean,
+		inServerBranch: boolean,
 		loop: ForIR | null,
 		inArm: boolean,
 	): void => {
@@ -2338,14 +2339,18 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 		// without it the author's entries vanish with no error. The same
 		// fold-fixed once-only addressing the item walk refuses one scope
 		// down; the guarded alternative is rejected for the same reason (a
-		// pass entry has no reactive core to guard). Skipped inside an arm
-		// (the arm walk refuses the shape through `unmountableInArm`,
-		// including nested server branches) and inside any list (the item
-		// walk refuses it in the item's own branches; an `each()` body keeps
-		// today's behavior).
+		// pass entry has no reactive core to guard). Keyed on
+		// `inServerBranch`, not `enclosed`: composed content also encloses,
+		// and a pass compose nested there is already the LTC011 nesting
+		// refusal — a second LTC005 naming a server branch would name the
+		// wrong enclosure (review of LT-470). Skipped inside an arm (the arm
+		// walk refuses the shape through `unmountableInArm`, including
+		// nested server branches) and inside any list (the item walk refuses
+		// it in the item's own branches; an `each()` body keeps today's
+		// behavior).
 		if (
 			node.kind === 'compose' &&
-			enclosed &&
+			inServerBranch &&
 			!inArm &&
 			loop === null &&
 			node.attrs.some(a => a.kind === 'pass')
@@ -2364,23 +2369,30 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 		let innerLoop = loop
 		let innerEnclosed = enclosed
 		let innerInArm = inArm
+		let innerInServerBranch = inServerBranch
 		if (hasArmSet(node)) {
 			innerLoop = null
 			innerEnclosed = false
 			innerInArm = true
+			innerInServerBranch = false
 		} else if (own !== null) {
 			innerLoop = own
-			if (own.kind === 'reconcile') innerEnclosed = false
+			if (own.kind === 'reconcile') {
+				innerEnclosed = false
+				innerInServerBranch = false
+			}
 		} else if (
 			node.kind === 'conditional' ||
 			node.kind === 'try' ||
 			node.kind === 'compose'
 		)
 			innerEnclosed = true
+		if (node.kind === 'conditional' && node.mode === 'server')
+			innerInServerBranch = true
 		for (const child of childNodes(node))
-			visit(child, innerEnclosed, innerLoop, innerInArm)
+			visit(child, innerEnclosed, innerInServerBranch, innerLoop, innerInArm)
 	}
-	visit(component.root, false, null, false)
+	visit(component.root, false, false, null, false)
 }
 
 /**
