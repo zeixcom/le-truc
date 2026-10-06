@@ -335,6 +335,14 @@ export type ReconcilePlan = {
 	 * — and an arg-seeded harvest has no connect-time container to read.
 	 */
 	scoped: boolean
+	/**
+	 * The container sits in a server-rendered branch of its scope (LT-455):
+	 * the branch folds per render call, the same for every clone, but may
+	 * leave the list out, so the container and `@empty` locals are
+	 * non-throwing queries and the client binds the nested mount under an
+	 * `if` on the container.
+	 */
+	inBranch?: boolean
 }
 
 /**

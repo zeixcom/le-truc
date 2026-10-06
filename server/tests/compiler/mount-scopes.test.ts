@@ -765,7 +765,7 @@ describe('a list whose container is the item root', async () => {
 	})
 })
 
-/* === A list in a server branch of an item (LT-454) === */
+/* === A list in a server branch of an item (LT-454, LT-455) === */
 
 const LIST_IN_BRANCH = {
 	tsrx: tsrx(
@@ -774,9 +774,11 @@ const LIST_IN_BRANCH = {
 		const tags = createList<string>(['x'], { keyConfig: s => s })
 		expose({})`,
 		`
+				<button type="button" class="group" onClick={() => { groups.add('g2') }}>Group</button>
+				<button type="button" class="tag" onClick={() => { tags.add('y') }}>Tag</button>
 				<ul class="groups">
 					@for (const group of groups) {
-						<li><span>{group}</span>@if (show) { <ol class="tags">@for (const tag of tags) { <li>{tag}</li> }</ol> }</li>
+						<li><span>{group}</span>@if (show) { <ol class="tags">@for (const tag of tags) { <li>{tag}</li> } @empty { <li class="placeholder">none</li> }</ol> }</li>
 					}
 				</ul>`,
 		'{ show }: { show: boolean }',
@@ -788,9 +790,11 @@ const LIST_IN_BRANCH = {
 	const tags = createList<string>(['x'], { keyConfig: s => s })
 	expose({})`,
 		`
+				<button type="button" class="group" onClick={() => { groups.add('g2') }}>Group</button>
+				<button type="button" class="tag" onClick={() => { tags.add('y') }}>Tag</button>
 				<ul class="groups">
 					{groups.map(group => (
-						<li><span>{group}</span>{show ? <ol class="tags">{tags.map(tag => <li>{tag}</li>)}</ol> : null}</li>
+						<li><span>{group}</span>{show ? <ol class="tags">{tags.length === 0 ? <li class="placeholder">none</li> : tags.map(tag => <li>{tag}</li>)}</ol> : null}</li>
 					))}
 				</ul>`,
 		'{ show }: { show: boolean }',
@@ -821,6 +825,73 @@ describe('a list in a server branch of an item', async () => {
 			'<template data-list="0"><li><span></span></li></template>',
 		)
 	})
+
+	test('the item mount queries the branch-held container optionally and guards the nested mount', () => {
+		expect(component.clientCode).toMatch(/const ol = first\('ol'\)/)
+		expect(component.clientCode).toMatch(
+			/const li = first\('li\.placeholder'\)/,
+		)
+		expect(component.clientCode).toMatch(/if \(ol\) \{/)
+	})
+
+	for (const shown of [false, true])
+		describe(`with the branch ${shown ? 'taken' : 'not taken'}`, async () => {
+			const markup = await render(component.serverCode, { show: shown })
+			const { realm, html, diagnostics } = await mount(
+				`list-in-branch-${shown}`,
+				component.clientCode,
+				markup,
+			)
+			afterAll(() => realm.dispose())
+			const item = (key: string) =>
+				realm.document.querySelector(
+					`c-el ul.groups > li[data-key="${key}"]`,
+				) as HTMLElement
+			const click = (selector: string) =>
+				(
+					realm.document.querySelector(`c-el ${selector}`) as HTMLElement
+				).click()
+			const tagsIn = (key: string) =>
+				[...item(key).querySelectorAll('ol.tags > li[data-key]')].map(
+					el => el.textContent,
+				)
+
+			test('connect binds the item without a realm diagnostic', () => {
+				expect(diagnostics).toEqual([])
+				expect(html).toBe(serialized(markup))
+				expect(
+					(item('g1').querySelector(':scope > span') as HTMLElement)
+						.textContent,
+				).toBe('g1')
+			})
+
+			if (shown)
+				test('the nested list adopts and clones as before', async () => {
+					expect(tagsIn('g1')).toEqual(['x'])
+					// The @empty watch binds under the guard: tags non-empty,
+					// the placeholder stays hidden.
+					expect(
+						(item('g1').querySelector('li.placeholder') as HTMLElement | null)
+							?.hidden,
+					).toBe(true)
+					click('button.tag')
+					await settle()
+					expect(tagsIn('g1')).toEqual(['x', 'y'])
+					click('button.group')
+					await settle()
+					expect(tagsIn('g2')).toEqual(['x', 'y'])
+				})
+			else
+				test('an added outer item clones and binds its own content', async () => {
+					click('button.group')
+					await settle()
+					expect(
+						(item('g2').querySelector(':scope > span') as HTMLElement)
+							.textContent,
+					).toBe('g2')
+					expect(item('g2').querySelector('ol.tags')).toBeNull()
+				})
+		})
 })
 
 /* === A list whose container is the arm root (LT-454) === */

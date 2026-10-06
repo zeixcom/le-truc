@@ -531,7 +531,11 @@ synthesizes a `:scope >` child path when no class, role or `data-*`
 separates the elements; LTC007 otherwise). A nested `ReconcilePlan` is
 `scoped` (its container, parent and empty roots are scope locals), and a
 nested `ForClientPlan` is a static query against the scope root rather than
-`each(all())`. Every plan node carries source spans for the remapping tables.
+`each(all())`. When a nested list's container sits in a server-rendered
+branch of its scope (LT-455), those locals are non-throwing queries and the
+nested mount binds under an `if` on the container: the branch folds per
+render call, the same for every clone, but may leave the list out. Every
+plan node carries source spans for the remapping tables.
 The passes run as functions over a typed shared environment (`PassShared` —
 the order-carrying accumulators: queries, used names, ambients, child tags,
 ref names, and the diagnostic sinks), each taking its producers' output as a

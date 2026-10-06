@@ -1001,6 +1001,11 @@ export const emitClientModule = (
 	// direct-child step and the stamp lift the one-list-per-component limit.
 	const emitReconcile = (plan: ReconcilePlan): void => {
 		imports.add('reconcile')
+		// A list in a server-rendered branch of its scope (LT-455): the
+		// branch folds per render call, the same for every clone, but may
+		// leave the list out, so its container local is a non-throwing query
+		// and the nested mount binds only when the container is there.
+		if (plan.inBranch) out.open(`if (${plan.container}) {`)
 		const scope = plan.itemScope
 		const keyParam = plan.keyParam ?? '_key'
 		// The stamp addresses the template the compiler extracted; a missing
@@ -1054,6 +1059,7 @@ export const emitClientModule = (
 				`${imports.local('watch')}(() => ${plan.signal}.length === 0, ${imports.local('bindVisible')}(${query}))`,
 			)
 		}
+		if (plan.inBranch) out.close()
 	}
 
 	// An async boundary (ADR 0037 s4): the arm key follows the task's
