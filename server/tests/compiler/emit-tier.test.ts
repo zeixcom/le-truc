@@ -311,6 +311,48 @@ describe('a folded signal the markup reads survives every tier', () => {
 })
 
 /**
+ * A host-declared `deriveList` whose ONLY reader is a reactive-list item
+ * const (`prices.byKey(k)`, LT-447). The item setup rides the server module
+ * inside the `@for` loop, so the retention seed (`rootMarkup, ...lines`)
+ * names `prices` — the declaration must survive every tier, the Simulated
+ * one included, whose pool excludes server-unevaluable statements outright.
+ * Dropping it would leave the emitted item const referencing an undeclared
+ * name: `ReferenceError` at render, the failure LT-109's migration hit.
+ */
+const hostDeriveListFixture = `import { createList, deriveList } from '@zeix/le-truc'
+
+export function C({}: {})
+@{
+	const rows = createList([{ id: 'a', amount: 2 }], { keyConfig: r => r.id })
+	const prices = deriveList(rows, row => row.amount * 2)
+	expose({})
+		<c-el>
+			<ul class="rows">
+				@for (const row of rows; key k) {
+					const price = prices.byKey(k)
+					<li><span class="price">{() => String(price.get())}</span></li>
+				}
+			</ul>
+			<style>:host {
+	  color: red;
+	}</style>
+		</c-el>
+
+}`
+
+describe('a host list read only through an item const survives every tier (LT-447)', () => {
+	for (const tier of ['folded', 'simulated', 'static'] as const) {
+		test(`\`${tier}\` keeps the deriveList declaration over its item-const reader`, () => {
+			const code = emit(hostDeriveListFixture, tier)
+			expect(code).toContain(
+				'const prices = deriveList(rows, row => row.amount * 2)',
+			)
+			expect(code).toContain('const price = prices.byKey(k)')
+		})
+	}
+})
+
+/**
  * The invariant, over every real component instead of one fixture.
  *
  * `emit-tier.test.ts` originally asserted markup byte-identity only for the
