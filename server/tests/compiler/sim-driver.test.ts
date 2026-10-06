@@ -87,7 +87,7 @@ const realm = createSimulationRealm({
 	// LT-165 step 7: revert each unresolvable expression's site to its
 	// skeleton state after the drain — a no-op while no corpus component
 	// carries records, and what keeps the fixed-point gate below honest
-	// the day one does (module-ticker's shape).
+	// the day one does (the synthetic pin in suppression.test.ts).
 	suppressedSites: tag => registry[tag]?.suppressedSites ?? [],
 })
 afterAll(() => realm.dispose())

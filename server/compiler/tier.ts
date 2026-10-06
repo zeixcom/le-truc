@@ -25,10 +25,11 @@
  * 2. **Tier is a routing decision about a COMPONENT** — and the predicate
  *    is not "can phase 1 resolve everything" but "is phase 2 worth running".
  *
- * `module-ticker` is why they cannot be merged: it calls `Math.random()` and
- * is heavily `first()`-based. Classified Static-tier as a whole it would
- * discard everything the realm could resolve; classified Simulated-tier with
- * the random read folded it would bake a seed into the page. It is
+ * They cannot be merged: picture a component that reads `Math.random()` at
+ * one rendered site and is otherwise realm-answerable (the synthetic pin in
+ * `suppression.test.ts`). Classified Static-tier as a whole it would discard
+ * everything the realm could resolve; classified Simulated-tier with the
+ * random read folded it would bake a seed into the page. It is
  * Simulated-tier *with one suppressed expression*, an outcome that only
  * exists because unresolvability is per-expression.
  *

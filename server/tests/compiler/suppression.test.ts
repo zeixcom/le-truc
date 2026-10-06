@@ -25,10 +25,10 @@
  * An impure reactive site ALONE does not make a component Simulated (step 5:
  * it stays Folded, phase 1 omits the site, no realm ever runs), so the
  * fixtures carry an impure site (attribute form and text-child form) AND a
- * genuine Simulated-tier routing signal — an unharvested signal, the
- * `module-ticker` shape. Ticker itself is unmigrated (its corpus pin rides
- * its migration), so the synthetic fixture is the pin now, in the step-5
- * synthetic-Static-fixture pattern.
+ * genuine Simulated-tier routing signal — an unharvested signal. No corpus
+ * component has this shape (`module-ticker` reads `Math.random()` only in
+ * handlers, so no rendered site is suppressed), so the synthetic fixture is
+ * the pin, in the step-5 synthetic-Static-fixture pattern.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { cpSync } from 'node:fs'

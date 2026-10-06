@@ -736,10 +736,11 @@ seam (ADR 0035 s3) so the classifier answers with no substrate installed. Limb (
 escape hatch — no driver capability can tell the build machine what time it
 will be when the page is read.
 
-**`module-ticker` is why the two facts stay separate.** It calls
-`Math.random()` and is heavily `first()`-based (template, table, tbody,
-toggle button). Component-level the Static tier would discard everything the realm
-could resolve; component-level the Simulated tier would bake the random walk's seed into
+**Why the two facts stay separate.** Picture a component that reads
+`Math.random()` at one rendered site and is otherwise realm-answerable — the
+synthetic pin in `server/tests/compiler/suppression.test.ts`.
+Component-level the Static tier would discard everything the realm could
+resolve; component-level the Simulated tier would bake the random seed into
 the page. It is the Simulated tier with one suppressed expression.
 
 `Intl` splits along the same seam: a locale resolving to a server-known value

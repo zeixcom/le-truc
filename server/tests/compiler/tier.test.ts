@@ -169,7 +169,7 @@ describe('the routing conjunction (sub-design 1)', () => {
 	})
 
 	test('a mix routes to the Simulated tier, not the Static tier', () => {
-		// `module-ticker`'s shape: `Math.random()` is suppressed per-expression
+		// The suppression pin's shape: `Math.random()` is suppressed per-expression
 		// while everything else still simulates. Component-level Static here
 		// would discard every answer the realm could give it.
 		expect(

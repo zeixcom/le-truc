@@ -216,6 +216,14 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 		start: 'Narrow panel (30%)',
 		end: 'Wide panel (70%)',
 	},
+	'module-ticker': {
+		fraction: 0.1,
+		rows: [
+			{ symbol: 'AAPL', open: 189.3, price: 189.3, volume: 0 },
+			{ symbol: 'BRK.B', open: 412.75, price: 412.75, volume: 0 },
+			{ symbol: 'MSFT', open: 417.5, price: 417.5, volume: 0 },
+		],
+	},
 	'basic-button': { label: 'Add' },
 	'basic-pluralize': { count: 1, i18n: PLURALIZE_I18N },
 }
