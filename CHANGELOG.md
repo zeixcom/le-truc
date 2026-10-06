@@ -93,6 +93,7 @@
 - **A throwing `bindItem` stays in its scope**: Previously, it escaped `reconcile()` uncaught, and on the first run took the whole list down. Now it is reported once, naming the item key and the container, and that element stays in place unbound.
 - **`watch(prop, { stale })` behind `pass()`**: Previously, `stale` never fired when a parent `pass()`ed an async thunk into the prop, because the Slot hid the `Task`. Now it fires.
 - **A `truc:pass` onto a composed child in a server-known branch never bound**: Previously, in a reactive-list item the compose minted a required local, so with the branch folded off every item mount threw `MissingElementError` and the pass entries never bound; at the host the entries were silently unplanned. Now the shape fails the compile (`LTC005`) with the reactive-conditional remedy, and a pass-less composed child in a branch stays legal (LT-470).
+- **A `truc:pass` on a compose site that is a reactive arm root never bound**: Previously, the entries compiled clean and never bound — the arm walk checked only the arm root's descendants, so the pass on the root was neither refused nor lowered. Now the entries plan as `pass()` effects in the arm's mount against the arm element parameter — the arm root IS the child's rendered element, so nothing is queried from the host — re-binding on every adopt and clone, for reactive `@if`/`@switch` arms and the async boundary's pending and catch arms on both surfaces; a `first()` on the site is refused (LT-481).
 
 ## 2.6.0
 

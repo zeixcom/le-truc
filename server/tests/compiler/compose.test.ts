@@ -1544,3 +1544,293 @@ export function BasicParent({}: {}) {
 		)
 	})
 })
+
+describe('compose arm roots plan their `truc:pass` entries (LT-481)', () => {
+	// LT-460 made a compose site legal as an arm root but never planned its
+	// `truc:pass` entries: the arm walk checked only the root's DESCENDANTS
+	// against `unmountableInArm`, so a pass on the root was neither refused
+	// nor lowered — the silent drop LT-470's remedy ("make the condition
+	// reactive: the composed child then renders as its arm's root") steered
+	// authors into. The entries now plan as `pass()` effects in the arm's
+	// mount against the arm element parameter — the arm root IS the child's
+	// rendered element, so no query or local is minted — and a `first()` on
+	// the site stays refused.
+
+	// A child that renders its passed prop, so a flip test can see the
+	// pass: `value` is exposed from a plain literal, i.e. Slot-backed
+	// (LT-158), and `{host.value}` is the reactive lazy child over it.
+	const valueChild = `export function ValueChild({}: {})
+	@{
+		expose({ value: '' })
+			<value-child>{host.value}
+				<style>:host {
+	  display: block;
+	}</style>
+			</value-child>
+	}`
+	const valueChildTsx = `export function ValueChild({}: {}) {
+	expose({ value: '' })
+	return <value-child>{host.value}</value-child>
+}`
+	const compileValueChild = () => {
+		const { component, diagnostics } = compileComponent(
+			valueChild,
+			'examples/child/value-child.tsrx',
+			new Set(['value-child']),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		return component
+	}
+	const compileValueChildTsxEntry = (): RegistryEntry => {
+		const { component, diagnostics } = compileComponentTsx(
+			valueChildTsx,
+			'examples/child/value-child.tsx',
+			new Set(['value-child']),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		return component.entry
+	}
+
+	const IF_PARENT_TSRX = `import { createCell } from '@zeix/le-truc'
+import { ValueChild } from '../child/value-child.tsrx'
+
+export function BasicParent({}: {})
+	@{
+		const mode = createCell('a')
+		expose({ mode })
+			<basic-parent>
+				@if (mode.get() === 'a') {
+					<ValueChild truc:pass={{ value: () => 'from-a' }} />
+				} @else {
+					<ValueChild truc:pass={{ value: () => 'from-b' }} />
+				}
+			</basic-parent>
+	}`
+	const IF_PARENT_TSX = `import { createCell } from '@zeix/le-truc'
+import { ValueChild } from '../child/value-child.tsx'
+
+export function BasicParent({}: {}) {
+	const mode = createCell('a')
+	expose({ mode })
+	return <basic-parent>
+		{mode.get() === 'a' ? (
+			<ValueChild truc:pass={{ value: () => 'from-a' }} />
+		) : (
+			<ValueChild truc:pass={{ value: () => 'from-b' }} />
+		)}
+	</basic-parent>
+}`
+
+	const BOUNDARY_PARENT_TSRX = `import { deriveCell } from '@zeix/le-truc'
+import { ValueChild } from '../child/value-child.tsrx'
+
+export function BasicParent({}: {})
+	@{
+		const data = deriveCell(async () => 'x')
+		expose({})
+			<basic-parent>
+				@try {
+					<div class="content">{data}</div>
+				} @pending {
+					<ValueChild truc:pass={{ value: () => 'loading' }} />
+				} @catch (e) {
+					<ValueChild truc:pass={{ value: () => 'failed' }} />
+				}
+			</basic-parent>
+	}`
+	const BOUNDARY_PARENT_TSX = `import { deriveCell } from '@zeix/le-truc'
+import { ValueChild } from '../child/value-child.tsx'
+
+export function BasicParent({}: {}) {
+	const data = deriveCell(async () => 'x')
+	expose({})
+	return <basic-parent>
+		<truc:try
+			pending={<ValueChild truc:pass={{ value: () => 'loading' }} />}
+			catch={e => <ValueChild truc:pass={{ value: () => 'failed' }} />}>
+			<div class="content">{data}</div>
+		</truc:try>
+	</basic-parent>
+}`
+
+	const compileParent = (
+		source: string,
+		childEntry: RegistryEntry,
+		surface: 'tsrx' | 'tsx' = 'tsrx',
+	) =>
+		surface === 'tsrx'
+			? compileComponent(
+					source,
+					'examples/parent/basic-parent.tsrx',
+					new Set(['value-child']),
+					undefined,
+					composeRegistryOf(childEntry),
+				)
+			: compileComponentTsx(
+					source,
+					'examples/parent/basic-parent.tsx',
+					new Set(['value-child']),
+					undefined,
+					new Map([[childEntry.source, childEntry]]),
+				)
+
+	test('a reactive @if arm root plans its entries in the arm mount, querying nothing from the host, on both surfaces', () => {
+		const childComponent = compileValueChild()
+		for (const surface of ['tsrx', 'tsx'] as const) {
+			const { component, diagnostics } = compileParent(
+				surface === 'tsrx' ? IF_PARENT_TSRX : IF_PARENT_TSX,
+				surface === 'tsrx' ? childComponent.entry : compileValueChildTsxEntry(),
+				surface,
+			)
+			expect(diagnostics).toEqual([])
+			if (!component) throw new Error('parent must compile')
+			// The arm root IS the child's element: the mount casts the arm
+			// element parameter and passes against it — no host query.
+			expect(component.clientCode).toContain(
+				"const valueChild = armElement as ElementFromSelector<'value-child'>",
+			)
+			expect(component.clientCode).toContain(
+				"pass(valueChild, { value: { get: () => 'from-a' } })",
+			)
+			expect(component.clientCode).toContain(
+				"pass(valueChild2, { value: { get: () => 'from-b' } })",
+			)
+			expect(component.clientCode).not.toContain('first("value-child')
+		}
+	})
+
+	test('the passed value binds on the adopted arm and again on a cloned arm after a flip', async () => {
+		const childComponent = compileValueChild()
+		const { component, diagnostics } = compileParent(
+			IF_PARENT_TSRX,
+			childComponent.entry,
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		ensureEmitted('value-child', childComponent.serverCode)
+		ensureEmitted('basic-parent', component.serverCode)
+		const mod = await generated.importModule('basic-parent.server.ts')
+		const markup = (
+			mod as { renderBasicParent: (args: Record<string, unknown>) => string }
+		).renderBasicParent({})
+		// The server folds the initial winner: the adopted arm renders the
+		// child live, keyed; the other arm sits in its inert template.
+		expect(markup).toContain('<value-child')
+		expect(markup).toContain('data-key="then"')
+
+		const { pathToFileURL } = await import('node:url')
+		const { createSimulationRealm } = await import('../../compiler/sim/realm')
+		const settle = async () => {
+			for (let i = 0; i < 20; i++) await Promise.resolve()
+		}
+		const childPath = generated.emit(
+			'lt481-value-child.client.ts',
+			childComponent.clientCode,
+		)
+		const parentPath = generated.emit(
+			'lt481-basic-parent.client.ts',
+			component.clientCode,
+		)
+		const realm = createSimulationRealm()
+		try {
+			await realm.load(() => import(pathToFileURL(childPath).href))
+			await realm.load(() => import(pathToFileURL(parentPath).href))
+			const { html } = await realm.render({ markup, component: 'basic-parent' })
+			expect(html).toContain('<value-child')
+			const child = () =>
+				realm.document.querySelector('value-child') as HTMLElement
+			const host = () =>
+				realm.document.querySelector('basic-parent') as HTMLElement & {
+					mode: string
+				}
+			await settle()
+			// The adopted arm: the pass swapped the signal into the child's
+			// slot at its mount.
+			expect(child().textContent).toBe('from-a')
+			// The flip clones the other arm, inserts it, THEN mounts it —
+			// the pass meets an upgraded child and binds again.
+			host().mode = 'b'
+			await settle()
+			expect(child().textContent).toBe('from-b')
+		} finally {
+			realm.dispose()
+		}
+	})
+
+	test('an async boundary plans the pending and catch compose roots in their branches, on both surfaces', () => {
+		const childComponent = compileValueChild()
+		for (const surface of ['tsrx', 'tsx'] as const) {
+			const { component, diagnostics } = compileParent(
+				surface === 'tsrx' ? BOUNDARY_PARENT_TSRX : BOUNDARY_PARENT_TSX,
+				surface === 'tsrx' ? childComponent.entry : compileValueChildTsxEntry(),
+				surface,
+			)
+			expect(diagnostics).toEqual([])
+			if (!component) throw new Error('parent must compile')
+			// The nil arm gains a mount branch with the pass; the err arm's
+			// branch emits the root local and the pass beside its err watch
+			// channel (absent here — no catch-parameter read).
+			expect(component.clientCode).toContain(`} else if (armKey === 'nil') {`)
+			expect(component.clientCode).toContain(
+				"pass(valueChild, { value: { get: () => 'loading' } })",
+			)
+			expect(component.clientCode).toContain(`} else if (armKey === 'err') {`)
+			expect(component.clientCode).toContain(
+				"pass(valueChild2, { value: { get: () => 'failed' } })",
+			)
+			expect(component.clientCode).not.toContain('first("value-child')
+		}
+	})
+
+	test('a `first()` on a compose arm root is refused on both surfaces', () => {
+		const childComponent = compileValueChild()
+		const REFUSAL_TSRX = `import { createCell } from '@zeix/le-truc'
+import { ValueChild } from '../child/value-child.tsrx'
+
+export function BasicParent({}: {})
+	@{
+		const mode = createCell('a')
+		const child = first('value-child')
+		expose({ mode })
+			<basic-parent>
+				@if (mode.get() === 'a') {
+					<ValueChild truc:pass={{ value: () => 'x' }} />
+				} @else {
+					<p class="empty">empty</p>
+				}
+			</basic-parent>
+	}`
+		const REFUSAL_TSX = `import { createCell } from '@zeix/le-truc'
+import { ValueChild } from '../child/value-child.tsx'
+
+export function BasicParent({}: {}) {
+	const mode = createCell('a')
+	const child = first('value-child')
+	expose({ mode })
+	return <basic-parent>
+		{mode.get() === 'a' ? (
+			<ValueChild truc:pass={{ value: () => 'x' }} />
+		) : (
+			<p class="empty">empty</p>
+		)}
+	</basic-parent>
+}`
+		for (const surface of ['tsrx', 'tsx'] as const) {
+			const { diagnostics } = compileParent(
+				surface === 'tsrx' ? REFUSAL_TSRX : REFUSAL_TSX,
+				surface === 'tsrx' ? childComponent.entry : compileValueChildTsxEntry(),
+				surface,
+			)
+			const hits = diagnostics.filter(
+				d =>
+					d.severity === 'error' &&
+					d.message.includes(
+						'`first()` reference to <value-child> as the root of an arm',
+					),
+			)
+			expect(hits).toHaveLength(1)
+		}
+	})
+})
