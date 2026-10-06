@@ -1,0 +1,22 @@
+{
+	"li": {
+		"wrapperKept": true,
+		"parentIsWrapper": true,
+		"childRuleMatches": false
+	},
+	"tr": {
+		"wrapperKept": false,
+		"parentIsWrapper": false,
+		"childRuleMatches": true
+	},
+	"option": {
+		"wrapperKept": true,
+		"parentIsWrapper": true,
+		"childRuleMatches": false
+	},
+	"dt": {
+		"wrapperKept": true,
+		"parentIsWrapper": true,
+		"childRuleMatches": false
+	}
+}
