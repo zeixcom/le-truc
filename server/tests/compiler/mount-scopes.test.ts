@@ -1238,51 +1238,73 @@ export function OuterChild({ label, children }: {
 				`outer must compile: ${JSON.stringify(outerFromTsx.diagnostics)}`,
 			)
 		const { childTsrx, childTsx } = compilePassChildren()
+		const NESTED_BODY = `
+				<OuterChild label="outer">
+					<BasicChild label="inner" truc:pass={{ value: () => 'x' }} />
+				</OuterChild>`
+		// The bare nesting, and the same nesting inside a server-rendered
+		// branch: the flag must not survive the compose hop, so the
+		// wrong-enclosure LTC005 never joins the nesting refusal (review 2).
 		const nested = {
 			tsrx: tsrx(
 				"import { BasicChild } from '../child/basic-child.tsrx'\nimport { OuterChild } from '../outer/outer-child.tsrx'",
 				'expose({})',
-				`
-				<OuterChild label="outer">
-					<BasicChild label="inner" truc:pass={{ value: () => 'x' }} />
-				</OuterChild>`,
+				NESTED_BODY,
 				'{ label }: { label: string }',
 			),
 			tsx: tsx(
 				"import { BasicChild } from '../child/basic-child.tsx'\nimport { OuterChild } from '../outer/outer-child.tsx'",
 				'{ label: string }',
 				'expose({})',
-				`
-				<OuterChild label="outer">
-					<BasicChild label="inner" truc:pass={{ value: () => 'x' }} />
-				</OuterChild>`,
+				NESTED_BODY,
 				'{ label }: { label: string }',
 			),
 		}
-		const fromTsrx = compileComponent(
-			nested.tsrx,
-			'examples/parent/basic-parent.tsrx',
-			new Set(),
-			undefined,
-			new Map([
-				[childTsrx.entry.source, childTsrx.entry],
-				[outerFromTsrx.component.entry.source, outerFromTsrx.component.entry],
-			]),
-		)
-		const fromTsx = compileComponentTsx(
-			nested.tsx,
-			'examples/parent/basic-parent.tsx',
-			new Set(),
-			undefined,
-			new Map([
-				[childTsx.entry.source, childTsx.entry],
-				[outerFromTsx.component.entry.source, outerFromTsx.component.entry],
-			]),
-		)
-		for (const { diagnostics } of [fromTsrx, fromTsx]) {
-			expect(diagnostics).toHaveLength(1)
-			expect(diagnostics[0]?.code).toBe('LTC011')
-			expect(diagnostics.some(d => d.code === 'LTC005')).toBe(false)
+		const wrapped = {
+			tsrx: tsrx(
+				"import { BasicChild } from '../child/basic-child.tsrx'\nimport { OuterChild } from '../outer/outer-child.tsrx'",
+				'expose({})',
+				`
+				@if (show) {${NESTED_BODY}}`,
+				'{ show, label }: { show: boolean, label: string }',
+			),
+			tsx: tsx(
+				"import { BasicChild } from '../child/basic-child.tsx'\nimport { OuterChild } from '../outer/outer-child.tsx'",
+				'{ show: boolean, label: string }',
+				'expose({})',
+				`
+				{show ? (${NESTED_BODY}) : null}`,
+				'{ show, label }: { show: boolean, label: string }',
+			),
+		}
+		const registriesTsrx = new Map([
+			[childTsrx.entry.source, childTsrx.entry],
+			[outerFromTsrx.component.entry.source, outerFromTsrx.component.entry],
+		])
+		const registriesTsx = new Map([
+			[childTsx.entry.source, childTsx.entry],
+			[outerFromTsx.component.entry.source, outerFromTsx.component.entry],
+		])
+		for (const fixture of [nested, wrapped]) {
+			const fromTsrx = compileComponent(
+				fixture.tsrx,
+				'examples/parent/basic-parent.tsrx',
+				new Set(),
+				undefined,
+				registriesTsrx,
+			)
+			const fromTsx = compileComponentTsx(
+				fixture.tsx,
+				'examples/parent/basic-parent.tsx',
+				new Set(),
+				undefined,
+				registriesTsx,
+			)
+			for (const { diagnostics } of [fromTsrx, fromTsx]) {
+				expect(diagnostics).toHaveLength(1)
+				expect(diagnostics[0]?.code).toBe('LTC011')
+				expect(diagnostics.some(d => d.code === 'LTC005')).toBe(false)
+			}
 		}
 	})
 })

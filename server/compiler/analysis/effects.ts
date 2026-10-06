@@ -2381,12 +2381,16 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 				innerEnclosed = false
 				innerInServerBranch = false
 			}
-		} else if (
-			node.kind === 'conditional' ||
-			node.kind === 'try' ||
-			node.kind === 'compose'
-		)
+		} else if (node.kind === 'conditional' || node.kind === 'try') {
 			innerEnclosed = true
+		} else if (node.kind === 'compose') {
+			// Composed content encloses on its own: a pass compose nested in
+			// it is the LTC011 nesting refusal, server branch around the
+			// outer compose or not, so the flag does not survive the hop
+			// (review 2 of LT-470).
+			innerEnclosed = true
+			innerInServerBranch = false
+		}
 		if (node.kind === 'conditional' && node.mode === 'server')
 			innerInServerBranch = true
 		for (const child of childNodes(node))
