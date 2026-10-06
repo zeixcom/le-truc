@@ -197,3 +197,136 @@ describe('CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 
 		expect(containerInner).toContain('id="tags-input"')
 	})
 })
+
+/* === Arm adoption (ADR 0037, LT-390) === */
+
+/** A component's phase-1 render, from the shared fixture args. */
+const renderPhase1 = async (info: CompiledInfo): Promise<string> => {
+	const mod = (await import(
+		pathToFileURL(info.serverModulePath).href
+	)) as Record<string, unknown>
+	const renderFn = mod[renderName(info.tag)] as (args: unknown) => string
+	return renderFn(CORPUS_ARGS[info.tag] ?? {})
+}
+
+/**
+ * Every arm set under `root`: the `template[data-arms="N"]` children of one
+ * parent, and the live arm — the non-template sibling whose `data-key` names
+ * one of those templates. Template content is inert, so a set inside a
+ * reactive list's item template is not walked: it has no server winner.
+ */
+const armSets = (root: Element) =>
+	[...root.querySelectorAll('template[data-arms]')]
+		.filter(
+			t =>
+				t.previousElementSibling?.getAttribute('data-arms') !==
+				t.getAttribute('data-arms'),
+		)
+		.map(first => {
+			const parent = first.parentElement!
+			const templates = [
+				...parent.querySelectorAll(
+					`:scope > template[data-arms="${first.getAttribute('data-arms')}"]`,
+				),
+			]
+			const keys = new Set(templates.map(t => t.getAttribute('data-key')))
+			const live = [...parent.children].filter(
+				el =>
+					el.localName !== 'template' && keys.has(el.getAttribute('data-key')),
+			)
+			return {
+				live: live.map(el => el.getAttribute('data-key')),
+				templates: templates.map(t => t.outerHTML),
+			}
+		})
+
+/**
+ * Arm sets whose task settles during the realm's drain, so the live arm
+ * flips AFTER adoption — a state change, not a failed adoption. Keyed by
+ * tag, one live key per set in document order. The realm's document is
+ * `about:blank`, so lazyload's relative `src` fails `isValidURL` and its
+ * task rejects: the server's `nil` arm is adopted, then flips to `err`.
+ * In a browser the fetch is still in flight at connect and `nil` stays.
+ */
+const SETTLED_IN_REALM: Record<string, string[]> = {
+	'module-lazyload': ['err'],
+	'module-listnav': ['err'],
+}
+
+// The adoption contract (ADR 0037 s3): the client adopts the server's
+// winning arm by key — it never clones a replacement for it at connect,
+// and it never touches an arm template. The Folded snapshot above records
+// the connect diff only as a shape and covers no Simulated component; this
+// block covers every component whose phase-1 render ships a live arm set,
+// in every tier, and checks node identity, not just bytes (a re-cloned arm
+// whose binding rewrites the same text serializes identically).
+const armEntries: CompiledInfo[] = []
+{
+	const inert = realm.document.implementation.createHTMLDocument('')
+	for (const info of compiled) {
+		inert.body.innerHTML = await renderPhase1(info)
+		if (armSets(inert.body).length > 0) armEntries.push(info)
+	}
+}
+
+describe('arm adoption across the hydration boundary (ADR 0037, LT-390)', () => {
+	test('the corpus consumers of both arm forms are covered — the class is not vacuous', () => {
+		const tags = armEntries.map(info => info.tag)
+		// A reactive `@if` and the async boundary. A new consumer joins the
+		// loop below on its own; losing one of these fails here.
+		expect(tags).toContain('form-inplace-edit')
+		expect(tags).toContain('module-lazyload')
+		for (const tag of Object.keys(SETTLED_IN_REALM)) expect(tags).toContain(tag)
+	})
+
+	for (const info of armEntries) {
+		test(`${info.tag}: connect adopts the server's live arm and leaves the arm templates untouched`, async () => {
+			const phase1 = await renderPhase1(info)
+			const { document } = realm
+			const inert = document.implementation.createHTMLDocument('')
+			inert.body.innerHTML = phase1
+			const before = armSets(inert.querySelector(info.tag)!)
+			for (const set of before) expect(set.live).toHaveLength(1)
+			const serverKeys = new Set(before.map(set => set.live[0]))
+
+			// Every childList mutation below the body during the connect. The
+			// drain delivers records to the callback, so collect them there as
+			// well as from takeRecords(). Body-level records are the previous
+			// render's teardown and this render's parse.
+			const records: MutationRecord[] = []
+			const observer = new document.defaultView!.MutationObserver(batch => {
+				records.push(...batch)
+			})
+			observer.observe(document.body, { childList: true, subtree: true })
+			await realm.render({ markup: phase1, component: info.tag })
+			records.push(...observer.takeRecords())
+			observer.disconnect()
+
+			// A re-cloned winner: an arm root carrying a server-live key
+			// inserted beside its templates.
+			const recloned = records
+				.filter(r => r.target !== document.body)
+				.flatMap(r =>
+					[...r.addedNodes].filter(
+						node =>
+							node.nodeType === 1 &&
+							(node as Element).localName !== 'template' &&
+							serverKeys.has((node as Element).getAttribute('data-key')) &&
+							(r.target as Element).querySelector(
+								`:scope > template[data-arms][data-key="${(node as Element).getAttribute('data-key')}"]`,
+							) !== null,
+					),
+				)
+				.map(node => (node as Element).outerHTML)
+			expect(recloned).toEqual([])
+
+			const after = armSets(document.querySelector(info.tag)!)
+			expect(after.map(set => set.templates)).toEqual(
+				before.map(set => set.templates),
+			)
+			const settled: (string | null)[] =
+				SETTLED_IN_REALM[info.tag] ?? before.map(set => set.live[0] ?? null)
+			expect(after.map(set => set.live)).toEqual(settled.map(key => [key]))
+		})
+	}
+})

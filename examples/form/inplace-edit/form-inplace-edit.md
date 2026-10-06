@@ -29,7 +29,7 @@ A self-contained inline label editor — click to edit, and the label seamlessly
 ---
 - `value`
 - `string`
-- Text content of `.text`
+- Attribute `value`, else text content of `.text`
 - Current label value; reactive — set via `pass()` to keep display in sync with external data
 {% /table %}
 
@@ -43,13 +43,18 @@ A self-contained inline label editor — click to edit, and the label seamlessly
 - Required
 - Description
 ---
-- `first('.text')`
-- `HTMLElement`
-- **required**
-- Label display element; hidden during editing
+- `.text`
+- `HTMLSpanElement`
+- display arm
+- Label display element; present only in view mode
+---
+- `.edit`
+- `HTMLDivElement`
+- edit arm
+- Wraps the `<form-textbox>` editor; present only in edit mode, cloned afresh on each entry
 ---
 - `first('button')`
 - `HTMLButtonElement`
-- optional
+- **required**
 - Toggle button: ✎ (view mode) / ✓ (edit mode)
 {% /table %}

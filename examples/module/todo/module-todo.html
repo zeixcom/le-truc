@@ -40,20 +40,21 @@
 				<input type="checkbox" class="visually-hidden">
 				<label class="label">
 					<form-inplace-edit name="" value="">
-						<span class="text"></span>
-						<div hidden class="edit">
-							<form-textbox name="" value="">
-								<label for="-input">Edit</label>
-								<div class="input">
-									<input
-										type="text"
-										id="-input"
-										value=""
-										autocomplete="off"
-									>
-								</div>
-							</form-textbox>
-						</div>
+						<span data-key="else" class="text"></span>
+						<template data-arms="0" data-key="then"><div class="edit">
+								<form-textbox name="" value="">
+									<label for="-input">Edit</label>
+									<div class="input">
+										<input
+											type="text"
+											id="-input"
+											value=""
+											autocomplete="off"
+										>
+									</div>
+								</form-textbox>
+							</div></template>
+						<template data-arms="0" data-key="else"><span class="text"></span></template>
 						<button type="button" aria-label="Edit">✎</button>
 					</form-inplace-edit>
 				</label>
