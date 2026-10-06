@@ -510,6 +510,85 @@ records the actual net delta.
   **Channel/tier:** no new runtime check; verification widening strengthens tier 1 (Prevented). LTC026's existing wording stands unless it must distinguish verified-miss from unverifiable — if it does, the copy follows `writer` → error-messages.
   **Verification:** new pins (authored selector used verbatim when verified; LTC026 on verified-miss; synthesis fallback unchanged for child/sibling and unparseable); goldens change ONLY where a corpus component's authored selector newly verifies — assert none today, or enumerate the delta in the handoff; full gates.
 
+- [ ] LT-405: A nested qualifier on `:host` evades LTC070 (LT-398 residue). — rolled back 2026-10-02, deferred to the design session
+  **Area:** compiler
+  **Needs:** LT-409
+  **Rolled back (owner, 2026-10-02):** the working tree is back to HEAD's behaviour for this case. `hostParent`, the codemod's
+  `hoistNestedHostQualifiers` and their tests are removed, and the ~37 corpus sites are restored to the nested authored form
+  (module-codeblock's `:global { pre/code }` block now follows `:host`). What follows records what
+  the reverted change did, for the design session.
+  **Was:** `checkRules` (`css-scope.ts`) carries `hostParent`, so `:host { &<qualifier> }` is
+  LTC070 too (no new code). The codemod's `hoistNestedHostQualifiers` moves such rules to a
+  sibling `:host(<qualifier>)` rule and keeps the flattened order. That migrated about 37 sites
+  in 14 corpus sources. The emitted CSS changed in selector text only.
+  **Ruling (owner, 2026-10-02 — the NOTES question; still describes the emission, documentation deferred to LT-408):** `:host(X)` keeps its all-zero emission
+  (`:where(tag:is(X))` / `:where(:scope:is(X))`), arguments included, so page styles always win on
+  the host. It is recorded as an s7 difference: a `:host(…)` argument carries no specificity, so a
+  variant rule must follow the base rule it overrides. Documented by LT-408. The migrated
+  corpus's specificity loss changes no computed value (static pass), and pixel confirmation
+  rides LT-397. The nested face's copy and fix-it go to LT-407.
+
+
+- [ ] LT-407: LTC070's nested face — `&<qualifier>` inside `:host { }` gets its own message and fix-it (LT-405 review).
+  **Area:** compiler
+  **Needs:** LT-409
+  **Context:** (Written against LT-405, now rolled back: re-scope it from the design session. If LT-405's check returns, this follows it.) Since LT-405, `checkRules` reports `:host { &:hover { … } }` as LTC070. The message
+  says "`:host` followed directly by a qualifier" and offers `:host(:hover)` as the fix. The author
+  never wrote `:host:hover`, though, and following the fix-it in place nests `:host(:hover)` under
+  `:host`, a descendant selector that matches nothing. Give `ContractFinding` a `nested` flag (set
+  when the qualified component is a `&` standing for `:host`). Route it through
+  `contractDiagnostic` to a second face of `diagnostic.hostQualifier`, saying that a qualifier
+  after `&` in a `:host` rule qualifies `:host` itself, and that the fix is a sibling top-level rule
+  `:host(<qualifier>) { … }` (the shape the codemod's `hoistNestedHostQualifiers` writes). The flat
+  face's copy stays as it is. Update the diagnostic-parity fixtures if the face is surface-visible.
+  **Channel/tier:** compiler, tier 1 Prevented (unchanged; LTC070 gains a face, no new code).
+  Copy follows `writer` → error-messages, including the `skills/le-truc/references/errors.md` row.
+  **Verification:** a `css-scope.test.ts` case asserts the nested flag. A diagnostic test asserts
+  each face's message (the nested one has no in-place `:host(…)` fix-it). `tsc` 0, server suite
+  green.
+
+
+- [ ] LT-408: Document the zero-specificity `:host(…)` arguments as an s7 difference (owner ruling 2026-10-02, LT-405 NOTES question).
+  **Area:** docs
+  **Needs:** LT-409
+  **Context:** Owner ruling (b): `:host(X)` keeps its all-zero emission, `:where(tag:is(X))` lowered
+  and `:where(:scope:is(X))` native, arguments included, so page styles always win on the host
+  (R1). In a real shadow root, `:host(X)` carries a pseudo-class's specificity plus X's, so
+  `:host(.tiny) .label` beats `.label` in the same sheet whatever the order. Compiled, only
+  source order decides. Add the difference to ADR 0033 s7 (in place, unpublished), to
+  `styling.md` § Differences from a Real Shadow Root and to `HOST_PROFILE.md` § Styles, in the
+  same words. The rule for authors: write variant rules (`:host(.x) …`) after the base rules they
+  override. In the same pass, change s7's "its guarded `:host…` rules" to the docs' "non-bare
+  `:host` rules" (LT-406 check).
+  **Channel/tier:** none — copy only. (No check is added: an order-sensitive conflict needs
+  cascade analysis across rules, which the compiler does not do. This is a recorded
+  limitation, not a deferred check.)
+  **Verification:** `check:links` green, and the three files state the difference in the same
+  words.
+
+
+- [ ] LT-409: Design session — the departures of compiled CSS from a real shadow root (ADR 0033 s7 as a whole; re-scopes LT-405, LT-407, LT-408).
+  **Area:** design
+  **Context:** The owner's ruling and the facts the session starts from, moved from the
+  BACKLOG.md P2b preamble:
+  **[2026-10-02, owner: LT-405 rolled back; LT-407 and LT-408 deferred from the current iteration's track D.]** All three explain or police a way compiled CSS departs from a real shadow root. The owner wants those departures re-evaluated in a design session (architect) before more of them are documented or given diagnostics: "the differences to real Shadow DOM become a burden that is increasingly hard to explain." The session reviews ADR 0033 s7's list as a whole (zero-specificity `:host(…)`, template-authored content inside a composed child, the LTC070/LTC071 refusals) and decides, for each, whether to keep it, close the gap in the emission, or reshape it. Re-scope all three from the session's outcome before picking any up.
+
+  **Known state after the rollback (2026-10-02, measured by a contributor).** These are the input facts for the session.
+  - `:host { &:hover/&.x/&[open] { … } }` (and `:host(.a) { &:hover }`) gets no diagnostic. It emits exactly what the flat `:host:hover` would, `:where(my-box):hover` lowered and `:where(:scope):hover` native. That styles the host, where a shadow root matches nothing (`:host` is featureless; spec reasoning, not browser-checked).
+  - The qualifier carries (0,1,0), so a page `my-box { … }` rule loses to it. That makes `styling.md:74` / `HOST_PROFILE.md:76` ("Page styles still win over `:host` rules") and § Differences' "behaves like the same sheet in a shadow root, except where …" overclaim for this form.
+  - In lowered mode with boundaries, the nested form picks up the self-nesting guard, which `:host(X)` does not.
+  - The corpus relies on the nested form at about 37 sites in 14 sources.
+  - `:host(X)` still emits at (0,0,0), arguments included (LT-408's difference, undocumented).
+  **Deliverable:** for each s7 difference — zero-specificity `:host(…)`, the nested
+  `&<qualifier>` in `:host { }`, template-authored content inside a composed child, the
+  LTC070/LTC071 refusals — a ruling: keep (and document once), close the gap in the emission,
+  or reshape the authored form. Amend ADR 0033 s7 in place (unpublished). Then rewrite LT-405,
+  LT-407 and LT-408 from the outcome (or strike them), naming channel and tier for any check
+  that returns (ADR 0028). A ruling that changes emission changes goldens and pixels by design:
+  say so in the rewritten task and require LT-397's pixel-parity procedure.
+  **Channel/tier:** decided per difference by the session.
+
+
 - [ ] LT-460: A compose site in an async-boundary arm — lower it as arm root, keep the arm binding in its children.
   **Area:** compiler
   **Gates:** check:corpus, test:server
@@ -1404,6 +1483,69 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Channel/tier:** build check, tier 1 Prevented.
   **Verification:** green at HEAD; a fixture skill file naming a retired code or a removed export fails it.
 
+
+- [ ] LT-448: Design session — fetched partials that bring new components to the page (script admission and loading; the compiled `allow-scripts` gap; LT-334 residue).
+  **Area:** design
+  **Area:** design
+  **Goal (owner, 2026-10-06):** allow a fetched HTML partial to bring *new* components to the
+  page — components the build did not know. The origin constraint: partials come from the
+  same origin, or from origins the page's CSP policy approves. Decouple-point: split out of
+  LT-334 so the boundary migration (LT-449) does not wait on a security design.
+  **Constraint the ruling must satisfy:** code-splitting for components. A rarely-used, huge
+  component (a video player) must not be pulled into the main JS bundle; whatever mechanism
+  rules must load component code lazily, on the partial's arrival.
+  **Ground truth established in the 2026-10-06 dive** (verify before ruling; facts may have moved):
+  1. The platform's free mechanism: `customElements` upgrades any matching element inserted
+     into the document — a partial carrying *known* component markup needs no script at all.
+     The script in `examples/module/lazyload/mocks/snippet.html` exists only because
+     `shake-hands` is not yet *registered* (a guarded `customElements.define` shim).
+  2. The runtime escape hatch (`dangerouslyBindInnerHTML({ allowScripts })`,
+     `src/bindings.ts`) re-creates script nodes naively: `SCRIPT_ATTRS` copied, inline text
+     re-created verbatim, appended after the content, **no dedup and no cleanup — every `ok`
+     update re-executes every script** (snippet's define-guard is what keeps the demo correct).
+  3. Sanitizer and `allowScripts` are mutually exclusive in the runtime: sanitization runs
+     first, so a configured sanitizer (DOMPurify) strips `<script>` before the re-creation
+     pass sees it; the escape hatch works only raw-passthrough. The compiled `truc:html`
+     path always passes `sanitizeHtml` (fail-closed, ADR 0010), so scripts never survive it.
+  4. `allowScripts` has exactly one consumer in the repo: `module-lazyload`. The demo page
+     authors `allow-scripts`; `mocks/module-with-type.html` is a pure script-execution fixture.
+  **Options discussed (no direction picked — rule, then record):**
+  - **A. Registry pattern.** Behavior in partials = custom elements; the page pre-registers
+    the tags its partials use; no script execution, no new mechanism. Fails the stated goal
+    for genuinely build-unknown components and strains the code-splitting constraint
+    (pre-registration means main-bundle weight).
+  - **A′. Lazy registry.** A tag→chunk manifest; after a partial inserts markup, a loader
+    fetches the unknown tags' component chunks and registers them — code-splitting native.
+    Tension: the manifest is build-known; a partial bringing an unknown component needs a way
+    to *declare* its components (a manifest beside the partial, fetched with it?) — that
+    softening is part of the question, not settled.
+  - **B. Policy-driven client loader.** The authored `allow-scripts` opt-in teaches the
+    compiled `truc:html` a script policy running *inside* the sanitize step (mends finding 3):
+    external-`src` re-created deduped by src, `type="application/json"` passthrough,
+    `type="importmap"` refused, inline per policy. CSP cost: re-created inline scripts need
+    `unsafe-inline` or a render-injected nonce.
+  - **C. Arm-lifecycle execution semantics.** Orthogonal to B (foldable into its policy):
+    scripts execute as arm effects — run on arm adoption, cleanup on arm exit, no
+    re-execution on re-render. The compiler knows the arm boundary; the runtime never could.
+  - **D. Build/serve-time extraction.** For same-origin partials the build can see, the
+    server strips scripts and ships them as proper external, hashed module URLs; the client
+    loads them as ordinary deferred scripts (CSP-clean, no `unsafe-inline`, browser-managed
+    order and dedup). Genuinely dynamic URLs fall back to B/C.
+  **Trust framing to carry:** no mechanism makes an untrusted script safe; sandboxing
+  untrusted code is origin isolation (iframes), a different product. `allow-scripts` stays a
+  page-author trust grant at the component boundary, origin-constrained per the goal. What a
+  full-stack design adds over the runtime is hygiene and defaults, not safety.
+  **Held state:** `shake-hands` stays broken until this rules (owner, 2026-10-06) — the
+  lazyload demo shows it inert; do not paper over it with pre-registration (that is option A,
+  and it strains the code-splitting constraint). `mocks/module-with-type.html` and the three
+  script-execution spec legs (LT-449 re-scoped them here) are this session's test input.
+  **Exit:** rule the direction (an option, a combination, or a new one); decide whether it
+  needs an ADR (ADR 0047 if so) or an `ARCHITECTURE.md`/`HOST_PROFILE.md` record; write the
+  follow-up implementation task — the one that transforms `shake-hands` from inert to alive
+  per the ruled design (owner, 2026-10-06), absorbing the script-execution spec legs
+  re-scoped from LT-449 — including the compiled-path wiring and the runtime binding's
+  adoption of the same policy function (one policy, two hosts, no drift). Nothing in the
+  lazyload track waits on this session: LT-449 and LT-390 proceed independently.
 
 - [ ] LT-450: Design session — lists too large to server-render at once, as HTML partials of item blocks loaded on demand (optimistically, as the user scrolls).
   **Area:** design
