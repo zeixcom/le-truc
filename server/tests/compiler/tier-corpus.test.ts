@@ -122,6 +122,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'form-tokenbox',
 				'module-calctable',
 				'module-catalog',
+				'module-cem-list',
 				'module-codeblock',
 				'module-colorinfo',
 				'module-dialog',

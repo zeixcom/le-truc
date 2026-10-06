@@ -33,7 +33,7 @@
 @import "../server/generated/components/module-calctable.css";
 @import "../server/generated/components/module-carousel.css";
 @import "../server/generated/components/module-catalog.css";
-@import "./module/cem-list/module-cem-list.css";
+@import "../server/generated/components/module-cem-list.css";
 @import "../server/generated/components/module-codeblock.css";
 @import "../server/generated/components/module-coloreditor.css";
 @import "../server/generated/components/module-colorinfo.css";
