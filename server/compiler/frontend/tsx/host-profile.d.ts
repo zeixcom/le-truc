@@ -382,6 +382,7 @@ declare namespace JSX {
 	}
 	type ModuleCarouselAttrs = CommonLightDom
 	type ModuleCatalogAttrs = CommonLightDom
+	type ModuleCemListAttrs = CommonLightDom
 	type ModuleColoreditorAttrs = CommonLightDom & {
 		/** Parser-backed: read once at connect; the `value` property owns it after. */
 		value?: string
@@ -523,6 +524,7 @@ declare namespace JSX {
 		'module-codeblock': ModuleCodeblockAttrs
 		'module-carousel': ModuleCarouselAttrs
 		'module-catalog': ModuleCatalogAttrs
+		'module-cem-list': ModuleCemListAttrs
 		'module-coloreditor': ModuleColoreditorAttrs
 		'module-colorinfo': ModuleColorinfoAttrs
 		'module-dialog': ModuleDialogAttrs

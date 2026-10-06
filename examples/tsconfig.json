@@ -36,6 +36,8 @@
 		"module/calctable/module-calctable.tsx",
 		"module/carousel/module-carousel.ts",
 		"module/carousel/module-carousel.tsx",
+		"module/cem-list/module-cem-list.ts",
+		"module/cem-list/module-cem-list.tsx",
 		"module/codeblock/module-codeblock.ts",
 		"module/codeblock/module-codeblock.tsx",
 		"module/catalog/module-catalog.ts",
