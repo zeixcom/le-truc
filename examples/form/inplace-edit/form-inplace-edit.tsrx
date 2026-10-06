@@ -100,8 +100,10 @@ export function FormInplaceEdit(
 		@if (host.editing) {
 			<div class="edit">
 				{/* name="" keeps the composed textbox OUT of FormData (the
-				    colorgraph precedent) — the host alone submits `name` */}
-				<FormTextbox name="" label="Edit" />
+				    colorgraph precedent) — the host alone submits `name`.
+				    `value` seeds a server-rendered edit arm; a user-driven
+				    entry pre-fills from `host.value` (startEditing) */}
+				<FormTextbox name="" label="Edit" {value} />
 			</div>
 		} @else {
 			<span

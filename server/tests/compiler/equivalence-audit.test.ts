@@ -330,3 +330,39 @@ describe('arm adoption across the hydration boundary (ADR 0037, LT-390)', () => 
 		})
 	}
 })
+
+describe('form-inplace-edit: a server-rendered edit arm (LT-390 review)', () => {
+	test('seeds the textbox from the render value, so committing keeps it', async () => {
+		const info = compiled.find(entry => entry.tag === 'form-inplace-edit')!
+		const mod = (await import(
+			pathToFileURL(info.serverModulePath).href
+		)) as Record<string, unknown>
+		const renderFn = mod[renderName(info.tag)] as (args: unknown) => string
+		const markup = renderFn({ name: 'label', value: 'x', editing: true })
+
+		const inert = realm.document.implementation.createHTMLDocument('')
+		inert.body.innerHTML = markup
+		const live = inert.querySelector(':scope form-inplace-edit > .edit')!
+		expect(live.getAttribute('data-key')).toBe('then')
+		expect(live.querySelector('input')?.getAttribute('value')).toBe('x')
+
+		await realm.render({ markup, component: info.tag })
+		const host = realm.document.querySelector(
+			'form-inplace-edit',
+		) as HTMLElement & { value: string; editing: boolean }
+		const textbox = host.querySelector('form-textbox') as HTMLElement & {
+			value: string
+		}
+		expect(host.editing).toBe(true)
+		expect(textbox.value).toBe('x')
+
+		host.dispatchEvent(
+			new realm.document.defaultView!.KeyboardEvent('keydown', {
+				key: 'Enter',
+				bubbles: true,
+			}),
+		)
+		expect(host.editing).toBe(false)
+		expect(host.value).toBe('x')
+	})
+})

@@ -53,8 +53,8 @@ A self-contained inline label editor — click to edit, and the label seamlessly
 - edit arm
 - Wraps the `<form-textbox>` editor; present only in edit mode, cloned afresh on each entry
 ---
-- `first('button')`
+- `button`
 - `HTMLButtonElement`
-- **required**
+- host child
 - Toggle button: ✎ (view mode) / ✓ (edit mode)
 {% /table %}
