@@ -224,6 +224,13 @@ export type DeclaredSignalIR = SignalIRBase & {
 	harvest?: HarvestSeedIR
 	/** A `createList` declaration's item type, read syntactically (ADR 0046 s7). */
 	listItem?: ListItemIR
+	/**
+	 * The declaration reads `host`/`internals` with no server truth to fold
+	 * (LT-451): not server-known, so every read of it is omitted from the
+	 * server render, and the client evaluates the declaration itself after
+	 * `expose()` instead of harvesting it.
+	 */
+	unresolvable?: true
 }
 
 /** A harvest parser the compiler infers from a field's type (ADR 0046 s7). */

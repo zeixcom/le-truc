@@ -892,7 +892,8 @@ const planHarvests = (
 		 * `thunkRendered` — its value flows into the DOM through a
 		 * style-map/class-map object or a computed reactive thunk, so it is
 		 * provably not dead, and the server rendered that output from this
-		 * same initializer (DOM agrees by construction). A `createCell`/
+		 * same initializer (DOM agrees by construction) — and since LT-451
+		 * for a seed reading `host` the server folds (`hostSeeded`). A `createCell`/
 		 * `createState` signal with a literal initializer and NO rendered
 		 * site at all must still fail (LTC004): those DO have a direct-site
 		 * harvest route, and a silently-never-rendered signal is exactly
@@ -997,6 +998,22 @@ const planHarvests = (
 		// no-harvest path; LT-348 still refuses a server name in either), and
 		// a harvest would replace the start callback (ADR 0046 s5).
 		if (signal.constructor === 'createSensor') continue
+		// A declaration reading `host` with no server truth (LT-451) seeds
+		// itself on the client the same way: it is not server-known, so no
+		// site renders it, and the client declares it verbatim after
+		// `expose()` has installed the props it reads.
+		if (signal.family === 'declared' && signal.unresolvable) continue
+		/**
+		 * A seed reading `host` that the server folds (LT-451): every read is
+		 * a prop whose server seed `hostSeedExpr` splices (`assemble-ir.ts`
+		 * marks the rest `unresolvable`), so the client's own evaluation after
+		 * `expose()` — the parser applied to the same root attribute — agrees
+		 * with the render by construction, as a literal seed does.
+		 */
+		const hostSeeded =
+			signal.family === 'declared' &&
+			!!signal.init &&
+			dependenciesOf(signal.init).has('host')
 		/**
 		 * A scalar `harvest(seed, parser)` marker (ADR 0046 s7, LT-443): the
 		 * parser the scalar harvest reads go through — the direct text/attr
@@ -1099,7 +1116,13 @@ const planHarvests = (
 		)
 		if (listPlan && signal.family === 'declared') {
 			const free = signal.init ? dependenciesOf(signal.init) : new Set<string>()
-			if ([...free].every(name => JS_GLOBALS.has(name))) {
+			if (
+				[...free].every(
+					name =>
+						JS_GLOBALS.has(name) ||
+						(name === 'host' && hostSeeded && !signal.harvest),
+				)
+			) {
 				// The client reuses a literal seed as written, so a `harvest()`
 				// map there declares parsers nothing reads (ADR 0046 s7).
 				if (signal.harvest) {
@@ -1225,7 +1248,7 @@ const planHarvests = (
 			const substituted = signal.init
 				? substituteArgExpr(
 						signal.init,
-						isDerivedCallback || thunkRendered.has(signal.name),
+						isDerivedCallback || thunkRendered.has(signal.name) || hostSeeded,
 						isDerivedCallback,
 						clientCredited.has(signal.name) && !renderCredited.has(signal.name),
 					)

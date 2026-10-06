@@ -420,7 +420,8 @@ leading JSDoc, and the placed plain imports (`server` / `client`).
 
 **`SignalIR`** — one declared signal, a three-member union by constructor
 family (ADR 0040 s2) tagged `family`: `DeclaredSignalIR` (`createCell`/
-`createState`/`createList`/`createStore` — `init` is the initializer),
+`createState`/`createList`/`createStore` — `init` is the initializer,
+`unresolvable` set when it reads `host` with no server truth, LT-451),
 `DerivedSignalIR` (`deriveCell`/`deriveList`/`deriveStore`/`createMemo` —
 `init` is the derive expression; `createSensor` — `init` is the start
 callback, `unresolvable` set when it has no server value), and `ContextSignalIR` (`requestContext` —
@@ -792,7 +793,16 @@ server truth (a Parser prop's root attribute, a prop harvested from a
 same-named server arg, a `first()` ref's branch presence) is spliced to an
 initial value. The fold is all-or-nothing: one non-substitutable read
 disqualifies the expression — and, under ADR 0029, routes the component out
-of the Folded tier.
+of the Folded tier. A signal declaration reading `host`
+(`createList(host.seed, { keyConfig })`, LT-451) takes the same fold: every
+`host.<prop>` read is spliced for `hostSeedExpr` in the server's
+declaration, and the client, which evaluates the same parser over the same
+attribute after `expose()`, reuses the declaration as written. A
+declaration with one read the fold cannot answer is marked `unresolvable`
+like an unseeded sensor, with an `LTC013` routing signal (`assemble-ir.ts`).
+The generated client emits setup — plain consts, signal declarations,
+`expose()`, client-only statements — in source order, so a declaration
+after `expose()` sees the props it installed.
 
 **The `argsFromAttrs` export (LT-194).** A folded module that declares the
 reserved `i18n` parameter also exports
