@@ -160,6 +160,7 @@
 - **A Parser-backed prop's server seed read the raw expression**: previously a folded test or thunk parsed the attribute's expression value, so `ordinal={false}` could render a different arm than the client picks. Now it parses the rendered attribute; a seed the render cannot resolve routes the component Simulated (`form-spinbutton`).
 - **`@if` roots with different binding sources shared one binding**: previously roots binding different props to one attribute, or differing in `truc:pass` entries or a reactive `truc:html` value, used the first root's source. Now each binds its own, or `LTC007` fires if they cannot be told apart.
 - **`reconcile()` duplicate-key removal misreported**: previously a second child carrying a `data-key` another child already held drew the "key not present in the source" warning (dev mode), pointing the author at a source where nothing is wrong. The warning now names the collision, and that the first occurrence wins (LT-187).
+- **A reactive list in a server-known branch of a list item threw in every item mount when the branch did not render**: previously the item mount queried the nested container as required, so with the branch folded off, every adopted and cloned item threw `MissingElementError` and stayed unbound. Now the mount queries the container and the `@empty` roots non-throwing, and binds the nested list and its empty watch under an `if` on the container (LT-455).
 
 ## 2.6.0
 

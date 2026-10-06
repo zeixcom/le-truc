@@ -1877,12 +1877,16 @@ const holderOf = (
  * A construct that is a Mount Scope of its own, or a loop, met while
  * planning `scope` (LT-424): plan it into the scope's sink through the
  * scope's locals and report true, so the caller does not descend. False for
- * everything else.
+ * everything else. `inBranch`: `node` sits in a server-rendered conditional
+ * branch of the scope (an item's walk descends there; a reactive conditional
+ * or boundary below one is refused), so a nested list's container may be
+ * absent from the rendered markup (LT-455).
  */
 const planNested = (
 	fx: EffectsContext,
 	scope: MountScope,
 	node: TemplateNode,
+	inBranch = false,
 ): boolean => {
 	if (node.kind === 'conditional' && node.mode === 'reactive') {
 		handleReactiveConditional(fx, node, scope)
@@ -1895,7 +1899,7 @@ const planNested = (
 	if (!isElement(node)) return false
 	const loop = loopFor(fx, node)
 	if (!loop) return false
-	if (loop.kind === 'reconcile') planNestedList(fx, loop, scope)
+	if (loop.kind === 'reconcile') planNestedList(fx, loop, scope, inBranch)
 	else planNestedEach(fx, loop, scope)
 	return true
 }
@@ -1905,11 +1909,16 @@ const planNested = (
  * and its `@empty` roots are the scope's locals, and its item is a Mount
  * Scope of its own. The container may be the scope root itself: the
  * extracted template sits at the host's end and is queried from the host.
+ * `inBranch`: the container sits in a server-rendered branch of the scope
+ * (LT-455) — the branch folds per render call, the same for every clone,
+ * but may leave the list out, so the container and `@empty` locals are
+ * non-throwing queries and the mount binds under an `if` on the container.
  */
 const planNestedList = (
 	fx: EffectsContext,
 	loop: ReconcileForIR,
 	scope: MountScope,
+	inBranch = false,
 ): void => {
 	const plan = fx.reconcilePlans.get(loop)
 	if (!plan) return
@@ -1917,11 +1926,12 @@ const planNestedList = (
 	// at the shallowest.
 	const container = holderOf(fx, loop.output)
 	if (container === null) return
-	plan.container = scope.localFor(container)
+	plan.container = scope.localFor(container, inBranch)
 	fx.ambient.add('host')
 	plan.emptyQueries = (loop.emptyArm ?? [])
 		.filter(isElement)
-		.map(root => scope.localFor(root))
+		.map(root => scope.localFor(root, inBranch))
+	if (inBranch) plan.inBranch = true
 	planReconcileItem(fx, loop, plan)
 	scope.sink.push({ kind: 'reconcile', for: plan })
 }
@@ -2485,9 +2495,10 @@ const planReconcileItem = (
 		// Descendants with constructs of their own, document order, through
 		// server-rendered conditional arms (a construct there addresses
 		// markup the render's own winner put in every item); nested arm sets
-		// and loops plan into the item's mount as their own scopes.
-		const visitElements = (node: TemplateNode): void => {
-			if (node !== output && planNested(fx, scope, node)) return
+		// and loops plan into the item's mount as their own scopes, a loop
+		// below a branch knowing its container may be absent (LT-455).
+		const visitElements = (node: TemplateNode, inBranch = false): void => {
+			if (node !== output && planNested(fx, scope, node, inBranch)) return
 			if (isElement(node)) {
 				if (node !== output && hasOwnConstruct(node))
 					emitConstructEffects(
@@ -2497,7 +2508,7 @@ const planReconcileItem = (
 						item.effects,
 						badNames,
 					)
-				for (const child of node.children) visitElements(child)
+				for (const child of node.children) visitElements(child, inBranch)
 				return
 			}
 			if (node.kind === 'compose') {
@@ -2506,7 +2517,7 @@ const planReconcileItem = (
 			}
 			if (node.kind === 'conditional' && node.mode === 'server')
 				for (const arm of node.arms)
-					for (const child of arm.children) visitElements(child)
+					for (const child of arm.children) visitElements(child, true)
 		}
 
 		// Composed children in the item: `truc:pass` entries bind against a
