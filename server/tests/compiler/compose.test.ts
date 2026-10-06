@@ -967,60 +967,16 @@ export function BasicParent({ title }: { title: string })
 	})
 })
 
-describe('compose site inside a @pending arm (LT-221 §1.4 probe)', () => {
-	// `countForSelector` sums the @pending arm (async arms coexist in the
-	// DOM), but `allComposeNodes`/`composeNodesBySource`/`countComposeBySource`
-	// omit it — so whether the gap is reachable turns on whether a compose
-	// site can legally sit in a pending arm. The arm's only shape rule is
-	// "exactly one root element"; a single compose root satisfies it.
-	const parent = `import { BasicChild } from '../child/basic-child.tsrx'
-import { deriveCell } from '@zeix/le-truc'
-
-export function BasicParent({}: {})
-	@{
-		const data = deriveCell(async () => 'x')
-		const loading = first('basic-child.pending')
-		expose({})
-			<basic-parent>
-				@try {
-					<div class="content">{data}</div>
-				} @pending {
-					<BasicChild label={'loading'} class="pending" />
-				} @catch (e) {
-					<p class="error">{e.message}</p>
-				}
-				<style>:host {
-	  display: block;
-	}</style>
-			</basic-parent>
-	}`
-
-	test('a compose site in a @pending arm is rejected — the walks omit pending arms by ruling (LT-221 probe)', () => {
-		const childComponent = compileChild('examples/child/basic-child.tsrx')
-		const { diagnostics } = compileComponent(
-			parent,
-			'examples/parent/basic-parent.tsrx',
-			new Set(['basic-child']),
-			undefined,
-			composeRegistryOf(childComponent.entry),
-		)
-		// The probe's outcome (2026-09-18): the @pending arm-shape rule
-		// demands exactly one root ELEMENT — `singleRootOf` filters
-		// `kind === 'element'` — so a compose site can never reach a
-		// @pending arm through valid authoring. The compose walks omitting
-		// the pending arm (`allComposeNodes`/`composeNodesBySource`/
-		// `countComposeBySource`) was ruled consistent garbage-in
-		// protection. LT-230 found that ruling covered the arm ROOT only: a
-		// compose site nested below the pending root is valid authoring —
-		// see the next describe, which pins the settled walk policy.
-		expect(
-			diagnostics.some(
-				d =>
-					d.severity === 'error' &&
-					d.message.includes('that does not render exactly one root element'),
-			),
-		).toBe(true)
-	})
+describe('compose site inside a @pending arm (LT-221 §1.4 probe, overruled by LT-460)', () => {
+	// The LT-221 probe refused a compose site as a @pending arm root: the
+	// arm-shape rule filtered `kind === 'element'`, so a single compose
+	// root could never satisfy it, and the compose walks omitting pending
+	// arms was ruled consistent garbage-in protection. LT-460 overruled
+	// that (owner: bug — the arm root path was never routed through compose
+	// lowering): an arm root that is a compose site lowers as a compose
+	// site, and `data-key` splices onto the child's rendered root through
+	// the same `composeHostAttrs` path as `class`/`id`/`data-*`. Pinned
+	// below, in the arm-positions band.
 })
 
 describe('compose site nested below a @pending root (LT-230 walk policy)', () => {
@@ -1073,5 +1029,518 @@ export function BasicParent({}: {})
 		)
 		// Both sites — the body's and the nested pending one.
 		expect(diagnostics.filter(d => d.code === 'LTC011')).toHaveLength(2)
+	})
+})
+
+describe('compose sites in arm positions (LT-460)', () => {
+	// An arm root that is a compose site lowers as a compose site, and the
+	// children of a compose site render inside every binding scope that
+	// encloses the site. The async boundary is the one scope whose
+	// templates sit OUTSIDE the catch binding, so the sanctioned
+	// binding-scope read is the catch parameter — written by the live arm,
+	// baked empty in the inert templates, and rebound on the client through
+	// the boundary's err watch on a parent-authored message element inside
+	// the composed content.
+
+	// A child that renders the reserved `{children}` substitution — the
+	// composed content's message element must exist in the child's DOM for
+	// the arm-scoped `first()` to reach it.
+	const childrenChild = `export function ChildrenChild({ label, children }: {
+	label: string
+	children?: string
+})
+	@{
+		expose({ value: '' })
+			<children-child>{label}{children}</children-child>
+	}`
+	const compileChildrenChild = () => {
+		const { component, diagnostics } = compileComponent(
+			childrenChild,
+			'examples/child/children-child.tsrx',
+			new Set(['children-child']),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		return component
+	}
+
+	const asyncParent = (pendingArm: string, catchArm: string) =>
+		`import { deriveCell } from '@zeix/le-truc'
+
+export function BasicParent({}: {})
+	@{
+		const data = deriveCell(async () => 'x')
+		expose({})
+			<basic-parent>
+				@try {
+					<div class="content">{data}</div>
+				} @pending {
+					${pendingArm}
+				} @catch (e) {
+					${catchArm}
+				}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+
+	const withImports = (imports: string, parent: string): string =>
+		parent.replace(
+			"import { deriveCell } from '@zeix/le-truc'",
+			`${imports}\nimport { deriveCell } from '@zeix/le-truc'`,
+		)
+
+	test('an arm-root compose site keys the child root and reconciles on flip', async () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = withImports(
+			"import { BasicChild } from '../child/basic-child.tsrx'",
+			asyncParent(
+				'<BasicChild label={"loading"} class="pending" />',
+				'<p class="error">{e.message}</p>',
+			),
+		)
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		// The live nil arm: `data-key` spliced onto the child's rendered
+		// root, beside the authored `class`.
+		expect(component.serverCode).toContain(
+			'composeHostAttrs(renderBasicChild({ "label": "loading" }), "basic-child", { "class": "pending", "data-key": "nil" })',
+		)
+		// The inert template carries the arm content, unkeyed — the
+		// `<template data-key>` names the arm.
+		expect(component.serverCode).toContain(
+			'composeHostAttrs(renderBasicChild({ "label": "loading" }), "basic-child", { "class": "pending" })',
+		)
+		// The client switches arms through `reconcile()`'s arm form.
+		expect(component.clientCode).toContain('reconcile(')
+		// In-process execution: the child root carries `data-key` in the
+		// served DOM (the pending state wins at first render).
+		ensureEmitted('basic-child', childComponent.serverCode)
+		ensureEmitted('basic-parent', component.serverCode)
+		const mod = await generated.importModule('basic-parent.server.ts')
+		const html = (
+			mod as { renderBasicParent: (args: Record<string, unknown>) => string }
+		).renderBasicParent({})
+		expect(html).toContain('<basic-child class="pending" data-key="nil">')
+	})
+
+	test('a catch-parameter read in composed content renders server-side and rebinding is planned (the LT-460 miscompile regression)', async () => {
+		const childComponent = compileChildrenChild()
+		const parent = withImports(
+			"import { ChildrenChild } from '../child/children-child.tsrx'",
+			asyncParent(
+				'<div class="loading">loading</div>',
+				'<div class="wrapper"><ChildrenChild label={"failed"}><p class="error">{e.message}</p></ChildrenChild></div>',
+			),
+		)
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['children-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		// The LIVE err arm evaluates the read where `e` is bound...
+		expect(component.serverCode).toContain('text(e.message)')
+		// ...exactly once: the err arm TEMPLATE bakes the site empty —
+		// before LT-460 the generated module read `e` there, out of scope
+		// (TS2552 under check:corpus; a ReferenceError at execution).
+		expect(component.serverCode.match(/text\(e\.message\)/g)).toHaveLength(1)
+		// The client rebinds through the boundary's err watch, targeting the
+		// parent-authored message element inside the composed content.
+		expect(component.clientCode).toContain("'p.error'")
+		expect(component.clientCode).toContain(
+			'err: error => bindText(errMessage)(error.message)',
+		)
+		// Execution must not throw (the pre-fix module read `e` outside the
+		// catch callback while rendering the err template).
+		ensureEmitted('children-child', childComponent.serverCode)
+		ensureEmitted('basic-parent', component.serverCode)
+		const mod = await generated.importModule('basic-parent.server.ts')
+		const html = (
+			mod as { renderBasicParent: (args: Record<string, unknown>) => string }
+		).renderBasicParent({})
+		expect(html).toContain('<p class="error"></p>')
+	})
+
+	test('a composed callout as the catch arm root: the message renders server-side, bakes empty in the template, and the child root carries data-key (the module-lazyload conversion shape)', () => {
+		const callout = `export function CardCallout({ kind, children }: {
+	kind?: string
+	children?: string
+})
+	@{
+		expose({ value: '' })
+			<card-callout class={kind}>{children}</card-callout>
+	}`
+		const childComponent = compileComponent(
+			callout,
+			'examples/card/callout/card-callout.tsrx',
+			new Set(['card-callout']),
+		)
+		if (!childComponent.component)
+			throw new Error(
+				`child must compile: ${JSON.stringify(childComponent.diagnostics)}`,
+			)
+		const parent = withImports(
+			"import { CardCallout } from '../card/callout/card-callout.tsrx'",
+			asyncParent(
+				'<div class="loading">loading</div>',
+				'<CardCallout class="danger">\n\t\t\t\t\t\t\t<p class="error" role="alert">{e.message}</p>\n\t\t\t\t\t\t</CardCallout>',
+			),
+		)
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['card-callout']),
+			undefined,
+			composeRegistryOf(childComponent.component.entry),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		// The composed callout IS the err arm root: data-key and the
+		// discriminator splice onto the child's rendered root.
+		expect(component.serverCode).toContain(
+			'"class": "danger", "data-key": "err"',
+		)
+		// The message read is bound in the live arm, baked empty in the
+		// err template (the miscompile regression), and the arm-scoped
+		// write targets the parent-authored message element by role.
+		expect(component.serverCode.match(/text\(e\.message\)/g)).toHaveLength(1)
+		expect(component.clientCode).toContain('first(\'p[role="alert"]\'')
+		ensureEmitted('card-callout', childComponent.component.serverCode)
+		ensureEmitted('basic-parent', component.serverCode)
+	})
+
+	test('a bare-tag message element inside composed content is refused — the child renders markup the compiler cannot see (LT-460 rework)', () => {
+		// The child's own label <p> shares the tag with the parent-authored
+		// message element; a bare `p` selector would hit the child's markup
+		// on an err flip and overwrite the label instead of the message.
+		const labeledChild = `export function ChildrenChild({ label, children }: {
+	label: string
+	children?: string
+})
+	@{
+		expose({ value: '' })
+			<children-child><p>{label}</p>{children}</children-child>
+	}`
+		const childComponent = compileComponent(
+			labeledChild,
+			'examples/child/children-child.tsrx',
+			new Set(['children-child']),
+		)
+		if (!childComponent.component)
+			throw new Error(
+				`child must compile: ${JSON.stringify(childComponent.diagnostics)}`,
+			)
+		const parent = withImports(
+			"import { ChildrenChild } from '../child/children-child.tsrx'",
+			asyncParent(
+				'<div class="loading">loading</div>',
+				'<ChildrenChild label={"failed"}><p>{e.message}</p></ChildrenChild>',
+			),
+		)
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['children-child']),
+			undefined,
+			composeRegistryOf(childComponent.component.entry),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain(
+			'message element <p> inside composed content has no `role`, `class`, `id` or `data-*` attribute',
+		)
+		expect(hit?.message).toContain('distinguishing attribute')
+	})
+
+	test('a reactive construct nested below the PENDING root is refused — the deep construct walk covers the pending arm (LT-460 rework round 2)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { deriveCell } from '@zeix/le-truc'
+
+export function BasicParent({ busy }: { busy: boolean })
+	@{
+		const data = deriveCell(async () => 'x')
+		expose({})
+			<basic-parent>
+				@try {
+					<div class="content">{data}</div>
+				} @pending {
+					<div class="loading"><span class={() => (host.busy ? 'b' : null)}>loading</span></div>
+				} @catch (e) {
+					<p class="error">{e.message}</p>
+				}
+			</basic-parent>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		// Regression: splitting the deep-construct check per arm in the
+		// first rework left the pending arm with `hasOwnConstruct` only,
+		// so this compiled silently and planned no client code for the
+		// span.
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain(
+			'A client construct in the `@pending` arm of an async boundary',
+		)
+		expect(hit?.message).toContain(
+			'Nothing watches the pending arm once the signal resolves',
+		)
+	})
+
+	test('a lazy child DIRECTLY inside composed content is refused with the wrap-in-an-element fix (LT-460 rework)', () => {
+		const childComponent = compileChildrenChild()
+		const parent = withImports(
+			"import { ChildrenChild } from '../child/children-child.tsrx'",
+			asyncParent(
+				'<div class="loading">loading</div>',
+				'<ChildrenChild label={"failed"}>{e.message}</ChildrenChild>',
+			),
+		)
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['children-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('A client construct below the root element')
+		// The generic "move it onto the arm's root element" advice is
+		// impossible here — the fix names the wrapper element instead.
+		expect(hit?.message).toContain('wrap the read in an element of your own')
+	})
+
+	test('a compose arm root of a REACTIVE conditional keys the child root and plans the arm mount (LT-460 rework)', async () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+import { createCell } from '@zeix/le-truc'
+
+export function BasicParent({}: {})
+	@{
+		const open = createCell(true)
+		expose({})
+			<basic-parent>
+				@if (open.get()) {
+					<BasicChild label={"open"} class="branch" />
+				} @else {
+					<div class="closed">closed</div>
+				}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		// The live winner's child root carries the arm key; the inert
+		// then-template holds the composed arm unkeyed.
+		expect(component.serverCode).toContain(
+			'"class": "branch", "data-key": "then"',
+		)
+		expect(component.serverCode).toContain(
+			'composeHostAttrs(renderBasicChild({ "label": "open" }), "basic-child", { "class": "branch" })',
+		)
+		// The client switches arms through `reconcile()`'s arm form; with no
+		// constructs on the compose root the mount itself is a no-op body,
+		// so the key thunk carries the arm switching.
+		expect(component.clientCode).toContain("? 'then' : 'else'")
+		// Execution: the true arm renders, keyed on the child's root.
+		ensureEmitted('basic-child', childComponent.serverCode)
+		ensureEmitted('basic-parent', component.serverCode)
+		const mod = await generated.importModule('basic-parent.server.ts')
+		const html = (
+			mod as { renderBasicParent: (args: Record<string, unknown>) => string }
+		).renderBasicParent({})
+		expect(html).toContain('<basic-child class="branch" data-key="then">')
+	})
+
+	test('a catch-parameter read in a compose ARG is refused — the child renders args itself (no client write channel)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const { component, diagnostics } = compileComponent(
+			withImports(
+				"import { BasicChild } from '../child/basic-child.tsrx'",
+				asyncParent(
+					'<div class="loading">loading</div>',
+					'<BasicChild label={e.message} class="error" />',
+				),
+			),
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain(
+			'`label` arg reading the catch parameter `e`',
+		)
+		expect(hit?.message).toContain('composed content')
+	})
+
+	test('a server-data loop variable in composed content renders per iteration, in scope', async () => {
+		const childComponent = compileChildrenChild()
+		const parent = `import { ChildrenChild } from '../child/children-child.tsrx'
+
+export function BasicParent({ rows }: { rows: string[] })
+	@{
+		expose({})
+			<basic-parent>
+				<ul>
+					@for (const row of rows) {
+						<li><ChildrenChild label={row}><p class="cell">{row}</p></ChildrenChild></li>
+					}
+				</ul>
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['children-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		// The composed content's read evaluates inside the render loop,
+		// where the loop variable is bound.
+		expect(component.serverCode).toContain('text(row)')
+		ensureEmitted('children-child', childComponent.serverCode)
+		ensureEmitted('basic-parent', component.serverCode)
+		const mod = await generated.importModule('basic-parent.server.ts')
+		const html = (
+			mod as { renderBasicParent: (args: Record<string, unknown>) => string }
+		).renderBasicParent({ rows: ['a', 'b'] })
+		expect(html).toContain('<p class="cell">a</p>')
+		expect(html).toContain('<p class="cell">b</p>')
+	})
+
+	test('a list item or key read in composed content stays refused (LTC075) — the template renders once, outside the item mount', () => {
+		const childComponent = compileChildrenChild()
+		const parent = `import { ChildrenChild } from '../child/children-child.tsrx'
+import { createList } from '@zeix/le-truc'
+
+export function BasicParent({}: {})
+	@{
+		const items = createList(['a'])
+		expose({})
+			<basic-parent>
+				<ul>
+					@for (const item of items; key item) {
+						<li><ChildrenChild label={'x'}><p class="cell">{item}</p></ChildrenChild></li>
+					}
+				</ul>
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const { diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['children-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(diagnostics.filter(d => d.code === 'LTC075')).toHaveLength(1)
+	})
+
+	test('a catch-parameter read in composed content compiles in a SYNC boundary too (the binding exists at the template position)', () => {
+		const childComponent = compileChildrenChild()
+		const parent = `import { ChildrenChild } from '../child/children-child.tsrx'
+
+export function BasicParent({}: {})
+	@{
+		expose({})
+			<basic-parent>
+				@try {
+					<div class="ok">ok</div>
+				} @catch (e) {
+					<div class="wrapper"><ChildrenChild label={"failed"}><p class="error">{e.message}</p></ChildrenChild></div>
+				}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['children-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		// The sync catch arm emits inside the catch callback, so the read
+		// stays in scope in every emission position.
+		expect(component.serverCode).toContain('text(e.message)')
+	})
+
+	test('an arm-root compose site compiles on the .tsx surface (the boundary arms are attribute positions there)', () => {
+		const childTsx = `export function BasicChild({ label }: { label: string }) {
+	expose({ value: '' })
+	return <basic-child>{label}</basic-child>
+}`
+		const { component: childComponent, diagnostics: childDiags } =
+			compileComponentTsx(childTsx, 'examples/child/basic-child.tsx', new Set())
+		if (!childComponent)
+			throw new Error(`child must compile: ${JSON.stringify(childDiags)}`)
+		const parent = `import { BasicChild } from '../child/basic-child.tsx'
+import { deriveCell } from '@zeix/le-truc'
+
+export function BasicParent({}: {}) {
+	const data = deriveCell(async () => 'x')
+	expose({})
+	return <basic-parent>
+		<truc:try
+			pending={<div class="loading">loading</div>}
+			catch={e => <BasicChild label={"failed"} class="error" />}>
+			<div class="content">{data}</div>
+		</truc:try>
+	</basic-parent>
+}`
+		const { component, diagnostics } = compileComponentTsx(
+			parent,
+			'examples/parent/basic-parent.tsx',
+			new Set(['basic-child']),
+			undefined,
+			new Map([[childComponent.entry.source, childComponent.entry]]),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		expect(component.serverCode).toContain(
+			'"class": "error", "data-key": "err"',
+		)
 	})
 })

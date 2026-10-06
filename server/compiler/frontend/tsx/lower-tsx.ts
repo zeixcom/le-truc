@@ -50,6 +50,7 @@ import {
 	finishTry,
 	type Lowering,
 	lowerChildrenSkeleton,
+	lowerComposeElement,
 	lowerElement as lowerElementShared,
 	lowerLoop,
 	reportEmptySwitch,
@@ -75,6 +76,23 @@ const lowerJsxValue = (
 ): TemplateNode[] => {
 	if (node.type === 'JSXFragment')
 		return lowerChildren(ctx, node, signals, fors)
+	// A PascalCase element is a compose site wherever a JSX value lowers —
+	// an arm root included (LT-460): the boundary and conditional arms take
+	// the same route an element child list gives a composed element. A
+	// `truc:try` tag is namespaced, so it never reaches this branch.
+	const opening = isNode(node.openingElement) ? node.openingElement : null
+	const tag = jsxName(isNode(opening) ? opening.name : null)
+	if (tag && /^[A-Z]/.test(tag)) {
+		const lowered = lowerComposeElement(
+			ctx,
+			node,
+			tag,
+			signals,
+			fors,
+			TSX_LOWERING,
+		)
+		return lowered ? [lowered] : []
+	}
 	if (isTrucTry(node)) {
 		const lowered = lowerTrucTry(ctx, node, signals, fors)
 		return lowered ? [lowered] : []

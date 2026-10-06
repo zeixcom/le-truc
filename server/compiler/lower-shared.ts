@@ -253,16 +253,19 @@ export const validateCondition = (
 
 /* === Shared arm/child helpers === */
 
-/** The sole element child among a control-flow arm's children, or null. */
-export const singleRootOf = (
-	children: TemplateNode[],
-): (TemplateNode & { kind: 'element' }) | null => {
+/**
+ * The sole element child among a control-flow arm's children, or null. An
+ * arm root may also be a compose site (LT-460): its rendered root is the
+ * child's own element, so the arm-set shape rule ("exactly one root
+ * element", ADR 0037 s4) is satisfied by a single composed element too.
+ */
+export type ArmRootNode = TemplateNode & { kind: 'element' | 'compose' }
+
+export const singleRootOf = (children: TemplateNode[]): ArmRootNode | null => {
 	const roots = children.filter(
-		(c): c is TemplateNode & { kind: 'element' } => c.kind === 'element',
+		(c): c is ArmRootNode => c.kind === 'element' || c.kind === 'compose',
 	)
-	return roots.length === 1
-		? (roots[0] as TemplateNode & { kind: 'element' })
-		: null
+	return roots.length === 1 ? (roots[0] as ArmRootNode) : null
 }
 
 /**
@@ -280,14 +283,21 @@ export const singleRootOf = (
  * `reactivity.ts` correctly classifies them static — the context that makes
  * them reactive lives here, in the construct that binds them.
  *
- * Recurses through element children and server-rendered control-flow arms,
+ * Recurses through element children, server-rendered control-flow arms,
  * matching the recursive walk `validateListBody` uses to count item reads —
  * a reactive loop's item is routinely nested, not a direct child of the
- * loop's output root.
+ * loop's output root. The boundary caller (`finishTry`) additionally
+ * descends compose-site children (LT-460): a catch-parameter read inside a
+ * composed callout's message element is a sanctioned lazy site — the arm
+ * re-renders per activation with the parameter in scope, and the client's
+ * err watch writes it. A list item's caller deliberately does not: an item
+ * or key read inside composed content renders once into the extracted
+ * `<template>`, outside the item's mount, and stays LTC075-refused.
  */
 export const markPositionallyReactive = (
 	nodes: TemplateNode[],
 	names: ReadonlySet<string>,
+	intoCompose = false,
 ): void => {
 	if (names.size === 0) return
 	const visit = (node: TemplateNode): void => {
@@ -302,6 +312,8 @@ export const markPositionallyReactive = (
 			return
 		}
 		if (node.kind === 'element') for (const child of node.children) visit(child)
+		if (node.kind === 'compose' && intoCompose)
+			for (const child of node.children) visit(child)
 		if (node.kind === 'conditional' && node.mode === 'server')
 			for (const arm of node.arms)
 				for (const child of arm.children) visit(child)
@@ -436,14 +448,28 @@ export const validateComposedChildren = (
 	const walk = (node: TemplateNode): void => {
 		if (node.kind === 'text') return
 		if (node.kind === 'expr') {
-			if (node.reactivity === 'reactive')
-				ctx.diagnostics.push(
-					diagnostic.composedElementUnsupported(
-						ctx.source,
-						node.node,
-						`${wording.lazyChild} in a composed element's content`,
-					),
+			if (node.reactivity === 'reactive') {
+				// A binding-scope read (LT-460) is the one sanctioned lazy site
+				// in composed content: an async-boundary catch parameter — a
+				// positional name (`deps.bound`), not a declared signal — whose
+				// arm re-renders per activation and whose client watch writes
+				// the site. Anything else reactive (a declared signal, `host`)
+				// would render once, server-side, and never update.
+				const reads = [...freeIdentifiers(node.expr)].filter(
+					name => !JS_GLOBALS.has(name),
 				)
+				if (
+					reads.length === 0 ||
+					!reads.every(name => node.deps.bound.includes(name))
+				)
+					ctx.diagnostics.push(
+						diagnostic.composedElementUnsupported(
+							ctx.source,
+							node.node,
+							`${wording.lazyChild} in a composed element's content`,
+						),
+					)
+			}
 			return
 		}
 		if (node.kind !== 'element') {
@@ -1764,9 +1790,11 @@ export const finishTry = (
 	}
 	// The catch arm's error child reads the catch parameter, which is
 	// reactive by position — the async boundary re-renders the arm when the
-	// task rejects — but is not a declared signal.
+	// task rejects — but is not a declared signal. The mark descends into
+	// compose-site children (LT-460): the composed callout's message
+	// element reads the parameter, and the arm's value channel writes it.
 	if (catchParam !== null)
-		markPositionallyReactive(catchChildren, new Set([catchParam]))
+		markPositionallyReactive(catchChildren, new Set([catchParam]), true)
 	return {
 		kind: 'try',
 		children,

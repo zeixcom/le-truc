@@ -118,7 +118,7 @@ const TSRX: SurfaceWording = {
 
 	lazyChild: 'A lazy child (`{expr}`)',
 	controlFlow: 'A control-flow directive (`@if`, `@switch` or `@try`)',
-	composedPosition: '`@for` output',
+	composedPosition: "a `@for` loop's output root",
 	conditionalTag: '@if (level === 2) { <h2>…</h2> } @else { <h3>…</h3> }',
 
 	stylesheetForm: 'plain text in the `<style>` body',
@@ -175,7 +175,7 @@ const TSX: SurfaceWording = {
 	lazyChild: 'A lazy child expression',
 	controlFlow:
 		'A control-flow expression (a ternary, `.map()`, `switch` or `<truc:try>`)',
-	composedPosition: '`.map()` output',
+	composedPosition: "a `.map()` loop's output root",
 	conditionalTag: '{level === 2 ? <h2>…</h2> : <h3>…</h3>}',
 
 	stylesheetForm:

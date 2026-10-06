@@ -17,7 +17,12 @@
  * - `@for` over server data renders once per item, hoisted consts included
  */
 
-import { htmlThunkSignalName, lazyCatchMessageEl } from './analysis/effects'
+import {
+	type BoundaryArmRoot,
+	htmlThunkSignalName,
+	isBoundaryArmRoot,
+	lazyCatchMessageEl,
+} from './analysis/effects'
 import type { AstNode } from './ast-node'
 import { freeIdentifiers, hostPropOf } from './ast-utils'
 import { CodeBuilder, HtmlWriter, jsData, jsString } from './codegen'
@@ -1091,11 +1096,22 @@ const isComposeHostAttr = (name: string): boolean =>
  * their diagnostics escalate to an error (index.ts validates every
  * `node.source` against composeRegistry before emitServerModule runs at
  * all), so a missing entry is unreachable here.
+ *
+ * The option carrier (LT-460) serves the arm-root form: `extraHostAttrs`
+ * splices the arm's `data-key` onto the child's rendered root through the
+ * same `composeHostAttrs` path as authored `class`/`id`/`data-*`. The
+ * composed content emits through the generic paths — the catch parameter's
+ * reads inside a message element are ordinary reactive text sites (live
+ * arm: in scope; inert template: baked empty, LT-385c), and a reactive
+ * expression directly inside composed content is refused upstream.
  */
 const emitCompose = (
 	ctx: EmitContext,
 	node: ComposeNode,
 	scope: ReadonlySet<string>,
+	opts: {
+		extraHostAttrs?: Array<AttributeIR & { kind: 'static' }>
+	} = {},
 ): void => {
 	const entry = ctx.composeRegistry?.get(node.source)
 	if (!entry) return
@@ -1174,11 +1190,16 @@ const emitCompose = (
 		(a): a is Extract<typeof a, { kind: 'arg' }> =>
 			a.kind === 'arg' && isComposeHostAttr(a.name),
 	)
+	const extra = opts.extraHostAttrs ?? []
 	const renderCall = `render${entry.name}({ ${args.join(', ')} })`
-	if (hostAttrs.length > 0) {
+	if (hostAttrs.length > 0 || extra.length > 0) {
 		ctx.used.add('composeHostAttrs')
-		const attrsArg = hostAttrs
-			.map(a => `${jsString(a.name, 'double')}: ${a.exprText}`)
+		const attrsArg = [
+			...hostAttrs.map(a => [a.name, a.exprText] as const),
+			// Arm-set keys are compiler-synthesized statics (`data-key="ok"`).
+			...extra.map(a => [a.name, jsString(a.value ?? '', 'double')] as const),
+		]
+			.map(([name, expr]) => `${jsString(name, 'double')}: ${expr}`)
 			.join(', ')
 		push(
 			ctx,
@@ -1215,8 +1236,8 @@ const emitAsyncBoundary = (
 	const asyncId = ++ctx.armCounter
 	const stateVar = ctx.mint(`__async${asyncId}`)
 	const errVar = ctx.mint(`__async${asyncId}Err`)
-	const rootOf = (children: TemplateNode[]): ElementNode =>
-		children.find((c): c is ElementNode => c.kind === 'element') as ElementNode
+	const rootOf = (children: TemplateNode[]): BoundaryArmRoot =>
+		children.find(isBoundaryArmRoot) as BoundaryArmRoot
 	const okRoot = rootOf(node.children)
 	const pendingRoot = rootOf(pendingChildren)
 	const errRoot = rootOf(node.catchChildren)
@@ -1236,13 +1257,21 @@ const emitAsyncBoundary = (
 	// An arm root, with its recognized lazy child (the guarded signal; the
 	// catch param or a member read over it) written as `value`: the live
 	// winner's resolved value or error text, and nothing in a template —
-	// the client's arm mount writes it.
+	// the client's arm mount writes it. A compose root (LT-460) lowers as
+	// a compose site: `data-key` and the arm marker attributes splice onto
+	// the child's rendered root via `composeHostAttrs`, and the composed
+	// content — the message element and its catch-parameter read — emits
+	// through the generic paths (in scope live, baked empty in templates).
 	const emitArmRoot = (
-		root: ElementNode,
+		root: BoundaryArmRoot,
 		armScope: ReadonlySet<string>,
 		value: string | null,
-		extraAttrs: AttributeIR[] = [],
+		extraAttrs: Array<AttributeIR & { kind: 'static' }> = [],
 	): void => {
+		if (root.kind === 'compose') {
+			emitCompose(ctx, root, armScope, { extraHostAttrs: extraAttrs })
+			return
+		}
 		emitElement(ctx, root, armScope, extraAttrs)
 		for (const child of root.children) {
 			if (child.kind === 'expr' && child.reactivity === 'reactive') {
@@ -1302,7 +1331,7 @@ const emitAsyncBoundary = (
 		.line(`${stateVar} = 'err'`)
 		.close()
 		.close()
-	const keyed = (key: string): AttributeIR[] => [
+	const keyed = (key: string): Array<AttributeIR & { kind: 'static' }> => [
 		{ kind: 'static', name: 'data-key', value: key },
 	]
 	const errChild =
@@ -1386,11 +1415,19 @@ const emitReactiveConditional = (
 	node: ConditionalNode,
 	scope: ReadonlySet<string>,
 ): void => {
-	const rootOf = (arm: ArmTemplate): ElementNode | undefined =>
-		arm.children.find((c): c is ElementNode => c.kind === 'element')
+	// A compose site is an arm root too (LT-460): its rendered root is the
+	// child's own element, keyed through `composeHostAttrs`.
+	const rootOf = (arm: ArmTemplate): BoundaryArmRoot | undefined =>
+		arm.children.find(isBoundaryArmRoot)
 	const renderLive = (arm: ArmTemplate | undefined): void => {
 		const root = arm && rootOf(arm)
 		if (!arm || !root) return
+		if (root.kind === 'compose') {
+			emitCompose(ctx, root, scope, {
+				extraHostAttrs: [{ kind: 'static', name: 'data-key', value: arm.key }],
+			})
+			return
+		}
 		emitPlainElement(ctx, root, scope, [
 			{ kind: 'static', name: 'data-key', value: arm.key },
 		])
@@ -1439,7 +1476,8 @@ const emitReactiveConditional = (
 		// its values.
 		const wasInTemplate = ctx.inArmTemplate
 		ctx.inArmTemplate = true
-		emitPlainElement(ctx, root, scope)
+		if (root.kind === 'compose') emitCompose(ctx, root, scope)
+		else emitPlainElement(ctx, root, scope)
 		ctx.inArmTemplate = wasInTemplate
 		push(ctx, "'</template>'")
 	}
