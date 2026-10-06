@@ -111,6 +111,7 @@ export type DiagnosticCode =
 	| 'LTC076' // a field of a list item seeded from server args has a harvest site but no parser — its type is not one the compiler infers a parser from (`string`, a string-literal union, `number`, `boolean`; never an optional field) and no `harvest()` entry declares one; or the item type itself is unreadable (imported, generic) and no `harvest()` map lists its fields (ADR 0046 s7, LT-429) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC077' // a scalar-seeded signal whose harvest read is a raw DOM string — a direct text/attribute site, the substituted read of a seed that is the arg itself, or a membership value read — and whose seed type the compiler cannot read (any annotation that is not the bare `string`/`number`/`boolean` keyword) with no `harvest()` marker declaring its parser: the inferred-type fallback would connect e.g. `2.5` as `'2.5'` (ADR 0046 s7, LT-443) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC078' // a `<style>` block whose content is not a stylesheet spelling — on `.tsx` anything but the `css` marker's tagged template, a bare template literal or nothing (another tag, a shadowed or unimported `css`, a `${}` substitution, any other expression or text); on `.tsrx` an expression child in place of the CSS body. The sheet would read as empty and ship no CSS (ADR 0034 s1, LT-444) — tier 1 Prevented, statically decidable, no runtime half. Lands out of numeric order: `LTC076` is LT-429's, `LTC077` LT-443's — both reserved before this rule picked
+	| 'LTC080' // a key alias that does not meet ADR 0047 s1 — a host-level list seeded from server args, never rendered by its own `map`, is harvested through `const t = list.byKey(k)` in a reactive list's item setup only when the aliasing list keys each item by itself, the read is that alias statement over the loop key, the list has one alias scope, and every field renders at a site in it (LT-453) — tier 1 Prevented, statically decidable; the render witness is the dynamic half, a server-render error with no client counterpart
 
 /**
  * A range in the file the author wrote (ADR 0044 s1–s2): `start` and `end`
@@ -524,6 +525,65 @@ export const diagnostic = {
 			`Field \`${field}\` of list \`${list}\` renders nowhere in the item, so the client cannot read it back. The client rebuilds each server-rendered item from its markup, and a field the item does not carry has no value at connect — render the raw value in the item, reading exactly the field: \`data-${field.replace(/[A-Z]/g, c => `-${c.toLowerCase()}`)}={() => …}\` on the item root, or \`<data value={() => …}>\`.`,
 			rangeOf(source, at),
 		),
+
+	/**
+	 * A key alias that does not meet ADR 0047 s1 (LT-453). A host-level
+	 * list seeded from server args and never rendered by its own `map`
+	 * harvests through `const t = list.byKey(k)` in a reactive list's item
+	 * setup; the compiler proves where each field renders, the server render
+	 * witnesses which items rendered. One message per condition, each
+	 * naming its fix:
+	 *
+	 * - `item-key` — the aliasing list does not key each item by itself
+	 *   (`keyConfig: s => s`), so its keys are not the harvested list's.
+	 *   Located at the aliasing list's declaration, where the fix goes.
+	 * - `read` — a `byKey` read that is not the alias statement over the
+	 *   loop key: nested in an expression, conditional, over another value,
+	 *   or in a loop without a key binding. Located at the call.
+	 * - `second-scope` — the list already has an alias; each field needs one
+	 *   canonical site. Located at the second alias.
+	 * - `field` — a field renders nowhere in the alias scope. Located at the
+	 *   alias scope's root element. A field whose only site formats it is
+	 *   LTC059's, one with no parser LTC076's, as for any per-field harvest.
+	 *
+	 * Channel: compiler (Pass 3, `analysis/list-harvest.ts`, both
+	 * surfaces). ADR 0028 tier 1 (Prevented): statically decidable. The
+	 * runtime half is the render witness (`HarvestWitnessError`,
+	 * `runtime.ts`), which no static rule covers.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-453).
+	 */
+	keyAliasRefused: (
+		source: string,
+		at: Site,
+		list: string,
+		condition:
+			| { kind: 'item-key'; alias: string; loopList: string; item: string }
+			| { kind: 'read'; loopList: string; key: string | null }
+			| {
+					kind: 'second-scope'
+					alias: string
+					first: string
+					firstList: string
+			  }
+			| { kind: 'field'; alias: string; field: string },
+	) => {
+		const key = (k: string | null): string => k ?? 'k'
+		const message = (() => {
+			switch (condition.kind) {
+				case 'item-key':
+					return `List \`${condition.loopList}\`, whose items read list \`${list}\` through the key alias \`${condition.alias}\`, does not key each item by the item itself. The client rebuilds \`${list}\` from the keys of \`${condition.loopList}\`, so each item must be a key of \`${list}\` — declare \`${condition.loopList}\` with \`keyConfig: ${condition.item} => ${condition.item}\`.`
+				case 'read':
+					return `This \`${list}.byKey()\` read in the item setup of list \`${condition.loopList}\` is not a key alias, so the client cannot rebuild \`${list}\` from the items. A key alias reads \`byKey\` over the loop key, unconditionally, as its own statement — declare it as \`const t = ${list}.byKey(${key(condition.key)})\`${condition.key === null ? ' and bind the loop key' : ''}, and read the item through \`t\`.`
+				case 'second-scope':
+					return `List \`${list}\` already has the key alias \`${condition.first}\` in list \`${condition.firstList}\`, so the key alias \`${condition.alias}\` is a second one. The client rebuilds \`${list}\` from one alias scope, where each field has one site — read \`${list}\` through \`${condition.first}\` only, and remove this alias.`
+				case 'field':
+					return `Field \`${condition.field}\` of list \`${list}\` renders nowhere in the item of its key alias \`${condition.alias}\`, so the client cannot read it back. The client rebuilds each item of \`${list}\` from the alias scope's markup — render the raw value there, reading exactly the field: \`{() => ${condition.alias}.get().${condition.field}}\`, or \`<data value={() => ${condition.alias}.get().${condition.field}}>\`.`
+			}
+		})()
+		return error('LTC080', message, rangeOf(source, at))
+	},
 
 	/**
 	 * A field of an arg-seeded list's item that has a harvest site but no

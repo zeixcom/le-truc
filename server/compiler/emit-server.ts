@@ -48,6 +48,7 @@ import type {
 	SetupStmt,
 	TemplateNode,
 } from './ir'
+import { aliasScopeOf, harvestsPerField, isAliasHarvestable } from './key-alias'
 import { NO_DEPS } from './reactivity'
 import type { RegistryEntry } from './registry'
 import { onServer } from './setup-extraction'
@@ -114,6 +115,7 @@ const EMITTED_HARNESS_NAMES = [
 	'styleAttr',
 	'text',
 	'textOf',
+	'witnessHarvest',
 ] as const
 type EmittedHarnessName = (typeof EMITTED_HARNESS_NAMES)[number]
 
@@ -223,6 +225,12 @@ type EmitContext = {
 	 * hoisted template ships only when its container can exist.
 	 */
 	listFlags: Map<ReconcileForIR, string>
+	/**
+	 * The key-alias witnesses (ADR 0047 s2, LT-453): per alias scope, the
+	 * harvested list and the `__witnessN` array its live items push their
+	 * keys to, in render order.
+	 */
+	witnesses: Map<ReconcileForIR, { list: string; keys: string }>
 	/**
 	 * Every loop's `emptyArm` roots (LT-212). They sit in the template tree
 	 * as the loop output's following siblings, so selector resolution and
@@ -702,6 +710,44 @@ const declareListFlags = (ctx: EmitContext): void => {
 }
 
 /**
+ * A `const __witnessN: string[] = []` per list harvested through a key
+ * alias (ADR 0047 s2): the alias scope's live items push their keys to it,
+ * in render order. The harvest pass has refused every other alias shape,
+ * so the first alias names the scope.
+ */
+const declareWitnesses = (ctx: EmitContext): void => {
+	const { component } = ctx
+	for (const signal of component.signals) {
+		if (
+			signal.family !== 'declared' ||
+			!isAliasHarvestable(component, signal) ||
+			!harvestsPerField(signal)
+		)
+			continue
+		const scope = aliasScopeOf(component, signal.name)
+		if (!scope) continue
+		const keys = ctx.mint(`__witness${ctx.witnesses.size}`)
+		ctx.witnesses.set(scope, { list: signal.name, keys })
+		ctx.out.line(`const ${keys}: string[] = []`)
+	}
+}
+
+/**
+ * The render witness (ADR 0047 s2): once the render has run, the keys the
+ * alias scope rendered must reach every key of the harvested list, first
+ * occurrences in list order — else `witnessHarvest` throws, and the build
+ * fails before a page ships a list the client would rebuild incomplete.
+ */
+const checkWitnesses = (ctx: EmitContext): void => {
+	for (const { list, keys } of ctx.witnesses.values()) {
+		ctx.used.add('witnessHarvest')
+		ctx.out.line(
+			`${ctx.h('witnessHarvest')}(${jsString(ctx.component.tag)}, ${jsString(list)}, ${list}.keys(), ${keys})`,
+		)
+	}
+}
+
+/**
  * Every reactive list's extracted template, as the host's last children, in
  * document order of N (ADR 0046 s2): one copy per instance, whatever the
  * nesting depth, so a list container may be any element — a Mount Scope
@@ -819,6 +865,8 @@ const emitListFor = (
 		)
 		if (emptyFlag) ctx.out.line(`${emptyFlag} = false`)
 		emitItemSetup(ctx, loop, setup)
+		const witness = ctx.witnesses.get(loop)
+		if (witness) ctx.out.line(`${witness.keys}.push(${keyVar})`)
 		// The item and its setup's signals are cells — a bare `{name}` reads
 		// `.get()` — and its consts are values that shadow an enclosing one.
 		const cells = [
@@ -1631,6 +1679,7 @@ export const emitServerModule = (
 		templateUnbound: new Set(),
 		listItems: new Set(),
 		listFlags: new Map(),
+		witnesses: new Map(),
 		h: name => (renderScope.has(name) ? mint(`__${name}`) : name),
 		mint,
 	}
@@ -1642,9 +1691,11 @@ export const emitServerModule = (
 	const { lines } = out
 
 	declareListFlags(ctx)
+	declareWitnesses(ctx)
 	for (const child of component.root.children)
 		emit(ctx, child, component.serverKnown)
 	emitListTemplates(ctx)
+	checkWitnesses(ctx)
 
 	// Root element opening: only static and server-definitive attributes
 	// render; reactive/event/ref constructs on the root are the client

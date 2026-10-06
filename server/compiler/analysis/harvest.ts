@@ -43,6 +43,7 @@ import { reportServerOnlyNames } from './effects'
 import {
 	CALLABLE_AS_WRITTEN,
 	harvestsPerField,
+	planKeyAliasHarvest,
 	planListFieldHarvest,
 } from './list-harvest'
 import type {
@@ -1198,6 +1199,15 @@ const planHarvests = (
 				)
 			}
 			continue
+		}
+		// A host-level list never rendered by its own `map`, read by key in
+		// an item setup (ADR 0047, LT-453): harvested through the alias.
+		if (!listPlan && signal.family === 'declared') {
+			const aliased = planKeyAliasHarvest(shared, signal, reconcilePlans)
+			if (aliased !== undefined) {
+				if (aliased) harvests.push(aliased)
+				continue
+			}
 		}
 		// `deriveCell`/`deriveStore` initializers are callbacks, not raw values
 		// — a 'text'/'attr' direct-site harvest would splice the DOM read in
