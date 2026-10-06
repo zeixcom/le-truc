@@ -1,0 +1,110 @@
+{
+	"native status-quo": {
+		"A": ["P :host"],
+		"own": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"kid": ["page>P", "page<P", "C .x"],
+		"btnint": ["page>P", "page<P", "B .x", "C .x"],
+		"own2": ["page>P", "page<P", "P :host .x", "C .x"],
+		"kid2": ["page>P", "page<P", "C .x"],
+		"childint": ["page>P", "page<P", "C .x"],
+		"pre": [],
+		"code": ["C code"],
+		"pagekid": ["page>P", "page<P", "C .x"]
+	},
+	"native (c) :global": {
+		"A": ["P :host"],
+		"own": [
+			"page>P",
+			"P .wrap .x",
+			"P :host .x",
+			"P :host(.on) .x",
+			"P :global"
+		],
+		"kid": ["page>P", "page<P", "P :global", "C .x"],
+		"btnint": ["page>P", "page<P", "B .x", "P :global", "C .x"],
+		"own2": ["page>P", "page<P", "P :host .x", "P :global", "C .x"],
+		"kid2": ["page>P", "page<P", "P :global", "C .x"],
+		"childint": ["page>P", "page<P", "P :global", "C .x"],
+		"pre": [],
+		"code": ["C code"],
+		"pagekid": ["page>P", "page<P", "C .x"]
+	},
+	"native (a) marker": {
+		"A": ["P :host"],
+		"own": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"kid": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"btnint": ["page>P", "page<P", "B .x"],
+		"own2": ["page>P", "page<P", "P :host .x"],
+		"kid2": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"childint": ["page>P", "page<P", "C .x"],
+		"pre": [],
+		"code": ["C code"],
+		"pagekid": ["page>P", "page<P", "C .x"]
+	},
+	"native (b) wrapper": {
+		"A": ["P :host"],
+		"own": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"kid": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"btnint": ["page>P", "page<P", "B .x"],
+		"own2": ["page>P", "page<P", "P :host .x"],
+		"kid2": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"childint": ["page>P", "page<P", "C .x"],
+		"pre": [],
+		"code": ["C code"],
+		"pagekid": ["page>P", "page<P", "C .x"]
+	},
+	"lowered status-quo": {
+		"A": ["P :host"],
+		"own": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"kid": ["page>P", "page<P", "C .x"],
+		"btnint": ["page>P", "page<P", "B .x", "C .x"],
+		"own2": ["page>P", "page<P", "C .x"],
+		"kid2": ["page>P", "page<P", "C .x"],
+		"childint": ["page>P", "page<P", "C .x"],
+		"pre": [],
+		"code": ["C code"],
+		"pagekid": ["page>P", "page<P", "C .x"]
+	},
+	"lowered (c) :global": {
+		"A": ["P :host"],
+		"own": [
+			"page>P",
+			"P .wrap .x",
+			"P :host .x",
+			"P :host(.on) .x",
+			"P :global"
+		],
+		"kid": ["page>P", "page<P", "P :global", "C .x"],
+		"btnint": ["page>P", "page<P", "B .x", "P :global", "C .x"],
+		"own2": ["page>P", "page<P", "P :global", "C .x"],
+		"kid2": ["page>P", "page<P", "P :global", "C .x"],
+		"childint": ["page>P", "page<P", "P :global", "C .x"],
+		"pre": [],
+		"code": ["C code"],
+		"pagekid": ["page>P", "page<P", "C .x"]
+	},
+	"lowered (a) marker": {
+		"A": ["P :host"],
+		"own": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"kid": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"btnint": ["page>P", "page<P", "B .x"],
+		"own2": ["page>P", "page<P"],
+		"kid2": ["page>P", "page<P"],
+		"childint": ["page>P", "page<P", "C .x"],
+		"pre": [],
+		"code": ["C code"],
+		"pagekid": ["page>P", "page<P", "C .x"]
+	},
+	"lowered (b) wrapper": {
+		"A": ["P :host"],
+		"own": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"kid": ["page>P", "P .wrap .x", "P :host .x", "P :host(.on) .x"],
+		"btnint": ["page>P", "page<P", "B .x"],
+		"own2": ["page>P", "page<P"],
+		"kid2": ["page>P", "page<P"],
+		"childint": ["page>P", "page<P", "C .x"],
+		"pre": [],
+		"code": ["C code"],
+		"pagekid": ["page>P", "page<P", "C .x"]
+	}
+}
