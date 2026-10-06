@@ -10,8 +10,11 @@
  *           first ready one.
  *   claim   Mark a task — in progress ⚙ (scripts/start-task.ts claims it for a session).
  *   annotate  Write a run's outcome: flip the suffix, insert the handoff prose
- *           after the entry (or a NOTES.md entry when blocked).
- *   reset   Return a claimed task to open (crash recovery).
+ *           after the entry (or a NOTES.md entry when blocked). Accepts a
+ *           claimed task and, for an addendum, a pending-review one; refuses
+ *           a task in review.
+ *   review  Claim a pending-review task for the Architect's review (in-review).
+ *   reset   Release a claim: a claimed task to open, a review to pending-review.
  *
  * The parsing and the writes live in scripts/lib/queue.ts, under `bun test`;
  * this file is the command-line shell scripts/start-task.ts and the contributor drive. The queue
@@ -44,6 +47,7 @@ import {
 	pickStore,
 	renderEntry,
 	resetTaskStore,
+	reviewTaskStore,
 	type StorePick,
 } from './lib/queue-store.ts'
 
@@ -106,7 +110,7 @@ const write = (result: { ok: boolean; error?: string }): number => {
 
 const usage = (): number => {
 	console.error(
-		'usage: queue.ts check | pick [LT-NNN] | claim LT-NNN | annotate LT-NNN <pending-review|done|blocked> <prose-file> | reset LT-NNN | list [--status <status>] | migrate | build [--out <dir>]',
+		'usage: queue.ts check | pick [LT-NNN] | claim LT-NNN | annotate LT-NNN <pending-review|done|blocked> <prose-file> | review LT-NNN | reset LT-NNN | list [--status <status>] | migrate | build [--out <dir>]',
 	)
 	return 2
 }
@@ -170,6 +174,20 @@ switch (command) {
 		)
 		break
 	}
+	case 'review': {
+		const [id] = args
+		if (!id) {
+			exit = usage()
+			break
+		}
+		if (!stored) {
+			console.error('problem: review needs the queue/ store')
+			exit = 1
+			break
+		}
+		exit = write(reviewTaskStore(ROOT, id))
+		break
+	}
 	case 'reset': {
 		const [id] = args
 		if (!id) {
@@ -184,7 +202,9 @@ switch (command) {
 		// tasks as JSON, optionally filtered by status. Refuses an invalid store,
 		// exactly like pick.
 		if (!stored) {
-			console.error('problem: list needs the queue/ store; the kanban files have no list')
+			console.error(
+				'problem: list needs the queue/ store; the kanban files have no list',
+			)
 			exit = 1
 			break
 		}

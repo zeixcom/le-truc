@@ -1,7 +1,7 @@
 /**
  * Tests for the queue store's pick and write operations
  * (scripts/lib/queue-store.ts → pickStore/claimTaskStore/annotateTaskStore/
- * resetTaskStore) — the pick/claim/annotate contract in its store dialect. The views must
+ * reviewTaskStore/resetTaskStore) — the pick/claim/annotate/review contract in its store dialect. The views must
  * come out of every write fresh, because `check` compares them byte for byte.
  */
 
@@ -25,6 +25,7 @@ import {
 	type QueueTask,
 	renderTaskFile,
 	resetTaskStore,
+	reviewTaskStore,
 } from '../scripts/lib/queue-store.ts'
 
 afterAll(() => {
@@ -300,6 +301,50 @@ describe('store writes', () => {
 		expect(statuses(root)['LT-200']).toBe('open')
 		const r = resetTaskStore(root, 'LT-202')
 		expect(r.ok).toBe(false)
+	})
+
+	test('annotate appends an addendum to a pending-review task', () => {
+		const root = storeFrom([{ id: 'LT-200' }])
+		claimTaskStore(root, 'LT-200')
+		annotateTaskStore(root, 'LT-200', 'pending-review', '**Changed:** first.')
+		const r = annotateTaskStore(
+			root,
+			'LT-200',
+			'pending-review',
+			'**Addendum:** the owner asked for more.',
+		)
+		expect(r).toEqual({ ok: true })
+		expect(statuses(root)['LT-200']).toBe('pending-review')
+		const file = readFileSync(join(root, 'queue', 'LT-200.md'), 'utf8')
+		expect(file).toContain('**Changed:** first.')
+		expect(file).toContain('**Addendum:** the owner asked for more.')
+		expect(checkStore(root).problems).toEqual([])
+	})
+
+	test('review claims a pending-review task and freezes it against annotation', () => {
+		const root = storeFrom([{ id: 'LT-200' }, { id: 'LT-201' }])
+		claimTaskStore(root, 'LT-200')
+		annotateTaskStore(root, 'LT-200', 'pending-review', '**Changed:** x')
+		expect(reviewTaskStore(root, 'LT-200')).toEqual({ ok: true })
+		expect(statuses(root)['LT-200']).toBe('in-review')
+		const r = annotateTaskStore(root, 'LT-200', 'pending-review', 'late')
+		expect(r.ok).toBe(false)
+		expect(r.error).toContain('in review')
+		// Only a pending-review task is claimable for review.
+		expect(reviewTaskStore(root, 'LT-201').ok).toBe(false)
+		// In review counts as handed off: DONE renders it, Needs are satisfied.
+		const done = readFileSync(join(root, 'DONE.md'), 'utf8')
+		expect(done).toContain('- [x] LT-200: Task LT-200 — in review 🔍')
+		expect(checkStore(root).problems).toEqual([])
+	})
+
+	test('reset releases a claimed review back to pending-review', () => {
+		const root = storeFrom([{ id: 'LT-200' }])
+		claimTaskStore(root, 'LT-200')
+		annotateTaskStore(root, 'LT-200', 'pending-review', '**Changed:** x')
+		reviewTaskStore(root, 'LT-200')
+		expect(resetTaskStore(root, 'LT-200')).toEqual({ ok: true })
+		expect(statuses(root)['LT-200']).toBe('pending-review')
 	})
 
 	test('a write keeps the whole cycle green: claim, annotate, re-pick', () => {

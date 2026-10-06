@@ -15,7 +15,7 @@
  * Generated views (committed, by `bun scripts/queue.ts build`):
  *   BACKLOG.md  BANDS.md with each band's open, unchained entries appended.
  *   TODO.md     ITERATION.md with the chain's tasks grouped under their tracks.
- *   DONE.md     LEDGER.md with every reviewed/done/pending-review task.
+ *   DONE.md     LEDGER.md with every reviewed/done/pending-review/in-review task.
  *
  * A task's view is derived, never stored: the chain names the iteration, the
  * status names the shelf. `check` fails when a view is stale or a task file
@@ -29,6 +29,7 @@ export type TaskStatus =
 	| 'open'
 	| 'in-progress'
 	| 'pending-review'
+	| 'in-review'
 	| 'done'
 	| 'changes-requested'
 	| 'reviewed'
@@ -56,6 +57,7 @@ const STATUSES: TaskStatus[] = [
 	'open',
 	'in-progress',
 	'pending-review',
+	'in-review',
 	'done',
 	'changes-requested',
 	'reviewed',
@@ -68,6 +70,7 @@ export const STATUS_TAILS: Record<TaskStatus, string | null> = {
 	open: null,
 	'in-progress': 'in progress ⚙',
 	'pending-review': 'done, pending review ⏳',
+	'in-review': 'in review 🔍',
 	done: 'done ✓',
 	'changes-requested': 'changes requested ↩',
 	reviewed: 'reviewed ✓',
@@ -235,6 +238,7 @@ const byIdNumber = (a: QueueTask, b: QueueTask): number =>
 export function renderTitleLine(task: QueueTask): string {
 	const settled =
 		task.status === 'pending-review' ||
+		task.status === 'in-review' ||
 		task.status === 'done' ||
 		task.status === 'reviewed'
 	const tail = task.status === 'note' ? task.note : STATUS_TAILS[task.status]
@@ -257,7 +261,12 @@ export function renderEntry(task: QueueTask): string {
 	return `${renderTitleLine(task)}${body ? `\n${body}` : ''}`
 }
 
-const TERMINAL: TaskStatus[] = ['pending-review', 'done', 'reviewed']
+const TERMINAL: TaskStatus[] = [
+	'pending-review',
+	'in-review',
+	'done',
+	'reviewed',
+]
 
 /** The chain's bare LT-IDs in pick order: parentheticals, possessive citations and
  * `∥`/`→` structure reduced to one flat sequence per track. */
@@ -593,6 +602,7 @@ export function checkStore(root: string): {
 
 const SATISFIED: TaskStatus[] = [
 	'pending-review',
+	'in-review',
 	'done',
 	'changes-requested',
 	'reviewed',
@@ -775,9 +785,13 @@ export function claimTaskStore(root: string, id: string): WriteResult {
 	return error ? { ok: false, error } : { ok: true }
 }
 
-/** Write the run's outcome: flip the claimed status and append the handoff
- * prose to the task body — except blocked, whose prose is a NOTES.md entry in
- * the main checkout, exactly as the kanban dialect writes it. */
+/** Write the run's outcome: flip the status and append the handoff prose to
+ * the task body — except blocked, whose prose is a NOTES.md entry in the main
+ * checkout, exactly as the kanban dialect writes it. A claimed task takes its
+ * first outcome; a `pending-review` task takes an addendum (an owner-requested
+ * change after the hand-off, owner ruling 2026-10-06). Once the Architect has
+ * claimed the review (`in-review`), the entry is the reviewer's until the
+ * verdict. */
 export function annotateTaskStore(
 	root: string,
 	id: string,
@@ -787,10 +801,15 @@ export function annotateTaskStore(
 	const store = loadStore(root)
 	const task = store.tasks.get(id)
 	if (!task) return { ok: false, error: `${id} is stored by no task file` }
-	if (task.status !== 'in-progress')
+	if (task.status === 'in-review')
 		return {
 			ok: false,
-			error: `${id} carries "${task.status}"; annotate only a claimed (in-progress) task`,
+			error: `${id} is in review (claimed by the Architect); its entry takes no annotation until the verdict`,
+		}
+	if (task.status !== 'in-progress' && task.status !== 'pending-review')
+		return {
+			ok: false,
+			error: `${id} carries "${task.status}"; annotate only a claimed (in-progress) or pending-review task`,
 		}
 
 	if (suffix === 'blocked') {
@@ -814,13 +833,33 @@ export function annotateTaskStore(
 	return error ? { ok: false, error } : { ok: true }
 }
 
-/** Return a claimed task to open (the recover path when an implement agent dies). */
+/** Claim a `pending-review` task for review: its status becomes `in-review`,
+ * which freezes the entry against annotation until the Architect's verdict
+ * (a `status:` edit to `reviewed` or `changes-requested`). */
+export function reviewTaskStore(root: string, id: string): WriteResult {
+	const store = loadStore(root)
+	const task = store.tasks.get(id)
+	if (!task) return { ok: false, error: `${id} is stored by no task file` }
+	if (task.status !== 'pending-review')
+		return {
+			ok: false,
+			error: `${id} carries "${task.status}"; only pending-review tasks are claimable for review`,
+		}
+	const error = writeTask(root, { ...task, status: 'in-review' })
+	return error ? { ok: false, error } : { ok: true }
+}
+
+/** Release a claim (the recover path when a session dies): a claimed task
+ * returns to open, a claimed review to pending-review. */
 export function resetTaskStore(root: string, id: string): WriteResult {
 	const store = loadStore(root)
 	const task = store.tasks.get(id)
 	if (!task) return { ok: false, error: `${id} is stored by no task file` }
-	if (task.status !== 'in-progress')
+	if (task.status !== 'in-progress' && task.status !== 'in-review')
 		return { ok: false, error: `${id} is not claimed (status: ${task.status})` }
-	const error = writeTask(root, { ...task, status: 'open' })
+	const error = writeTask(root, {
+		...task,
+		status: task.status === 'in-review' ? 'pending-review' : 'open',
+	})
 	return error ? { ok: false, error } : { ok: true }
 }

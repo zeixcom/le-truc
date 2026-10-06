@@ -68,13 +68,14 @@ Name the error channel and tier for any new runtime check (ADR 0028).
 
 ### Status suffixes
 
-The suffix is the task's `status:` front-matter field. The contributor writes it through `bun run scripts/queue.ts claim` and `annotate`; the Architect updates it on review (a `status:` edit, then `bun run queue:build`).
+The suffix is the task's `status:` front-matter field. The contributor writes it through `bun run scripts/queue.ts claim` and `annotate`. The Architect claims a review with `queue.ts review` and records the verdict as a `status:` edit, then `bun run queue:build`.
 
 | Suffix | `status:` | Meaning |
 |---|---|---|
 | *(none)* | `open` | Open |
 | `— in progress ⚙` | `in-progress` | Claimed by a running contributor session. Prevents double pickup. A session that died leaves it claimed; `bun run scripts/queue.ts reset LT-NNN` releases it. |
 | `— done, pending review ⏳` | `pending-review` | The change touches the public API, compiler-authored surface semantics, a diagnostic code's meaning, or server routes or output. The entry carries a `Changed`/`How`/`Check` handoff, and the commit sits on the task's branch. |
+| `— in review 🔍` | `in-review` | The Architect claimed the review (`queue.ts review LT-NNN`). The entry takes no annotation until the verdict; reviewer nit commits still land on the branch. A dead review session leaves it claimed; `queue.ts reset` returns it to `pending-review`. |
 | `— done ✓` | `done` | A bug fix, test, internal change, or docs change. The entry carries a one-line `Changed`, and the commit sits on the task's branch. |
 | `— changes requested ↩` | `changes-requested` | Review found work inside the task's scope. The `**Review:**` line numbers the findings. The contributor fixes them in the same task, adds a `**Reworked:**` line, and sets the suffix again. |
 | `— reviewed ✓` | `reviewed` | The Architect approved it. |
@@ -89,7 +90,7 @@ One contributor session works one task from start to finish; there is no orchest
 1. **Start** — `bun run scripts/start-task.ts [LT-NNN]` runs `queue.ts pick`, `queue.ts claim` and `worktree.ts LT-NNN` in sequence and prints the task and the worktree as one JSON object. A failed bootstrap resets the claim; exit 1 means nothing started.
 2. **Implement, gate, self-review** — inside the worktree, until the gates are green and the session's own read of `git diff HEAD` finds nothing blocking.
 3. **Commit** — `bun run scripts/worktree.ts commit LT-NNN --message-file <path> -- <paths>`. A blocked task commits nothing.
-4. **Annotate** — `bun run scripts/queue.ts annotate LT-NNN <pending-review|done|blocked> <prose-file>`, only after the commit succeeded (or for `blocked`).
+4. **Annotate** — `bun run scripts/queue.ts annotate LT-NNN <pending-review|done|blocked> <prose-file>`, only after the commit succeeded (or for `blocked`). A `pending-review` task takes a further annotation, an addendum for a change the owner asked for after the hand-off, until the Architect claims its review (owner ruling 2026-10-06).
 5. **Report** to the owner and stop. The review pass integrates.
 
 The session never implements in the main checkout. The worktree is `.worktrees/LT-NNN` — a git worktree on branch `task/LT-NNN` cut from the current HEAD, with the main checkout's `node_modules` symlinked in (`scripts/worktree.ts`, idempotent). Consequences:
@@ -111,7 +112,7 @@ The session never implements in the main checkout. The worktree is `.worktrees/L
 - A track whose next task is claimed (`⚙`) or on a non-contract status **stalls**: that task and everything behind it in that track is skipped, and the scan falls through to the next track. A `blocked ⛔` task is skipped and the track continues.
 - When the order depends on a ruling that a `Needs:` field cannot express, write the ruling into the header's rulings list and the dependency into `Needs:`.
 
-`bun run scripts/queue.ts pick [LT-NNN]` prints this decision as JSON, and `list [--status <status>]` prints the store's tasks as JSON (both read-only; `claim`, `annotate`, `reset` are the write commands, and each write re-renders the views). `bun run check:queue` runs the store suite, then fails the build when a task file is malformed, a `Needs:` or chain reference names no task file (a `queue/LEDGER.md` mention satisfies), an ID disagrees with its filename, or a view is stale against `queue/` — run `bun run queue:build`; an open, unbanded, unchained task is reported as a note.
+`bun run scripts/queue.ts pick [LT-NNN]` prints this decision as JSON, and `list [--status <status>]` prints the store's tasks as JSON (both read-only; `claim`, `annotate`, `review`, `reset` are the write commands, and each write re-renders the views). `bun run check:queue` runs the store suite, then fails the build when a task file is malformed, a `Needs:` or chain reference names no task file (a `queue/LEDGER.md` mention satisfies), an ID disagrees with its filename, or a view is stale against `queue/` — run `bun run queue:build`; an open, unbanded, unchained task is reported as a note.
 
 ## Moves (Architect only)
 
