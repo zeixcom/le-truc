@@ -1,3 +1,81 @@
+// The docs site's own sanitizer (ADR 0010): the compiled `truc:html` path
+// fails closed — unconfigured, it renders fetched markup escaped. DOMPurify
+// keeps the rich content (markup) and strips scripts and event handlers,
+// which is the compiled surface's contract; the demo's `allow-scripts` stays
+// inert until the script-loading design (LT-448) rules. ES imports hoist, so
+// this runs after the component clients below register — the configured
+// default is read per update, never captured at bind time, so that ordering
+// is safe.
+//
+// Two policy extensions the partials' contract needs:
+// - DOMPurify's default allowlist has no custom elements — it would unwrap
+//   every corpus tag a fetched partial carries (KEEP_CONTENT keeps their
+//   children, but the element and its upgrade are gone). The site's policy
+//   admits the tags it registers below, plus the demo partial's own
+//   `shake-hands` (inert: its defining script is stripped until LT-448).
+// - DOMPurify 3 refuses `<style>` outright (mXSS hardening, not addable via
+//   ADD_TAGS), and the partials carry component styles. The policy extracts
+//   style blocks, sanitizes the rest, and re-appends them — same-origin
+//   partials are trusted for CSS, which cannot execute.
+import { configureHtmlSanitizer } from '@zeix/le-truc'
+import DOMPurify from 'dompurify'
+
+const SITE_TAGS = [
+	'basic-blogmeta',
+	'basic-button',
+	'basic-counter',
+	'basic-gauge',
+	'basic-hello',
+	'basic-number',
+	'basic-pluralize',
+	'card-callout',
+	'card-collapsible',
+	'card-colorscale',
+	'card-mediaqueries',
+	'context-media',
+	'form-checkbox',
+	'form-colorgraph',
+	'form-combobox',
+	'form-inplace-edit',
+	'form-listbox',
+	'form-radiogroup',
+	'form-spinbutton',
+	'form-textbox',
+	'form-tokenbox',
+	'module-blogarchive',
+	'module-carousel',
+	'module-catalog',
+	'module-codeblock',
+	'module-coloreditor',
+	'module-colorinfo',
+	'module-demo',
+	'module-dialog',
+	'module-lazyload',
+	'module-list',
+	'module-listnav',
+	'module-pagination',
+	'module-scrollarea',
+	'module-splitview',
+	'module-tabgroup',
+	'module-toc',
+	'section-hero',
+	'shake-hands',
+] as const
+
+configureHtmlSanitizer(html => {
+	const styles: string[] = []
+	const stripped = html.replace(
+		/<style(?=[\s>])[\s\S]*?<\/style\s*>/gi,
+		match => {
+			styles.push(match)
+			return ''
+		},
+	)
+	return (
+		styles.join('') + DOMPurify.sanitize(stripped, { ADD_TAGS: [...SITE_TAGS] })
+	)
+})
+
 import '../server/generated/components/basic-blogmeta.client.ts'
 // Site cutover (LT-092): every migrated component mounts its COMPILED client
 // from server/generated/components (gitignored build output — scripts/build-corpus.ts

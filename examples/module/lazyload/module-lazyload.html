@@ -1,158 +1,52 @@
-<!-- Default example - tests basic loading functionality -->
-<module-lazyload src="./test/module-lazyload/mocks/simple-text.html">
-	<card-callout>
-		<p class="loading" role="status">Loading...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<!-- Regenerated from the compiled server render (LT-449 cutover):
+     renderModuleLazyload({...}) from server/generated/components/module-lazyload.server.ts —
+     the test page serves exactly the markup the compiled client hydrates (the LT-111
+     precedent): the boundary's pending arm live and the three arm templates inert beside
+     it. The variant set serves module-lazyload.tsx (ADR 0039); the hand-written
+     module-lazyload.ts stays as the twin. shake-hands (snippet.html) renders inert on the
+     compiled surface — its inline script is stripped by the 'truc:html' sanitizer until
+     the script-loading design (LT-448) rules. The twin's #missing-elements-test instance
+     (authored markup without the callout wrapper) is retired: the compiled component owns
+     its markup, so the twin's missing-required-element failure mode has no compiled
+     counterpart (LT-449 handoff). -->
+<module-lazyload src="./test/module-lazyload/mocks/simple-text.html"><card-callout data-key="nil"><p role="status" class="loading">Loading...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- Complex content test - tests loading of components and styles -->
-<module-lazyload
-	id="complex-content-test"
-	src="./test/module-lazyload/mocks/with-styles.html"
->
-	<card-callout>
-		<p class="loading" role="status">Loading styled content...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="complex-content-test" src="./test/module-lazyload/mocks/with-styles.html"><card-callout data-key="nil"><p role="status" class="loading">Loading styled content...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading styled content...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- Nested components test - tests initialization of nested custom components -->
-<module-lazyload
-	id="nested-components-test"
-	src="./test/module-lazyload/mocks/nested-components.html"
->
-	<card-callout>
-		<p class="loading" role="status">Loading nested components...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="nested-components-test" src="./test/module-lazyload/mocks/nested-components.html"><card-callout data-key="nil"><p role="status" class="loading">Loading nested components...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading nested components...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- Original complex snippet test - tests the existing shake-hands component -->
-<module-lazyload
-	id="original-snippet-test"
-	src="./test/module-lazyload/mocks/snippet.html"
-	allow-scripts
->
-	<card-callout>
-		<p class="loading" role="status">Loading shake-hands...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="original-snippet-test" src="./test/module-lazyload/mocks/snippet.html" allow-scripts><card-callout data-key="nil"><p role="status" class="loading">Loading shake-hands...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading shake-hands...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<card-callout class="caution">
-	<p>
-		The following examples show nothing or an error message for empty or invalid
-		content, or log error messages to the console. Do not copy. Intended to test
-		resilience of the component.
-	</p>
-</card-callout>
-
-<!-- Empty content test - tests handling of empty/whitespace responses -->
-<module-lazyload
-	id="empty-content-test"
-	src="./test/module-lazyload/mocks/empty.html"
->
-	<card-callout>
-		<p class="loading" role="status">Loading empty content...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="empty-content-test" src="./test/module-lazyload/mocks/empty.html"><card-callout data-key="nil"><p role="status" class="loading">Loading empty content...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading empty content...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- Invalid URL test - tests error handling for malformed URLs -->
-<module-lazyload id="invalid-url-test" src="not-a-valid-url">
-	<card-callout>
-		<p class="loading" role="status">Loading invalid URL...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="invalid-url-test" src="not-a-valid-url"><card-callout data-key="nil"><p role="status" class="loading">Loading invalid URL...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading invalid URL...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- 404 error test - tests error handling for missing files -->
-<module-lazyload
-	id="not-found-test"
-	src="./test/module-lazyload/mocks/does-not-exist.html"
->
-	<card-callout>
-		<p class="loading" role="status">Loading non-existent file...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="not-found-test" src="./test/module-lazyload/mocks/does-not-exist.html"><card-callout data-key="nil"><p role="status" class="loading">Loading non-existent file...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading non-existent file...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- Cross-origin URL test - tests error handling for cross-origin requests -->
-<module-lazyload id="cross-origin-test" src="https://example.com/test.html">
-	<card-callout>
-		<p class="loading" role="status">Loading cross-origin...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="cross-origin-test" src="https://example.com/test.html"><card-callout data-key="nil"><p role="status" class="loading">Loading cross-origin...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading cross-origin...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- No src attribute test - tests handling when src is missing -->
-<module-lazyload id="no-src-test">
-	<card-callout>
-		<p class="loading" role="status">Loading without src...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="no-src-test"><card-callout data-key="nil"><p role="status" class="loading">Loading without src...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading without src...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- Dynamic src test - tests programmatic src changes -->
-<module-lazyload id="dynamic-src-test">
-	<card-callout>
-		<p class="loading" role="status">Loading dynamic src...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="dynamic-src-test"><card-callout data-key="nil"><p role="status" class="loading">Loading dynamic src...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading dynamic src...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 
 <hr>
 
-<!-- Missing elements test - tests graceful handling when required elements are missing -->
-<module-lazyload
-	id="missing-elements-test"
-	src="./test/module-lazyload/simple-text.html"
->
-	<!-- No card-callout wrapper -->
-	<p class="loading" role="status">Loading without wrapper...</p>
-	<p class="error" role="alert" aria-live="assertive" hidden></p>
-	<div class="content" hidden></div>
-</module-lazyload>
-
-<hr>
-
-<!-- Recursive loading test - tests prevention of recursive loading -->
-<module-lazyload
-	id="recursive-test"
-	src="./test/module-lazyload/mocks/recursive.html"
->
-	<card-callout>
-		<p class="loading" role="status">Loading recursive content...</p>
-		<p class="error" role="alert" aria-live="assertive" hidden></p>
-	</card-callout>
-	<div class="content" hidden></div>
-</module-lazyload>
+<module-lazyload id="recursive-test" src="./test/module-lazyload/mocks/recursive.html"><card-callout data-key="nil"><p role="status" class="loading">Loading recursive content...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading recursive content...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>

@@ -68,6 +68,7 @@ export type SignalConstructor =
 	| 'deriveStore'
 	| 'createMemo'
 	| 'createSensor'
+	| 'createTask'
 	| 'requestContext'
 
 /**
@@ -295,7 +296,9 @@ export type ListItemIR = {
 
 /**
  * A derived signal (`deriveCell`/`deriveList`/`deriveStore`/`createMemo`),
- * or a read-only `createSensor` (ADR 0046 s5): `init` is the derive
+ * a read-only `createSensor` (ADR 0046 s5), or an explicit `createTask`
+ * — the same runtime primitive `deriveCell` builds for an async compute,
+ * declared directly (LT-449). `init` is the derive
  * expression — the compute callback, or the source signal a
  * `deriveList`/`deriveStore` maps over (ADR 0040 s2); a sensor's is its
  * start callback, and its server value is the `{ value }` seed.
@@ -308,6 +311,7 @@ export type DerivedSignalIR = SignalIRBase & {
 		| 'deriveStore'
 		| 'createMemo'
 		| 'createSensor'
+		| 'createTask'
 	/** The derive expression node; `null` for an argument-less call. */
 	init: AstNode | null
 	/**

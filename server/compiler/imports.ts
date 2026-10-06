@@ -346,6 +346,7 @@ const RUNTIME_HARNESS_EXPORTS: ReadonlySet<string> = new Set<string>([
 	'createList',
 	'createStore',
 	'createState',
+	'createTask',
 	'deriveCell',
 	'deriveList',
 	'deriveStore',

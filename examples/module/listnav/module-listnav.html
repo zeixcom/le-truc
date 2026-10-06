@@ -55,11 +55,5 @@
 			</div>
 		</form-listbox>
 	</nav>
-	<module-lazyload>
-		<card-callout>
-			<p class="loading" role="status">Loading...</p>
-			<p class="error" role="alert" aria-live="assertive" hidden></p>
-		</card-callout>
-		<div class="content" hidden></div>
-	</module-lazyload>
+	<module-lazyload><card-callout data-key="nil"><p role="status" class="loading">Loading...</p></card-callout><template data-arms="0" data-key="ok"><div class="content"></div></template><template data-arms="0" data-key="nil"><card-callout><p role="status" class="loading">Loading...</p></card-callout></template><template data-arms="0" data-key="err"><card-callout class="danger"><p role="alert" aria-live="assertive" class="error"></p></card-callout></template></module-lazyload>
 </module-listnav>

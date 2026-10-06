@@ -40,14 +40,38 @@ export const CLASSIFIED_DIAGNOSTICS: readonly ClassifiedDiagnostic[] = [
 	},
 	{
 		kind: 'console',
-		component: 'module-lazyload',
-		message:
-			/<module-lazyload#missing-elements-test> did not enhance .*MissingElementError/,
+		message: /Error: (Invalid URL|No URL provided|Recursive URL detected)/,
 		reason:
-			'The demo page authors this instance without its required ' +
-			'`card-callout` on purpose, to exercise the broken state the spec ' +
-			'asserts. It keeps its served markup, which is what the spec expects ' +
-			'(LT-104: page occurrences simulate now that lazyload is Simulated).',
+			'LT-449: module-lazyload now drives the compiled async boundary with ' +
+			'a `createTask`, and the simulated fixture (and module-listnav, ' +
+			'which composes lazyload and passes its `src`) renders without a ' +
+			'fetchable URL on purpose — the task rejects by design and the ' +
+			"boundary's err arm carries the message into the pinned snapshot. " +
+			"The notice is the task's unobserved-rejection report during " +
+			'simulated connect; no fetch runs on the jsdom substrate, so beyond ' +
+			'the sanctioned err arm nothing in the serialized markup changes. ' +
+			'(Retired with the scenario it covered: the twin-era ' +
+			'`#missing-elements-test` classification — the compiled component ' +
+			'owns its markup, so the broken-state demo instance no longer ' +
+			'exists.)',
+	},
+	{
+		kind: 'console',
+		message:
+			/reconcile\(\) did not activate in <module-lazyload>; its other effects are unaffected: InvalidTemplateError/,
+		docsOnly: true,
+		reason:
+			'LT-449: the realm parses with the definitions already live, so ' +
+			'jsdom connects parent-first — the composed (or standalone) ' +
+			"lazyload's factory runs at upgrade, before the parser has " +
+			'appended the arm templates, and reconcile() refuses with ' +
+			'InvalidTemplateError. The refusal is Contained per Mount Scope ' +
+			'(ADR 0028 s3): the element keeps its served markup, the ' +
+			'serialization is the fixed point either way, and a real page ' +
+			'registers definitions from a deferred module so children upgrade ' +
+			'first (the LT-423 precedent, verified against plain jsdom). The ' +
+			"boundary's client behavior is exercised on real Chromium by the " +
+			'component spec.',
 	},
 	{
 		kind: 'console',

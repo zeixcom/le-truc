@@ -276,6 +276,33 @@ export const isPending = (signal: unknown): boolean =>
 	(signal as Record<symbol, unknown>)[ASYNC_PENDING] === true
 
 /**
+ * `createTask(fn, options?)` → the explicit spelling of the async
+ * `deriveCell` branch above (LT-449): the server render is synchronous and
+ * never awaits, so the task callback is never invoked here — invoking it
+ * would start a fetch the render discards. A `{ value }` seed is the
+ * retained value the client task also starts with (the `ok` arm); without
+ * one the cell is PENDING at render time (the `nil`/`@pending` arm), and
+ * `.get()` throws like the async-derive box — the boundary's
+ * `isPending()`-guarded routing never reads it unguarded.
+ */
+export const createTask = <T>(
+	fn: (prev: T, signal: AbortSignal) => Promise<T>,
+	options?: { value?: T },
+): ServerCell<T> => {
+	void fn
+	if (options && 'value' in options) return createCell(options.value as T)
+	return {
+		get: () => {
+			throw new Error(
+				'createTask(...) is pending (no { value } seed) — read it only inside an isPending()-guarded branch (ADR 0024 async boundaries).',
+			)
+		},
+		set: () => {},
+		[ASYNC_PENDING]: true,
+	} as ServerCell<T>
+}
+
+/**
  * `createMemo(fn, options?)` → box over `fn(prev)` evaluated once. Unlike
  * `deriveCell`, `createMemo` has no async overload (cause-effect's `Memo`
  * type is sync-only), so there is no pending-render branch to consider —
