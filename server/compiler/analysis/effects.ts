@@ -2492,22 +2492,36 @@ const planReconcileItem = (
 				badNames,
 			)
 
-		// Descendants with constructs of their own, document order, through
-		// server-rendered conditional arms (a construct there addresses
-		// markup the render's own winner put in every item); nested arm sets
-		// and loops plan into the item's mount as their own scopes, a loop
-		// below a branch knowing its container may be absent (LT-455).
+		// Descendants with constructs of their own, document order. A
+		// construct in a server-rendered conditional branch — the branch
+		// roots included — is refused (LT-468): the fold is fixed per render
+		// and per clone, so the construct's required query would throw in
+		// every item mount whenever the branch folded off — the same trap
+		// the host and arm walks refuse. Nested arm sets and loops plan into
+		// the item's mount as their own scopes, a loop below a branch knowing
+		// its container may be absent (LT-455).
 		const visitElements = (node: TemplateNode, inBranch = false): void => {
 			if (node !== output && planNested(fx, scope, node, inBranch)) return
 			if (isElement(node)) {
-				if (node !== output && hasOwnConstruct(node))
-					emitConstructEffects(
-						fx,
-						node,
-						scope.localFor(node),
-						item.effects,
-						badNames,
-					)
+				if (node !== output && hasOwnConstruct(node)) {
+					if (inBranch)
+						diagnostics.push(
+							diagnostic.unsupported(
+								source,
+								node.node,
+								`A client construct on an element in a server-rendered branch of the ${wording.loop} item <${output.tag}>`,
+								'The branch folds once per render and every clone copies the fold, so the construct would address markup that never re-renders — make the condition reactive: the item then plans an arm set with live switching and existence-guarded binding.',
+							),
+						)
+					else
+						emitConstructEffects(
+							fx,
+							node,
+							scope.localFor(node),
+							item.effects,
+							badNames,
+						)
+				}
 				for (const child of node.children) visitElements(child, inBranch)
 				return
 			}
