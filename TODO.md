@@ -109,7 +109,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-483.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-485.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -122,41 +122,6 @@ LTC056 is LT-358's).
 <!-- entries -->
 
 ### E — compose enablers
-
-- [ ] LT-481: A `truc:pass` on a compose site that is a reactive arm root compiles clean and never binds — plan the entries in the arm's mount. — in progress ⚙
-  **Area:** compiler
-  **Needs:** LT-470
-  **Gates:** check:corpus, test:server
-  **Area:** compiler
-  **Needs:** LT-470
-  **Filed (Architect, 2026-10-06, from LT-470's probe finding 3, reproduced in review):** LT-460
-  made a compose site legal as an arm root of a reactive conditional or an async boundary, and
-  splices the arm's `data-key` onto the child's rendered root. Its `truc:pass` entries are never
-  planned: `@if (open.get()) { <BasicChild truc:pass={{ value: () => 'x' }} /> }` (and the `.tsx`
-  ternary) compiles with no diagnostic to `reconcile(div, …, () => …, () => {})` — an empty
-  `bindArm` — on both surfaces. The arm walk checks only the arm root's descendants against
-  `unmountableInArm`, never the root itself, so the pass on the root is neither refused nor
-  lowered. LT-470's refusal names exactly this shape as its remedy ("make the condition reactive:
-  the composed child then renders as its arm's root"), so until this lands the remedy steers an
-  author from a compile error into a silent drop.
-  **Change:** in the arm planning (`armContainer`'s caller in `server/compiler/analysis/effects.ts`,
-  the `arms` map that builds each `ArmPlan`), when the arm root is a compose site carrying
-  `truc:pass` entries, plan those entries as `pass()` effects in the arm's mount against the arm
-  element parameter — the arm root IS the child's element, so no query or local is minted. Same
-  entry lowering as a host-level or item-level compose (reuse the path `collectCompose` takes;
-  do not fork the entry validation). Applies to every arm-set kind whose root may be a compose
-  site: reactive `@if`/`@switch` arms and async-boundary `pending`/`ok`/`catch` arms. A
-  `truc:ref`/`first()` on a compose arm root stays refused (the element is recreated on every
-  flip).
-  **Check:** both surfaces, for a reactive `@if` arm root and an async-boundary arm root: the
-  generated `bindArm` emits `pass(<armElement>, …)` with the entries, nothing is queried from the
-  host for the child; a render-and-flip test shows the child's prop takes the passed value on the
-  adopted arm and again on a cloned arm after a flip (the clone is inserted before its mount —
-  confirm `reconcile()`'s arm path keeps the insert-then-mount order the item path gained, or the
-  pass meets an un-upgraded child); a compose arm root without `truc:pass` is unchanged. LT-470's
-  remedy sentence then holds as written — re-read it in the message, `errors.md` and
-  HOST_PROFILE.md, and change nothing unless it no longer matches. CHANGELOG Fixed entry.
-  **Channel/tier:** compiler lowering only; no new check, no runtime check.
 
 - [ ] LT-482: A server-only `@try` is a server-rendered branch the plan walks don't treat as one — a `truc:pass` compose in its body compiles clean and never binds.
   **Area:** compiler
@@ -181,7 +146,10 @@ LTC056 is LT-358's).
   server-only boundary, and record what each one does today in this entry: (a) a `truc:pass`
   compose in a server-only `try` at the host; (b) the same inside a reactive-list item; (c) a
   client construct (reactive attribute, handler) on an element in a server-only `try` inside an
-  item; (d) the same at the host. A shape that is already refused, or that already plans
+  item; (d) the same at the host; (e) a compose site as the root of a server-only `try`'s body or
+  catch arm carrying `truc:pass` (LT-481's residue: `handleOptionalBranch` filters `isElement`
+  and never sees a compose root, so the entries compile clean and never bind; probed live by
+  LT-481's author). A shape that is already refused, or that already plans
   correctly, stays as it is. Fix only the shapes the probe shows silently unplanned or throwing
   at mount.
   **Change:** at the host, set `inServerBranch` for a `try` that is not an arm set. In the item
@@ -189,6 +157,8 @@ LTC056 is LT-358's).
   descends server `conditional` arms. Mirror the item walk's key-attribute descent
   (`collectKeySites`, `collectBranchKeyAttrs`) only if the probe shows a key-derived attribute
   there is lost.
+  Shape (e) is a fold-fixed branch like the others, so it takes LT-470's refusal. A server-only
+  `try` arm is not an arm mount, so LT-481's arm-mount planning does not reach it.
   **Check:** each probed shape the change touches gets a both-surface test: refused with the
   LT-468/LT-470 message, or bound. A pass-less compose in a server-only `try` still compiles.
   Add a CHANGELOG Fixed line only if a shape that was silently dropped now fails the compile.
@@ -240,50 +210,6 @@ LTC056 is LT-358's).
   **Verification:** test:server unit legs (host, arm and list-item compose sites; forwarding; each
   LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
   converted list remove button.
-
-### T — module-todo
-
-- [ ] LT-467: Retire basic-pluralize — module-todo words its own count through an ICU message.
-  **Area:** examples
-  **Needs:** LT-466
-  **Gates:** check:corpus, test:variants, test:server
-  **Area:** examples
-  **Filed (Architect, 2026-10-06; owner ruling 2026-10-06):** a parent words a count with its own
-  ICU `plural` message: folded into the HTML when the count is server-known, re-evaluated by the
-  inlined client evaluator when it is reactive (ADR 0030 s9). That leaves `basic-pluralize` no job —
-  it also owns a catalog that knows one noun ("tasks"), which no reusable pluralizer should. Retire
-  it.
-  **Do:**
-  1. **module-todo** (`.tsx` and `.tsrx`): replace the raw `<basic-pluralize>` with the parent's
-     own message and condition — declare e.g. `remaining: '{count, plural, =0 {Well done, all done!}
-     one {# task remaining} other {# tasks remaining}}'` in its `i18n` record and render
-     `<p class="remaining">{() => t.remaining({ count: activeCount.get() })}</p>` (the `=0` arm
-     replaces the `none`/`some` toggle — no markup varies, so no arm set; should the MF2 exit gate refuse the `=0` selector, use two keys and a ternary on
-     `activeCount.get() === 0`). Drop the `:global
-     module-todo basic-pluralize p` rule. The `.ts` twin and `module-todo.html` bind the same text
-     with `Intl.PluralRules` in a `watch` (the hand-written runtime has no ICU evaluator); the
-     wording matches the source locale.
-  2. **Translations:** move the `basic-pluralize.*` entries in every `i18n/*.json` locale to the new
-     `module-todo.remaining` key, reworded per locale into one MF1 pattern with that locale's
-     plural categories (the existing `tasks` patterns carry them); the census stays at 0 gaps.
-  3. **Coverage that must not be lost** — move each to `module-todo` or a fixture under
-     `examples/test/`, never delete it: `selectordinal`/`select` nesting (mf2-exit, `MF2_EXIT.md`),
-     the walked-locale materialization onto `lang` (LT-191; `basic-number` already carries the
-     same contract — confirm its spec covers it, else add the leg there), the client-message
-     `i18n` attribute pins (LT-352), the frozen-`deriveCell` harvest case (`harvest.ts` comment),
-     and every `server/tests/compiler` leg naming `basic-pluralize` (`i18n.test.ts`,
-     `i18n-client.test.ts`, `diagnostics.test.ts`, `root-harvest.test.ts`, `corpus-args.ts`, smoke
-     and gate-wave legs); regenerate the equivalence and sim snapshots and state each diff in the
-     handoff.
-  4. **Remove:** `examples/basic/pluralize/`, its entries in `examples/main.ts`, `examples/main.css`,
-     `docs-src/pages/examples.md`, `custom-elements-manifest.config.mjs`, `scripts/measure-size-bet.ts`.
-  5. **Prose references** (`AGENTS.md`'s built-in-IDL-property example, HOST_PROFILE's locale
-     precedence and anchors, `LE_TRUC_COMPILER.md`, `server/TESTS.md`, `i18n/README.md`): list
-     them in the handoff for a `writer` session; ADR text stays as history, and `CHANGELOG.md`
-     records the removal at iteration close.
-  **Channel/tier:** none — no runtime check, no diagnostic.
-  **Verification:** check:corpus (census 0 gaps), test:variants, test:server, `module-todo.spec.ts`
-  with a leg per count class (0, 1, many) in `en` and one locale with more categories (`pl`).
 
 ### M — section-menu
 

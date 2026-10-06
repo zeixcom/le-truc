@@ -553,6 +553,45 @@ waits for the corpus-port migrations to settle the census.
   say so in the rewritten task and require LT-397's pixel-parity procedure.
   **Channel/tier:** decided per difference by the session.
 
+
+- [ ] LT-483: '`handleAsyncBoundary` checks client positions against `badFreeNames` where every other arm-set handler uses `fx.scopeBadNames` — align it.'
+  **Area:** compiler
+  **Gates:** test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-07, from LT-481's residue 2):** in
+  `server/compiler/analysis/effects.ts`, `handleAsyncBoundary` destructures
+  `badFreeNames: badNames` and passes it to the ok arm's construct effects and, since LT-481, to
+  the pending and catch compose roots' pass entries. `handleReactiveConditional` and the other
+  Mount Scope handlers read `fx.scopeBadNames`, which, inside a reactive-list item, refuses the
+  names a list body cannot read on the client (setup consts and imports: LTC005's server-only
+  face). The review probed an item-nested boundary whose pending compose root passes
+  `() => item.get()`: it plans correctly, so item names are not affected. A setup-const or
+  import read in an item-nested boundary's client position was not probed. It may compile clean
+  and then fail at runtime in the cloned item.
+  **Change:** probe the setup-const read in an item-nested boundary on both surfaces (ok-arm
+  construct and pending compose root pass entry). If it compiles clean, switch
+  `handleAsyncBoundary` to `fx.scopeBadNames`. If it is already refused upstream, still align
+  the reader for consistency and record the probe here.
+  **Check:** a both-surface test pins the probed shape's diagnostic (LTC005 server-only face),
+  and host-level boundaries are unchanged (`test:server`). CHANGELOG Fixed only if the shape
+  compiled clean before.
+  **Channel/tier:** compiler check, tier 1 Prevented; no runtime check.
+
+- [ ] LT-484: An element root of an async boundary's pending or catch arm refuses every client construct, while a reactive conditional's element arm root plans them — decide whether boundary arms gain parity.
+  **Area:** design
+  **Area:** design
+  **Filed (Architect, 2026-10-07, from LT-481's residue 3):** the two arm-set kinds treat their
+  element roots differently. A reactive `@if`/`@switch` arm root plans its client constructs in
+  the arm's mount through `emitConstructEffects`. An async boundary's pending or catch element
+  root refuses every client construct except the catch-parameter text channel (LT-449). LT-481
+  made a compose root in those same arms plan its `truc:pass` entries, so an author can now pass
+  a reactive value to a composed pending root but cannot bind a reactive attribute on an element
+  pending root. Both lowerings are arm mounts under `reconcile()`.
+  **Question for the session:** should pending and catch element roots plan constructs the way
+  reactive-conditional arms do? Or is the refusal deliberate (ADR 0041's three-arm boundary,
+  with the in-flight state as the `isPending` idiom outside the boundary) and should be kept,
+  with a sharper message that names the idiom? Read ADR 0037, ADR 0041 and LT-449 before
+  ruling. Out of the session comes either a `compiler` task or a recorded refusal.
 ## P3 — Gate-wave residue
 
 Latent correctness and diagnostic-precision items, independent of the release track and of

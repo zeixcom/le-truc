@@ -399,6 +399,52 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** Approved. Both judgment calls stand as rulings: the label stays visible with only its text span `.visually-hidden` (the label's `::before` draws the box), and the completed-item dim/line-through moves to module-todo's own sheet on the `form-inplace-edit` host.
 
+- [x] LT-467: Retire basic-pluralize — module-todo words its own count through an ICU message. — done, pending review ⏳
+  **Area:** examples
+  **Needs:** LT-466
+  **Gates:** check:corpus, test:variants, test:server
+  **Area:** examples
+  **Filed (Architect, 2026-10-06; owner ruling 2026-10-06):** a parent words a count with its own
+  ICU `plural` message: folded into the HTML when the count is server-known, re-evaluated by the
+  inlined client evaluator when it is reactive (ADR 0030 s9). That leaves `basic-pluralize` no job —
+  it also owns a catalog that knows one noun ("tasks"), which no reusable pluralizer should. Retire
+  it.
+  **Do:**
+  1. **module-todo** (`.tsx` and `.tsrx`): replace the raw `<basic-pluralize>` with the parent's
+     own message and condition — declare e.g. `remaining: '{count, plural, =0 {Well done, all done!}
+     one {# task remaining} other {# tasks remaining}}'` in its `i18n` record and render
+     `<p class="remaining">{() => t.remaining({ count: activeCount.get() })}</p>` (the `=0` arm
+     replaces the `none`/`some` toggle — no markup varies, so no arm set; should the MF2 exit gate refuse the `=0` selector, use two keys and a ternary on
+     `activeCount.get() === 0`). Drop the `:global
+     module-todo basic-pluralize p` rule. The `.ts` twin and `module-todo.html` bind the same text
+     with `Intl.PluralRules` in a `watch` (the hand-written runtime has no ICU evaluator); the
+     wording matches the source locale.
+  2. **Translations:** move the `basic-pluralize.*` entries in every `i18n/*.json` locale to the new
+     `module-todo.remaining` key, reworded per locale into one MF1 pattern with that locale's
+     plural categories (the existing `tasks` patterns carry them); the census stays at 0 gaps.
+  3. **Coverage that must not be lost** — move each to `module-todo` or a fixture under
+     `examples/test/`, never delete it: `selectordinal`/`select` nesting (mf2-exit, `MF2_EXIT.md`),
+     the walked-locale materialization onto `lang` (LT-191; `basic-number` already carries the
+     same contract — confirm its spec covers it, else add the leg there), the client-message
+     `i18n` attribute pins (LT-352), the frozen-`deriveCell` harvest case (`harvest.ts` comment),
+     and every `server/tests/compiler` leg naming `basic-pluralize` (`i18n.test.ts`,
+     `i18n-client.test.ts`, `diagnostics.test.ts`, `root-harvest.test.ts`, `corpus-args.ts`, smoke
+     and gate-wave legs); regenerate the equivalence and sim snapshots and state each diff in the
+     handoff.
+  4. **Remove:** `examples/basic/pluralize/`, its entries in `examples/main.ts`, `examples/main.css`,
+     `docs-src/pages/examples.md`, `custom-elements-manifest.config.mjs`, `scripts/measure-size-bet.ts`.
+  5. **Prose references** (`AGENTS.md`'s built-in-IDL-property example, HOST_PROFILE's locale
+     precedence and anchors, `LE_TRUC_COMPILER.md`, `server/TESTS.md`, `i18n/README.md`): list
+     them in the handoff for a `writer` session; ADR text stays as history, and `CHANGELOG.md`
+     records the removal at iteration close.
+  **Channel/tier:** none — no runtime check, no diagnostic.
+  **Verification:** check:corpus (census 0 gaps), test:variants, test:server, `module-todo.spec.ts`
+  with a leg per count class (0, 1, many) in `en` and one locale with more categories (`pl`).
+
+  **Changed:** `basic-pluralize` is retired (folder, `main.ts`/`main.css`, examples nav, CEM comment, `host-profile.d.ts` attrs, size-bet rows incl. the React spike's twin). module-todo (`.tsx`/`.tsrx`) declares `remaining: '{count, plural, =0 {…} one {# task remaining} other {# tasks remaining}}'` and renders `<p class="remaining">{() => t.remaining({ count: activeCount.get() })}</p>`; the `.ts` twin binds the same source-locale text with `Intl.PluralRules('en')` in a `watch`; `module-todo.html`/`.css`/`.md` follow. **Deviation:** declaring `i18n` fires LTC047 on six template labels (Add Todo, Filter, All, Active, Completed, Clear Completed — the parity test requires a clean compile), so they became keys too (`addTodo`, `filter`, `all`, `active`, `completed`, `clearCompleted`); de/pl/zh translated, ar/cy/lv left as empty entries (source fallback). `basic-pluralize.*` catalog and manifest entries are replaced by `module-todo.remaining` in all six locales (census 0 gaps). Compiler coverage moved to a new `c-plural` test fixture (`server/tests/compiler/fixtures/plural/`: basic-pluralize's source under another tag, plus its six locale patterns): gate-wave LT-143/LT-144 (including the LT-173 Folded acceptance moved out of tier-corpus, with the byte pins reduced by the 14-byte tag delta), the mf2-exit cy arm-count leg and a new round-trip of every locale's nested select/selectordinal pattern, and the diagnostics/i18n-client/root-harvest comments. i18n.test, smoke/corpus-args (new `MODULE_TODO_I18N`), parity's variant-set list and the page-render LT-191 leg now pin module-todo. LT-191 materialization: basic-number walks the ancestor locale (`getLocale(host)`, specced by "inherits locale from closest lang attribute") but never writes it onto its root `lang`, so it does not carry the materialization contract. That contract is pinned only by the c-plural simulation legs, the ancestor and own-lang-wins legs plus the per-locale page leg (`lang="cy"` asserted on the root); the browser leg is gone with basic-pluralize.spec.ts.
+  **How:** Snapshots regenerated. In `equivalence-audit`, the `basic-pluralize` entry is dropped, module-todo's `<basic-pluralize>` hydration diff hunks are gone, and its offsets shift +10 for root `lang="en"`. In `sim-driver`, the `basic-pluralize` entry is dropped and module-todo gains `lang="en"` and `<p class="remaining">`. In `parity`, the basic-pluralize client snapshot is dropped and module-todo's client gains the message preamble. module-cem-list and module-ticker entries are only reordered. `module-todo.spec.ts` asserts `.remaining` text and adds two legs: `en` (0, 1, 5) and `pl` (0, 1, 2–4 few, 5 many). The `pl` leg swaps in `renderModuleTodo({ i18n: i18nRecord('module-todo','pl') })` imported from the generated server module, so it holds no hand copy of the `i18n` attribute. It is skipped when `/api/status` reports the `ts` surface.
+  **Check:** typecheck, test:server (3469 pass), check:contract, check:corpus (census 0), build:docs, check:links, and biome on server/ and examples/ are green. **Unrunnable here: test:variants module-todo and test:component module-todo.** Playwright cannot launch in this session's sandbox, even in bare form: every test times out in `beforeEach`, and WebKit logs `sandbox_extension_issue_file_to_process … Operation not permitted`. The untouched basic-counter control fails the same way. The owner must run `bun run test:variants module-todo`, which covers the new en/pl legs (pl is skipped on `ts`). Doubts: (1) the LTC047 key expansion is beyond the entry's letter. (2) The ar/cy/lv `remaining` wording reuses the old noun forms and needs a translator pass (lv "Atlikuši 2 uzdevumu" is likely wrong). (3) LT-352's row list still names basic-pluralize.html; it no longer exists. (4) Prose for a `writer` session: AGENTS.md (the built-in IDL property example), HOST_PROFILE.md:158 and :178, LE_TRUC_COMPILER.md:770, server/TESTS.md, i18n/README.md, spike/size-bet/FINDING.md. CHANGELOG at iteration close.
+
 - [x] LT-470: A composed child carrying `truc:pass` in a server-rendered branch of a list item mints a required local and throws in every item mount when the branch is not taken — refuse it after LT-468's manner. — reviewed ✓
   **Area:** compiler
   **Needs:** LT-468
@@ -471,3 +517,36 @@ Full entry text: `git log -p -- DONE.md`.
   its answer does not depend on the entry-point shape. Recorded in `COMPILER_SPEC.md` §2, §12,
   O-1, the decision log (D-32 → Ratified) and Appendix B (refreshed). The reshape is filed as
   LT-480 (P1, gates LT-254). LT-254 and LT-376 are re-scoped.
+
+- [x] LT-481: A `truc:pass` on a compose site that is a reactive arm root compiles clean and never binds — plan the entries in the arm's mount. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-470
+  **Gates:** check:corpus, test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-470's probe finding 3):** LT-460 made a compose site
+  legal as an arm root, but its `truc:pass` entries were never planned. The arm walk checked
+  only the root's descendants against `unmountableInArm`, so the shape compiled to an empty
+  `bindArm` on both surfaces. That is the silent drop LT-470's remedy steered authors into.
+
+  **Changed:** A compose site as an arm root now plans its `truc:pass` entries as `pass()`
+  effects in the arm's mount, against the arm element parameter. The arm root is the child's
+  rendered element, so no query or local is minted. The entries rebind on every adopt and clone.
+  This covers reactive `@if`/`@switch` arms (host and nested Mount Scopes) and the async
+  boundary's pending and catch arms, on both surfaces. The lowering is `planArmRootComposePass`
+  in `server/compiler/analysis/effects.ts`. It shares `checkPassEntries` + `emitPassEntries` with
+  every other compose path, and `composeArmRootTag` dedupes LT-460's tag expression.
+  `emit-client.ts`'s `emitBoundary` gained the `nil` mount branch and the err arm's root local
+  and effects. A `first()` on a compose arm root is now refused (LTC005); it was never refused
+  before, and the fix names `truc:pass` as the channel. An ambiguous `first()` keeps LTC027 as
+  its one diagnostic. `reconcile()`'s arm path already inserted a clone before mounting it, so
+  no runtime change was needed. Docs: HOST_PROFILE.md's arm-root paragraph, LE_TRUC_COMPILER.md's
+  ClientPlan passage, and a CHANGELOG Fixed entry. LT-470's remedy sentences now hold as written.
+  Tests: "compose arm roots plan their `truc:pass` entries (LT-481)" in
+  `server/tests/compiler/compose.test.ts`.
+
+  **Handoffs:** the compose root of a server-only `@try` arm → LT-482 shape (e). The boundary's
+  name check (`badFreeNames` vs `fx.scopeBadNames`) → LT-483. Element pending/catch roots refusing
+  constructs that reactive-conditional arm roots plan → LT-484 (design).
+
+  **Review:** Approved. The review probed list-item nesting: a reactive arm root and a pending
+  root passing `() => item.get()` both bind.
