@@ -758,7 +758,7 @@ describe('harvest() resolves by binding, in its one position (LT-429, LT-442 rid
 				expect(
 					errorsOf(result).some(d =>
 						d.message.includes(
-							'A `harvest()` call outside the seed of a `createList()`',
+							'A `harvest()` call outside the seed of a `createList()` or a scalar signal declaration',
 						),
 					),
 				).toBe(true)
@@ -783,7 +783,7 @@ describe('harvest() resolves by binding, in its one position (LT-429, LT-442 rid
 				expect(
 					errorsOf(result).some(d =>
 						d.message.includes(
-							"A `harvest()` seed on a list declared in a reactive-list item's setup",
+							"A `harvest()` seed declared in a reactive-list item's setup",
 						),
 					),
 				).toBe(true)

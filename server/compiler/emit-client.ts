@@ -18,10 +18,12 @@
 import type {
 	ArmPlan,
 	ArmsPlan,
+	AuthoredParser,
 	ClientPlan,
 	ForClientPlan,
 	KeyAttrPlan,
 	ListFieldPlan,
+	ParserKind,
 	ReconcilePlan,
 	TopEffectPlan,
 } from './analysis/plan'
@@ -117,18 +119,49 @@ const ariaProperty = (attr: string): string | null =>
 const memberAccess = (object: string, key: string): string =>
 	isJsIdentifier(key) ? `${object}.${key}` : `${object}[${jsString(key)}]`
 
+/**
+ * The parser expression a text/attr harvest reads through (LT-443): an
+ * inferred parser resolves through the import table (`asString()`), an
+ * authored `harvest()` parser is spliced as written — wrapped in
+ * parentheses when a call cannot follow it bare — and its slice maps the
+ * generated call back onto the authored expression, so a type error there
+ * reports at the authored parser.
+ */
+const parserExpression = (
+	parser: ParserKind | AuthoredParser,
+	imports: ClientImports,
+): { call: string; slice: SourceSlice | null } => {
+	if (typeof parser !== 'string') {
+		const call = parser.wrap ? `(${parser.text})` : parser.text
+		return { call, slice: { text: call, start: parser.start } }
+	}
+	return { call: `${imports.use(parser)}()`, slice: null }
+}
+
 const harvestInitializer = (
 	plan: ClientPlan['harvests'][number],
 	imports: ClientImports,
-): string | null => {
-	if (plan.kind === 'substitute') return plan.expr
+): { text: string; slices: SourceSlice[] } | null => {
+	if (plan.kind === 'substitute') {
+		// The substituted read is a DOM string; the marker's parser parses
+		// it back (LT-443), its slice mapping to the authored expression.
+		if (!plan.parser) return { text: plan.expr, slices: [] }
+		const { call, slice } = parserExpression(plan.parser, imports)
+		return {
+			text: `${call}(${plan.expr})`,
+			slices: slice ? [slice] : [],
+		}
+	}
 	if (plan.kind === 'text') {
-		const parser = imports.use(plan.parser)
+		const { call, slice } = parserExpression(plan.parser, imports)
 		const read = `${plan.query}.textContent`
-		return `${parser}()(${read})`
+		return {
+			text: `${call}(${read})`,
+			slices: slice ? [slice] : [],
+		}
 	}
 	if (plan.kind === 'attr') {
-		const parser = imports.use(plan.parser)
+		const { call, slice } = parserExpression(plan.parser, imports)
 		// CHECKLIST §6 (BUG): `value`/`checked`/`selected` are dirty-flag
 		// attributes — between server render and upgrade, the user can type,
 		// or the browser can refill via session restore/password-manager
@@ -140,20 +173,40 @@ const harvestInitializer = (
 		// `getAttribute` stays correct there.
 		if (DIRTY_FLAG_ATTRS.has(plan.attr)) {
 			const live = `${plan.query}.${plan.attr}`
-			return `${parser}()(String(${live}))`
+			return {
+				text: `${call}(String(${live}))`,
+				slices: slice ? [slice] : [],
+			}
 		}
 		const raw = `${plan.query}.getAttribute(${jsString(plan.attr)})`
-		return `${parser}()(${raw})`
+		return {
+			text: `${call}(${raw})`,
+			slices: slice ? [slice] : [],
+		}
 	}
 	// The list kind is emitted directly from its declaration (verbatim or
 	// substituted seed) and never reaches this initializer path.
 	if (plan.kind === 'list') return null
-	// membership: find the marked element in the collection, read its value
+	// membership: find the marked element in the collection, read its value.
+	// A marked seed reads through its `harvest()` parser (LT-443) — the
+	// parser owns the no-match miss, so the read hands it `null` and the
+	// typed default stays unused.
 	const markProp = ariaProperty(plan.markAttr)
 	const predicate = markProp
 		? `el => el.${markProp} === 'true'`
 		: `el => el.getAttribute(${jsString(plan.markAttr)}) === 'true'`
-	return `${plan.collection}.get().find(${predicate})?.getAttribute(${jsString(plan.valueAttr)}) ?? ${plan.default}`
+	const read = `${plan.collection}.get().find(${predicate})?.getAttribute(${jsString(plan.valueAttr)})`
+	if (plan.parser) {
+		const { call, slice } = parserExpression(plan.parser, imports)
+		return {
+			text: `${call}(${read})`,
+			slices: slice ? [slice] : [],
+		}
+	}
+	return {
+		text: `${read} ?? ${plan.default}`,
+		slices: [],
+	}
 }
 
 /**
@@ -726,13 +779,19 @@ export const emitClientModule = (
 		// and a source-mapping form carries its item callback after the source.
 		const call =
 			initializer && signal.constructor === 'deriveList'
-				? spliceInit(signal, initializer)
+				? spliceInit(signal, initializer.text)
 				: null
 		if (call) push(`const ${signal.name} = ${call}`)
-		else if (initializer)
-			push(
-				`const ${signal.name} = ${imports.local(signal.constructor)}(${initializer})`,
-			)
+		else if (initializer) {
+			// An authored `harvest()` parser maps its slice back to the
+			// authored expression (LT-443); the inferred call is fully
+			// synthesized and maps nowhere.
+			const head = `const ${signal.name} = ${imports.local(signal.constructor)}(`
+			push(`${head}${initializer.text})`, [
+				{ text: head, start: signal.textStart },
+				...initializer.slices,
+			])
+		}
 	}
 
 	// requestContext-backed signals (LT-035, ADR 0024 sub-design 15): no DOM

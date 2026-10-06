@@ -41,6 +41,7 @@ import {
 	MANAGED_TEXT_PROPS,
 	MUTABLE_SIGNAL_CONSTRUCTORS,
 	PARSER_FACTORIES,
+	SCALAR_HARVEST_CONSTRUCTORS,
 	SIGNAL_CONSTRUCTORS,
 } from './vocabulary'
 
@@ -98,19 +99,27 @@ const setupStatementRefusal = (ctx: ExtractContext, stmt: AstNode) =>
 	)
 
 /**
- * A `const name = createList(harvest(seed, { … }), …)` declaration's
- * marker call (ADR 0046 s7), read through the marker binding as resolved in
- * `enclosing`'s scopes; null when the seed is not a `harvest()` call.
+ * A `harvest()` marker call in a setup declaration's seed position (ADR
+ * 0046 s7): the map form on a `createList` seed (LT-429), the scalar form
+ * on a scalar signal constructor's seed (LT-443). Null when the statement
+ * declares nothing or the seed is no marker call.
  */
-const listHarvestOf = (
+const seedHarvestOf = (
 	ctx: ExtractContext,
 	stmt: AstNode,
 	enclosing: Iterable<string> = [],
-): HarvestCall | null => {
+): { constructor: string; call: HarvestCall } | null => {
 	if (stmt.type !== 'VariableDeclaration') return null
 	const init = asArray(stmt.declarations)[0]?.init as AstNode | undefined
-	if (!isNode(init) || identifierName(init.callee) !== 'createList') return null
-	return harvestCallOf(ctx, asArray(init.arguments)[0], enclosing)
+	if (!isNode(init)) return null
+	const callee = identifierName(init.callee)
+	if (
+		!callee ||
+		(callee !== 'createList' && !SCALAR_HARVEST_CONSTRUCTORS.has(callee))
+	)
+		return null
+	const call = harvestCallOf(ctx, asArray(init.arguments)[0], enclosing)
+	return call ? { constructor: callee, call } : null
 }
 
 /** The refusal for a `harvest()` call the compiler does not consume. */
@@ -123,27 +132,27 @@ const misplacedHarvest = (
 		ctx.source,
 		stmt,
 		subject,
-		'`harvest()` declares the field parsers of a list seeded from server args, so the compiler reads it only as the seed of a component-setup `createList()` — call it there, or drop it.',
+		'`harvest()` declares the parser a client harvest reads a server-rendered seed through, so the compiler reads it only as the seed of a component-setup `createList()` or a scalar signal declaration — call it there, or drop it.',
 	)
 
 /**
- * A component-setup `createList(harvest(seed, map), …)` statement with the
- * marker read through (ADR 0046 s7): the server's statement text and node
- * name `seed` where the call was, with source slices around the cut; the
- * call itself stays on the signal (`DeclaredSignalIR.harvest`) for the
- * client to splice the harvested array over.
+ * A component-setup signal declaration with the marker read through (ADR
+ * 0046 s7): the server's statement text and node name `seed` where the
+ * call was, with source slices around the cut; the call itself stays on
+ * the signal (`DeclaredSignalIR.harvest`) for the client to splice the
+ * harvest read over.
  */
 const readThroughHarvest = (
 	source: string,
 	stmt: AstNode,
 	init: AstNode,
-	harvest: Extract<HarvestCall, { form: 'list' }>,
+	harvest: { call: AstNode; seed: AstNode },
 ): {
 	init: AstNode
 	text: string
 	slices: NonNullable<SetupStmt['slices']>
 } => {
-	const { call } = harvest.marker
+	const { call } = harvest
 	const stmtStart = stmt.start as number
 	const callStart = call.start as number
 	const callEnd = call.end as number
@@ -311,17 +320,41 @@ export const extractSetup = (
 		// A `harvest()` seed (ADR 0046 s7) is consumed here; any other
 		// reference to the marker is the unclaimed-marker sweep's
 		// (`reportUnclaimedMarkers`, after extraction).
-		const listHarvest = listHarvestOf(ctx, stmt)
-		if (listHarvest?.form === 'malformed') {
+		const seedHarvest = seedHarvestOf(ctx, stmt)
+		if (seedHarvest?.call.form === 'malformed') {
 			ctx.diagnostics.push(
 				diagnostic.unsupported(
 					source,
-					listHarvest.call,
-					listHarvest.what,
-					listHarvest.fix,
+					seedHarvest.call.call,
+					seedHarvest.call.what,
+					seedHarvest.call.fix,
 				),
 			)
 			continue
+		}
+		// A marker form mismatched to its constructor is refused, read
+		// through (neither generated module sees the marker), and recorded
+		// on nothing — the signal keeps its plain seed.
+		if (
+			seedHarvest &&
+			(seedHarvest.call.form === 'list'
+				? seedHarvest.constructor !== 'createList'
+				: seedHarvest.constructor === 'createList')
+		) {
+			const { marker } = seedHarvest.call
+			const [what, fix] =
+				seedHarvest.call.form === 'scalar'
+					? [
+							'A scalar `harvest(seed, parser)` on a `createList` seed',
+							'The scalar form declares the parser of a scalar signal seed; a list takes the map form — `harvest(seed, { field: parser, … })` — or no marker at all.',
+						]
+					: [
+							`A \`harvest(seed, { … })\` map on a \`${seedHarvest.constructor}\` seed`,
+							'The map declares the field parsers of a list item; a scalar seed declares one parser — `createState(harvest(seed, parser))`.',
+						]
+			ctx.diagnostics.push(
+				diagnostic.unsupported(source, marker.call, what, fix),
+			)
 		}
 		if (stmt.type === 'VariableDeclaration') {
 			const declarations = asArray(stmt.declarations)
@@ -346,10 +379,12 @@ export const extractSetup = (
 			const authoredInit = (decl as AstNode).init as AstNode
 			// A `harvest()` seed is read through to its seed for every
 			// consumer of the statement; the signal keeps the marker call.
-			const readThrough =
-				listHarvest?.form === 'list'
-					? readThroughHarvest(source, stmt, authoredInit, listHarvest)
-					: null
+			const readThrough = seedHarvest
+				? readThroughHarvest(source, stmt, authoredInit, {
+						call: seedHarvest.call.marker.call,
+						seed: seedHarvest.call.seed,
+					})
+				: null
 			const init = readThrough?.init ?? authoredInit
 			// `first(selector, required)` element reference (LT-055, replacing
 			// `ref={}`): doesn't exist server-side and has no server
@@ -543,7 +578,13 @@ export const extractSetup = (
 							resolution: sensorResolution,
 						})
 					// A list's item type and `harvest()` map feed the per-field
-					// harvest of an arg-seeded list (ADR 0046 s7, LT-429).
+					// harvest of an arg-seeded list (ADR 0046 s7, LT-429); a
+					// scalar signal's `harvest()` parser feeds its text/attr
+					// harvest (LT-443). A mismatched form records nothing.
+					const matchedMarker =
+						seedHarvest && seedHarvest.constructor === calleeName
+							? seedHarvest.call.marker
+							: null
 					const listFields =
 						calleeName === 'createList'
 							? {
@@ -554,11 +595,13 @@ export const extractSetup = (
 										paramsNode,
 										paramNames,
 									),
-									...(listHarvest?.form === 'list'
-										? { harvest: listHarvest.marker }
+									...(matchedMarker?.kind === 'list'
+										? { harvest: matchedMarker }
 										: {}),
 								}
-							: {}
+							: matchedMarker?.kind === 'scalar'
+								? { harvest: matchedMarker }
+								: {}
 					const signal: SignalIR = MUTABLE_SIGNAL_CONSTRUCTORS.has(calleeName)
 						? {
 								...base,
@@ -963,12 +1006,12 @@ export const extractItemSetup = (
 		// sides, so nothing is harvested; any other reference here is the
 		// unclaimed-marker sweep's.
 		const enclosing = [...own.keys(), ...ctx.loopBound, ...signals.keys()]
-		if (listHarvestOf(ctx, stmt, enclosing)) {
+		if (seedHarvestOf(ctx, stmt, enclosing)) {
 			ctx.diagnostics.push(
 				misplacedHarvest(
 					ctx,
 					stmt,
-					"A `harvest()` seed on a list declared in a reactive-list item's setup",
+					"A `harvest()` seed declared in a reactive-list item's setup",
 				),
 			)
 			continue

@@ -1,5 +1,5 @@
 {
 	"extends": "./tsconfig.json",
-	"include": ["./combobox-bad-args.tsx", "./async-bad-arms.tsx", "./bad-host-typo.tsx", "./i18n-bad-reads.tsx", "./discriminated-compose.tsx", "./harvest-bad-parser.tsx", "../../../../../examples/form/listbox/form-listbox.tsx", "../../../../compiler/frontend/tsx/host-profile.d.ts"],
+	"include": ["./combobox-bad-args.tsx", "./async-bad-arms.tsx", "./bad-host-typo.tsx", "./i18n-bad-reads.tsx", "./discriminated-compose.tsx", "./harvest-bad-parser.tsx", "./harvest-bad-scalar.tsx", "../../../../../examples/form/listbox/form-listbox.tsx", "../../../../compiler/frontend/tsx/host-profile.d.ts"],
 	"exclude": [],
 }
