@@ -440,6 +440,7 @@ export const JS_GLOBALS: ReadonlySet<string> = new Set<string>([
 	'EventTarget',
 	'FocusEvent',
 	'FormData',
+	'HTMLAnchorElement',
 	'HTMLButtonElement',
 	'HTMLCanvasElement',
 	'HTMLDivElement',

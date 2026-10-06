@@ -21,6 +21,7 @@ import {
 	CONTEXT_NAMES,
 	FACTORY_CONTEXT_MEMBER_NAMES,
 	FACTORY_CONTEXT_MEMBERS,
+	JS_GLOBALS,
 	MUTABLE_SIGNAL_CONSTRUCTOR_NAMES,
 	MUTABLE_SIGNAL_CONSTRUCTORS,
 	PARSER_FACTORIES,
@@ -92,6 +93,17 @@ describe('globals.d.ts — ambient vocabulary parity with the compiler', () => {
 		// destructured context member in the generated client.
 		expect(FACTORY_CONTEXT_MEMBERS.has('expose')).toBe(true)
 		expect(declaredConsts).toContain('expose')
+	})
+})
+
+describe('vocabulary — the JS_GLOBALS set (LT-469)', () => {
+	test('every DOM element type a corpus client references by name is recognized', () => {
+		// section-menu's outside-click close checks
+		// `el instanceof HTMLAnchorElement` in a document-level descriptor —
+		// a name the set's own docblock scope ("DOM globals (generated
+		// handlers reference element types)") covers. Its absence was a false
+		// unknown-name LTC005; the entry is pinned so the set stays complete.
+		expect(JS_GLOBALS.has('HTMLAnchorElement')).toBe(true)
 	})
 })
 

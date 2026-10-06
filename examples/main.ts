@@ -94,10 +94,15 @@ import '../server/generated/components/module-tabgroup.client.ts'
 // which then held the tag on every page and in every `test:variants` surface
 // bundle, so the compiled spellings were never the ones exercised.
 import '../server/generated/components/module-todo.client.ts'
+// section-menu cut over in LT-469: the site's sidebar chrome serves its
+// compiled client (the variant set's selected surface), so the layout pages
+// run the compiled .tsx spelling; ?surface= and TEST_SURFACE reach the .ts
+// twin and the .tsrx variant. server/templates/menu.ts stays hand-written —
+// the markup contract SERVER.md documents, pinned by templates/menu.test.ts.
+import '../server/generated/components/section-menu.client.ts'
 import '../server/generated/components/test-listitem-tsx.client.ts'
 import '../server/generated/components/test-listitem.client.ts'
 import './module/ticker/module-ticker.ts'
-import './section/menu/section-menu.ts'
 import './test/audit/test-audit.ts'
 import './test/aria/test-aria.ts'
 import './test/context/test-context.ts'
