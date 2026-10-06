@@ -722,3 +722,24 @@ export const spliceHostDerivedFold = (
 	out += thunkText.slice(cursor)
 	return out
 }
+
+/**
+ * The `host.<prop>` reads a signal declaration folds on the server (LT-451):
+ * a signal IS its initial value under the value harness, so an initializer
+ * reading `host` — `createList(host.seed, { keyConfig })` over a
+ * Parser-backed `seed` — takes the reactive sites' fold, each read spliced
+ * for {@link hostSeedExpr}. `[]` when `node` reads neither `host` nor
+ * `internals` (nothing to fold); null when some read has no server truth —
+ * an unfoldable prop, a bare or computed `host`, any `internals` read — and
+ * the signal routes per ADR 0029 instead (`assemble-ir.ts`).
+ */
+export const initializerHostReads = (
+	node: AstNode,
+	foldable: ReadonlySet<string>,
+): readonly HostPropRead[] | null => {
+	const others = dependenciesOf(node)
+	if (!others.has('host') && !others.has('internals')) return []
+	others.delete('host')
+	others.delete('internals')
+	return hostDerivedFold(node, foldable, new Map(), others)
+}

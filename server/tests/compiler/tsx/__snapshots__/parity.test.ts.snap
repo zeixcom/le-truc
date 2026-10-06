@@ -152,11 +152,11 @@ export default defineComponent<BasicPluralizeProps>(
 		const materializeLocale = (): void => {
 			if (!host.getAttribute('lang')) host.setAttribute('lang', getLocale(host))
 		}
+		materializeLocale()
 		expose({
 			count: asClampedInteger(),
 			ordinal: asBoolean(),
 		})
-		materializeLocale()
 		watch(() => host.count !== 0, bindAttribute(p, 'hidden'))
 		watch(() => host.count === 0, bindAttribute(p2, 'hidden'))
 		watch(() => host.count, bindText(span))

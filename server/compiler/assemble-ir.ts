@@ -18,6 +18,7 @@ import {
 } from './ast-utils'
 import { readConfig } from './config'
 import { diagnostic } from './diagnostics'
+import { foldableHostProps, initializerHostReads } from './evaluability'
 import type { ExtractContext } from './extract-context'
 import {
 	declaresI18nOf,
@@ -43,6 +44,7 @@ import type { ComponentIR, ComponentParam, ConfigIR, ForIR } from './ir'
 import type { ComponentParams } from './params'
 import { onServer, type SetupExtraction } from './setup-extraction'
 import type { ResolvedTemplate } from './template-output'
+import { rangeFields, resolutionOf } from './tier'
 
 /** Module-level declarations beside the component function. */
 export type ModuleDecls = {
@@ -381,8 +383,43 @@ export const assembleComponentIR = (
 		serverKnown,
 		imports,
 	}
+	routeHostSeededSignals(ctx, component)
 	// The one IR fact that needs the whole component: each conditional's
 	// initial winner reads the root's attributes and every signal.
 	resolveInitialWinners(component)
 	return component
+}
+
+/**
+ * A signal declaration reading `host` (LT-451) — `createList(host.seed, …)`
+ * over a Parser-backed prop — is server-known only when every read folds
+ * through `hostSeedExpr` (the emitter splices them, `emit-server.ts`). One
+ * that reads a prop with no server truth routes per ADR 0029 s5, as an
+ * unseeded sensor does: it leaves `serverKnown`, so each site reading it is
+ * omitted, and the realm — which runs `expose()` — answers it. Decided here
+ * because the fold needs the root's attributes and the placed imports.
+ * A derived callback reading `host` never reaches `signals` (LTC013 at
+ * extraction), and a sensor's server value is its `{ value }` seed.
+ */
+const routeHostSeededSignals = (
+	ctx: ExtractContext,
+	component: ComponentIR,
+): void => {
+	const foldable = foldableHostProps(component)
+	const unresolved = component.signals.flatMap(signal => {
+		if (signal.family !== 'declared') return []
+		const stmt = component.setup.find(s => s.name === signal.name)
+		if (!stmt || initializerHostReads(stmt.node, foldable) !== null) return []
+		return [{ signal, stmt }]
+	})
+	for (const { signal, stmt } of unresolved) {
+		signal.unresolvable = true
+		ctx.serverKnown.delete(signal.name)
+		ctx.routingSignals.push({
+			origin: 'LTC013',
+			detail: `\`${signal.name}\`'s ${signal.constructor}() initializer reads host with no server value`,
+			...rangeFields(ctx.source, stmt.node),
+			resolution: resolutionOf(stmt.node, ctx.serverKnown),
+		})
+	}
 }

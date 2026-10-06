@@ -27,6 +27,7 @@ import {
 	foldableRenderScope,
 	hostDerivedFold,
 	hostSeedExpr,
+	initializerHostReads,
 	isServerEvaluable,
 	spliceHostDerivedFold,
 } from './evaluability'
@@ -1736,6 +1737,41 @@ export const emitServerModule = (
 	const emittedNames = new Set(
 		emittedSetup.map(stmt => stmt.name).filter(name => name !== null),
 	)
+	// A signal declaration reading `host` folds each read for the prop's
+	// server seed (LT-451): the parser applied to the root attribute, the
+	// same splice a reactive site's fold makes (`hostSeedExpr`). One with no
+	// server truth is `unresolvable` (`assemble-ir.ts`) and stays verbatim —
+	// no emitted site reads it, so the retention rule keeps it only for a
+	// dependent declaration. A `harvest()` read-through folds per slice.
+	const foldable = foldableHostProps(component)
+	const hostFolded = new Map<SetupStmt, NonNullable<SetupStmt['slices']>>()
+	for (const stmt of emittedSetup) {
+		const signal = component.signals.find(s => s.name === stmt.name)
+		if (signal?.family !== 'declared' || signal.unresolvable) continue
+		const reads = initializerHostReads(stmt.node, foldable)
+		if (!reads?.length) continue
+		const pieces = stmt.slices ?? [{ text: stmt.text, start: stmt.range.start }]
+		hostFolded.set(
+			stmt,
+			pieces.map(piece => ({
+				text: spliceHostDerivedFold(
+					piece.text,
+					piece.start,
+					reads.filter(
+						r =>
+							r.start >= piece.start &&
+							r.end <= piece.start + piece.text.length,
+					),
+					prop => {
+						const seed = hostSeedExpr(component, prop) ?? ''
+						useSeedNames(ctx, seed)
+						return seed
+					},
+				),
+				start: piece.start,
+			})),
+		)
+	}
 
 	for (const signal of component.signals) {
 		// A signal whose declaration the markup does not reference is not
@@ -2071,14 +2107,17 @@ export const emitServerModule = (
 			(s): s is ContextSignalIR =>
 				s.family === 'context' && s.name === stmt.name,
 		)
+		const folded = hostFolded.get(stmt)
 		const stmtText = ctxSignal
 			? `const ${ctxSignal.name} = createCell(${ctxSignal.fallbackText})`
-			: stmt.text
+			: folded
+				? folded.map(slice => slice.text).join('')
+				: stmt.text
 		// A `harvest()` seed's statement reads the marker through to its seed
 		// (ADR 0046 s7), so its slices map around the cut.
 		setup.line(
 			stmtText,
-			(!ctxSignal && stmt.slices) || [
+			(!ctxSignal && (folded ?? stmt.slices)) || [
 				{ text: stmtText, start: stmt.range.start },
 			],
 		)

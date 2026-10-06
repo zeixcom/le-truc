@@ -326,6 +326,24 @@ const spliceInit = (signal: InitSignalIR, init: string): string | null => {
 	)
 }
 
+/**
+ * The declaring call's text after its seed argument — `, { keyConfig })` —
+ * as authored, or null when no argument follows the seed. A `harvest()`
+ * seed cuts after the marker call: the signal's `init` is the marker's own
+ * seed, and the marker's parser is not a call argument.
+ */
+const restArguments = (signal: InitSignalIR): SourceSlice | null => {
+	const seed =
+		signal.family === 'declared' && signal.harvest
+			? signal.harvest.call
+			: signal.init
+	if (!seed || typeof seed.end !== 'number') return null
+	const text = signal.text.slice(seed.end - signal.textStart)
+	// No further argument — only a trailing comma before the paren.
+	if (/^\s*,?\s*\)$/.test(text)) return null
+	return { text, start: seed.end }
+}
+
 const sliceOf = (text: string, start: number | undefined): SourceSlice[] =>
 	start === undefined ? [] : [{ text, start }]
 
@@ -716,9 +734,22 @@ export const emitClientModule = (
 	const clientNeededNames = computeClientNeededNames(component)
 	// Set by any emission that types an element query by its selector.
 	let needsElementType = false
+	// Setup runs in source order (LT-451): plain consts, signal declarations,
+	// `expose()` and client-only statements are collected, then emitted by
+	// authored offset — a declaration after `expose()` reads the props it
+	// installed, as the hand-written factory would.
+	const ordered: Array<{ start: number; text: string; slices: SourceSlice[] }> =
+		[]
+	const pushAt = (
+		start: number,
+		text: string,
+		slices: SourceSlice[] = [],
+	): void => {
+		ordered.push({ start, text, slices })
+	}
 	for (const stmt of component.plainSetup)
 		if (stmt.name && clientNeededNames.has(stmt.name))
-			push(stmt.text, sliceOf(stmt.text, stmt.range.start))
+			pushAt(stmt.range.start, stmt.text, sliceOf(stmt.text, stmt.range.start))
 
 	// Signals seeded by DOM harvest
 	for (const signal of component.signals) {
@@ -738,7 +769,8 @@ export const emitClientModule = (
 			// this runs — in every tier, since the realm answering the value
 			// does not make the initializer runnable in the browser.
 			imports.add(signal.constructor)
-			push(
+			pushAt(
+				signal.textStart,
 				`const ${signal.name} = ${signal.text}`,
 				sliceOf(signal.text, signal.textStart),
 			)
@@ -747,7 +779,8 @@ export const emitClientModule = (
 		imports.add(signal.constructor)
 		if (harvest.kind === 'list') {
 			if (harvest.seed === 'verbatim') {
-				push(
+				pushAt(
+					signal.textStart,
 					`const ${signal.name} = ${signal.text}`,
 					sliceOf(signal.text, signal.textStart),
 				)
@@ -759,7 +792,11 @@ export const emitClientModule = (
 					imports,
 				)
 				if (declared) {
-					push(`const ${signal.name} = ${declared.text}`, declared.slices)
+					pushAt(
+						signal.textStart,
+						`const ${signal.name} = ${declared.text}`,
+						declared.slices,
+					)
 					if (
 						harvest.seed.fields.some(
 							field => field.site.kind === 'attr' && field.site.property,
@@ -769,7 +806,8 @@ export const emitClientModule = (
 				}
 			} else {
 				const substituted = listDeclaration(signal, harvest.seed)
-				if (substituted) push(`const ${signal.name} = ${substituted}`)
+				if (substituted)
+					pushAt(signal.textStart, `const ${signal.name} = ${substituted}`)
 			}
 			continue
 		}
@@ -781,16 +819,24 @@ export const emitClientModule = (
 			initializer && signal.constructor === 'deriveList'
 				? spliceInit(signal, initializer.text)
 				: null
-		if (call) push(`const ${signal.name} = ${call}`)
+		if (call) pushAt(signal.textStart, `const ${signal.name} = ${call}`)
 		else if (initializer) {
 			// An authored `harvest()` parser maps its slice back to the
 			// authored expression (LT-443); the inferred call is fully
-			// synthesized and maps nowhere.
+			// synthesized and maps nowhere. The call's other arguments follow
+			// the seed verbatim (LT-451): a dropped `{ keyConfig }` would key
+			// the client's items apart from the server's.
 			const head = `const ${signal.name} = ${imports.local(signal.constructor)}(`
-			push(`${head}${initializer.text})`, [
-				{ text: head, start: signal.textStart },
-				...initializer.slices,
-			])
+			const rest = restArguments(signal)
+			pushAt(
+				signal.textStart,
+				`${head}${initializer.text}${rest?.text ?? ')'}`,
+				[
+					{ text: head, start: signal.textStart },
+					...initializer.slices,
+					...(rest ? [rest] : []),
+				],
+			)
 		}
 	}
 
@@ -804,7 +850,8 @@ export const emitClientModule = (
 	// `expose()`/`clientSetup` just below.
 	for (const signal of component.signals) {
 		if (signal.family !== 'context') continue
-		push(
+		pushAt(
+			signal.textStart,
 			`const ${signal.name} = ${signal.text}`,
 			sliceOf(signal.text, signal.textStart),
 		)
@@ -813,7 +860,8 @@ export const emitClientModule = (
 	// expose() verbatim
 	if (component.expose) {
 		imports.add('expose')
-		push(
+		pushAt(
+			component.expose.range.start,
 			component.expose.text,
 			sliceOf(component.expose.text, component.expose.range.start),
 		)
@@ -822,7 +870,9 @@ export const emitClientModule = (
 	// Client-only setup side effects (LT-008): connect-time statements the
 	// server never runs — internals?.states.add('clearable') and friends.
 	for (const stmt of component.clientSetup)
-		push(stmt.text, sliceOf(stmt.text, stmt.range.start))
+		pushAt(stmt.range.start, stmt.text, sliceOf(stmt.text, stmt.range.start))
+	for (const entry of ordered.sort((a, b) => a.start - b.start))
+		push(entry.text, entry.slices)
 
 	// A reactive conditional (ADR 0037): `reconcile()`'s arm form over the
 	// templates the server stamped `data-arms`, a key thunk over the test,
