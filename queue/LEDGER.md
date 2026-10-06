@@ -14,12 +14,82 @@ into this prose.
 
 ---
 
+Pruned 2026-10-06, seventh pass (Architect, after the "corpus port and pre-publish reshapes"
+iteration closed; the `writer` recorded it in `CHANGELOG.md [Unreleased]` the same day).
+Consumed: LT-109–LT-111, LT-186, LT-187, LT-277, LT-280, LT-305, LT-334, LT-342, LT-353,
+LT-355, LT-356, LT-374, LT-375, LT-387, LT-390–LT-392, LT-411, LT-412, LT-414–LT-436,
+LT-438–LT-447, LT-449, LT-451–LT-455, LT-468. Where their rulings live: ADR 0046 (s1–s7, as
+amended by LT-429/LT-454), ADR 0047, ADR 0034 s1 (markers), ADR 0039; `HOST_PROFILE.md`
+(per-item setup, per-field/scalar/key-alias harvest, list templates at the host's end, the
+boundary's driver channels and one-catch-read rule, raw value source, unknown `truc:*`, markers,
+LTC078); `errors.md` (LTC005's condition and arm/branch faces, LTC059–LTC080);
+`VOCABULARY_LEDGER.md` (code skips, LTC079 released); `LE_TRUC_COMPILER.md` (sensor and
+host-seed routing, source-ordered client setup); `src/helpers/reactive.ts` (`reconcile()`:
+insert-before-mount, per-Mount-Scope containment) and `src/errors.ts` (`reportScopeFailure`);
+`analysis/loops.ts` (LTC074, `data-key` no exemption); `glob.ts` + SERVER.md (explicit-dot
+segments, `/api/status`, HMR-free mock fragments); `scripts/lib/baseline.ts` and
+`check-baseline.ts` (author code reported, not judged); `simulation/contract.ts` (seam revision
+2); the module docs of `module-lazyload.tsx`/`.ts`, `module-cem-list.tsx`, `_common/reorder.ts`
+and `examples/main.ts` (sanitizer policy, `on*` excluded); `task-queue.md` (commit/integrate
+flow); AGENTS.md; and the notes below. Open handoffs: LT-469 (its "LT-111 ruling 5" now
+means the twin bullet below), LT-078 (the boundary's corpus consumer is module-lazyload,
+LT-449; arm-adoption audit LT-390), and LT-448, LT-456, LT-457, LT-458, LT-459, LT-470, which
+restate what they need. LT-246, LT-437 only `needs:` consumed IDs.
+
+**Rulings carried from the 2026-10-06 prune** (recorded nowhere else; do not re-litigate):
+- **A twin follows the compiled page; it is never deleted** (ITERATION ruling 5, LT-110,
+  LT-449). Every example folder is served compiled and the `.ts` twin stays as a variant. A
+  migration regenerates the authored `.html` from the compiled render; the result need not
+  match the old fixture byte for byte (owner, 2026-10-06), but the twin must enhance it. When
+  the compiled surface owns the DOM (an arm set), the twin is rewritten to consume the compiled
+  page through public `reconcile()`. Rejected: deleting the twin, per-surface page shapes,
+  surface guards in the spec (the last two break ADR 0039 s2). ADR 0039's "the twin stays
+  byte-for-byte the artifact of record" yields to this. Shared helpers serve the *compiled*
+  surfaces; the twin keeps its inline logic (LT-111).
+- **Acceptance criteria are goals, not constraints to meet by workaround** (ITERATION ruling
+  10, owner). A spec or golden that encodes a twin's latent bug is reported with evidence and
+  ruled (fix the twin or change the expectation), never matched silently.
+- **List-template placement: comment anchors rejected (minifier robustness), computed positions
+  rejected (fragility)** (ITERATION ruling 16, LT-454). Not in ADR 0046's alternatives.
+- **LTC074 is an error, not a warning, and LT-185's runtime half stays a DEV_MODE advisory**
+  (LT-186). A deliberate deviation from ADR 0028's Prevented pairing: do not convert the
+  advisory to `console.error` and do not retire it. The compiler cannot see consumer-authored
+  HTML.
+- **No cleanup ambient for per-item effects** (LT-280): `watch` handler cleanups already run
+  before removal.
+- **`expose({ value: harvest(…) })` stays LTC005** (LT-443): a plain-value prop's client seed
+  is evaluated once and cannot parse a DOM read. Allowing it is a new feature, not a new
+  spelling.
+- **A generated module's header cites no internal ADR** (LT-414). It keeps only the milestone
+  wording.
+- **Mount-Scope addressing limits accepted** (LT-424): a host-level `first()` keeps LTC007
+  without child-path synthesis, and the synthesized `:scope >` child path skips the
+  composed-children exclusion (a step names an own tag).
+- **A key alias behind an arm set, a server-data loop or a composed child is LTC005, not
+  LTC080** (LT-453). This narrows ADR 0047 s3's "across all enclosing scopes" to enclosing list
+  items, under the ADR's "wider forms wait"; LT-456 holds the widening.
+- **A key-alias field with no parser or only a formatted site keeps LTC076/LTC059** (LT-453):
+  "with s7's parsers and raw-source rule" reuses s7's codes; LTC080 covers only the four s1
+  conditions.
+
+**Open obligations added** (check before closing the named work):
+- **Known compiler gaps, deliberately unfiled:** dependents of an `unresolvable` signal stay
+  server-known, and a `deriveList` over one iterates the `refStub` value; sensors share this
+  gap (LT-451). Synthesized harvest declarations drop type arguments (LT-451). A Simulated host
+  signal excluded from the retention pool (LT-165 step 5) leaves an item const with a dangling
+  name — loud as TS2304, never a silent runtime error (LT-447). The harness's
+  `deriveList(source, itemFn)` does not run async item callbacks (LT-425).
+- **`form-inplace-edit.css`'s `&[editing] .text { display: none }` is dead** since the arm
+  swap. Drop it in the next CSS pass (LT-390).
+
+---
+
 Pruned 2026-10-03, sixth pass (Architect, after the first `release-notes` run recorded
 LT-370, LT-371 and LT-378 in `CHANGELOG.md [Unreleased]` and found LT-335 and LT-410 covered,
 LT-373 and LT-393 internal). Consumed: LT-335, LT-370, LT-371, LT-373, LT-378, LT-393, LT-410.
 Where their rulings live: `sim/realm.ts` § Attribution (LT-335), ADR 0044 s1 and LT-254's entry
 (LT-370, LT-371), `do-task.js`'s commit step (LT-378's bundle-churn note), and the notes below.
-Open handoffs: LT-411, LT-414, LT-416 in `BACKLOG.md`.
+Its open handoffs (LT-411, LT-414, LT-416) were consumed by the seventh pass.
 
 ---
 
@@ -89,10 +159,8 @@ Full entry text: `git log -p -- DONE.md`.
   references live in `MF2_EXIT.md`; the pinned test flags an upstream fix — delete the matching
   normalization then (LT-253).
 - **Browser specs the agent sandbox could not run:** `basic-pluralize.spec.ts`,
-  `module-todo.spec.ts` and `form-tokenbox.spec.ts`, in en and de. The owner confirms they are
-  green before the next PR (LT-252, LT-354).
-- **The first `@empty` over a reactive List owes a browser spec leg** for the empty → filled →
-  empty cycle. No corpus component uses it yet (LT-212).
+  `module-todo.spec.ts` and `form-tokenbox.spec.ts`, in en and de (the example components; the
+  docs are English only). The owner confirms they are green before the next PR (LT-252, LT-354).
 - **CI has not yet proved the variant spec matrix.** CI triggers only on `main`/`next` pushes and
   PRs, not `v3`, so the next PR's run is the first proof. It must list every variant set, and a
   throwaway broken `.ts` twin must fail the job on surface "ts" (LT-295).
@@ -195,21 +263,8 @@ Full entry text: `git log -p -- DONE.md`.
 - **A provider's context keys live in a module with no side effects**, never in the component
   module, because importing a component module defines the element (LT-106; docs in LT-189
   item 14).
-- **Lazyload keeps its hand-written `watch(content, { ok, nil, stale, err })`**. The compiled
-  boundary cannot express that contract until LT-334 (LT-104).
 - **No compiler-stamped hash class for addressing** (LT-096): page-authored occurrences never pass
   through the compiler's render, so a stamped hook would be absent where the enhancer binds. The
   `:not(<tag> *)` exclusion is accepted; its only miss is an own element inside a same-tag
   ancestor of the host, which no composition produces.
 - **Scrollarea's wall time at demo scale is noise** (LT-103).
-
----
-
-**Since the 2026-10-03 prune:**
-
-- **A key alias behind an arm set, a server-data loop or a composed child is LTC005, not
-  LTC080** (LT-453): it narrows ADR 0047 s3's "across all enclosing scopes" to enclosing list
-  items, under the ADR's "wider forms wait for a component that needs them". LT-456 widens it.
-- **A key-alias field with no parser or only a formatted site keeps LTC076/LTC059** (LT-453):
-  "with s7's parsers and raw-source rule" reuses s7's codes; LTC080 covers only the four s1
-  conditions.

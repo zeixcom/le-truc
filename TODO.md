@@ -7,7 +7,9 @@ in this file; contributors claim and annotate only through `bun run scripts/queu
 are unique by construction — the filename is the ID; the "Next free task ID" line below
 allocates the next one.
 
-**Current iteration (opened 2026-10-02): the corpus port and the pre-publish reshapes.** The
+**Iteration closed 2026-10-06 (opened 2026-10-02): the corpus port and the pre-publish reshapes.**
+Every chain task is reviewed and integrated, recorded in `CHANGELOG.md [Unreleased]` and
+pruned (ruling 18). The
 previous iteration (consolidate the compiler, then land the pre-publish reshapes: tracks A–D,
 LT-227–LT-406) is landed and reviewed. The `writer` recorded it in `CHANGELOG.md
 [Unreleased]` the same day and `DONE.md` was pruned. Its line-count record: `server/compiler/`
@@ -143,6 +145,12 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
     When both are reviewed and integrated, the iteration closes and the `writer` records
     it in `CHANGELOG.md [Unreleased]`. The exit criterion's LT-409 clause is withdrawn
     with the task; the trio keeps its `needs: [LT-409]` in the backlog.
+18. **The iteration is closed (owner, 2026-10-06).** LT-468 and LT-446 are reviewed and
+    integrated; LT-446's implementation task LT-469 and LT-468's follow-up LT-470 are banded
+    (P6, P2b), not chained. The chain below is the closed record: the D band and the two
+    design sessions are no longer named in it. The `writer` recorded it in `CHANGELOG.md
+    [Unreleased]` the same day, and its 61 consumed entries are pruned (`queue/LEDGER.md`,
+    seventh pass). Next: planning.
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
@@ -151,18 +159,14 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 - **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
   ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). ~~LT-429~~ (ruled 2026-10-05 → ADR 0046
   s7, ADR 0034 s1; ruling 14). ~~LT-334~~ (ruled 2026-10-06 → LT-449; `allow-scripts`
-  decoupled to LT-448; ruling 15). ~~LT-448~~ and ~~LT-409~~ moved back to the backlog
-  2026-10-06 (ruling 17): the sessions outran the iteration's remaining capacity, and
-  nothing left in the chain waits on either.
+  decoupled to LT-448; ruling 15). The remaining two sessions went back to the backlog
+  (ruling 17).
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → ~~LT-449~~ (reviewed ✓) → **next, critical path (compiler list emission, one at a time):** ~~LT-454~~ (reviewed ✓) → ~~LT-453~~ (reviewed ✓) → ~~LT-110~~ (done ✓) → LT-446 (section-menu, design — the sweep's last folder). **Beside it (example folders only, pickable now):** ~~LT-445~~ (reviewed ✓), ~~LT-390~~ (done ✓).
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → ~~LT-449~~ (reviewed ✓) → **next, critical path (compiler list emission, one at a time):** ~~LT-454~~ (reviewed ✓) → ~~LT-453~~ (reviewed ✓) → ~~LT-110~~ (done ✓) → ~~LT-446~~ (reviewed ✓ — the sweep's last folder; its migration is LT-469, P6). **Beside it (example folders only, pickable now):** ~~LT-445~~ (reviewed ✓), ~~LT-390~~ (done ✓).
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). ~~LT-443~~ (reviewed ✓). ~~LT-452~~ (done ✓). ~~LT-451~~ (reviewed ✓). ~~LT-447~~ (reviewed ✓ — the shape is supported and the declaration already rides both modules; the filed failure was a stale generated module, ruling on the task file; no LTC079). ~~LT-455~~ (reviewed ✓ — a nested list in a server branch of an item now mounts under a guard on its container; the construct residue ruled refuse-not-guard). **Next:** LT-468 (refuse a client construct in a server-rendered branch of an item, filed from LT-455's review — the item walk was the only scope that both descended and emitted there).
-- **D — CSS departures** — moved back to the backlog 2026-10-06 (ruling 17): ~~LT-405~~,
-  ~~LT-407~~, ~~LT-408~~ (each behind LT-409) return to P2b, re-scoped or struck by
-  LT-409's session there.
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). ~~LT-443~~ (reviewed ✓). ~~LT-452~~ (done ✓). ~~LT-451~~ (reviewed ✓). ~~LT-447~~ (reviewed ✓ — the shape is supported and the declaration already rides both modules; the filed failure was a stale generated module, ruling on the task file; no LTC079). ~~LT-455~~ (reviewed ✓ — a nested list in a server branch of an item now mounts under a guard on its container; the construct residue ruled refuse-not-guard). ~~LT-468~~ (reviewed ✓; its `truc:pass` sibling is LT-470, P2b).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
   LT-433~~ (done ✓). ~~LT-411~~ (reviewed ✓), ~~LT-416~~ (reviewed ✓), ~~LT-414~~
   (reviewed ✓), ~~LT-187, LT-434, LT-435~~ (reviewed ✓). ~~LT-436~~ (reviewed ✓). ~~LT-438~~ (reviewed ✓).
@@ -186,7 +190,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-469** (LT-468 is filed and in progress). Next free diagnostic code: LTC082 (LTC081 is reserved for LT-461; LTC080 is LT-453's; LTC079 is LT-447's, unused — its shape is supported, not refused; LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-471** (LT-469 and LT-470 are filed and banded). Next free diagnostic code: LTC082 (LTC081 is reserved for LT-461; LTC080 is LT-453's; LTC079 is LT-447's, unused — its shape is supported, not refused; LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
