@@ -412,10 +412,15 @@ describe('every corpus component, emitted at every tier', () => {
 			const undeclared: string[] = []
 			for (const { component, code } of emitCorpus(tier)) {
 				// Comments are not references: a JSDoc word that equals a setup
-				// name (module-coloreditor's "color") would read as a use.
+				// name (module-coloreditor's "color") would read as a use. The
+				// emitted props alias is not one either: a type member sharing a
+				// dropped const's name (section-menu's `open`, LT-469) cannot
+				// raise TS2304, and the alias is the module's only multi-line
+				// type-level text.
 				const uncommented = code
 					.replace(/\/\*[\s\S]*?\*\//g, '')
 					.replace(/^\s*\/\/.*$/gm, '')
+					.replace(/^export type \w+ = \{[\s\S]*?^\}/gm, '')
 				const identifiers = new Set(
 					uncommented.match(/[A-Za-z_$][\w$]*/g) ?? [],
 				)

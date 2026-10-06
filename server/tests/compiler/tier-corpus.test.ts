@@ -125,6 +125,10 @@ describe('tier assignment over the migrated corpus', () => {
 				'module-tabgroup',
 				'module-ticker',
 				'module-todo',
+				// LT-469: section-menu joins Folded by design — no setup const
+				// holds a page-context value (the toggle lookups are inline
+				// call arguments), so it classifies without a routing signal.
+				'section-menu',
 				'test-listitem',
 				'test-listitem-tsx',
 			],

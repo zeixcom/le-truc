@@ -62,6 +62,8 @@
 		"module/todo/module-todo.ts",
 		"module/todo/module-todo.tsx",
 		"module/splitview/module-splitview.tsx",
+		"section/menu/section-menu.ts",
+		"section/menu/section-menu.tsx",
 		"../server/compiler/frontend/tsx/host-profile.d.ts",
 		"../server/generated/components/tsrx-imports.d.ts"
 	]

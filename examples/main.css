@@ -47,6 +47,9 @@
 @import "../server/generated/components/module-tabgroup.css";
 @import "../server/generated/components/module-ticker.css";
 @import "../server/generated/components/module-todo.css";
+/* section-menu cut over in LT-469: the folder's hand-written
+   section-menu.css stays as the twin-era sheet (unimported, like
+   module-todo.css); the page bundles the set's emitted stylesheet. */
+@import "../server/generated/components/section-menu.css";
 @import "./section/hero/section-hero.css";
-@import "./section/menu/section-menu.css";
 @import "./section/menu/chapter-nav.css";

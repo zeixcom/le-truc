@@ -180,3 +180,8 @@ exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) test-listitem-tsx: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
 
 exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) css-probe: the connect diff against the harness render is the recorded hydration boundary 1`] = `""`;
+
+exports[`CI equivalence audit (ADR 0029 s7, amended 2026-09-06 — LT-165 step 8) section-menu: the connect diff against the harness render is the recorded hydration boundary 1`] = `
+"@13 (-16/+55)  P1: …<section-menu></section-menu>…
+          P2: …<section-menu class="js"><div class="backdrop"></div></section-menu>…"
+`;
