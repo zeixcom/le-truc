@@ -2377,6 +2377,34 @@ const armContainer = (
 }
 
 /**
+ * The server-rendered branch a node sits under, named by the enclosure that
+ * set it: a server-mode conditional's arms, or a server-only `try`'s body
+ * vs its catch arm (LT-482). The LT-470 refusal words its fix per enclosure
+ * (LT-488), and the nearest enclosure wins — a `try` inside a server
+ * conditional's arm, or a server conditional inside the `try`, re-keys the
+ * flag to itself on the way down.
+ */
+type ServerBranch = false | 'conditional' | 'try-body' | 'try-catch'
+
+/**
+ * The LT-470 fix clause per server-branch enclosure. A server conditional's
+ * remedy is the reactive condition, whose arm root may be the composed
+ * child itself (LT-460); a server-only `try` has no condition — its body
+ * takes no in-place remedy, and its catch arm's is a pending arm, which
+ * makes the `try` an async boundary whose catch root plans the pass
+ * entries (LT-481).
+ */
+const serverBranchFix = (
+	branch: 'conditional' | 'try-body' | 'try-catch',
+): string => {
+	if (branch === 'try-body')
+		return 'The `try` renders its body once per render, and its body cannot hold the pass — move the composed child out of the `try`.'
+	if (branch === 'try-catch')
+		return 'The catch arm folds once per render, so the pass would address markup that never re-renders — add a pending arm, which makes the `try` an async boundary whose catch arm binds the pass.'
+	return 'The branch folds once per render, so the pass would address markup that never re-renders — make the condition reactive: the composed child then renders as its arm’s root.'
+}
+
+/**
  * Every arm set (ADR 0037: a reactive conditional, an async boundary) and
  * every nested reactive list must sit where a mount reaches it: directly in
  * an element of the host or of a Mount Scope — an arm, a list item (ADR
@@ -2394,7 +2422,7 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 	const visit = (
 		node: TemplateNode,
 		enclosed: boolean,
-		inServerBranch: boolean,
+		inServerBranch: ServerBranch,
 		loop: ForIR | null,
 		inArm: boolean,
 	): void => {
@@ -2447,7 +2475,8 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 		// walk refuses the shape through `unmountableInArm`, including
 		// nested server branches) and inside any list (the item walk refuses
 		// it in the item's own branches; an `each()` body keeps today's
-		// behavior).
+		// behavior). The fix clause is worded per enclosure (LT-488): see
+		// `serverBranchFix`.
 		if (
 			node.kind === 'compose' &&
 			inServerBranch &&
@@ -2460,7 +2489,7 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 					source,
 					node.node,
 					'A `truc:pass` onto a composed child in a server-rendered branch',
-					'The branch folds once per render, so the pass would address markup that never re-renders — make the condition reactive: the composed child then renders as its arm’s root.',
+					serverBranchFix(inServerBranch),
 				),
 			)
 		// An arm and a reactive-list item are Mount Scopes: what sits inside
@@ -2470,6 +2499,10 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 		let innerEnclosed = enclosed
 		let innerInArm = inArm
 		let innerInServerBranch = inServerBranch
+		// Set when this node is a server-only `try`: its body children and
+		// catch-arm children carry different enclosures, so the child loop
+		// below keys each child's branch kind by the arm holding it.
+		let serverOnlyTry: TryNode | null = null
 		if (hasArmSet(node)) {
 			innerLoop = null
 			innerEnclosed = false
@@ -2486,8 +2519,9 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 			// A server-only `try` — no `@pending`, so not an arm set (the first
 			// branch took those) — folds once per render into its body or catch
 			// arm (LT-482): both are server-rendered branches like a server
-			// conditional's, so its `truc:pass` composes take the same refusal.
-			if (node.kind === 'try') innerInServerBranch = true
+			// conditional's, so its `truc:pass` composes take the same refusal,
+			// worded per arm (LT-488).
+			if (node.kind === 'try') serverOnlyTry = node
 		} else if (node.kind === 'compose') {
 			// Composed content encloses on its own: a pass compose nested in
 			// it is the LTC011 nesting refusal, server branch around the
@@ -2497,9 +2531,15 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 			innerInServerBranch = false
 		}
 		if (node.kind === 'conditional' && node.mode === 'server')
-			innerInServerBranch = true
-		for (const child of childNodes(node))
-			visit(child, innerEnclosed, innerInServerBranch, innerLoop, innerInArm)
+			innerInServerBranch = 'conditional'
+		for (const child of childNodes(node)) {
+			let childBranch = innerInServerBranch
+			if (serverOnlyTry)
+				childBranch = serverOnlyTry.catchChildren.includes(child)
+					? 'try-catch'
+					: 'try-body'
+			visit(child, innerEnclosed, childBranch, innerLoop, innerInArm)
+		}
 	}
 	visit(component.root, false, false, null, false)
 }
