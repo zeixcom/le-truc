@@ -73,7 +73,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-481 → LT-482 → LT-488 → LT-461. LT-460 through LT-482 are integrated (2026-10-07); LT-488
+  LT-481 → LT-482 → LT-488 → LT-461. LT-460 through LT-488 are integrated (2026-10-07); LT-461
   is next.
 
   LT-481 and LT-482 joined from the reviews of LT-470 and LT-481: the arm-root pass planning,
@@ -132,35 +132,6 @@ LTC056 is LT-358's).
 
 ### E — compose enablers
 
-- [ ] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy.
-  **Area:** compiler
-  **Needs:** LT-482
-  **Gates:** test:server
-  **Area:** compiler
-  **Needs:** LT-482
-  **Filed (Architect, 2026-10-07, from LT-482's review):** LT-482 made a server-only `try`'s body
-  and catch arm server-rendered branches, so a `truc:pass` compose there now draws LT-470's
-  LTC005 from `validateArmSetPlacement`. The fix part reads "make the condition reactive: the
-  composed child then renders as its arm's root". A `try` has no condition, and the actual
-  remedies differ by arm:
-  - **catch arm:** add a pending arm (`@pending` / `pending={…}`). The `try` then becomes an
-    async boundary, whose catch root plans its pass entries (LT-481).
-  - **body:** no in-boundary remedy. An async boundary's ok arm cannot have a compose root (the
-    task read must sit on an element root). Move the compose out of the `try`, or wrap it in an
-    element and pass from a reactive conditional inside.
-  **Change:** in `validateArmSetPlacement`, track which enclosure set `inServerBranch` (a
-  server `conditional`, or a `try`'s body vs its catch arm). Word the refusal per enclosure
-  and keep the subject head "A `truc:pass` onto a composed child in a server-rendered branch":
-  - conditional: today's fix, unchanged;
-  - try body: "the `try` renders its body once per render, and its body cannot hold the pass;
-    move the composed child out of the `try`";
-  - try catch arm: "add a pending arm, which makes the `try` an async boundary whose catch arm
-    binds the pass".
-  Write the copy against `writer/references/error-messages.md` (three parts, tier 1).
-  **Check:** LT-482's tests assert the per-arm fix text on both surfaces. LT-470's conditional
-  tests are unchanged. The `errors.md` LTC005 face gains the `try` remedy in its parenthesis.
-  **Channel/tier:** compiler message copy only; tier 1 Prevented; no runtime check.
-
 - [ ] LT-461: Handler args — an `on`-prefixed function arg the child places on an owned element lowers to a parent-side `on()`.
   **Area:** compiler
   **Gates:** check:corpus, test:server
@@ -208,63 +179,52 @@ LTC056 is LT-358's).
   LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
   converted list remove button.
 
-- [ ] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy.
+- [ ] LT-461: Handler args — an `on`-prefixed function arg the child places on an owned element lowers to a parent-side `on()`.
   **Area:** compiler
-  **Needs:** LT-482
-  **Gates:** test:server
+  **Gates:** check:corpus, test:server
   **Area:** compiler
-  **Needs:** LT-482
-  **Filed (Architect, 2026-10-07, from LT-482's review):** LT-482 made a server-only `try`'s body
-  and catch arm server-rendered branches, so a `truc:pass` compose there now draws LT-470's
-  LTC005 from `validateArmSetPlacement`. The fix part reads "make the condition reactive: the
-  composed child then renders as its arm's root". A `try` has no condition, and the actual
-  remedies differ by arm:
-  - **catch arm:** add a pending arm (`@pending` / `pending={…}`). The `try` then becomes an
-    async boundary, whose catch root plans its pass entries (LT-481).
-  - **body:** no in-boundary remedy. An async boundary's ok arm cannot have a compose root (the
-    task read must sit on an element root). Move the compose out of the `try`, or wrap it in an
-    element and pass from a reactive conditional inside.
-  **Change:** in `validateArmSetPlacement`, track which enclosure set `inServerBranch` (a
-  server `conditional`, or a `try`'s body vs its catch arm). Word the refusal per enclosure
-  and keep the subject head "A `truc:pass` onto a composed child in a server-rendered branch":
-  - conditional: today's fix, unchanged;
-  - try body: "the `try` renders its body once per render, and its body cannot hold the pass;
-    move the composed child out of the `try`";
-  - try catch arm: "add a pending arm, which makes the `try` an async boundary whose catch arm
-    binds the pass".
-  Write the copy against `writer/references/error-messages.md` (three parts, tier 1).
-  **Check:** LT-482's tests assert the per-arm fix text on both surfaces. LT-470's conditional
-  tests are unchanged. The `errors.md` LTC005 face gains the `try` remedy in its parenthesis.
-  **Channel/tier:** compiler message copy only; tier 1 Prevented; no runtime check.
-
-- [ ] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy.
-  **Area:** compiler
-  **Needs:** LT-482
-  **Gates:** test:server
-  **Area:** compiler
-  **Needs:** LT-482
-  **Filed (Architect, 2026-10-07, from LT-482's review):** LT-482 made a server-only `try`'s body
-  and catch arm server-rendered branches, so a `truc:pass` compose there now draws LT-470's
-  LTC005 from `validateArmSetPlacement`. The fix part reads "make the condition reactive: the
-  composed child then renders as its arm's root". A `try` has no condition, and the actual
-  remedies differ by arm:
-  - **catch arm:** add a pending arm (`@pending` / `pending={…}`). The `try` then becomes an
-    async boundary, whose catch root plans its pass entries (LT-481).
-  - **body:** no in-boundary remedy. An async boundary's ok arm cannot have a compose root (the
-    task read must sit on an element root). Move the compose out of the `try`, or wrap it in an
-    element and pass from a reactive conditional inside.
-  **Change:** in `validateArmSetPlacement`, track which enclosure set `inServerBranch` (a
-  server `conditional`, or a `try`'s body vs its catch arm). Word the refusal per enclosure
-  and keep the subject head "A `truc:pass` onto a composed child in a server-rendered branch":
-  - conditional: today's fix, unchanged;
-  - try body: "the `try` renders its body once per render, and its body cannot hold the pass;
-    move the composed child out of the `try`";
-  - try catch arm: "add a pending arm, which makes the `try` an async boundary whose catch arm
-    binds the pass".
-  Write the copy against `writer/references/error-messages.md` (three parts, tier 1).
-  **Check:** LT-482's tests assert the per-arm fix text on both surfaces. LT-470's conditional
-  tests are unchanged. The `errors.md` LTC005 face gains the `try` remedy in its parenthesis.
-  **Channel/tier:** compiler message copy only; tier 1 Prevented; no runtime check.
+  **Ruled — pickable (Architect, planning 2026-10-06):** the design below is the owner's ruling; the
+  task is implementation, not a session. LTC081 is reserved for rule 6.
+  **Filed (Architect, 2026-10-06; design by the owner, 2026-10-06):** today `onClick` on
+  `<BasicButton>` is forwarded as a server arg into `renderBasicButton({ …, onClick })` and dropped:
+  no listener exists anywhere. In a reactive-list item it is misdiagnosed as LTC075.
+  **Design (owner):** a handler is an ordinary server arg — never exposed, never stored on the
+  host, never a reactive property. The child declares delegation by placing the arg on an owned
+  raw element:
+  `export function BasicButton({ type = 'button', onClick, … }: { onClick?: (e: MouseEvent) => void; … })`
+  with `<basic-button><button {type} {onClick}>…</button></basic-button>`. The parent's compose site
+  `<BasicButton class="remove" onClick={e => items.remove(k)} />` lowers in the parent's client to
+  `on(first('basic-button.remove button'), 'click', e => items.remove(k))`.
+  **Rules:**
+  1. **Which args:** a parameter whose name matches `on[A-Z]…` and whose declared type is a function
+     type, read syntactically from the child's parameter annotation (no checker).
+  2. **The event comes from the placement, not the arg name:** `onPress` placed as
+     `<button onClick={onPress}>` delegates `click`.
+  3. **Server:** the child's render never emits the arg (no attribute, no serialization); the
+     child's client emits nothing for it. Page-authored instances simply carry no handler.
+  4. **Selector:** the compose site's tag-plus-discriminator selector (LT-127/LT-338), joined with
+     the placement element's selector from the child's template, proven unique by the structural
+     verifier (ADR 0045). The compiler synthesizes it; an author never writes it, so it is no
+     reach-in (HOST_PROFILE § data account, bullet 3): the child's signature is the contract.
+  5. **Scope:** the `on()` emits into the compose site's enclosing Mount Scope — host, arm
+     (`bindArm`), list item (`bindItem`) — so item/key reads are legal; LTC075 exempts handler args.
+     The `on()` return-value contract applies to the **parent's** host (`{ prop: value }` batches
+     into the parent), as for any parent handler.
+  6. **Placements the parent cannot address are refused** in the child (new **LTC081**, tier 1
+     Prevented, compiler; statically decidable, no runtime half): a handler arg placed anywhere but
+     as an event attribute on a raw element; inside one of the child's reactive arms or list items
+     (recreated on flip or reconcile, so the parent's `first()` would go stale); or an `on[A-Z]` arg
+     whose type is not a function type. Several placements of one arg emit one `on()` each.
+  7. **Forwarding:** a child that passes its handler arg on to its own compose site
+     (`<Inner onClick={onClick} />`) resolves through the registry to the inner placement; the
+     selector descends through both boundaries.
+  8. **Typing:** on `.tsx`, compose-site handler args typecheck as ordinary props; an undeclared
+     `onX` stays the existing tsc excess-property error. `.tsrx` parity on the same IR.
+  **Then:** `BasicButton` gains `type?: 'button' | 'submit'`, `ariaLabel?: string` (rendered as
+  `aria-label`) and `onClick?: (e: MouseEvent) => void`, placed on its native button.
+  **Verification:** test:server unit legs (host, arm and list-item compose sites; forwarding; each
+  LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
+  converted list remove button.
 
 ### G — layout graph
 
@@ -375,7 +335,7 @@ LTC056 is LT-358's).
 
 ### M — section-menu
 
-- [ ] LT-469: Migrate `section-menu` to `.tsx` with same-commit cutover — the site's sidebar chrome: external toggle by document id, imperative backdrop, layout-wide registration.
+- [ ] LT-469: Migrate `section-menu` to `.tsx` with same-commit cutover — the site's sidebar chrome: external toggle by document id, imperative backdrop, layout-wide registration. — in progress ⚙
   **Area:** examples
   **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
   **Area:** examples
@@ -487,7 +447,7 @@ LTC056 is LT-358's).
 
 ### F — form-checkbox `.tsx`
 
-- [ ] LT-464: form-checkbox gains a .tsx spelling.
+- [ ] LT-464: form-checkbox gains a .tsx spelling. — in progress ⚙
   **Area:** examples
   **Gates:** check:corpus, test:variants
   **Area:** examples
@@ -731,7 +691,7 @@ LTC056 is LT-358's).
 
 ### P — compiler cleanup
 
-- [ ] LT-093: Make LTC004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall).
+- [ ] LT-093: Make LTC004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall). — in progress ⚙
   **Area:** compiler
   **Context:** Re-confirmed empirically 2026-08-29: `const DEFAULT = 'red'; const color =
   createCell(DEFAULT)` consumed only through a style-map still fires LTC004's "never rendered"

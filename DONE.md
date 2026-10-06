@@ -579,3 +579,25 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** Approved. The ruling's "same wording and remedy" was the Architect's error for a
   `try` and is not held against the task; LT-488 corrects it.
+
+- [x] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-482
+  **Gates:** test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-07, from LT-482's review):** LT-470's refusal told a server-only
+  `@try` site to "make the condition reactive", but a `try` has no condition.
+
+  **Changed:** `validateArmSetPlacement`'s `inServerBranch` became a `ServerBranch` union
+  (`false | 'conditional' | 'try-body' | 'try-catch'`), keyed per child by the arm that holds it.
+  The nearest enclosure wins on nesting. `serverBranchFix` words the LTC005 fix per enclosure,
+  under the same subject head:
+  - server conditional: unchanged;
+  - `try` body: move the composed child out of the `try`;
+  - `try` catch arm: add a pending arm, which makes the `try` an async boundary whose catch arm
+    binds the pass (LT-481).
+  The LTC005 face in `skills/le-truc/references/errors.md` and LT-482's CHANGELOG line follow.
+  LT-482's tests assert the per-arm fix on both surfaces.
+
+  **Review:** Approved. The catch-arm mechanism clause the contributor added ("The catch arm
+  folds once per render…") stays: it gives the message its three-part form.

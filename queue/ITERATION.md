@@ -73,7 +73,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-481 → LT-482 → LT-488 → LT-461. LT-460 through LT-482 are integrated (2026-10-07); LT-488
+  LT-481 → LT-482 → LT-488 → LT-461. LT-460 through LT-488 are integrated (2026-10-07); LT-461
   is next.
 
   LT-481 and LT-482 joined from the reviews of LT-470 and LT-481: the arm-root pass planning,
