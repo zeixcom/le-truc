@@ -57,6 +57,7 @@ import { CLIENT_ONLY_PRIMITIVES, CONTEXT_NAMES, JS_GLOBALS } from './vocabulary'
 import {
 	armSetOf,
 	type ConditionalNode,
+	childNodes,
 	elseOf,
 	enclosingLists,
 	hasArmSet,
@@ -215,6 +216,13 @@ type EmitContext = {
 	 * read of a signal the item's setup declares (ADR 0046 s5).
 	 */
 	listItems: Set<string>
+	/**
+	 * The render-time flag of each reactive list below a server-known
+	 * branch (LT-454): set wherever the list renders — a live item, an arm
+	 * or an enclosing list's template, each folding the same branch — so its
+	 * hoisted template ships only when its container can exist.
+	 */
+	listFlags: Map<ReconcileForIR, string>
 	/**
 	 * Every loop's `emptyArm` roots (LT-212). They sit in the template tree
 	 * as the loop output's following siblings, so selector resolution and
@@ -665,13 +673,45 @@ const listTemplate = (
 }
 
 /**
+ * A `let __listN = false` flag, at the render function's top level, for
+ * every reactive list below a server-known branch — a server-mode
+ * conditional or a synchronous `@try` (LT-454). A list outside any such
+ * branch always renders, so it needs none, and its template ships
+ * unconditionally.
+ */
+const declareListFlags = (ctx: EmitContext): void => {
+	const { component } = ctx
+	const visit = (node: TemplateNode, guarded: boolean): void => {
+		const loop = [...component.fors.values()].find(
+			(f): f is ReconcileForIR => f.kind === 'reconcile' && f.output === node,
+		)
+		if (loop && guarded) {
+			const flag = ctx.mint(
+				`__list${listIndexOf(component.root, component.fors, loop)}`,
+			)
+			ctx.listFlags.set(loop, flag)
+			ctx.out.line(`let ${flag} = false`)
+		}
+		const inner =
+			guarded ||
+			(node.kind === 'conditional' && node.mode === 'server') ||
+			(node.kind === 'try' && node.pendingChildren === null)
+		for (const child of childNodes(node)) visit(child, inner)
+	}
+	visit(component.root, false)
+}
+
+/**
  * Every reactive list's extracted template, as the host's last children, in
  * document order of N (ADR 0046 s2): one copy per instance, whatever the
  * nesting depth, so a list container may be any element — a Mount Scope
  * root included — and the client queries it from the host. A nested list's
  * template renders with every enclosing scope unbound: its enclosing items'
  * names bake empty (the inner mount writes them on adopt and clone), and
- * client-written sites bake empty as in an arm template (LT-385c).
+ * client-written sites bake empty as in an arm template (LT-385c). A list
+ * below a server-known branch ships its template only when that branch
+ * rendered it (`listFlags`); the client queries no template for a container
+ * the render left out.
  */
 const emitListTemplates = (ctx: EmitContext): void => {
 	const { component } = ctx
@@ -702,8 +742,11 @@ const emitListTemplates = (ctx: EmitContext): void => {
 			loop.output,
 		)
 		ctx.templateUnbound = new Set(unbound)
+		const flag = ctx.listFlags.get(loop)
 		try {
+			if (flag) ctx.out.open(`if (${flag}) {`)
 			ctx.out.append(listTemplate(ctx, loop, index, component.serverKnown))
+			if (flag) ctx.out.close()
 		} finally {
 			ctx.inArmTemplate = saved.inArmTemplate
 			ctx.templateUnbound = saved.templateUnbound
@@ -825,7 +868,10 @@ const emitListFor = (
 		}
 	}
 	// The extracted template renders once, at the host's end
-	// (`emitListTemplates`, ADR 0046 s2).
+	// (`emitListTemplates`, ADR 0046 s2) — below a server-known branch, only
+	// once the list rendered somewhere.
+	const listFlag = ctx.listFlags.get(loop)
+	if (listFlag) ctx.out.line(`${listFlag} = true`)
 }
 
 /**
@@ -1584,6 +1630,7 @@ export const emitServerModule = (
 		inArmTemplate: false,
 		templateUnbound: new Set(),
 		listItems: new Set(),
+		listFlags: new Map(),
 		h: name => (renderScope.has(name) ? mint(`__${name}`) : name),
 		mint,
 	}
@@ -1594,6 +1641,7 @@ export const emitServerModule = (
 	const { out, used, composeImports } = ctx
 	const { lines } = out
 
+	declareListFlags(ctx)
 	for (const child of component.root.children)
 		emit(ctx, child, component.serverKnown)
 	emitListTemplates(ctx)

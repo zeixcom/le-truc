@@ -765,6 +765,64 @@ describe('a list whose container is the item root', async () => {
 	})
 })
 
+/* === A list in a server branch of an item (LT-454) === */
+
+const LIST_IN_BRANCH = {
+	tsrx: tsrx(
+		"import { createList } from '@zeix/le-truc'",
+		`const groups = createList<string>(['g1'], { keyConfig: s => s })
+		const tags = createList<string>(['x'], { keyConfig: s => s })
+		expose({})`,
+		`
+				<ul class="groups">
+					@for (const group of groups) {
+						<li><span>{group}</span>@if (show) { <ol class="tags">@for (const tag of tags) { <li>{tag}</li> }</ol> }</li>
+					}
+				</ul>`,
+		'{ show }: { show: boolean }',
+	),
+	tsx: tsx(
+		"import { createList } from '@zeix/le-truc'",
+		'{}',
+		`const groups = createList<string>(['g1'], { keyConfig: s => s })
+	const tags = createList<string>(['x'], { keyConfig: s => s })
+	expose({})`,
+		`
+				<ul class="groups">
+					{groups.map(group => (
+						<li><span>{group}</span>{show ? <ol class="tags">{tags.map(tag => <li>{tag}</li>)}</ol> : null}</li>
+					))}
+				</ul>`,
+		'{ show }: { show: boolean }',
+	),
+}
+
+describe('a list in a server branch of an item', async () => {
+	const { fromTsrx, fromTsx } = compileBoth(LIST_IN_BRANCH)
+	const component = fromTsrx.component
+	if (!component) throw new Error(JSON.stringify(fromTsrx.diagnostics))
+
+	test('both surfaces compile clean, to the same modules', () => {
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		expect(body(fromTsx.component?.serverCode)).toBe(body(component.serverCode))
+		expect(body(fromTsx.component?.clientCode)).toBe(body(component.clientCode))
+	})
+
+	test('its hoisted template ships exactly when the branch renders', async () => {
+		const shown = await render(component.serverCode, { show: true })
+		expect(shown.split('<template data-list="1">').length - 1).toBe(1)
+		expect(shown).toContain('<ol class="tags"><li data-key="x">')
+		const hidden = await render(component.serverCode, { show: false })
+		expect(hidden).not.toContain('<ol')
+		expect(hidden).not.toContain('<template data-list="1">')
+		// The outer template still ships, folding the same branch.
+		expect(hidden).toContain(
+			'<template data-list="0"><li><span></span></li></template>',
+		)
+	})
+})
+
 /* === A list whose container is the arm root (LT-454) === */
 
 const LIST_AS_ARM = {

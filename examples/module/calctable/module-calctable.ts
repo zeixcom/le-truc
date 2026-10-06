@@ -98,7 +98,12 @@ export default defineComponent(
 			rowPrices.get().reduce((sum, price) => sum + price, 0),
 		)
 
-		const template = first('template', 'Add a template element for rows.')
+		// The row template is the host's direct child, after the table — the
+		// placement the compiled variants render (ADR 0046 s2).
+		const template = first(
+			':scope > template',
+			'Add a <template> for rows as a direct child of <module-calctable>.',
+		)
 		reconcile(container, template, list, (_element, item, key, first) => {
 			const descriptionInput = first('input.description')
 			const amountInput = first('input.amount')
