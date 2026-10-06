@@ -984,8 +984,8 @@ export const emitClientModule = (
 	// per entering item, key-derived attributes set once at clone (a key
 	// never changes), and the bare `{item}` shorthand watched as the signal
 	// itself. The extracted `<template>` is stamped `data-list="N"` (ADR
-	// 0046 s2) and queried from the container's parent — the direct-child
-	// step and the stamp lift the one-list-per-component limit.
+	// 0046 s2), hoisted to the host's end and queried from the host — the
+	// direct-child step and the stamp lift the one-list-per-component limit.
 	const emitReconcile = (plan: ReconcilePlan): void => {
 		imports.add('reconcile')
 		const scope = plan.itemScope
@@ -993,7 +993,7 @@ export const emitClientModule = (
 		// The stamp addresses the template the compiler extracted; a missing
 		// one is markup drift, and `reconcile()`'s own template checks are
 		// the Contained backstop (ADR 0028).
-		const templateQuery = `${plan.parent}.querySelector<HTMLTemplateElement>(${jsString(`:scope > template[data-list="${plan.listIndex}"]`)})!`
+		const templateQuery = `host.querySelector<HTMLTemplateElement>(${jsString(`:scope > template[data-list="${plan.listIndex}"]`)})!`
 		if (
 			scope.effects.length === 0 &&
 			scope.keyAttrs.length === 0 &&

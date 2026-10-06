@@ -1901,39 +1901,24 @@ const planNested = (
 }
 
 /**
- * A reactive list nested in a Mount Scope (ADR 0046 s1–s2): its container,
- * the element its extracted template is queried from and its `@empty` roots
- * are the scope's locals, and its item is a Mount Scope of its own. The
- * container cannot be the scope root: the template sits after the
- * container's close tag, which would put it outside the arm or item.
+ * A reactive list nested in a Mount Scope (ADR 0046 s1–s2): its container
+ * and its `@empty` roots are the scope's locals, and its item is a Mount
+ * Scope of its own. The container may be the scope root itself: the
+ * extracted template sits at the host's end and is queried from the host.
  */
 const planNestedList = (
 	fx: EffectsContext,
 	loop: ReconcileForIR,
 	scope: MountScope,
 ): void => {
-	const { component, source, diagnostics } = fx
 	const plan = fx.reconcilePlans.get(loop)
 	if (!plan) return
-	const wording = wordingOf(component)
+	// A nested list's output always has an element above it: the scope root
+	// at the shallowest.
 	const container = holderOf(fx, loop.output)
-	if (container === null || container === scope.root) {
-		diagnostics.push(
-			diagnostic.unsupported(
-				source,
-				loop.output.node,
-				`A reactive-list ${wording.loop} directly under ${scope.label}`,
-				"The list puts its item template after the container's closing tag, and that position is outside the arm or item — wrap the loop in an element of its own.",
-			),
-		)
-		return
-	}
+	if (container === null) return
 	plan.container = scope.localFor(container)
-	const parent = holderOf(fx, container)
-	plan.parent =
-		parent === null || parent === scope.root
-			? scope.rootRef()
-			: scope.localFor(parent)
+	fx.ambient.add('host')
 	plan.emptyQueries = (loop.emptyArm ?? [])
 		.filter(isElement)
 		.map(root => scope.localFor(root))

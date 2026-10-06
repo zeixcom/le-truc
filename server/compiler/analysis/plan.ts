@@ -287,18 +287,13 @@ export type ReconcilePlan = {
 	container: string
 	/**
 	 * The list's compile-time document-order index per component (ADR 0046
-	 * s2): the extracted template is stamped `data-list` and queried from the
-	 * container's parent as `:scope > template[data-list="N"]` — the stamp
-	 * lifts the one-list-per-component limit.
+	 * s2): the extracted template is stamped `data-list` and hoisted to the
+	 * host's end, one copy per instance, and queried from the host as
+	 * `:scope > template[data-list="N"]` — the stamp lifts the
+	 * one-list-per-component limit, and the hoist lets a container be any
+	 * element, a Mount Scope root included.
 	 */
 	listIndex: number
-	/**
-	 * Query variable of the element the extracted `<template>` is queried
-	 * from (ADR 0046 s2): the template sits OUTSIDE the container — after
-	 * its close tag — so `:scope > template[data-list="N"]` runs on the
-	 * container's parent, `'host'` when that is the component root.
-	 */
-	parent: string
 	/** The declared createList signal (`items`). */
 	signal: string
 	/** bindItem's item-signal parameter, named after the loop variable. */

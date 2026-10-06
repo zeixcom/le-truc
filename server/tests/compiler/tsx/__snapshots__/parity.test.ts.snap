@@ -447,9 +447,8 @@ declare global {
 
 export default defineComponent(
 	'module-calctable',
-	({ first, on, pass, watch }) => {
+	({ first, host, on, pass, watch }) => {
 		const container = first('tbody', 'module-calctable: tbody missing')
-		const table = first('table', 'module-calctable: table missing')
 		const entryDescription = first('input.entry-description', 'Add a description input to the entry row.')
 		const entryAmount = first('input.entry-amount', 'Add an amount input to the entry row.')
 		const entryPrice = first('input.entry-price', 'Add a price-per-unit input to the entry row.')
@@ -474,7 +473,7 @@ export default defineComponent(
 		items.get().reduce((sum, item) => sum + item.amount, 0))
 		const priceTotal = createMemo(() =>
 		items.get().reduce((sum, item) => sum + item.amount * item.pricePerUnit, 0))
-		reconcile(container, table.querySelector<HTMLTemplateElement>(':scope > template[data-list="0"]')!, items, (_element, item, k, first) => {
+		reconcile(container, host.querySelector<HTMLTemplateElement>(':scope > template[data-list="0"]')!, items, (_element, item, k, first) => {
 			const input = first('input[type="text"]', 'module-calctable: input[type="text"] missing')
 			const input2 = first('input.amount', 'module-calctable: input.amount missing')
 			const input3 = first('input.price-per-unit', 'module-calctable: input.price-per-unit missing')
