@@ -372,45 +372,30 @@ Full entry text: `git log -p -- DONE.md`.
   and ADR 0046 s1 were amended in place, and CONTEXT.md gained **Children Region** and **Role**.
   The implementation is track C: LT-472 to LT-479 (ITERATION ruling 10).
 
-- [x] LT-464: form-checkbox gains a .tsx spelling. — done, pending review ⏳
+- [x] LT-464: form-checkbox gains a .tsx spelling. — reviewed ✓
   **Area:** examples
   **Gates:** check:corpus, test:variants
   **Area:** examples
-  **Filed (Architect, 2026-10-06, owner request):** `form-checkbox` exists only as
-  `form-checkbox.tsrx`. Add `form-checkbox.tsx` beside it as a variant-set member (ADR 0039): same
-  canonical tag, its own `declare global` `HTMLElementTagNameMap` entry (s4), byte-identical CSS,
-  typed second parameter `FormFactoryContext<FormCheckboxProps>` (LT-209). Keep the current
-  `label: string` arg — the switch to `children` waits for LT-462's children contract and lands in
-  LT-463. The `.tsx` member becomes the served surface; the `.tsrx` twin stays.
-  **Verification:** check:corpus, test:variants, `form-checkbox.spec.ts`.
+  **Filed (Architect, 2026-10-06, owner request):** add `form-checkbox.tsx` beside the `.tsrx`
+  as a variant-set member (ADR 0039). It becomes the served surface, keeps the `label: string`
+  arg (the children switch lands in LT-463), and the `.tsrx` twin stays.
 
-  **Changed:** added `examples/form/checkbox/form-checkbox.tsx` as a variant-set member (ADR 0039): same canonical tag, own `HTMLElementTagNameMap` entry, byte-identical CSS, `FormFactoryContext<FormCheckboxProps>` second param, `label: string` arg kept; it is now the served surface. `check:corpus` and `typecheck` green; `test:variants form-checkbox` died without output and was not verified (committed on owner instruction) — owner to re-run.
+  **Changed:** `examples/form/checkbox/form-checkbox.tsx` is added: canonical tag, its own
+  `HTMLElementTagNameMap` entry, byte-identical CSS, and a `FormFactoryContext<FormCheckboxProps>`
+  second parameter. It is now the served surface. The host profile
+  (`server/compiler/frontend/tsx/host-profile.d.ts`) gains `name`/`checked` on
+  `FormCheckboxAttrs` and `disabled` on the `input` intrinsic. Both members declare
+  `'truc:pass'?: { checked?: … }` on their args type, as form-listbox's members do, so the
+  parity render signatures stay identical. `examples/test/listitem/test-listitem-tsx.tsx` now
+  composes the `.tsx` member, which pins a typed `.tsx`→`.tsx` pass. The parity snapshot gains
+  the form-checkbox `.tsx` client.
 
-  **Review (Architect, 2026-10-07):** changes requested. `check:corpus` passes, and
-  `test:variants form-checkbox` passes on both surfaces (the reviewer ran it outside the
-  sandbox, 40 + 40). The member reads as a faithful spelling of the twin. But `test:server`
-  fails one test the entry's gates do not name and the handoff does not mention:
-  `server/tests/compiler/tsx/typecheck.test.ts` "the examples variant-set members typecheck",
-  which runs tsc over `examples/tsconfig.json`. `bun run typecheck` does not cover that program.
-  (1) `form-checkbox.tsx:63`: `name` and `checked` are not in the host profile's
-  `FormCheckboxAttrs` (`server/compiler/frontend/tsx/host-profile.d.ts`). Add them as the
-  root's light-DOM attributes, following the profile's Wave-4 rule (a migrated tag gains its
-  entry in the same commit). (2) `form-checkbox.tsx:68`: `disabled` is not on the profile's
-  `input` intrinsic. Add it as `Reactive<boolean>`. (3) The member is a pass target, since
-  `test-listitem` passes `checked` into it. Declare `'truc:pass'?: { checked?: … }` on its args
-  type, as `form-listbox.tsx` does. Then switch
-  `examples/test/listitem/test-listitem-tsx.tsx`'s import from `form-checkbox.tsrx` to
-  `form-checkbox.tsx`. The fixture predates the `.tsx` member, so the `.tsrx` import is an
-  artifact, not a choice (owner flag). The switch pins that a `.tsx` parent composes the `.tsx`
-  member with a typed pass. The reviewer tried the switch alone: it fails with "`truc:pass`
-  does not exist" until (3) lands. (4) `test:server` writes a new form-checkbox entry into
-  `server/tests/compiler/tsx/__snapshots__/parity.test.ts.snap` on first run. Review it and
-  commit it. Gates: `test:server` green (run `build:docs` first in a fresh worktree),
-  `check:corpus`, and `test:variants form-checkbox` and `test:component test-listitem`, outside the sandbox or
-  stated as unrun.
-
-  **Reworked:** (1) `FormCheckboxAttrs` in `host-profile.d.ts` gains `name?: Reactive<string>` and `checked?: Reactive<boolean>` (Wave-4 rule). (2) The profile's `input` intrinsic gains `disabled?: Reactive<boolean>`. (3) `form-checkbox.tsx` declares `'truc:pass'?: { checked?: (() => boolean) | { get; set } }` on its args type, and `test-listitem-tsx.tsx` now imports `form-checkbox.tsx`. The same key also went on the `.tsrx` twin's args type, so the parity test's render signature stays identical rather than adding form-checkbox to `AUTHORED_ARGS_DRIFT` — check that you want this extra edit to the twin. (4) Reviewed and committed the new form-checkbox client snapshot in `parity.test.ts.snap`. It matches the twin's wiring: checked/disabled binds, a change handler, `formAssociatedCheckbox()`.
-  **Check:** `test:server` (3487 pass, after `build:docs`), `check:corpus`, `typecheck`, `lint:server` all green. `test:variants form-checkbox` and `test:component test-listitem` are unrunnable in this sandbox: every test timed out in `beforeEach` on both browsers, including the untouched `.tsrx` fixture. The owner needs to run them outside the sandbox.
+  **Review:** Approved after one rework. The rework was owed because the examples tsc program
+  (`tsx/typecheck.test.ts`) failed on the profile attrs and the missing pass key, and
+  test-listitem-tsx still imported the `.tsrx` (owner flag). The twin's matching `'truc:pass'`
+  key is accepted. The reviewer ran the browser gates outside the sandbox: `test:variants
+  form-checkbox` (tsrx 40, tsx 40) and `test:component test-listitem` (18), all green. The tsx
+  typecheck suite passes 4/0.
 
 - [x] LT-465: Spike — style scope for parent-owned children inside a composed child. — reviewed ✓
   **Area:** compiler
@@ -512,6 +497,122 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** Approved after one rework. The reviewer ran `test:variants module-todo` outside
   the sandbox: ts 58 pass (`pl` skipped by design), tsrx 60, tsx 60.
+
+- [x] LT-469: Migrate `section-menu` to `.tsx` with same-commit cutover — the site's sidebar chrome: external toggle by document id, imperative backdrop, layout-wide registration. — done, pending review ⏳
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
+  **Area:** examples
+  **Scopes (LT-446 design session, 2026-10-06):** the last folder the "every example folder
+  served compiled" exit criterion cannot close without, and the four shapes no compiled corpus
+  member has carried together — an external toggle wired by `document.getElementById`, an
+  imperative backdrop created at connect, a writable State-backed expose, and layout-wide
+  registration. Every authored shape below is probe-verified against both front ends
+  (both surfaces compile clean, byte-identical client/server modules) — do not re-derive them.
+  **The set:** `section-menu.tsx` (served) beside a `section-menu.tsrx` twin; the hand-written
+  `section-menu.ts` stays as the set's `.ts` twin (LT-111 ruling 5). Both compiled members emit
+  byte-identical server renders and CSS (LTC051). Every member declares the identical
+  `declare global { 'section-menu': HTMLElement & SectionMenuProps }` entry, each with its own
+  identical `SectionMenuProps` alias (`{ open: boolean }`) — divergence is TS 2717.
+  **Template:** root = host, `{children}` passthrough, one `<style>{css`…`}</style>` child —
+  nothing else. The component is behavior-only chrome: the nav content arrives as page-authored
+  children (`server/templates/menu.ts` and the example page author it), and the compiled server
+  render must stay byte-compatible with `menu()`'s hand-written output plus the compose-site
+  attributes (`id="sidebar"`) menu.ts writes itself. `module-scrollarea` inside the children is
+  NOT a compile-time boundary (the template composes no child — ADR 0033 s7), so the sheet's
+  `& module-scrollarea` selectors stay legal.
+  **Setup rulings (LT-446):**
+  1. **`expose({ open })` stays the live-State identifier form, verbatim:** `const open =
+     createState(false)` + `expose({ open })`. The classifier's kind is `slot` (the
+     no-diagnostic answer); the generated client carries both statements verbatim and the
+     server module carries the signal declaration with the expose shim, so the fold sees the
+     seed. `el.open = …` writes through the installed Slot — the unchanged spec's Programmatic
+     Control probe proves it per surface. The toggle handler's `() => ({ open: !open.get() })`
+     return-updates idiom is an authored `on()` call — library contract, carried as written.
+  2. **`.js`/`.ready` sequencing is two bare client-only setup statements, verbatim:**
+     `host.classList.add(JS_CLASS)` and `requestAnimationFrame(() => host.classList.add(READY_CLASS))`
+     — `host` is context, `requestAnimationFrame` a JS global, the callback an inline arrow in a
+     client-only statement. The five name constants (`JS_CLASS`, `READY_CLASS`, `OPEN_CLASS`,
+     `BACKDROP_CLASS`, `TOGGLE_ID`) MOVE from module scope into setup — module-scope names are
+     not client-known (LTC005; the module-scrollarea deviation note is the precedent). The
+     served HTML carries no `.js` class — the progressive-enhancement contract holds by
+     construction (probe: the server render emits `<section-menu>{children}</section-menu>`
+     only).
+  3. **The backdrop stays imperative:** `ensureBackdrop()` — a function const that finds or
+     creates `:scope > .backdrop`, prepends it, and RETURNS the element (the existence check
+     keeps the twin's tolerance of authored markup); wired by
+     `on(ensureBackdrop(), 'click', () => ({ open: false }))` — the call is the `on()`
+     argument, so no setup const ever holds a page-context value. Do NOT author the backdrop
+     `hidden` in the template: the no-JS DOM shape stays byte-identical to the twin's (no
+     backdrop element at all), which is the contract the sheet's header comment documents.
+  4. **The external toggle stays component-owned; the guard lives in the helpers, the lookups
+     inline as call arguments:** `on(document.getElementById(TOGGLE_ID), 'click', () => ({ open:
+     !open.get() }))` — `on()`'s target accepts `Falsy` and the descriptor no-ops on it; and
+     `watch(open, bindAria(document.getElementById(TOGGLE_ID), 'ariaExpanded'))` — `bindAria`
+     accepts nullish targets and makes every handler a no-op. The twin's `if (toggle)` guard is
+     therefore built into the runtime; do NOT hold the element in a setup const (a const whose
+     value reads `document` is a build error, LTC054 — page context), and do NOT call
+     `watch`/`on` inside a function const (LTC045 — the ambient collector is gone by the time a
+     deferred callback runs). NOT the layout's job: the drawer state has one owner (the
+     component's exposed Slot), the id is the documented chrome contract (TOGGLE_ID's docblock,
+     LT-001, SERVER.md), and the wiring must exist exactly when the drawer behavior does.
+     The outside-click handler re-queries the toggle inside the descriptor body — no held
+     reference.
+  5. **Document-level listeners ride the twin's `watch(() => true, descriptor)` idiom
+     verbatim** (module-listnav's compiled form is the corpus precedent): raw
+     `addEventListener`/`removeEventListener` on `document`, `open.get()`/`open.set()` inside,
+     cleanup returned. Keep the twin's `el instanceof HTMLAnchorElement` check — which needs
+     the rider below.
+  **Compiler rider — JS_GLOBALS:** `server/compiler/vocabulary.ts`'s `JS_GLOBALS` set lists
+  `HTMLButtonElement`…`HTMLTextAreaElement` but NOT `HTMLAnchorElement`, so the twin's
+  `instanceof HTMLAnchorElement` outside-click check is a false unknown name and refuses with
+  LTC005 (probe-verified; a `nodeName === 'A'` re-spelling compiles but deviates from the twin
+  for no reason once the set is fixed). Add the entry — the set's own docblock scope ("DOM
+  globals (generated handlers reference element types)") — and pin it in
+  `server/tests/compiler/globals.test.ts`. No diagnostic changes, no ADR 0028 inventory change.
+  **Styles:** re-author the sheet to ADR 0033 form — `:host`-led (a rule led by the component's
+  own tag is LTC066, fix-it `:host`); the page-shell rules (`.docs-body`, `.docs-main`,
+  `#sidebar-toggle`, `.quicklinks`, `.docs-header-bar`, `header`) ride the two whole-rule
+  `:global` forms, the at-rule-conditioned ones inside a bare `:global { @media … }` block
+  (LTC069); `module-dialog`'s `:global(body.scroll-lock)` is the corpus precedent and the
+  sheet's header comment documenting the `.docs-body`/`.docs-main` exception stays. Members'
+  CSS byte-identical (LTC051). `examples/main.css` flips its import to the generated sheet.
+  **Cutover:** `examples/main.ts` imports
+  `../server/generated/components/section-menu.client.ts` — the canonical client, so the
+  LAYOUT pages serve the canonical `.tsx` surface (main.js bundles it on every docs page) and
+  `/test/section-menu`'s default page is the registry's selected surface; `?surface=` and the
+  runner's `TEST_SURFACE` reach the `.ts` twin and the `.tsrx` variant
+  (`routes.ts` `resolveSurfaceModule`). `server/templates/menu.ts` stays hand-written and
+  byte-compatible with the compiled server render — the markup contract SERVER.md documents;
+  `templates/menu.test.ts` keeps pinning it, unchanged. The authored `section-menu.html` is
+  regenerated from the compiled server render (the module-todo header-comment pattern),
+  keeping `#sidebar-toggle` before the host and `#outside-target` after `<main>`.
+  `examples/tsconfig.json` lists the new members; the strict `IntrinsicElements` table in
+  `server/compiler/frontend/tsx/host-profile.d.ts` gains `type SectionMenuAttrs =
+  CommonLightDom` and the `'section-menu'` entry (a migration extends the table in the same
+  commit). The component has no `.md`/gallery entry before or after (structural chrome).
+  **Tier:** the component stays Folded — no setup const holds a page-context value (probe: no
+  LTC013 routing signal, no LTC054). The tier-corpus census pins +`section-menu: folded`; that
+  shift is this entry's by-design change.
+  **The spec is unchanged.** `test:variants section-menu` is the acceptance gate: the unchanged
+  suite (drawer, toggle, aria reflection, programmatic control, Escape/outside-click/link-nav
+  close) passes against all three surfaces.
+  **Check:** gates inside the worktree: `typecheck`; `test:server` (extend the
+  parity/equivalence-audit snapshots for the new generated modules; `templates/menu.test.ts`
+  stays green unchanged); `check:corpus` (census re-pin); `check:contract`; `test:variants
+  section-menu` (browser gate — LT-111 proved it can run green in the sandbox; else an
+  owner-run leg); `test:component section-menu` on the default page. `build:docs` +
+  `check:links` when the JSDoc/host-profile changes are doc-visible.
+  **Channel/tier:** no new runtime check and no diagnostic change; the rider is a vocabulary
+  omission fix (compiler) that removes a false LTC005 — it adds no check, so nothing owes the
+  catalog or the ADR 0028 inventory an entry.
+
+  ---
+
+  **Changed:** `section-menu` migrated to the served `.tsx` surface with same-commit cutover (LT-469): the folder is now the three-member variant set — `section-menu.tsx` (served), `section-menu.tsrx` twin, hand-written `section-menu.ts` retained (LT-111 ruling 5) — with identical `SectionMenuProps` aliases and tag-map entries in every member (the TS 2717 drift gate runs in the examples program). Template is the host passthrough plus one `<style>` child; the compiled server render of page-authored children is byte-identical to `menu()`'s output modulo the compose-site `id="sidebar"` attribute (verified live; `templates/menu.test.ts` untouched and green). The sheet re-authors to ADR 0033 form: `:host`-led internals, the page-shell rules (`.docs-body`, `.docs-main`, `#sidebar-toggle`, `.quicklinks`, `.docs-header-bar`, `header`, `:root`) in the two whole-rule `:global` forms, drawer class combos spelled as `:host(.js)`/`:host(.js.ready)`/`:host(.js.open)` arguments (no `&.ready` nesting under `:host`, which would lower to a refused `:host`+qualifier). Setup follows the LT-446 rulings verbatim — `createState(false)`/`expose({ open })` identifier form, the five name constants moved into setup, `ensureBackdrop()` as the `on()` call argument, toggle lookups inline as `on()`/`bindAria()` arguments, `watch(() => true, descriptor)` document-level listeners with the `instanceof HTMLAnchorElement` check and the outside-click re-query. Rider: `HTMLAnchorElement` joins `JS_GLOBALS` (vocabulary omission fix, no diagnostic/ADR 0028 change), pinned in `globals.test.ts`. Cutover: `examples/main.ts` imports the canonical generated client, `examples/main.css` the emitted sheet (the hand-written `section-menu.css` stays unimported, like `module-todo.css`); authored `section-menu.html` carries the regeneration header over unchanged body markup (the compiled render of its children is byte-identical to what the page authors); `examples/tsconfig.json` lists the twin pair; `host-profile.d.ts` gains `SectionMenuAttrs` + the `'section-menu'` entry; tier census pins `+section-menu: folded` (registry-verified: folded, zero routing signals); SERVER.md's sidebar bullet now points at the emitted stylesheet. No diagnostic, error-copy or ADR 0028 inventory change; spec, `.md`/gallery absence and `server/templates/menu.ts` unchanged.
+
+  **How:** Authored both members first, compiled the corpus to verify (Folded tier, LTC051 byte-identical CSS, `<section-menu>{children}</section-menu>`-only server render), then flipped the imports and re-pinned. Three authored-source corrections fell out of the gates: (1) backticks inside sheet comments terminate the `css` template literal — stripped from both members' sheet comments (LTC008 parse failure otherwise); (2) `host.querySelector<HTMLElement>(…)` is TS2347 in the generated server module (`host` is the `any` refStub there — untyped calls reject type arguments), so the query is spelled `as HTMLElement | null`, matching the corpus's cast idiom; (3) the emitted props alias is carried verbatim into the server module (`assemble-ir.ts` decl ride-along), so `emit-tier.test.ts`'s dropped-statement scan read the type member `open: boolean` as a use of the dropped slot-kind const — the scan now strips `export type X = {…}` blocks, the same non-value carve-out its comment strip already had (its own JSDoc-word precedent). New snapshots: equivalence-audit connect diff (records the designed `.js` class + backdrop insertion, nothing overwrites server state), sim-driver fixture pin (`<section-menu class="js"><div class="backdrop"></div></section-menu>`), parity client-module snapshots for the set.
+
+  **Check:** All gates run inside the worktree, all green: `typecheck` (exit 0); `test:server` 3492 pass / 0 fail, 85 snapshots (after `-u` on `parity.test.ts.snap` — its stored section-menu snapshot predated the `as`-cast fix); `check:corpus` exit 0 (tier census 42 entries: 34 folded, 8 simulated, 0 static; translation census 0 gaps); `check:contract` exit 0; `build:docs` + `check:links` exit 0 (771 links; built `docs/assets/main.{js,css}` verified to carry the compiled client and the `:where(section-menu)` sheet); `test:variants section-menu` — the unchanged 10-test spec green on all three surfaces, Chromium + WebKit, 20/20; `test:component section-menu` green on the default page, 20/20. `bunx biome check --write` over exactly the changed paths: no fixes. Review-attention items: (a) the `emit-tier.test.ts` strip is a standing-invariant amendment — value-position coverage unchanged, but a reviewer should confirm the regex (`^export type \w+ = \{[\s\S]*?^\}`) against future emitted type shapes; (b) the emitted sheet's `:global`-hoisted rules keep authored nesting (`& a` inside `.quicklinks`) verbatim — browser-native nesting, same posture as the old hand-written sheet; (c) below-48em drawer cascade now rides source order (all `:host` emits are zero-specificity) instead of the old tag-rule specificity — verified order-equivalent for every competing pair in this sheet; (d) full `bun run test` (all example specs) not run — not in the entry's gate list; the touched component's specs ran via the variants and component gates.
 
 - [x] LT-470: A composed child carrying `truc:pass` in a server-rendered branch of a list item mints a required local and throws in every item mount when the branch is not taken — refuse it after LT-468's manner. — reviewed ✓
   **Area:** compiler
