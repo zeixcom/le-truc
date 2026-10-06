@@ -272,6 +272,74 @@ recorded against the 30.4k opening measurement.
 
 ### C — corpus port
 
+- [ ] LT-449: Migrate `module-lazyload`'s async boundary to `<truc:try>` — per-arm callouts, `truc:html` ok arm, beside-watch scroll. — changes requested ↩
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
+  **Area:** examples
+  **Ruled (owner + Architect, design session 2026-10-06, in LT-334):** the 2026-09-25 refusal
+  is superseded on three of its four grounds by ADR 0037's template-cloned arms and the
+  reactive `truc:html` attribute (LT-025). The ruled shape, pinned so no contributor decision
+  is needed:
+  1. **Per-arm duplicated callout** (owner ruling): the loading and error callouts are
+     separate arms, not one shared wrapper toggled by hand —
+     - pending arm: `<card-callout><p class="loading" role="status">{loading}</p></card-callout>`
+     - catch arm: `<card-callout class="danger"><p class="error" role="alert">{e.message}</p></card-callout>`
+       — `.danger` is authored per arm, never a runtime `classList` mutation;
+     - ok arm (the children): `<div class="content" truc:html={() => content.get()}></div>`.
+     Three one-root sibling arms directly in the host — the exact shape the existing emission
+     supports. **Accepted DOM consequence:** when ok, no callout exists in the DOM at all
+     (today a hidden one remains). Spec legs asserting the toggling shape are reported with
+     evidence and re-ruled per ITERATION ruling 10, never matched silently. The no-JS story
+     holds: the server renders the pending arm live.
+  2. **`allow-scripts` is out of scope, and this task waits for nothing** (owner, 2026-10-06:
+     everything is settled — the `<truc:try>` pattern works and the previous blockers are
+     lifted). The decoupling from LT-448 is one-directional: LT-448's design session produces
+     the follow-up that revives `shake-hands`; this migration is complete without it. The
+     attribute stays page-authorable on the host and documented, but the compiled `truc:html`
+     path passes `sanitize: sanitizeHtml` and strips scripts, so `shake-hands`
+     (`mocks/snippet.html`) renders inert in the interim — the accepted state, never fixed
+     here by pre-registering the component. The three script-execution spec legs
+     ('executes JavaScript in loaded content when allow-scripts is present', 'respects
+     allow-scripts attribute for script execution control', 'preserves script type attributes
+     when recreating scripts', `module-lazyload.spec.ts:419,451,490`) plus the shake-hands
+     assertions (~line 431) move to that follow-up, which LT-448's session writes. Keep
+     `mocks/module-with-type.html` as its test input.
+  3. **Stale dimming** stays the documented idiom: a reactive `style` (or `class`) thunk
+     reading `isPending(content)` on the ok arm root. It works because a re-fetching task
+     keeps its ok arm (LT-211), so the arm effect stays live across the dim. If it lands as
+     a class rule, the rule goes in the shared sheet — the variant set's byte-identical CSS
+     check then forces the same rule into the twin's sheet.
+  4. **The nil routing is free:** the twin's nil handler shows the loading callout, which is
+     what the pending arm already is.
+  5. **The scroll-to-first-heading side effect stays a beside-watch** (owner: a sanctioned
+     escape hatch — the `isPending` idiom's precedent): `watch(content, { ok: … })` in setup,
+     `hasLoaded` in a const record and the distinct `scrollTask` key, verbatim from the twin.
+     A boundary hook attribute is rejected by ADR 0041 condition 1, and arm-mounted effects
+     cannot hold it (they die with the arm; the guard is component-lifetime state).
+     **The task owes an ordering probe:** the side watch's ok fire and reconcile's arm
+     adoption are both driven by the same signal change, and the scroll queries into the
+     freshly adopted arm — prove the existing `schedule()` indirection orders it, by test,
+     not by assumption.
+  **Compiler work in scope** (recognition, no new diagnostic; census and warning baseline
+  unchanged): the boundary's signal identification currently looks for a bare reactive
+  identifier child of the ok root — it must read the task through the `truc:html` thunk; and
+  the reactive `truc:html` lowering must be probed in arm position — the watch mounts inside
+  `bindArm` (effects die with the arm) and the ok template bakes the html child empty
+  (LT-385c), the mount writing it on enter.
+  **Verification:** full gates; goldens/snapshots extend by design; the demo page and the
+  spec run in the browser/Playwright — name any leg left unrunnable. Pairs with LT-390, which
+  extends the equivalence audit to arm adoption on this component.
+
+  **Changed:** `module-lazyload`'s async boundary migrated to the compiled `<truc:try>` (LT-334's ruling): per-arm callouts (loading / `.danger` catch / `.content` ok), the ok arm reading through the reactive `truc:html` thunk, the `isPending` dim as a style map on the ok root, and the scroll-to-heading beside-watch with its ordering probe. Compiler: the boundary's driver is identified through the ok root's `truc:html={() => data.get()}` thunk (beside the existing direct-child channel), `createTask` joins the signal constructors with a server pending-box shim, the ok root's client constructs are planned as the ok arm's effects (mounted inside `bindArm`, dying with the arm), and the catch arm's nested message element writes through an arm-scoped `first()` local. The test page, listnav's page child and the recursive mock now carry the compiled server render (the LT-111 cutover precedent); the docs site configures DOMPurify as its `truc:html` sanitizer with the corpus tags admitted and partial `<style>` blocks preserved.
+
+  **How:** `analysis/effects.ts` (driver channels + ok-arm effect planning + err message element), `emit-server.ts`/`emit-client.ts` (mirrored identification; ok-branch effects; err-branch local), `vocabulary.ts`/`ir.ts`/`imports.ts` (`createTask` constructor), `runtime.ts` (the shim: `{ value }` seed → cell, else pending box; the callback is never invoked server-side), `host-profile.d.ts` (`style` on `CommonLightDom` — the typed table lagged the LT-028 grammar), `simulation/contract.ts` + `sim/classifications.ts` (`docsOnly` classifications; the missing-elements entry retired with its scenario), `features.test.ts` (4 new regression tests), the sim snapshots re-pinned for lazyload/listnav. Spec legs re-ruled per ITERATION ruling 10, evidence attached: (1) 'loads and displays…' — hidden→absent: when ok no callout exists; (2) 'preserves existing content structure…' reworked to 'removes the callout arms entirely…' — the twin kept a hidden callout, the compiled surface removes it (templates persist, count 3); (3) 'maintains proper ARIA…' reworked to read the roles off the arm templates; (4) 'shows broken state when required DOM elements are missing' RETIRED — the compiled component owns its markup, the `#missing-elements-test` instance is gone; (5) the three script-execution legs plus 'loads snippet content independently' (also script-dependent — a fourth the entry's list of three did not name) moved to LT-448's follow-up; (6) 'loads snippet content into light DOM' — shake-hands survives as an inert element and its counter must NOT move.
+
+  **Check:** `typecheck` clean; `test:server` 3277 pass / 0 fail (snapshots re-pinned, diff reviewed — lazyload's shows the err arm adopted live with the message written into the nested `p.error`); `check:corpus` exit 0, translation census 0 gaps; `check:contract` green; `build:docs` + `check:links` (731 links) green; Playwright: lazyload 19/19 and listnav 7/7 on the canonical surface, including the new ordering-probe leg (the `schedule()` indirection orders the scroll after arm adoption and the html write — proven, not assumed). **OPEN IMPASSE — Architect ruling requested:** `test:variants` is green on the `tsx` surface and red on `ts`: the `.ts` twin's `first('.content', required)` cannot enhance the compiled-shaped page (and the listnav twin fails the same way through its page's now-compiled lazyload child), while the compiled members cannot enhance twin-shaped pages (no baked templates) — ADR 0039 s2's same-spec-per-surface contract cannot hold for a boundary component whose DOM the compiled surface owns. Candidate rulings: (a) delete the `.ts` twin at boundary migrations (amends ruling 5's sweep reading for this class), (b) per-surface page shapes on the `/test/<tag>?surface=` route, (c) explicit surface guards in the spec. Also for review: the `docsOnly` extension to `ClassifiedDiagnostic` (the reconcile InvalidTemplateError notice fires only in the docs build's page simulation — its realm parses occurrences whose definitions registered on earlier pages; corpus-realm reproductions were attempted and do not produce it), and the site sanitizer's `SITE_TAGS` list (maintenance: keep in sync with `main.ts`'s client imports).
+    **Review:** Changes requested ↩ (Architect, 2026-10-06). Reviewed f6d23d9d against its parent b548a590 (the branch's own LT-443 merge differs from v3's 0a0c8492 only in `queue/LT-443.md`). Accepted as shipped: the `truc:html` driver channel and its mirrored server identification, `createTask` as a signal constructor with the server pending-box shim, root constructs planned as ok-arm effects, the `style` entry in `host-profile.d.ts`, all six spec re-rulings (including the fourth script-dependent leg moved to LT-448's follow-up), and the ordering-probe leg. **The `docsOnly` classification is accepted.** It follows LT-423's parent-first precedent: Contained per Mount Scope, and the docs build exercises it on every run.
+    1. **The site sanitizer can be bypassed (security).** `examples/main.ts` pulls `<style>` blocks out with a regex, sanitizes the rest and concatenates the pieces again, which voids DOMPurify's guarantee. Verified in jsdom: `<style a="</style>" onload=alert(1) <b>x</b>` comes out of the policy and parses to a live `<style onload="alert(1)">`. The premise is wrong too. DOMPurify does not refuse `<style>`: a *leading* `<style>` is hoisted into `<head>` by the body parse and dropped there. Fix: drop the regex and call `DOMPurify.sanitize(html, { FORCE_BODY: true, CUSTOM_ELEMENT_HANDLING: { tagNameCheck: /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/, attributeNameCheck: /^[a-z][a-z0-9-]*$/, allowCustomizedBuiltInElements: false } })`. That keeps the styles, admits custom elements by name pattern (an undefined tag is inert) and retires `SITE_TAGS` along with its sync burden. The styled-content and shake-hands legs must stay green.
+    2. **The err arm miscompiles silently when both catch channels are present.** `<card-callout class="danger">{e.message}<p class="error">{e.name}</p></card-callout>` compiles with zero diagnostics. `errText` takes the root's direct `e.message`, but the write target becomes the nested `errMessage` local, so the client writes `e.message` into the `<p>`. `e.name` and the root text are never written on a flip, while the server renders both. Verified by compiling at f6d23d9d. Fix: refuse the combination through the boundary's existing `unsupported` family (no new LTC; channel compiler, tier 1 Prevented), with the copy telling the author to keep one catch read per arm. Pin it in `features.test.ts`.
+    3. **Impasse ruled: rewrite the `.ts` twin to the compiled page contract (option d).** Options (a)–(c) are rejected. (a) deletes a twin, which goes against ADR 0039's owner ruling ("migrations stop deleting work"). (b) and (c) break s2's same-spec-per-surface contract. The twin is the hand-written spelling of the same component, and `reconcile(container, templates, keyThunk, bindArm)` is public API that twins already consume (module-todo). So the twin reads `:scope > template[data-arms]` and routes `ok`/`nil`/`err` the way the boundary does (`isPending` → nil, `UnsetSignalValueError` → nil, else err). Its ok arm writes through `dangerouslyBindInnerHTML(el, { sanitize: sanitizeHtml })`, so `allow-scripts` is inert on both surfaces in the interim, and LT-448's follow-up revives scripts on both. The beside-watch scroll and the `isPending` dim are kept. The twin's JSDoc states the hand-written arm routing. Exit criterion: `test:variants` green on `ts` and `tsx` for lazyload and listnav, with the spec unchanged between surfaces.
+
 - [ ] LT-445: Migrate `module-cem-list` to `.tsx` with same-commit cutover — the filter layer over `{% cem-list %}`'s page-authored cards.
   **Area:** examples
   **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
