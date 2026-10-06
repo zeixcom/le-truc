@@ -2483,6 +2483,11 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 			}
 		} else if (node.kind === 'conditional' || node.kind === 'try') {
 			innerEnclosed = true
+			// A server-only `try` — no `@pending`, so not an arm set (the first
+			// branch took those) — folds once per render into its body or catch
+			// arm (LT-482): both are server-rendered branches like a server
+			// conditional's, so its `truc:pass` composes take the same refusal.
+			if (node.kind === 'try') innerInServerBranch = true
 		} else if (node.kind === 'compose') {
 			// Composed content encloses on its own: a pass compose nested in
 			// it is the LTC011 nesting refusal, server branch around the
