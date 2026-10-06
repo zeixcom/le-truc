@@ -31,7 +31,8 @@ publishing a package its consumers cannot yet use is not a milestone — so this
 the others in priority but behind P6 in practice. Inside the band the order is LT-254 →
 LT-257 → the pioneers, because a pioneer cannot start before the package exists and emission
 is proven. LT-377 (no TypeScript types in the published declarations, ADR 0034 s8) lands with
-or after LT-254's declaration build.
+or after LT-254's declaration build. The D-32 design session (LT-471, the public contract) gates LT-254
+and runs during the P6 round, so the band opens unblocked.
 
 ## P2 — Internationalization follow-ups (ADR 0030)
 
@@ -81,11 +82,12 @@ handler-args design in P6 and carries only its tombstone.
 ## P6 — Cleanup round and the composition batch
 
 The cleanup round the first publish waits for (see P1), unblocked by the corpus port's close.
-It carries two kinds of work: the standing cleanup items (LT-093, LT-135, LT-136, LT-282,
-LT-437), and the composition batch — convert the compiled corpus from raw custom-element
-markup to sub-components (LT-463) through the design spine LT-465 → LT-462 (ADR 0048) and
-LT-461's ruled handler-args design, the compiler enabler LT-460 (kept in P2b), LT-464 and
-LT-466, retiring basic-pluralize last (LT-467). The section-menu chrome migration (LT-469, from
+It carries two kinds of work: the standing cleanup items (LT-093, which absorbed LT-135;
+LT-136, LT-282, LT-437), and the composition batch — convert the compiled corpus from raw
+custom-element markup to sub-components (LT-463) on the compiler enablers LT-460 and LT-470
+(kept in P2b) and LT-461's ruled handler-args design, beside LT-464, LT-466 and LT-467. The two
+sites that need the children contract ride the design spine LT-465 → LT-462 (ADR 0048) and its
+implementation tasks (split from LT-463, owner 2026-10-06). The section-menu chrome migration (LT-469, from
 LT-446's ruled design) closes the last uncompiled example folder and interleaves freely.
 Ordering matters: the design spine and
 enablers before the corpus conversion, while the cleanup items interleave freely because none

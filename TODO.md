@@ -7,195 +7,688 @@ in this file; contributors claim and annotate only through `bun run scripts/queu
 are unique by construction — the filename is the ID; the "Next free task ID" line below
 allocates the next one.
 
-**Iteration closed 2026-10-06 (opened 2026-10-02): the corpus port and the pre-publish reshapes.**
-Every chain task is reviewed and integrated, recorded in `CHANGELOG.md [Unreleased]` and
-pruned (ruling 18). The
-previous iteration (consolidate the compiler, then land the pre-publish reshapes: tracks A–D,
-LT-227–LT-406) is landed and reviewed. The `writer` recorded it in `CHANGELOG.md
-[Unreleased]` the same day and `DONE.md` was pruned. Its line-count record: `server/compiler/`
-measured 75 modules / ~30.4k lines on 2026-10-02 (non-test `.ts`), against the 27.0k baseline of
-2026-10-01. The net +3.4k is mostly the scoped-CSS track (`css-scope.ts`, the stylesheet parse)
-and the materialized probe; the library swaps retired less than they added.
+**Iteration opened 2026-10-06: the P6 cleanup round and the composition batch.** The
+previous iteration (the corpus port and the pre-publish reshapes, opened 2026-10-02) closed on
+2026-10-06. The `writer` recorded it in `CHANGELOG.md [Unreleased]`, and its 61 entries are
+pruned (`queue/LEDGER.md`, seventh pass).
 
-**Why now (Architect, 2026-10-02).** The first publish sits behind the P6 cleanup round, and P6
-sits behind the corpus port (ruled 2026-09-19). The corpus port is three migrations
-(LT-109–LT-111) gated on one design, LT-280, which has waited since 2026-09-21. So LT-280 is the
-critical path, and it opens as soon as gate zero is green. Around it go the reshapes that must land before the
-publish and are cheaper before the migrations add call sites: the IR leaves the contract
-(LT-370, which also turns `check:contract` green again), diagnostics take their published
-record (LT-371), root-is-host is enforced (LT-375), and each template expression carries its
-reactivity class (LT-373). The last iteration's reviews left four silent miscompiles or drops
-(LT-378, LT-387, LT-355, LT-391); a framework does not ship those, so they run here too.
+**Why now (Architect, 2026-10-06).** The first publish waits for the P6 cleanup round (owner,
+2026-09-19), and the corpus port's close unblocked P6. P6 does two jobs. It finishes the
+standing cleanup items, and it converts the compiled corpus from raw custom-element markup to
+composed sub-components (LT-463), so that the corpus models ownership before the compiler
+ships. The composition probe for LT-463 found two compose-lowering bugs (LT-460), and LT-468's
+review found a third (LT-470). Those are equivalence gaps that more compose sites would only
+multiply, so they run first. Section-menu (LT-469) closes the last uncompiled example folder.
 
-**Rulings taken at planning (Architect, 2026-10-02).**
-1. **The record shape before new producers.** LT-371 lands before any task that adds a
-   diagnostic (LT-186, LT-353, LT-355, LT-374, LT-375), so every new producer is born with
-   `location`. This is the previous iteration's rule (consolidation before the features that
-   would grow call sites in it).
-2. **Root-is-host before new `.tsx` sources.** LT-375 lands before LT-109–LT-111 and LT-390
-   author or migrate a `.tsx` source, so no new fragment root has to be migrated twice.
-3. **LT-373 before LT-387.** Both change the answer to "does this expression read a signal".
-   Centralize first, then fix the alias and shadowing cases in the one place.
-4. **LT-342 rides LT-280's session.** LT-280's design question 2 *is* LT-342 (the `.tsx` key
-   spelling); one ruling answers both, and LT-342 is then implemented by whichever LT-280
-   implementation task touches `surface.ts`.
-5. **The corpus-port sweep is restated.** LT-111's "no `.ts` component files remain" predates
-   ADR 0039, which keeps each `.ts` twin as a variant. The sweep's check is now: every example
-   folder is served from a compiled surface, the twins remain as variants, and LT-014's
-   trigger is discharged on that reading.
-6. **Gate zero: green before anything else** (owner, 2026-10-02). Two gates are red at
-   opening. `check:contract` fails because the toy IR literal in `scripts/contract-check.ts`
-   predates LT-287/LT-288. `build:docs` fails the simulation gate on module-lazyload's canvas
-   notices (NOTES.md, LT-397 session). LT-370 and LT-335 fix them, and they run first and in
-   parallel, ahead of the design gates and every other task. Neither waits on a design: LT-370
-   leaves everything in `contract.ts` except the IR as it is, and LT-335 already names its
-   fallback. If draining the composed closure's work does not land quickly, take the
-   origin-tag fallback the task allows rather than hold the iteration. A classification entry
-   is not a fix (the baseline test rejects it). Gate zero closes when `typecheck`, the server
-   suite, `check:contract`, `check:corpus`, `build:docs` and `check:links` are all green on one
-   commit. Record the census and warning baseline on that commit: it is the iteration's opening
-   measurement. **Closed 2026-10-02 on b795ff3e** (Architect re-ran every gate on the merge):
-   `typecheck` clean; server suite 2830 pass / 5 skip / 0 fail; `check:contract` green;
-   `check:corpus` exit 0; `build:docs` and `check:links` (693 links) green. **Opening
-   measurement:** tier census 36 entries, 28 Folded / 8 Simulated / 0 Static; compile-warning
-   baseline 0; translation census 0 gaps across 6 locales. `check:sim` green on all three
-   runtimes (owner, Deno leg outside the sandbox).
+**Rulings taken at planning (Architect with the owner, 2026-10-06).**
+1. **Scope: P6 plus the two P2b compose fixes.** LT-460 and LT-470 join from P2b because they
+   sit in the compose lowering that LT-461 extends and LT-463 exercises. The rest of P2b stays
+   in the backlog, including the CSS-departures cluster behind LT-409.
+2. **LT-461 is implementation, not a session.** The owner ruled its design on 2026-10-06, so its
+   area flips from `design` to `compiler` and it becomes pickable. LTC081 is reserved for its
+   rule 6.
+3. **Compose enablers run one at a time** (track E): LT-460 → LT-470 → LT-461 all change
+   compose-site lowering and its Mount Scope placement. Run in parallel, they would conflict at
+   integration.
+4. **LT-463 is split (owner).** Its two sites that need the children contract
+   (`module-codeblock`'s scrollarea, and `form-checkbox` with its label as children) move to
+   LT-462's implementation tasks. LT-463 converts the rest once tracks E and T have landed, so
+   the iteration's exit does not wait on a design session.
+5. **`module-todo` is edited in sequence:** LT-466 → LT-467 → LT-463. Each `needs:` field says
+   so, and track T orders the first two.
+6. **LT-135 is merged into LT-093 (owner).** It is the same free-name-through-a-const wall,
+   fixed in one pass through the client-needed fixpoint. LT-093 does LT-135's half first.
+7. **Two design sessions are scheduled (owner).**
+   - LT-462 (the children contract → ADR 0048) runs after the LT-465 spike reports in
+     `NOTES.md`.
+   - LT-471 (D-32, the compiler's public contract) can run at any point. Nothing in this
+     iteration waits on it, and it gates LT-254. Ruling it now means P1 opens unblocked.
 
-**Re-plan (Architect, 2026-10-04).** The process restructuring (LT-418–LT-421: single-agent
-roles, task branches committed in the worktree, integration in the review pass) is done, and
-so is all of track A: LT-371 and LT-373 are pruned (`queue/LEDGER.md`), and LT-375 and LT-387 are
-reviewed. Rulings 1–3 are therefore discharged: every remaining diagnostic producer is born
-with `location`, root-is-host is enforced, and the reactivity class is central. LT-378,
-LT-393 and LT-410 are pruned too, and LT-391 is reviewed. What is left splits cleanly. About ten mechanical tasks are all
-pickable now, and the three migrations plus LT-390 sit behind three design sessions that
-have not run. LT-280 has waited since 2026-09-21. The iteration's exit therefore turns on
-the owner's calendar, not on contributor throughput. The sessions are scheduled in this order:
-7. **Design sessions in critical-path order.** LT-280 with LT-342 first: it gates LT-109–LT-111,
-   and its implementation tasks join track C. LT-334 next. LT-276 is pruned, so it is unblocked
-   now, and it gates LT-390. LT-409 last: track D is the only thing it gates, and nothing else
-   waits on track D.
-8. **Corpus-port prerequisites before the correctness track.** LT-374 and LT-186 move ahead of
-   track B. When LT-280 rules, the migrations then wait only on LT-280's own implementation
-   tasks. Track B still lands in full this iteration, so the reorder only changes what lands first.
-9. **LT-415 first.** Every task gate under the worktree flow runs a test server. A stray server
-   on 3000 makes `test:variants` refuse and lets Playwright test another checkout's build without
-   any error. Fix it before the run of ten.
-10. **Acceptance criteria are goals, not constraints to satisfy by workaround** (owner,
-    2026-10-04). For the LT-280 implementation chain and the migrations: byte-identical CSS
-    across a variant set, the warning baseline 0, unchanged Playwright specs and unchanged
-    goldens are the target. A contributor who can meet one only through a workaround that
-    bends the design stops, annotates `blocked` and writes the impasse into `NOTES.md`. The
-    hand-written twins may carry latent bugs. A spec or golden that encodes one is reported
-    with the evidence and ruled by the Architect (fix the twin, or change the expectation);
-    it is never matched silently.
-11. **LT-280 ruled (2026-10-04) → ADR 0046.** The chain's implementation tasks are LT-422–LT-429.
-    LT-425 waited on Cause & Effect 1.6.0 (handoff `CAUSE_EFFECT_LIST_MAP.md`); 1.6.0 shipped and
-    the dependency moved to `^1.6.0` on 2026-10-05, so LT-425 is open again. LT-355 moves from track B into
-    track C after LT-423, which makes its composed child renderable; LT-355 keeps the locale half.
-
-**Next batch (Architect, 2026-10-05).** LT-423, LT-425 and LT-434 are reviewed and integrated
-(460fd94e and the merges before it), and so is every task in tracks 0, A and B except LT-412.
-Track C's critical path is now LT-424 → LT-355 → LT-426, all on the compiler's list and arm
-emission, so they run one at a time. Two runtime tasks run beside them in `src/`: LT-412 (the
-Cause & Effect 1.6.1 bump, unblocked by LT-425) and LT-436. LT-429's design is unblocked
-(LT-423 landed) and is the owner's next session: LT-109 and LT-110 wait on it and on LT-426,
-so ruling it while LT-424–LT-426 land keeps the migrations off the critical path.
-12. **LT-436 ruled: a throwing Mount Scope is Contained per scope** (ADR 0028 s3 extended one
-    level down; runtime, tier 2). `reconcile()` reports it once through `reportEffectFailure`,
-    leaves the element in place unbound, and continues. The task entry carries the detail.
-13. **The landed tasks are not pruned yet.** Pruning waits for the `writer`'s changelog pass
-    at iteration close (hard rule); the reviewed entries stay in `DONE.md` until then.
-14. **LT-429 ruled (owner, 2026-10-05).** List-item field parsers are inferred from a same-file
-    item type and declared otherwise with `harvest(items, { field: parser })` (ADR 0046 s7). A
-    compile-time marker is an import from `@zeix/le-truc-compiler/macros`, never an ambient
-    (ADR 0034 s1): LT-442 builds the subpath and moves `css` onto it. `asInteger` is not an
-    inferable parser: LT-440 maps `number` → `asNumber`. An unresolvable scalar seed type is
-    refused unless `harvest(value, parser)` declares it: LT-443 (S3).
-15. **LT-334 ruled (owner + Architect, 2026-10-06).** The boundary migration is LT-449
-    (pickable now): per-arm duplicated callout with `.danger` authored per arm (the
-    arms-span-parents machinery extension rejected), the ok arm a reactive `truc:html`
-    thunk, stale dimming as the `isPending` idiom, and the scroll side effect as a
-    beside-watch — a sanctioned escape hatch — with a required ordering probe. The
-    `allow-scripts` question is decoupled to LT-448 (design): the goal is partials bringing
-    *new* components to the page, build-unknown, same-origin or CSP-approved origins, with
-    code-splitting required. The decoupling is one-directional — nothing in the lazyload
-    track waits on LT-448: LT-449 is pickable now and complete on its own terms, and
-    LT-448's session writes the follow-up that revives `shake-hands` (inert → alive per the
-    ruled design), absorbing the three re-scoped script-execution spec legs and
-    `mocks/module-with-type.html`. LT-390 is re-pointed at LT-449.
-16. **LT-110 unblocked (owner + Architect, 2026-10-06).** The blocked session found two
-    compiler gaps in the ticker's ruled shape. (a) **List templates hoist to the host's end**
-    (ADR 0046 s2 amended → LT-454): one copy per instance, queried from the host, so a
-    container may be a scope root (`<tbody>`). Arm templates stay beside their arm, because
-    the arm form anchors on them. Comment anchors were rejected for minifier robustness, and
-    computed positions for fragility. (b) **A list reached only through `byKey` harvests
-    from its alias sites, witnessed by the render** (ADR 0047 → LT-453). Rejected: a JSON
-    root-attribute seed (the data ships twice) and a client-side-rendering escape hatch (it
-    contradicts enhance-not-generate). Too-large datasets go to LT-450 (design, P7: HTML
-    partials on demand). Found on the way: LT-451 (silent miscompiles of a signal
-    initializer over a Parser-backed host prop) and LT-452 (the canceller globals). The
-    ticker's "LT-165 step 7 corpus pin" clause is withdrawn: `Math.random()` reaches no
-    rendered site there, so the pin stays synthetic in `suppression.test.ts`.
-17. **The iteration is de-scoped to its close (owner, 2026-10-06).** The iteration was
-    overloaded. The remaining design sessions — LT-448 (fetched partials bringing new
-    components) and LT-409 (the shadow-root departures) — and the whole D — CSS departures
-    band move back to the backlog: LT-405, LT-407 and LT-408 return to P2b behind LT-409,
-    and LT-448 goes to P7 beside LT-450. What is left is LT-468 (the last correctness fix,
-    in progress ⚙) and LT-446 (the sweep's last folder, itself still a design session).
-    When both are reviewed and integrated, the iteration closes and the `writer` records
-    it in `CHANGELOG.md [Unreleased]`. The exit criterion's LT-409 clause is withdrawn
-    with the task; the trio keeps its `needs: [LT-409]` in the backlog.
-18. **The iteration is closed (owner, 2026-10-06).** LT-468 and LT-446 are reviewed and
-    integrated; LT-446's implementation task LT-469 and LT-468's follow-up LT-470 are banded
-    (P6, P2b), not chained. The chain below is the closed record: the D band and the two
-    design sessions are no longer named in it. The `writer` recorded it in `CHANGELOG.md
-    [Unreleased]` the same day, and its 61 consumed entries are pruned (`queue/LEDGER.md`,
-    seventh pass). Next: planning.
+   ADR 0048's implementation tasks join this chain if they are ruled before track K closes.
+   Otherwise they are banded P6 and open the next iteration beside P1. The session only delays
+   them; it never holds this iteration open.
+8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
+   the last iteration still stands). The goals are byte-identical CSS across a variant set, a
+   warning baseline of 0, unchanged Playwright specs and unchanged goldens. If a contributor can
+   meet one only by bending the design, they annotate the task `blocked` and write the impasse
+   into `NOTES.md`. LT-463's rule for surprises is the same thing for composition sites.
+9. **Probe-first tasks may close as `done` with a finding.** LT-136 (re-verify against ADR
+   0046) and LT-282 (TypeDoc may already regenerate `_media`) each state a premise to check. If
+   the premise is false, close the task with a pinning test or a one-line finding rather than
+   building the fix.
 
 **The chain.**
-- **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
-- **A — pre-publish reshapes — landed.** ~~LT-371~~, ~~LT-373~~ (pruned), ~~LT-375~~,
-  ~~LT-387~~ (reviewed ✓).
-- **Design gates** — Area `design`: the Architect with the owner; `start-task` never picks them.
-  ~~LT-280~~ + ~~LT-342~~ (ruled 2026-10-04 → ADR 0046). ~~LT-429~~ (ruled 2026-10-05 → ADR 0046
-  s7, ADR 0034 s1; ruling 14). ~~LT-334~~ (ruled 2026-10-06 → LT-449; `allow-scripts`
-  decoupled to LT-448; ruling 15). The remaining two sessions went back to the backlog
-  (ruling 17).
-- **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
-- **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
-  (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → ~~LT-449~~ (reviewed ✓) → **next, critical path (compiler list emission, one at a time):** ~~LT-454~~ (reviewed ✓) → ~~LT-453~~ (reviewed ✓) → ~~LT-110~~ (done ✓) → ~~LT-446~~ (reviewed ✓ — the sweep's last folder; its migration is LT-469, P6). **Beside it (example folders only, pickable now):** ~~LT-445~~ (reviewed ✓), ~~LT-390~~ (done ✓).
-- **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). ~~LT-443~~ (reviewed ✓). ~~LT-452~~ (done ✓). ~~LT-451~~ (reviewed ✓). ~~LT-447~~ (reviewed ✓ — the shape is supported and the declaration already rides both modules; the filed failure was a stale generated module, ruling on the task file; no LTC079). ~~LT-455~~ (reviewed ✓ — a nested list in a server branch of an item now mounts under a guard on its container; the construct residue ruled refuse-not-guard). ~~LT-468~~ (reviewed ✓; its `truc:pass` sibling is LT-470, P2b).
-- **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
-  LT-433~~ (done ✓). ~~LT-411~~ (reviewed ✓), ~~LT-416~~ (reviewed ✓), ~~LT-414~~
-  (reviewed ✓), ~~LT-187, LT-434, LT-435~~ (reviewed ✓). ~~LT-436~~ (reviewed ✓). ~~LT-438~~ (reviewed ✓).
+- **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
+  LT-461.
+- **S — children-contract spike** — feeds the LT-462 session (ruling 7). LT-465.
+- **T — module-todo** — ruling 5. LT-466 → LT-467.
+- **M — section-menu** — the last uncompiled example folder, beside everything. LT-469.
+- **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
+- **K — composition** — after tracks E and T (ruling 4). LT-463.
+- **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
+- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282.
+- **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
+  LT-471 (D-32, any time) ∥ LT-462 (after LT-465's report).
 
-**Deliberately not here.** LT-254, LT-257's build half, LT-259–LT-261 stay behind P6 (ruled
-2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
-design sessions. LT-381 changes the census and the warning baseline by design and needs the
-owner's sign-off first. LT-246 waits for LT-109–LT-111 to settle the census. LT-363, LT-369,
-LT-372 (after LT-371, post-publish-safe) and the P3/P4/P6 items stay in the backlog. LT-310 is
-design work for a later session; LT-311 is closed as absorbed by LT-461's ruled handler-args
-design (2026-10-06).
+**Deliberately not here.** P1 waits for this round: LT-254 now also needs LT-471. The
+CSS-departures cluster (LT-405, LT-407, LT-408 behind the LT-409 session) and the rest of P2b
+stay in the backlog. So do LT-381, which needs the owner's sign-off because it changes the
+census by design, and LT-246, which needs a settled census. The fetched-partials sessions
+(LT-448, LT-450) stay in P7, and P2–P5 stay where they are.
 
-**Exit criterion.** Tier census and warning baseline unchanged from the iteration's opening
-measurement (recorded on the gate-zero commit, ruling 6), except where LT-109–LT-111, LT-390 or
-an LT-280 ruling changes them by design, as those tasks state; the warning baseline stays 0.
-The mechanical tasks (LT-370, LT-371, LT-373, LT-375's migration half, LT-393) leave goldens
-and parity byte-identical. Every example folder is served compiled, per ruling 5. ADR 0046
-records LT-280's ruling. The IR is out of `contract.ts`, every diagnostic carries
-`location` on both surfaces, and a fragment root fails LTC060. No silent miscompile from the
-last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:contract`,
-`bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
-recorded against the 30.4k opening measurement.
+**Exit criterion.** Every chain task except the two design sessions is reviewed and
+integrated. LT-462 has ruled into ADR 0048, or its open state is recorded here (ruling 7). The
+compiled corpus composes every site LT-463 names, and every example folder is served compiled,
+section-menu included. No compose-lowering miscompile LT-460 or LT-470 names remains. The tier
+census and the warning baseline are unchanged from the opening measurement below, except where
+a task states a by-design change: LT-469 adds `section-menu: folded`, LT-467 removes
+basic-pluralize's entry, and LT-093 may move components from Simulated to Folded. The warning
+baseline stays 0. `typecheck`, the server suite, `check:contract`, `check:corpus`, `build:docs`
+and `check:links` are green on the closing commit. The net line count of `server/compiler/` is
+recorded against the opening measurement.
 
-**Next free task ID: LT-471** (LT-469 and LT-470 are filed and banded). Next free diagnostic code: LTC082 (LTC081 is reserved for LT-461; LTC080 is LT-453's; LTC079 is LT-447's, unused — its shape is supported, not refused; LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Opening measurement (b63fbfed):** `check:corpus` exits 0. The tier census has 42
+entries: 34 Folded, 8 Simulated, 0 Static. The compile-warning baseline is 0, and the
+translation census has 0 gaps across 6 locales. `server/compiler/` has 79 modules and 37.3k
+lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
+figure from 2026-10-02, so compare the closing measurement with this one only.
+
+**Next free task ID: LT-472.** Next free diagnostic code: LTC083 (LTC082 is reserved for LT-136
+if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
+LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
+LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
+LT-399's; LTC066–LTC070 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are
+LT-274's; LTC061 is LT-383's; LTC060 is LT-375's; LTC059 is LT-374's; LTC057/LTC058 are LT-257's;
+LTC056 is LT-358's).
 
 ---
 
-### Gate zero (closed 2026-10-02, b795ff3e)
-
 <!-- entries -->
 
+### E — compose enablers
 
+- [ ] LT-460: A compose site in an async-boundary arm — lower it as arm root, keep the arm binding in its children.
+  **Area:** compiler
+  **Gates:** check:corpus, test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from a composition probe for LT-463; owner: both are bugs):**
+  two oversights in how arms lower, found converting `module-lazyload.tsx`'s raw `<card-callout>`
+  arms to `<CardCallout>`.
+  (1) **Arm root refused (LTC011).** Arm content in attribute position (`pending={…}`,
+  `catch={e => …}`; `.tsrx` `@pending`/`@catch`/`@if` bodies likewise) is lowered through the
+  plain-element funnel (`lower-shared.ts`, the `/^[A-Z]/` check), which refuses every PascalCase
+  tag. Compose support was wired into element child lists only (ADR 0024 sub-design 10); the arm
+  root path was never routed through it. The message is also stale: it still names "`.map()`
+  output", which LT-424 made legal. Fix: an arm root that is a compose site lowers as a compose
+  site; `data-key` (and the arm marker attributes) splice onto the child's rendered root through
+  the same path as `class`/`id`/`data-*` (`composeHostAttrs`). The refusal survives only for
+  positions that genuinely have no lowering, with a message naming them.
+  (2) **Arm binding dropped in compose-site children — a silent miscompile.** With a wrapper root,
+  `catch={error => <div><CardCallout kind="danger"><p>{error.message}</p></CardCallout></div>}`
+  compiles with no diagnostic, and the generated server module reads `error` outside the catch
+  callback: `check:corpus` fails with TS2552 "Cannot find name 'error'". The boundary itself still
+  catches at runtime; what is swallowed is the compile error — a source that compiles must emit a
+  typechecking module. The children of a compose site must be rendered inside every binding scope
+  that encloses the site (catch parameter, arm, list item key/item, server-data loop variable).
+  Audit the other enclosing-scope kinds for the same drop while there.
+  **Channel/tier:** compiler only. (1) narrows LTC011's refused set; (2) removes a miscompile. No
+  new LTC code, no runtime check.
+  **Verification:** test:server unit legs — an arm-root compose site renders the winning arm with
+  `data-key` on the child root and reconciles on flip; compose-site children reading the catch
+  parameter render the message server-side and rebind on the client; one leg per enclosing-scope
+  kind for (2). check:corpus.
+
+- [ ] LT-470: A composed child carrying `truc:pass` in a server-rendered branch of a list item mints a required local and throws in every item mount when the branch is not taken — refuse it after LT-468's manner.
+  **Area:** compiler
+  **Needs:** LT-468
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-468's review):** the residue LT-468's entry flagged as
+  a doubt, confirmed statically during that review. In `planReconcileItem`'s `visitElements`
+  (`server/compiler/analysis/effects.ts`), a compose node inside a server conditional's arm is
+  reached with `inBranch = true`, but `collectCompose` runs with no branch awareness: it mints a
+  scope local with no `optional` flag (`item.locals.push`, the "`…` missing" message), so with
+  the branch folded off every adopted and cloned item throws `MissingElementError` at mount
+  (contained per scope by LT-436) and the child's `truc:pass` entries never bind. A
+  `truc:pass` onto a fold-fixed branch's child is the same once-only addressing of markup that
+  can never re-render that LT-468 refuses for constructs. A pass-less compose needs nothing: it
+  is server-rendered markup in the extracted template, addressed by no client binding, and must
+  stay legal.
+  **Ruling (Architect):** refuse, after LT-468's manner — same LTC005 family, wording after
+  LT-468's message with the compose-specific address, same remedy (make the condition reactive).
+  The LT-455 guard shape (optional local, guarded binding) is not the alternative: a compose's
+  pass entries have no reactive core of their own, so guarding them would mint per-entry
+  existence guards for one-shot addressing — the over-engineering the construct ruling
+  rejected.
+  **Change:** in `collectCompose` (or its `visitElements` call site), when the compose site sits
+  in a server-rendered branch of the item (`inBranch`) and carries at least one `truc:pass`
+  entry — the point where a local would be minted — report `diagnostic.unsupported` in the
+  LTC005 family and mint nothing. A pass-less compose in a branch stays legal, and a compose
+  outside a branch keeps today's behavior.
+  **Probe first:** neither the author nor the review found a refusal of the shape outside the
+  item walk. The host-level walk routes an if-node to `handleIfEffects`, which never reaches
+  arm children through `emitTopEffects`'s compose arm, so whether a composed child in a server
+  branch of the HOST is refused upstream (classifier), silently unplanned, or differently broken
+  is unverified — probe it before the change and record what the probe shows in this entry. If
+  the host shape is real, the fix covers both scopes in one pass; if the host already refuses
+  it, the item walk is the only site.
+  **Check:** both surfaces refuse a `truc:pass`-carrying compose in a server branch of a
+  reactive-list item; the refusal names the remedy; a pass-less compose in the same branch still
+  compiles and the composed child renders into the template; a compose with `truc:pass`
+  directly in the item (no branch) still compiles and binds. If the host-level probe shows the
+  shape compiles there, pin the host-level refusal (or recorded behavior) too. Catalog face for
+  the refusal instance; HOST_PROFILE.md's item/Mount-Scope passage and AGENTS.md's
+  conditional-placement paragraph gain the compose case where LT-468 named the construct case;
+  CHANGELOG Fixed entry.
+  **Channel/tier:** compiler check; tier 1 Prevented (statically decidable where the walk
+  already knows `inBranch`); no runtime check, so nothing owes the sim-realm an entry beyond the
+  catalog face.
+
+- [ ] LT-461: Handler args — an `on`-prefixed function arg the child places on an owned element lowers to a parent-side `on()`.
+  **Area:** compiler
+  **Gates:** check:corpus, test:server
+  **Area:** compiler
+  **Ruled — pickable (Architect, planning 2026-10-06):** the design below is the owner's ruling; the
+  task is implementation, not a session. LTC081 is reserved for rule 6.
+  **Filed (Architect, 2026-10-06; design by the owner, 2026-10-06):** today `onClick` on
+  `<BasicButton>` is forwarded as a server arg into `renderBasicButton({ …, onClick })` and dropped:
+  no listener exists anywhere. In a reactive-list item it is misdiagnosed as LTC075.
+  **Design (owner):** a handler is an ordinary server arg — never exposed, never stored on the
+  host, never a reactive property. The child declares delegation by placing the arg on an owned
+  raw element:
+  `export function BasicButton({ type = 'button', onClick, … }: { onClick?: (e: MouseEvent) => void; … })`
+  with `<basic-button><button {type} {onClick}>…</button></basic-button>`. The parent's compose site
+  `<BasicButton class="remove" onClick={e => items.remove(k)} />` lowers in the parent's client to
+  `on(first('basic-button.remove button'), 'click', e => items.remove(k))`.
+  **Rules:**
+  1. **Which args:** a parameter whose name matches `on[A-Z]…` and whose declared type is a function
+     type, read syntactically from the child's parameter annotation (no checker).
+  2. **The event comes from the placement, not the arg name:** `onPress` placed as
+     `<button onClick={onPress}>` delegates `click`.
+  3. **Server:** the child's render never emits the arg (no attribute, no serialization); the
+     child's client emits nothing for it. Page-authored instances simply carry no handler.
+  4. **Selector:** the compose site's tag-plus-discriminator selector (LT-127/LT-338), joined with
+     the placement element's selector from the child's template, proven unique by the structural
+     verifier (ADR 0045). The compiler synthesizes it; an author never writes it, so it is no
+     reach-in (HOST_PROFILE § data account, bullet 3): the child's signature is the contract.
+  5. **Scope:** the `on()` emits into the compose site's enclosing Mount Scope — host, arm
+     (`bindArm`), list item (`bindItem`) — so item/key reads are legal; LTC075 exempts handler args.
+     The `on()` return-value contract applies to the **parent's** host (`{ prop: value }` batches
+     into the parent), as for any parent handler.
+  6. **Placements the parent cannot address are refused** in the child (new **LTC081**, tier 1
+     Prevented, compiler; statically decidable, no runtime half): a handler arg placed anywhere but
+     as an event attribute on a raw element; inside one of the child's reactive arms or list items
+     (recreated on flip or reconcile, so the parent's `first()` would go stale); or an `on[A-Z]` arg
+     whose type is not a function type. Several placements of one arg emit one `on()` each.
+  7. **Forwarding:** a child that passes its handler arg on to its own compose site
+     (`<Inner onClick={onClick} />`) resolves through the registry to the inner placement; the
+     selector descends through both boundaries.
+  8. **Typing:** on `.tsx`, compose-site handler args typecheck as ordinary props; an undeclared
+     `onX` stays the existing tsc excess-property error. `.tsrx` parity on the same IR.
+  **Then:** `BasicButton` gains `type?: 'button' | 'submit'`, `ariaLabel?: string` (rendered as
+  `aria-label`) and `onClick?: (e: MouseEvent) => void`, placed on its native button.
+  **Verification:** test:server unit legs (host, arm and list-item compose sites; forwarding; each
+  LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
+  converted list remove button.
+
+### S — children-contract spike
+
+- [ ] LT-462: Children contract — parent-owned children, child-declared roles and content model (design; ADR 0048).
+  **Area:** design
+  **Needs:** LT-465
+  **Area:** design
+  **Filed (Architect, 2026-10-06; owner rulings 2026-10-06):** composing `<ModuleScrollarea>` around
+  `module-codeblock`'s `<pre><code>` fails LTC026 — the structural verifier excludes everything
+  under a composed child (`:not(<child-tag> *)`, LT-316) — and ADR 0033 s7 leaves content a parent
+  places inside a composed child outside the parent's style scope.
+  **Owner rulings:** (a) content a parent passes as `children` is owned by the parent. (b) A child
+  may act on its children through its contract (first raised for `BasicPluralize`, since retired
+  in LT-467; `<select>`/`<option>` is the standing analogue).
+  (c) `FormCheckbox` takes its label as `children` and refuses interactive content in it. (d) The
+  CSS boundary consequence is decided by a spike first (LT-465).
+  **Model to record in ADR 0048:**
+  1. **Parent owns the content** — structure, text, its own bindings and `first()` references reach
+     the children region; the verifier excludes only the child's own template.
+  2. **The child acts only through declared roles** — its `children` type names the roles it
+     addresses (sketch: `children: Children<{ tab: 'button', panel: 'section' }>`, roles matched by
+     class), as `<select>` acts on `<option>`. A child `first()`/`all()` into children that targets
+     no declared role is a reach-in (new LTC, tier 1).
+  3. **One writer per property** — a parent binding a property the child's contract writes on a role
+     element is a conflict (new LTC, tier 1, decidable from the compose registry).
+  4. **Content model** — a child may declare its children non-interactive; the compiler checks the
+     compose site's literal children (`a[href]`, `button`, `input`, `select`, `textarea`, `label`,
+     `details`, `iframe`, `[tabindex]`, media with `controls`) and composed children whose template
+     contains one, transitively through the registry (new LTC, tier 1). TypeScript cannot carry it
+     (JSX element types are opaque); page-authored HTML is unchecked.
+  5. **Styles** — per LT-465's recommendation.
+  **ADR edits riding with 0048** (none of these is published on `main`, so all are in-place
+  amendments): ADR 0024 s10 (children ownership; cross-reference), ADR 0033 s7 (the
+  "template-authored content in a composed child" difference, per LT-465), ADR 0046 (point 1's
+  verifier change inside list items), HOST_PROFILE § data account bullet 3 and § element references.
+  **Output:** ADR 0048, then compiler tasks per numbered point with channel, tier and LTC codes,
+  plus the two composition sites split out of LT-463 (owner, planning 2026-10-06):
+  `module-codeblock`'s `<module-scrollarea>` → `<ModuleScrollarea>`, and `module-todo`'s
+  `<form-checkbox>` → `<FormCheckbox>` with its label as children (point 4's content model; after
+  LT-464 gives form-checkbox its `.tsx` spelling).
+
+- [ ] LT-465: Spike — style scope for parent-owned children inside a composed child.
+  **Area:** compiler
+  **Area:** compiler (spike — no production change; output is a report)
+  **Filed (Architect, 2026-10-06, owner ruling (d) in LT-462):** under parent-owned children the
+  parent's rules should reach the content it passes into a composed child, and the child's rules
+  should not (beyond declared role elements' own boxes). ADR 0033 s3 emits
+  `@scope (parent) to (<boundary> > *)`, which cuts off everything below the child host —
+  children included, wherever the child's template inserts them (`<pre><code>{children}</code></pre>`
+  puts them two levels deep). A `to` limit cannot re-include a subtree it excluded.
+  **Probe these shapes, both emissions (native `@scope` and lowered `:where()`), self-nesting
+  included (ADR 0033 s7's `A > B > A′`):**
+  (a) **A second scope root at the insertion point:** the server marks the element enclosing a
+  `{children}` insertion (sketch `data-children`), and the parent's sheet emits once more as
+  `@scope ([data-children]) to (<boundary> > *)`, guarded to the parent's own instances — cost:
+  doubled rules, the marker attribute in served HTML, the instance guard.
+  (b) **A `display: contents` wrapper element** around inserted children, as the scope root of (a)
+  without marking a template element — cost: a non-semantic element in the DOM, child selectors
+  (`:host > p`) that now miss.
+  (c) **Status quo plus `:global`** — children stay outside the scope; record what ownership then
+  means for styles only.
+  For each: which rules match, specificity parity between emissions, served-byte cost on the
+  corpus's composing components, and the child-side half (the child's own `to` limit must now stop
+  at the insertion point). Also confirm the structural verifier change (LT-462 point 1) composes
+  with the chosen marker.
+  **Output:** a recommendation with fixtures under `server/tests/` (kept, skipped if the chosen
+  shape is not adopted) and a short report in `NOTES.md` for the Architect, who writes ADR 0048
+  and the ADR 0033 s7 amendment from it.
+
+### T — module-todo
+
+- [ ] LT-466: module-todo — move the in-place editor out of the checkbox label.
+  **Area:** examples
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06; owner-confirmed bug):** each todo item places a `FormInplaceEdit`
+  inside the `<label>` of its `form-checkbox`. Interactive content inside a label is invalid
+  (HTML content model) and leaks activation: the edit button stops its click, but the
+  double-click that starts editing bubbles to the label and toggles the checkbox. Move the
+  `FormInplaceEdit` to beside the `form-checkbox` within the item, in both `module-todo.tsx` and
+  `.tsrx` (CSS byte-identical, ADR 0039). The checkbox keeps an accessible name: a
+  `.visually-hidden` label text bound to the item label (`{() => item.label.get()}`), so the
+  visible text is the editor's and the name follows edits. Adjust the item grid in the sheet.
+  **Verification:** a Playwright leg — double-clicking the label text enters edit mode without
+  toggling the checkbox; the checkbox's accessible name tracks a committed edit; check:corpus,
+  test:variants, `module-todo.spec.ts`.
+
+- [ ] LT-467: Retire basic-pluralize — module-todo words its own count through an ICU message.
+  **Area:** examples
+  **Needs:** LT-466
+  **Gates:** check:corpus, test:variants, test:server
+  **Area:** examples
+  **Filed (Architect, 2026-10-06; owner ruling 2026-10-06):** a parent words a count with its own
+  ICU `plural` message: folded into the HTML when the count is server-known, re-evaluated by the
+  inlined client evaluator when it is reactive (ADR 0030 s9). That leaves `basic-pluralize` no job —
+  it also owns a catalog that knows one noun ("tasks"), which no reusable pluralizer should. Retire
+  it.
+  **Do:**
+  1. **module-todo** (`.tsx` and `.tsrx`): replace the raw `<basic-pluralize>` with the parent's
+     own message and condition — declare e.g. `remaining: '{count, plural, =0 {Well done, all done!}
+     one {# task remaining} other {# tasks remaining}}'` in its `i18n` record and render
+     `<p class="remaining">{() => t.remaining({ count: activeCount.get() })}</p>` (the `=0` arm
+     replaces the `none`/`some` toggle — no markup varies, so no arm set; should the MF2 exit gate refuse the `=0` selector, use two keys and a ternary on
+     `activeCount.get() === 0`). Drop the `:global
+     module-todo basic-pluralize p` rule. The `.ts` twin and `module-todo.html` bind the same text
+     with `Intl.PluralRules` in a `watch` (the hand-written runtime has no ICU evaluator); the
+     wording matches the source locale.
+  2. **Translations:** move the `basic-pluralize.*` entries in every `i18n/*.json` locale to the new
+     `module-todo.remaining` key, reworded per locale into one MF1 pattern with that locale's
+     plural categories (the existing `tasks` patterns carry them); the census stays at 0 gaps.
+  3. **Coverage that must not be lost** — move each to `module-todo` or a fixture under
+     `examples/test/`, never delete it: `selectordinal`/`select` nesting (mf2-exit, `MF2_EXIT.md`),
+     the walked-locale materialization onto `lang` (LT-191; `basic-number` already carries the
+     same contract — confirm its spec covers it, else add the leg there), the client-message
+     `i18n` attribute pins (LT-352), the frozen-`deriveCell` harvest case (`harvest.ts` comment),
+     and every `server/tests/compiler` leg naming `basic-pluralize` (`i18n.test.ts`,
+     `i18n-client.test.ts`, `diagnostics.test.ts`, `root-harvest.test.ts`, `corpus-args.ts`, smoke
+     and gate-wave legs); regenerate the equivalence and sim snapshots and state each diff in the
+     handoff.
+  4. **Remove:** `examples/basic/pluralize/`, its entries in `examples/main.ts`, `examples/main.css`,
+     `docs-src/pages/examples.md`, `custom-elements-manifest.config.mjs`, `scripts/measure-size-bet.ts`.
+  5. **Prose references** (`AGENTS.md`'s built-in-IDL-property example, HOST_PROFILE's locale
+     precedence and anchors, `LE_TRUC_COMPILER.md`, `server/TESTS.md`, `i18n/README.md`): list
+     them in the handoff for a `writer` session; ADR text stays as history, and `CHANGELOG.md`
+     records the removal at iteration close.
+  **Channel/tier:** none — no runtime check, no diagnostic.
+  **Verification:** check:corpus (census 0 gaps), test:variants, test:server, `module-todo.spec.ts`
+  with a leg per count class (0, 1, many) in `en` and one locale with more categories (`pl`).
+
+### M — section-menu
+
+- [ ] LT-469: Migrate `section-menu` to `.tsx` with same-commit cutover — the site's sidebar chrome: external toggle by document id, imperative backdrop, layout-wide registration.
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
+  **Area:** examples
+  **Scopes (LT-446 design session, 2026-10-06):** the last folder the "every example folder
+  served compiled" exit criterion cannot close without, and the four shapes no compiled corpus
+  member has carried together — an external toggle wired by `document.getElementById`, an
+  imperative backdrop created at connect, a writable State-backed expose, and layout-wide
+  registration. Every authored shape below is probe-verified against both front ends
+  (both surfaces compile clean, byte-identical client/server modules) — do not re-derive them.
+  **The set:** `section-menu.tsx` (served) beside a `section-menu.tsrx` twin; the hand-written
+  `section-menu.ts` stays as the set's `.ts` twin (LT-111 ruling 5). Both compiled members emit
+  byte-identical server renders and CSS (LTC051). Every member declares the identical
+  `declare global { 'section-menu': HTMLElement & SectionMenuProps }` entry, each with its own
+  identical `SectionMenuProps` alias (`{ open: boolean }`) — divergence is TS 2717.
+  **Template:** root = host, `{children}` passthrough, one `<style>{css`…`}</style>` child —
+  nothing else. The component is behavior-only chrome: the nav content arrives as page-authored
+  children (`server/templates/menu.ts` and the example page author it), and the compiled server
+  render must stay byte-compatible with `menu()`'s hand-written output plus the compose-site
+  attributes (`id="sidebar"`) menu.ts writes itself. `module-scrollarea` inside the children is
+  NOT a compile-time boundary (the template composes no child — ADR 0033 s7), so the sheet's
+  `& module-scrollarea` selectors stay legal.
+  **Setup rulings (LT-446):**
+  1. **`expose({ open })` stays the live-State identifier form, verbatim:** `const open =
+     createState(false)` + `expose({ open })`. The classifier's kind is `slot` (the
+     no-diagnostic answer); the generated client carries both statements verbatim and the
+     server module carries the signal declaration with the expose shim, so the fold sees the
+     seed. `el.open = …` writes through the installed Slot — the unchanged spec's Programmatic
+     Control probe proves it per surface. The toggle handler's `() => ({ open: !open.get() })`
+     return-updates idiom is an authored `on()` call — library contract, carried as written.
+  2. **`.js`/`.ready` sequencing is two bare client-only setup statements, verbatim:**
+     `host.classList.add(JS_CLASS)` and `requestAnimationFrame(() => host.classList.add(READY_CLASS))`
+     — `host` is context, `requestAnimationFrame` a JS global, the callback an inline arrow in a
+     client-only statement. The five name constants (`JS_CLASS`, `READY_CLASS`, `OPEN_CLASS`,
+     `BACKDROP_CLASS`, `TOGGLE_ID`) MOVE from module scope into setup — module-scope names are
+     not client-known (LTC005; the module-scrollarea deviation note is the precedent). The
+     served HTML carries no `.js` class — the progressive-enhancement contract holds by
+     construction (probe: the server render emits `<section-menu>{children}</section-menu>`
+     only).
+  3. **The backdrop stays imperative:** `ensureBackdrop()` — a function const that finds or
+     creates `:scope > .backdrop`, prepends it, and RETURNS the element (the existence check
+     keeps the twin's tolerance of authored markup); wired by
+     `on(ensureBackdrop(), 'click', () => ({ open: false }))` — the call is the `on()`
+     argument, so no setup const ever holds a page-context value. Do NOT author the backdrop
+     `hidden` in the template: the no-JS DOM shape stays byte-identical to the twin's (no
+     backdrop element at all), which is the contract the sheet's header comment documents.
+  4. **The external toggle stays component-owned; the guard lives in the helpers, the lookups
+     inline as call arguments:** `on(document.getElementById(TOGGLE_ID), 'click', () => ({ open:
+     !open.get() }))` — `on()`'s target accepts `Falsy` and the descriptor no-ops on it; and
+     `watch(open, bindAria(document.getElementById(TOGGLE_ID), 'ariaExpanded'))` — `bindAria`
+     accepts nullish targets and makes every handler a no-op. The twin's `if (toggle)` guard is
+     therefore built into the runtime; do NOT hold the element in a setup const (a const whose
+     value reads `document` is a build error, LTC054 — page context), and do NOT call
+     `watch`/`on` inside a function const (LTC045 — the ambient collector is gone by the time a
+     deferred callback runs). NOT the layout's job: the drawer state has one owner (the
+     component's exposed Slot), the id is the documented chrome contract (TOGGLE_ID's docblock,
+     LT-001, SERVER.md), and the wiring must exist exactly when the drawer behavior does.
+     The outside-click handler re-queries the toggle inside the descriptor body — no held
+     reference.
+  5. **Document-level listeners ride the twin's `watch(() => true, descriptor)` idiom
+     verbatim** (module-listnav's compiled form is the corpus precedent): raw
+     `addEventListener`/`removeEventListener` on `document`, `open.get()`/`open.set()` inside,
+     cleanup returned. Keep the twin's `el instanceof HTMLAnchorElement` check — which needs
+     the rider below.
+  **Compiler rider — JS_GLOBALS:** `server/compiler/vocabulary.ts`'s `JS_GLOBALS` set lists
+  `HTMLButtonElement`…`HTMLTextAreaElement` but NOT `HTMLAnchorElement`, so the twin's
+  `instanceof HTMLAnchorElement` outside-click check is a false unknown name and refuses with
+  LTC005 (probe-verified; a `nodeName === 'A'` re-spelling compiles but deviates from the twin
+  for no reason once the set is fixed). Add the entry — the set's own docblock scope ("DOM
+  globals (generated handlers reference element types)") — and pin it in
+  `server/tests/compiler/globals.test.ts`. No diagnostic changes, no ADR 0028 inventory change.
+  **Styles:** re-author the sheet to ADR 0033 form — `:host`-led (a rule led by the component's
+  own tag is LTC066, fix-it `:host`); the page-shell rules (`.docs-body`, `.docs-main`,
+  `#sidebar-toggle`, `.quicklinks`, `.docs-header-bar`, `header`) ride the two whole-rule
+  `:global` forms, the at-rule-conditioned ones inside a bare `:global { @media … }` block
+  (LTC069); `module-dialog`'s `:global(body.scroll-lock)` is the corpus precedent and the
+  sheet's header comment documenting the `.docs-body`/`.docs-main` exception stays. Members'
+  CSS byte-identical (LTC051). `examples/main.css` flips its import to the generated sheet.
+  **Cutover:** `examples/main.ts` imports
+  `../server/generated/components/section-menu.client.ts` — the canonical client, so the
+  LAYOUT pages serve the canonical `.tsx` surface (main.js bundles it on every docs page) and
+  `/test/section-menu`'s default page is the registry's selected surface; `?surface=` and the
+  runner's `TEST_SURFACE` reach the `.ts` twin and the `.tsrx` variant
+  (`routes.ts` `resolveSurfaceModule`). `server/templates/menu.ts` stays hand-written and
+  byte-compatible with the compiled server render — the markup contract SERVER.md documents;
+  `templates/menu.test.ts` keeps pinning it, unchanged. The authored `section-menu.html` is
+  regenerated from the compiled server render (the module-todo header-comment pattern),
+  keeping `#sidebar-toggle` before the host and `#outside-target` after `<main>`.
+  `examples/tsconfig.json` lists the new members; the strict `IntrinsicElements` table in
+  `server/compiler/frontend/tsx/host-profile.d.ts` gains `type SectionMenuAttrs =
+  CommonLightDom` and the `'section-menu'` entry (a migration extends the table in the same
+  commit). The component has no `.md`/gallery entry before or after (structural chrome).
+  **Tier:** the component stays Folded — no setup const holds a page-context value (probe: no
+  LTC013 routing signal, no LTC054). The tier-corpus census pins +`section-menu: folded`; that
+  shift is this entry's by-design change.
+  **The spec is unchanged.** `test:variants section-menu` is the acceptance gate: the unchanged
+  suite (drawer, toggle, aria reflection, programmatic control, Escape/outside-click/link-nav
+  close) passes against all three surfaces.
+  **Check:** gates inside the worktree: `typecheck`; `test:server` (extend the
+  parity/equivalence-audit snapshots for the new generated modules; `templates/menu.test.ts`
+  stays green unchanged); `check:corpus` (census re-pin); `check:contract`; `test:variants
+  section-menu` (browser gate — LT-111 proved it can run green in the sandbox; else an
+  owner-run leg); `test:component section-menu` on the default page. `build:docs` +
+  `check:links` when the JSDoc/host-profile changes are doc-visible.
+  **Channel/tier:** no new runtime check and no diagnostic change; the rider is a vocabulary
+  omission fix (compiler) that removes a false LTC005 — it adds no check, so nothing owes the
+  catalog or the ADR 0028 inventory an entry.
+
+  ---
+
+### F — form-checkbox `.tsx`
+
+- [ ] LT-464: form-checkbox gains a .tsx spelling.
+  **Area:** examples
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, owner request):** `form-checkbox` exists only as
+  `form-checkbox.tsrx`. Add `form-checkbox.tsx` beside it as a variant-set member (ADR 0039): same
+  canonical tag, its own `declare global` `HTMLElementTagNameMap` entry (s4), byte-identical CSS,
+  typed second parameter `FormFactoryContext<FormCheckboxProps>` (LT-209). Keep the current
+  `label: string` arg — the switch to `children` waits for LT-462's children contract and lands in
+  LT-463. The `.tsx` member becomes the served surface; the `.tsrx` twin stays.
+  **Verification:** check:corpus, test:variants, `form-checkbox.spec.ts`.
+
+### K — composition
+
+- [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
+  **Area:** examples
+  **Needs:** LT-460, LT-461, LT-466, LT-467
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
+  child component's markup by hand (`<basic-button><button>…</button></basic-button>`) instead of
+  composing it (`<BasicButton … />`), duplicating markup the child owns. Composition is allowed
+  to be raw, but the corpus should model ownership: the child's template renders its markup, the
+  parent passes args, `class` discriminators and `truc:pass`. Convert each site below in every
+  variant-set member (`.tsx` and `.tsrx` twin together; CSS must stay byte-identical, ADR 0039);
+  the `.ts` twins are hand-written runtime sources and stay as they are.
+  **Sites:**
+  - `module-lazyload` — pending/catch callouts → `<CardCallout>` / `<CardCallout kind="danger">`
+    (needs LT-460).
+  - `module-dialog`, `module-splitview` — `<module-scrollarea>` → `<ModuleScrollarea>`; no parent
+    reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
+    documented reason stands).
+  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers become
+    `onClick` args (LT-461).
+  - `module-list`, `module-todo` — submit buttons and list-item remove buttons → `<BasicButton>`
+    with `type`, `ariaLabel` and `onClick` args (LT-461). `module-todo`'s clear-completed → `<BasicButton>` with its
+    existing `truc:pass`.
+  - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
+    `class="split-button"`.
+  `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
+  in prose.
+  **Split (owner, planning 2026-10-06):** the two sites that need the children contract —
+  `module-codeblock`'s `<module-scrollarea>` and `module-todo`'s `<form-checkbox>` with its label as
+  children — moved to LT-462's implementation tasks. Leave both raw here. `module-todo` is touched
+  after LT-466 and LT-467 land, so the three edits to it run in sequence.
+  **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
+  or changes the rendered DOM or a spec's expectation beyond the composed root's attributes,
+  stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
+  **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
+
+### P — compiler cleanup
+
+- [ ] LT-093: Make LTC004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall).
+  **Area:** compiler
+  **Context:** Re-confirmed empirically 2026-08-29: `const DEFAULT = 'red'; const color =
+  createCell(DEFAULT)` consumed only through a style-map still fires LTC004's "never rendered"
+  message, though the signal IS credited as rendered (`thunkRendered`) —
+  `substituteArgExpr`'s free-name gate rejects the verbatim initializer because the client
+  module may not define the name. **Step 1 (small):** split the diagnostic — "rendered but
+  initializer not client-portable" (name the offending free names) vs "never rendered".
+  **Step 2 (goal):** feed signal-initializer free names into `computeClientNeededNames` as
+  client-needed seed positions so plain-setup and import-local names in initializers place
+  client-side; the fixpoint has grown accretively (clientSetup statements, composed refs, pass
+  set-thunks — LT-069/087/088), so the plumbing gap is much narrower than when option (b) was
+  judged heavy. Also fold in a compiler unit test for the `imports.plainLocalNames`
+  `badFreeNames` widening (currently unexercised after the LT-091 redesign), and the LT-116
+  finding that `returnsNumber`'s heuristic misses number-signal reads (`count.get()`) in `value`
+  thunks, which now lack `String()` coercion under property dispatch — consult `inferredType` so
+  the coercion fires for number-typed signal reads (no corpus offender today; add the unit test).
+  **Absorbs LT-135 (owner, planning 2026-10-06)** — the same free-name-through-a-const wall from
+  the other direction. LT-119 credits a signal in `thunkRendered` when a `clientSetup` statement
+  reads it, but only through `containsSignalGet(stmt.node, …)` on the statement itself, so
+  hoisting a predicate into a plain setup const (`const isOpen = () => open.get(); watch(() =>
+  !isOpen(), …)`) un-credits the signal and the component tiers into Simulated with no warning.
+  Resolve reads through the `component.plainSetup` consts a statement names, with the same
+  one-hop widening `computeClientNeededNames` already does. Flip the negative case pinned in
+  `server/tests/compiler/client-setup-credit.test.ts`, and drop the "repeat the predicate"
+  workaround comment in `form-combobox.tsrx` (in the `.tsx` member too, if it carries one) if the
+  fix makes it unnecessary. **Order inside the task:** do the LT-135 half and step 1 first; step 2
+  builds on both.
+  **Channel/tier:** compiler only. Step 1 re-words a routing reason, not a diagnostic (LTC004
+  rides the tier census, ADR 0029); no new LTC code, no runtime check.
+  **Re-triaged 2026-09-06 (LT-165 step 5 landed).** The ADR 0029 concern stands and has
+  sharpened: LTC004 left the diagnostic channel, so a false firing on a fully
+  phase-1-resolvable component now tiers it into simulation **silently** — it buys a realm and
+  says nothing. It is not invisible, though: the tier census records the reason with its
+  LTC004 origin and line, so the failure mode is inspectable rather than lost. Stays in P6 on
+  that basis. **Cheap check to run at the end of wave 4, before this task:** scan the census for
+  any Simulated component whose ONLY reason is a LTC004 origin — each one is a candidate false
+  firing, and the list sizes this task's real payoff.
+
+
+- [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
+  **Area:** compiler
+  **Context:** A `@for (const x of items)` loop lowers CLIENT-side to
+  `const items = all('<selector>')` — the loop's collection name becomes a query variable that
+  SHADOWS the server arg of the same name. Setup or `expose()` code reading the arg then means
+  two different things per half: server `items.length` is the array length, client
+  `items.length` is `undefined` on a `Cell`. **Verified 2026-08-30, and it is loud:**
+  `expose({ n: () => items.length })` over a `@for (const item of items)` loop compiles with
+  ZERO compiler diagnostics but fails `check:tsrx` with `TS2339: Property 'length' does not
+  exist on type 'Cell<HTMLSpanElement[]>'`, mapped back to the right `.tsrx` line. So this is a
+  message-clarity task, not a correctness hole — same posture as LT-125. The tsc text names
+  `Cell<…>` but never says *why* the author's `string[]` arg became one, and the fix (rename the
+  loop binding, or project the value through `expose()`) is not discoverable from it. **Re-verify first (Architect, planning 2026-10-06):** the entry predates ADR 0046 (reactive
+  lists) and `.tsx` as the default surface. Before changing anything, check whether a
+  server-data `@for` still lowers its collection name to a client `all()` query that shadows the
+  arg, on either surface. If neither surface still shadows, close the task with `done` and a pinning
+  test. If one does, the diagnostic is **LTC082** (compiler, tier 1 Prevented, statically
+  decidable; no runtime half).
+  **Fix:**
+  detect the collision in the compiler — a `@for` collection name that also names a server arg,
+  where the arg is read outside the loop body — and emit a dedicated diagnostic naming both the
+  shadowing and the rename. Low priority: no corpus component hits it, and the build already
+  stops.
+
+
+### Q — docs and build cleanup
+
+- [ ] LT-437: Refresh the `cause-effect` skill for 1.6 — version stamp, list `map`/`forEach`, derived-list `stale` (LT-412 review follow-up).
+  **Area:** docs
+  **Needs:** LT-412
+  **Narrowed (Architect, planning 2026-10-06):** b63fbfed restamped `skills/cause-effect/` to
+  1.6.x and covered list `map`/`forEach` and the derived-list `stale` case. What is left: the
+  `stale` bullet in `skills/le-truc/references/runtime.md` ("never fires for a cell or memo", no
+  derived-list case) and the matching last bullet of `AGENTS.md` ("only fires for `Task` signals").
+  Bring both in line with `skills/cause-effect/SKILL.md`'s `stale` bullet, which is verified
+  against 1.6.1. The original context follows.
+  **Context:** `skills/cause-effect/SKILL.md:6` still says it describes 1.5.x (verified against
+  1.5.2). LT-412 corrected the `stale` routing for 1.6.1, but the rest of the skill was never
+  checked against 1.6: 1.6.0 added `map((item, key) => R)` and `forEach` to both list kinds (the
+  `.tsx` keyed map, ADR 0046 s4, relies on them), and in 1.6.1 a list or store derived from an async
+  computation can reach `stale`. `skills/le-truc/references/runtime.md`'s `stale` bullet still says
+  "never fires for a cell or memo" and omits the derived-list case. Verify each claim against the
+  installed `node_modules/@zeix/cause-effect/src/`, add only what a Solid/Preact user would get
+  wrong (the skill's own rule), and restamp the version.
+  **Channel/tier:** none — docs.
+  **Check:** every behavioral claim in both files traces to the 1.6.1 source; the stamp names 1.6.x
+  and the version verified.
+
+- [ ] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review).
+  **Area:** server
+  **Context:** `_media/*.md` inside the gitignored TypeDoc output dir are hand-copied mirrors
+  of repo docs (`REQUIREMENTS.md`, ADRs). No build generates or refreshes them, so they go
+  stale silently and freshness depends on somebody remembering (LT-272 hand-refreshed them
+  once; the gap was left unfiled). Decide: generate the mirror in `build:docs` from the repo
+  sources, or delete it and link the repo files instead. **Probe first (Architect, planning 2026-10-06):** the premise may be wrong. `docs-src/api/` is
+  TypeDoc's `out` dir (gitignored), and TypeDoc copies relatively linked local files into `_media`
+  when it runs. Find out whether `build:docs` runs TypeDoc and whether a run refreshes `_media`.
+  If it does, close the task with `done` and a one-line finding. If it does not, prefer deleting
+  the mirror and linking the repo files (fewer moving parts) unless a link target cannot be
+  reached from the published site, and record which one you chose.
+  **Channel/tier:** none — build pipeline.
+  Filed while its staleness was
+  re-observed during the LT-179 review.
+
+
+### Design gates
+
+- [ ] LT-471: Design session — D-32, the compiler's public contract (entry points, result types, the generated-module API under semver).
+  **Area:** design
+  **Area:** design (Architect with the owner)
+  **Filed (Architect, planning 2026-10-06; owner scheduled it this iteration):** D-32 is deferred
+  to a design session (`COMPILER_SPEC.md` §12, decision log). It gates LT-254, the first task of
+  the P1 release track, and LT-376. Running it during the P6 round keeps the publish off the
+  owner's calendar when P1 opens.
+  **Questions to rule:**
+  1. **Entry points** — one public entry point (dialect + one entry + consumer half, PROPOSAL D4)
+     versus also publishing the corpus pass and the incremental API (§2).
+  2. **Result types** — which types the entry points return are public. `RegistryEntry` names
+     `RenderedShape` and `SuppressedSite`, and neither is exported: export them, or narrow
+     `RegistryEntry`.
+  3. **The generated-module API under semver** — ADR 0034 s8 counts it as public (a change is a
+     major), while `contract.ts` and `LE_TRUC_COMPILER.md` §2 say semver applies to the designated
+     set "and to nothing else", which does not list it. Rule which way it goes: add it to the
+     policy, or amend the ADR (LT-254's rider).
+  4. **Weigh `@typescript-eslint/typescript-estree` as a runtime dependency** under M28 if its
+     answer turns on the entry-point shape (LT-254's rider). Otherwise it stays with LT-254.
+  **Output:** the ruling recorded in `COMPILER_SPEC.md` §12 and its decision log (D-32 → Ratified),
+  an in-place ADR 0034 s8 amendment if question 3 goes that way, and Appendix B refreshed (stale
+  since 2026-09-29). Then re-scope LT-254 and LT-376 against the ruling.
+  **Channel/tier:** none — design.
+
+- [ ] LT-462: Children contract — parent-owned children, child-declared roles and content model (design; ADR 0048).
+  **Area:** design
+  **Needs:** LT-465
+  **Area:** design
+  **Filed (Architect, 2026-10-06; owner rulings 2026-10-06):** composing `<ModuleScrollarea>` around
+  `module-codeblock`'s `<pre><code>` fails LTC026 — the structural verifier excludes everything
+  under a composed child (`:not(<child-tag> *)`, LT-316) — and ADR 0033 s7 leaves content a parent
+  places inside a composed child outside the parent's style scope.
+  **Owner rulings:** (a) content a parent passes as `children` is owned by the parent. (b) A child
+  may act on its children through its contract (first raised for `BasicPluralize`, since retired
+  in LT-467; `<select>`/`<option>` is the standing analogue).
+  (c) `FormCheckbox` takes its label as `children` and refuses interactive content in it. (d) The
+  CSS boundary consequence is decided by a spike first (LT-465).
+  **Model to record in ADR 0048:**
+  1. **Parent owns the content** — structure, text, its own bindings and `first()` references reach
+     the children region; the verifier excludes only the child's own template.
+  2. **The child acts only through declared roles** — its `children` type names the roles it
+     addresses (sketch: `children: Children<{ tab: 'button', panel: 'section' }>`, roles matched by
+     class), as `<select>` acts on `<option>`. A child `first()`/`all()` into children that targets
+     no declared role is a reach-in (new LTC, tier 1).
+  3. **One writer per property** — a parent binding a property the child's contract writes on a role
+     element is a conflict (new LTC, tier 1, decidable from the compose registry).
+  4. **Content model** — a child may declare its children non-interactive; the compiler checks the
+     compose site's literal children (`a[href]`, `button`, `input`, `select`, `textarea`, `label`,
+     `details`, `iframe`, `[tabindex]`, media with `controls`) and composed children whose template
+     contains one, transitively through the registry (new LTC, tier 1). TypeScript cannot carry it
+     (JSX element types are opaque); page-authored HTML is unchecked.
+  5. **Styles** — per LT-465's recommendation.
+  **ADR edits riding with 0048** (none of these is published on `main`, so all are in-place
+  amendments): ADR 0024 s10 (children ownership; cross-reference), ADR 0033 s7 (the
+  "template-authored content in a composed child" difference, per LT-465), ADR 0046 (point 1's
+  verifier change inside list items), HOST_PROFILE § data account bullet 3 and § element references.
+  **Output:** ADR 0048, then compiler tasks per numbered point with channel, tier and LTC codes,
+  plus the two composition sites split out of LT-463 (owner, planning 2026-10-06):
+  `module-codeblock`'s `<module-scrollarea>` → `<ModuleScrollarea>`, and `module-todo`'s
+  `<form-checkbox>` → `<FormCheckbox>` with its label as children (point 4's content model; after
+  LT-464 gives form-checkbox its `.tsx` spelling).
