@@ -89,7 +89,11 @@ On each run:
 
 The first run adopts server-rendered children that carry `data-key`. Children carrying `data-unreconciled` are exempt from reconciliation entirely — this is a public SSR contract. A compiled list seeded from server args rebuilds its seed from those children before the first run: each item field is harvested from its canonical render site in the adopted item, or from `data-key` when the key configuration returns it verbatim, through a parser inferred from a same-file item type or declared with the `harvest()` marker; the rebuilt item is checked against the item type ([ADR 0046](adr/0046-reactive-list-items-as-mount-scopes.md) s7).
 
-Per-item bindings mount via `bindItem` in root-keyed scopes, reusing the `keyedScopes` ownership discipline (ADR 0014). The driving effect tracks structural changes (source keys) only.
+A list reached only through `byKey` in another list's item setup (a flat list rendered through a nested grouping) harvests from those alias sites instead. The server render witnesses that every key rendered, in order, and fails the build otherwise ([ADR 0047](adr/0047-harvest-through-a-key-alias-witnessed-by-the-render.md)).
+
+In compiled output every list template is a direct child of the host, after its rendered content, stamped `data-list="N"` and queried from the host, so a container — a scope root included — holds only its items. Arm templates stay beside their arm, because the arm form anchors on them (below; [ADR 0046](adr/0046-reactive-list-items-as-mount-scopes.md) s2).
+
+Per-item bindings mount via `bindItem` in root-keyed scopes, reusing the `keyedScopes` ownership discipline (ADR 0014). The driving effect tracks structural changes (source keys) only. A leaving item's scope is disposed before its element is removed, so cleanups see a connected element.
 
 **`bindItem` has collector parity with `each()`'s callback.** Both run inside an ambient effect-descriptor collector:
 
@@ -215,7 +219,7 @@ Cutting across the tiers is a second, expression-level fact. An expression is **
 
 Three properties are worth carrying as a mental model:
 
-- **Unresolvability is per-expression; tier is per-component.** Conflating them goes wrong in both directions — `module-ticker` calls `Math.random()` but is also heavily `first()`-based, so it is the Simulated tier with one suppressed expression, neither wholly static nor wholly simulated.
+- **Unresolvability is per-expression; tier is per-component.** Conflating them goes wrong in both directions — a component that reads `Math.random()` at one rendered site but is otherwise realm-answerable is the Simulated tier with one suppressed expression, neither wholly static nor wholly simulated.
 - **The predicate is "is simulation worth running," not "did folding fail."** A component whose only unresolved reads are scroll offsets and `bindState(internals, …)` writes gains nothing from a realm that returns zeros for both, so it is not simulated. The "can the realm answer this" half of the test reads the driver's own stub table, which means a driver capability landing later re-routes affected components automatically.
 - **Classification is conservative.** A component is Folded-tier only when phase 1 is provably total; any doubt routes downward. A false Simulated classification costs about a millisecond of build time; a false Folded-tier ships wrong HTML with no diagnostic.
 - **The fold's inputs are closed.** Whatever the server evaluates may read only the component's own args and the reserved `i18n` record's declared members (`lang`, `t`, `timeZone`, `currency`, `dir`) — the partial-readiness invariant that makes template emission possible ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s4). A page-context read (`document`, `window`, `navigator`, …) in a server-evaluated position is a compile error (LTC054), not an omission: omitting a realm-answerable read would silently move the component out of the Folded tier and out of template emission. The set is declared once, in `server/compiler/fold-inputs.ts`; widening it is a reviewed act.

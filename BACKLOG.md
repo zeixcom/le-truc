@@ -1158,6 +1158,31 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   **Verification:** green at HEAD; a fixture skill file naming a retired code or a removed export fails it.
 
 
+- [ ] LT-450: Design session — lists too large to server-render at once, as HTML partials of item blocks loaded on demand (optimistically, as the user scrolls).
+  **Area:** design
+  **Area:** design
+  **Filed (Architect, 2026-10-06, from the LT-110 session):** ADR 0047's key-alias harvest
+  needs the server to render every item once (its render witness fails a partial render by
+  design), and the owner rejected client-side rendering from a page-level data block (ADR 0047,
+  Alternatives). For a dataset too large to render at once, the owner's direction is the
+  HTML-first answer: the server renders the first blocks, and further blocks arrive as HTML
+  partials fetched on demand, optimistically as the user starts to scroll.
+  **Questions for the session:** (1) **The data list's growth.** Items arriving in a partial are
+  server-rendered markup after connect. ADR 0003 harvests at connect only, so does an arriving
+  block harvest into the host-level list on insertion (a harvest-at-insertion rule), or is
+  each block its own list? What about order and duplicate keys across blocks? (2) **The fetch
+  contract.** URL scheme per block (page index, cursor, key range), who owns it (a component
+  attribute, an authored template, a server route convention), and how the partial is
+  rendered: the compiled component's own render over a slice of server args, so that one
+  render produces both the page and its partials? (3) **Relation to existing machinery.**
+  `module-lazyload`'s fetch-and-insert, `dangerouslyBindInnerHTML`'s sanitize path, and LT-448
+  (partials that bring new components). Which of them carries this, and what does the
+  sanitizer do to a partial's harvest sites? (4) **The witness.** A partial is a render with
+  its own scope. Does ADR 0047's witness apply per partial (every item of the slice
+  rendered)? (5) **Template targets** (ADR 0043): can a backend emit the partial route?
+  (6) **The probe component**: `module-ticker` past BLOCK_SIZE × N, or a new corpus example.
+  Traces to M17 (every pattern expressible), M19, M27.
+
 ## Unbanded
 
 - [ ] LT-134: LTC035 and LTC042 give opposite advice on the same construct (LT-131 review finding). — closed as moot (Architect, 2026-10-02)
@@ -1168,30 +1193,3 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   instances by class") names no per-arm shape. Nothing to do; the residual LTC042 advice
   stands on its own row in `errors.md`.
 
-
-- [ ] LT-447: A host-declared `deriveList` consumed only inside a reactive-list body compiles to a server `ReferenceError` with no diagnostic — emit the declaration or refuse the shape.
-  **Area:** compiler
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, from LT-109's review):** a contributor hit this live during the
-  `module-calctable` migration. Source shape: `const rowPrices = deriveList(items, item => …)`
-  declared at host level, whose ONLY consumer is an item-scope const inside the reactive-list
-  body (`const price = rowPrices.byKey(k)` in the `map` callback / `@for` body). The compiler
-  accepted the source on both surfaces with no diagnostic; the generated SERVER module emitted
-  the item const but omitted the `deriveList` declaration entirely — every render throws
-  `ReferenceError: rowPrices is not defined`. The sim realm caught it during `build:docs`
-  (before the fix, `module-calctable`'s build-docs connect reported exactly this); neither
-  `check:corpus` nor `tsc` sees it, because the generated module fails at RUNTIME, not
-  typecheck. The client module has the same hole (the declaration is emitted neither there).
-  **Design questions:** (1) Is a host-level `deriveList` whose only read is a list body's
-  `byKey` a supported shape? ADR 0046 s5 admits signal declarations in item setup, and
-  `deriveList` is a loop source (LT-425) — but the item-const route here reads it as a SIGNAL
-  MAP, not a loop source, and the both-phase classification (`extractItemSetup`) emits the item
-  const while the declaration walker never follows the dependency. (2) If supported: the
-  declaration must ride both modules whenever a list-body position reads it (the same
-  import-placement rule LT-426 applies to item setup). (3) If not: an LTC refusal (next free
-  code LTC079), tier 1 Prevented, statically decidable, naming the supported alternative (the
-  per-item `createMemo` over the item's own fields, which is what LT-109 shipped). The
-  evidence lives on `task/LT-109`'s pre-restructure state and in LT-109's handoff; the
-  equivalence-audit/sim snapshots on that branch carried the failing render.
-  **Channel/tier:** compiler; decided by the task per question (3). Parity cases on both
-  surfaces regardless.

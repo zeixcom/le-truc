@@ -121,6 +121,19 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
     LT-448's session writes the follow-up that revives `shake-hands` (inert → alive per the
     ruled design), absorbing the three re-scoped script-execution spec legs and
     `mocks/module-with-type.html`. LT-390 is re-pointed at LT-449.
+16. **LT-110 unblocked (owner + Architect, 2026-10-06).** The blocked session found two
+    compiler gaps in the ticker's ruled shape. (a) **List templates hoist to the host's end**
+    (ADR 0046 s2 amended → LT-454): one copy per instance, queried from the host, so a
+    container may be a scope root (`<tbody>`). Arm templates stay beside their arm, because
+    the arm form anchors on them. Comment anchors were rejected for minifier robustness, and
+    computed positions for fragility. (b) **A list reached only through `byKey` harvests
+    from its alias sites, witnessed by the render** (ADR 0047 → LT-453). Rejected: a JSON
+    root-attribute seed (the data ships twice) and a client-side-rendering escape hatch (it
+    contradicts enhance-not-generate). Too-large datasets go to LT-450 (design, P7: HTML
+    partials on demand). Found on the way: LT-451 (silent miscompiles of a signal
+    initializer over a Parser-backed host prop) and LT-452 (the canceller globals). The
+    ticker's "LT-165 step 7 corpus pin" clause is withdrawn: `Math.random()` reaches no
+    rendered site there, so the pin stays synthetic in `suppression.test.ts`.
 
 **The chain.**
 - **Gate zero — closed 2026-10-02 (b795ff3e).** ~~LT-335~~ (done ✓) and ~~LT-370~~ (reviewed ✓).
@@ -135,10 +148,9 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → LT-110 → LT-449 (lazyload's boundary, ruled 2026-10-06 — pickable immediately, folder-independent, not gated on LT-448; pairs with LT-390) → LT-445 (cem-list, filed from LT-111's sweep) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-449 only). LT-110 is
-  LT-165 step 7's corpus pin.
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → **next:** ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → LT-449 (lazyload's boundary, ruled 2026-10-06 — folder-independent, not gated on LT-448; pairs with LT-390) → LT-445 (cem-list, filed from LT-111's sweep) → LT-454 (list-template hoisting) → LT-453 (key-alias harvest) → LT-110 (needs LT-452, LT-453, LT-454; ruling 16) → LT-446 (section-menu, design — the sweep's last folder) → LT-390 (needs LT-449 only).
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). **Next:** LT-443 (needs LT-429).
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). **Next:** LT-443 (needs LT-429) → LT-452 (canceller globals; LT-110 needs it) → LT-451 (ruling 16) → LT-447.
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
@@ -163,7 +175,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-450.** Next free diagnostic code: LTC079 (LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-455.** Next free diagnostic code: LTC081 (LTC080 is LT-453's; LTC079 is reserved for LT-447's refusal option; LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -260,76 +272,6 @@ recorded against the 30.4k opening measurement.
 
 ### C — corpus port
 
-- [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
-  **Area:** examples
-  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429
-  **Updated (Architect, 2026-10-04, ADR 0046):** an acceptance probe. Shape ruled at the LT-280 session: an outer reactive list over `<tbody>` blocks, each with a per-item `createSensor` on the scope root (`first('tbody')`, `{ value: true }`), a per-block `height` state written from `IntersectionObserverEntry.boundingClientRect.height` before `visible` flips (one `batch`), and an inner list over a scope-declared `deriveList` that is empty while invisible; the placeholder is the inner loop's empty arm with a reactive height. Rows look up `tickers.byKey(s)` in per-item setup. Formatted cells need raw sources; `open` needs a site (`data-open` or `<data value>`; corpus choice). Both `.tsx` and `.tsrx` members.
-  **Context:** ~283 lines, the most loop-dense example (`each()` ×11, `MutationObserver` ×6,
-  `IntersectionObserver`, `populate`). Expect this to stress the loop/effect analysis hardest —
-  surface compiler gaps in NOTES.md rather than restructuring the component away from its
-  demonstrated patterns. Formats through `Intl`; same tiering reference as LT-109. **This is
-  LT-165 step 7's corpus pin:** Simulated tier with its `Math.random()` expression suppressed
-  and everything else simulated.
-
-
-- [ ] LT-449: Migrate `module-lazyload`'s async boundary to `<truc:try>` — per-arm callouts, `truc:html` ok arm, beside-watch scroll. — in progress ⚙
-  **Area:** examples
-  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
-  **Area:** examples
-  **Ruled (owner + Architect, design session 2026-10-06, in LT-334):** the 2026-09-25 refusal
-  is superseded on three of its four grounds by ADR 0037's template-cloned arms and the
-  reactive `truc:html` attribute (LT-025). The ruled shape, pinned so no contributor decision
-  is needed:
-  1. **Per-arm duplicated callout** (owner ruling): the loading and error callouts are
-     separate arms, not one shared wrapper toggled by hand —
-     - pending arm: `<card-callout><p class="loading" role="status">{loading}</p></card-callout>`
-     - catch arm: `<card-callout class="danger"><p class="error" role="alert">{e.message}</p></card-callout>`
-       — `.danger` is authored per arm, never a runtime `classList` mutation;
-     - ok arm (the children): `<div class="content" truc:html={() => content.get()}></div>`.
-     Three one-root sibling arms directly in the host — the exact shape the existing emission
-     supports. **Accepted DOM consequence:** when ok, no callout exists in the DOM at all
-     (today a hidden one remains). Spec legs asserting the toggling shape are reported with
-     evidence and re-ruled per ITERATION ruling 10, never matched silently. The no-JS story
-     holds: the server renders the pending arm live.
-  2. **`allow-scripts` is out of scope, and this task waits for nothing** (owner, 2026-10-06:
-     everything is settled — the `<truc:try>` pattern works and the previous blockers are
-     lifted). The decoupling from LT-448 is one-directional: LT-448's design session produces
-     the follow-up that revives `shake-hands`; this migration is complete without it. The
-     attribute stays page-authorable on the host and documented, but the compiled `truc:html`
-     path passes `sanitize: sanitizeHtml` and strips scripts, so `shake-hands`
-     (`mocks/snippet.html`) renders inert in the interim — the accepted state, never fixed
-     here by pre-registering the component. The three script-execution spec legs
-     ('executes JavaScript in loaded content when allow-scripts is present', 'respects
-     allow-scripts attribute for script execution control', 'preserves script type attributes
-     when recreating scripts', `module-lazyload.spec.ts:419,451,490`) plus the shake-hands
-     assertions (~line 431) move to that follow-up, which LT-448's session writes. Keep
-     `mocks/module-with-type.html` as its test input.
-  3. **Stale dimming** stays the documented idiom: a reactive `style` (or `class`) thunk
-     reading `isPending(content)` on the ok arm root. It works because a re-fetching task
-     keeps its ok arm (LT-211), so the arm effect stays live across the dim. If it lands as
-     a class rule, the rule goes in the shared sheet — the variant set's byte-identical CSS
-     check then forces the same rule into the twin's sheet.
-  4. **The nil routing is free:** the twin's nil handler shows the loading callout, which is
-     what the pending arm already is.
-  5. **The scroll-to-first-heading side effect stays a beside-watch** (owner: a sanctioned
-     escape hatch — the `isPending` idiom's precedent): `watch(content, { ok: … })` in setup,
-     `hasLoaded` in a const record and the distinct `scrollTask` key, verbatim from the twin.
-     A boundary hook attribute is rejected by ADR 0041 condition 1, and arm-mounted effects
-     cannot hold it (they die with the arm; the guard is component-lifetime state).
-     **The task owes an ordering probe:** the side watch's ok fire and reconcile's arm
-     adoption are both driven by the same signal change, and the scroll queries into the
-     freshly adopted arm — prove the existing `schedule()` indirection orders it, by test,
-     not by assumption.
-  **Compiler work in scope** (recognition, no new diagnostic; census and warning baseline
-  unchanged): the boundary's signal identification currently looks for a bare reactive
-  identifier child of the ok root — it must read the task through the `truc:html` thunk; and
-  the reactive `truc:html` lowering must be probed in arm position — the watch mounts inside
-  `bindArm` (effects die with the arm) and the ok template bakes the html child empty
-  (LT-385c), the mount writing it on enter.
-  **Verification:** full gates; goldens/snapshots extend by design; the demo page and the
-  spec run in the browser/Playwright — name any leg left unrunnable. Pairs with LT-390, which
-  extends the equivalence audit to arm adoption on this component.
-
 - [ ] LT-445: Migrate `module-cem-list` to `.tsx` with same-commit cutover — the filter layer over `{% cem-list %}`'s page-authored cards.
   **Area:** examples
   **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
@@ -348,6 +290,127 @@ recorded against the 30.4k opening measurement.
   4. No `.spec.ts` exists in the folder — `test:variants` skips it; the demo page and the docs pages (which embed `{% cem-list %}`) are the live exercise; run them in the browser or name the leg unrunnable.
   **Verification:** full gates; the cem-list demo filters live (type in the box, cards hide); goldens/snapshots extend for the new compiled members; tier census change recorded by design.
   ---
+
+- [ ] LT-454: Hoist every compiled list template to the host's end; drop the "list directly under an item root" refusal (ADR 0046 s2).
+  **Area:** compiler
+  **Gates:** check:sim
+  **Area:** compiler
+  **Context (Architect, 2026-10-06, ADR 0046 s2 as amended):** a list's `<template
+  data-list="N">` sits today right after its container's close tag, and the client queries
+  it from the container's parent. When the container is itself a scope root (a `<tbody>` as
+  a list item, holding the rows list), the slot after the container belongs to the outer
+  list's container, so the compiler refuses the shape (LTC005, `analysis/effects.ts:1779`).
+  `module-ticker` (LT-110) needs exactly this shape.
+  **Change:**
+  - **Placement.** Every list template, at every nesting depth, is emitted once per
+    instance as a direct child of the host, after the rendered content, in document order
+    of N.
+  - **Query.** Every mount queries `host.querySelector(':scope > template[data-list="N"]')`.
+  - **Nested copies.** A nested list's template is no longer copied into its outer
+    template or into live items.
+  - **Refusal retired.** The `effects.ts:1779` refusal goes; a list container may be any
+    element, a Mount Scope root included.
+  - **Unchanged.** N's derivation (`walk.ts:listIndexOf`); the refusal of a list directly
+    under the component root (the host is never a container); LTC061.
+  **Arm templates are out of scope** (owner ruling, 2026-10-06): they stay beside their arm,
+  because `reconcile()`'s arm form uses the first template as its insertion and adoption
+  anchor (`src/helpers/reactive.ts`, `reconcileArms`).
+  **The invariant to pin.** A hoisted template renders with every enclosing scope's
+  bindings unbound. Today a live outer item's copy of an inner template bakes outer-item
+  values (`data-group="x"` from an outer key, via `emit-server.ts`'s `templateUnbound`),
+  while the outer template's copy bakes them empty. The client's inner mount writes them on
+  every adopt and clone, so the baked values are redundant. Pin with regression tests that
+  the single copy carries no enclosing-scope value and that a cloned inner item in a cloned
+  outer item still gets it. Cover list-in-list, list-in-arm and arm-in-list, on both
+  surfaces.
+  **Also pin:** a list whose container is the item root (`<tbody>` item holding a `<tr>`
+  list with an empty arm) compiles, renders, connects with no realm diagnostics, and clones
+  a new outer item with working inner reconciliation.
+  **Docs:** `LE_TRUC_COMPILER.md` and `HOST_PROFILE.md` (template placement, the
+  `:host > :last-child` gotcha: trailing host children are compiler templates), the
+  `emit-server.ts`/`walk.ts`/`loops.ts`/`plan.ts` comments that describe the old placement.
+  Snapshot churn (parity, equivalence audit, sim driver) is expected and is the diff to review.
+  **Channel/tier:** no new check; one refusal retired.
+
+- [ ] LT-453: Harvest a host-level arg-seeded list through a key alias, with the render witness (ADR 0047).
+  **Area:** compiler
+  **Gates:** check:sim
+  **Area:** compiler
+  **Context (Architect, 2026-10-06, ADR 0047):** implement ADR 0047 on both surfaces. The
+  motivating shape is `module-ticker` (LT-110): the host-level `tickers` list, seeded from the
+  `rows` arg, is rendered only through per-block derived lists of symbols. Each row binds
+  `const ticker = tickers.byKey(s)` in item setup and renders the fields through
+  `ticker.get().<field>`. Today this is refused: LTC005 "The initializer of signal `tickers`
+  references server-only name `rows`".
+  **Static half:** recognize the alias in the harvest pass (`analysis/harvest.ts`, beside the
+  per-field plan `planListFieldHarvest`). The four ADR 0047 s1 conditions are each refused
+  with **LTC080** (tier 1 Prevented, compiler channel; one code, one message per condition,
+  each naming its fix). The conditions: the alias list's item is its key; `byKey` over the
+  loop key, unconditional, in item setup; one alias scope per list; every field at a canonical
+  site through `t.get().<field>`, with s7's parsers and raw-source rule. The harvested list's
+  declaration rides both modules (the alias read counts as a read in both phases; compare
+  LT-447's dropped-declaration class).
+  **Dynamic half:** the server module records the keys rendered at the alias scope, in order,
+  and asserts at render end that their first occurrences equal the list's keys. The failure
+  is a thrown error from the server runtime (`server/compiler/runtime.ts`). Its message names
+  the component, the list and the first missing or out-of-order key, and follows
+  `.agents/skills/writer/references/error-messages.md`. Channel: the server render; it fails
+  the build under static generation and the realm (ADR 0028: Prevented in effect). No client
+  counterpart. A client cannot detect an item it never saw.
+  **Client:** harvest the list at connect, before any consumer reads it, from every
+  alias-scope root in document order across enclosing scopes. The selector path is
+  synthesized by the structural proof (ADR 0045).
+  **Template targets:** under a configured target, a key-alias harvest is not emittable (a
+  census routing outcome, ADR 0043 s2), until a target operation carries the witness.
+  **Tests:** a fixture of a flat list rendered through two levels of derived grouping, on both
+  surfaces. Pin: the per-field harvest from the alias sites; the client list's keys and order
+  after connect; each LTC080 refusal; a witness failure, with the server render showing a
+  missing key (for example, a block gated off on the server); parity between the surfaces.
+  Docs: `LE_TRUC_COMPILER.md` (harvest, the diagnostic inventory), `HOST_PROFILE.md`
+  (per-item setup: the alias), `VOCABULARY_LEDGER.md` (LTC080).
+
+- [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429, LT-452, LT-453, LT-454
+  **Re-scoped (Architect, 2026-10-06, after the blocked session):** the first session found two
+  compiler gaps in the ruled shape. Both are ruled and filed: the nested list in a `<tbody>`
+  item root (template hoisting, ADR 0046 s2 → LT-454), and `tickers` harvested only through
+  `byKey` (ADR 0047 → LT-453). LT-452 removes the `window.clearInterval` workaround. The
+  first session's draft is uncommitted in `.worktrees/LT-110/examples/module/ticker/module-ticker.tsx`.
+  Start from it, but check it against this entry.
+  **The shape (LT-280 ruling, unchanged):** an outer reactive list over `<tbody>` blocks.
+  Each block has a per-item `createSensor` on the scope root (`first('tbody')`,
+  `{ value: true }`) and a per-block `height` state written from
+  `IntersectionObserverEntry.boundingClientRect.height` before `visible` flips (one `batch`).
+  Inside it, an inner list over a scope-declared `deriveList` that is empty while invisible;
+  the placeholder is the inner loop's empty arm with a reactive height.
+  **Data (ADR 0047):** `tickers` is a host-level `createList` seeded from the `rows` arg and
+  harvested through the rows' alias, `const ticker = tickers.byKey(s)`, in the inner item
+  setup. The inner list's item is the symbol, and its key config returns it verbatim.
+  Every `TickerItem` field needs a canonical alias site with a raw source: a formatted cell
+  carries its raw value (`<data value>` or a `data-*` attribute; corpus choice). For `open`,
+  either give it a site or drop it from the harvested item type and seed it per row from the
+  harvested `price`, as the hand-written twin does (`open: price`); corpus choice, stated in
+  the handoff. The witness requires every row to render on the server, which the
+  `{ value: true }` sensor seed guarantees.
+  **Blocks:** the block list's seed is the corpus's choice among the shapes that compile. The
+  first session found that a scalar seed needs the item rendered somewhere; the key alone
+  does not count. A `deriveList` over `tickers.keys()` chunked by `BLOCK_SIZE` is
+  recommended: no seed, and "Add 100 rows" becomes one `tickers.splice`.
+  **Formatting:** list-body thunks cannot read setup consts (LTC005), so format through
+  per-item `createMemo`s in item setup that read the setup-level `Intl.NumberFormat`
+  consts. The first session verified this compiles.
+  **Tier:** classifier's decision, reported in the handoff. The old "LT-165 step 7 corpus
+  pin" clause is withdrawn (ITERATION ruling 16): `Math.random()` sits only in handlers, so
+  no rendered site is suppressed. Reword the ticker references in `server/compiler/tier.ts`,
+  `LE_TRUC_COMPILER.md` (the "`module-ticker` is why the two facts stay separate" paragraph)
+  and the `suppression.test.ts`/`tier.test.ts`/`sim-driver.test.ts` comments to the synthetic
+  pin. `ARCHITECTURE.md` is already reworded.
+  **Variant set:** `.tsx` (served) and `.tsrx` members; the hand-written `.ts` stays as the
+  twin (ruling 5). The authored `.html` is regenerated from the compiled render. It need not
+  be byte-identical to today's hand-written fixture (owner, 2026-10-06), but the twin must
+  enhance the regenerated markup, so adapt the twin where it must. CSS stays byte-identical
+  across the set.
 
 - [ ] LT-446: Scope the `section-menu` migration (site chrome: external toggle by document id, imperative backdrop, layout-wide registration) — decide, then write the implementation task.
   **Area:** design
@@ -380,52 +443,74 @@ recorded against the 30.4k opening measurement.
   upstream.
 
 
-- [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
-  **Area:** examples
-  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429
-  **Updated (Architect, 2026-10-04, ADR 0046):** an acceptance probe. Shape ruled at the LT-280 session: an outer reactive list over `<tbody>` blocks, each with a per-item `createSensor` on the scope root (`first('tbody')`, `{ value: true }`), a per-block `height` state written from `IntersectionObserverEntry.boundingClientRect.height` before `visible` flips (one `batch`), and an inner list over a scope-declared `deriveList` that is empty while invisible; the placeholder is the inner loop's empty arm with a reactive height. Rows look up `tickers.byKey(s)` in per-item setup. Formatted cells need raw sources; `open` needs a site (`data-open` or `<data value>`; corpus choice). Both `.tsx` and `.tsrx` members.
-  **Context:** ~283 lines, the most loop-dense example (`each()` ×11, `MutationObserver` ×6,
-  `IntersectionObserver`, `populate`). Expect this to stress the loop/effect analysis hardest —
-  surface compiler gaps in NOTES.md rather than restructuring the component away from its
-  demonstrated patterns. Formats through `Intl`; same tiering reference as LT-109. **This is
-  LT-165 step 7's corpus pin:** Simulated tier with its `Math.random()` expression suppressed
-  and everything else simulated.
-
-
 ### B — correctness
 
-- [ ] LT-443: An unresolvable scalar seed type harvests silently as a string — refuse it (LTC077) unless `harvest(value, parser)` declares its parser (ADR 0046 s7). — changes requested ↩
+- [ ] LT-452: Add `clearInterval`, `clearTimeout` and `cancelAnimationFrame` to the client-known JS globals.
   **Area:** compiler
-  **Needs:** LT-429
-  **Context:** `typeOfAnnotation` (`server/compiler/infer-type.ts:128`) recognizes only the
-  `string`/`number`/`boolean` keywords; an alias (`price: Price`), a literal union, `number | null`
-  or `Date` infers `'unknown'`, which `parserForType` reads as `asString`. A signal seeded from such
-  an arg and harvested from a render site connects holding a string, and tsc does not reliably catch
-  it (`'2.5' + 1` is legal). Ruling (owner, 2026-10-05; ADR 0046 s7): S3 — refuse, with the scalar
-  form of LT-429's marker as the fix-it.
-  1. **The overload.** `harvest<T>(seed: T, parser: Parser<T>): T` beside LT-429's list form in
-     `server/compiler/macros.ts`; same stub, same recognition and stripping. Recognized wherever a
-     harvested signal's seed is spelled today (the `createState` argument, a server-arg `expose()`
-     initializer — the positions `analysis/harvest.ts` plans a scalar harvest for).
-  2. **Parser selection.** A harvest site whose signal is seeded through `harvest(x, p)` reads
-     through `p` (spliced as authored; its free names must be client-resolvable — a server-only name
-     is LTC005's client-position face, as for LT-429's map entries). Without the marker, inference
-     as today (with LT-440's `asNumber`).
-  3. **LTC077** — compiler, tier 1 Prevented, statically decidable, no runtime half: a harvested
-     signal whose inferred type is `'unknown'` and that carries no `harvest()` parser. Copy per
-     `writer` → error-messages, naming the signal, the annotation it could not read and the fix:
-     *declare its parser — `createState(harvest(price, asNumber()))`*. A non-harvested signal (no
-     render site, a Parser-exposed prop, a context or sensor) is never refused: only the harvest
-     needs a parser.
-  **Check:** an aliased-`number` arg rendered as text fails LTC077 on both surfaces and passes once
-  wrapped in `harvest(…, asNumber())`, connecting as a number; a `Date` seed round-trips through an
-  authored parser; run the corpus census first — any existing component this refuses is listed in
-  the handoff and fixed in the task. Full compiler gates.
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from the LT-110 session):** `vocabulary.ts`'s `JS_GLOBALS`
+  lists `setInterval`, `setTimeout` and `requestAnimationFrame`, but none of their
+  cancellers. So `watch('running', v => { const id = setInterval(tick, 10); return () =>
+  clearInterval(id) })` is refused as a setup statement (LTC005). Add the three cancellers,
+  with a regression test that compiles the watch-cleanup shape on both surfaces. The
+  `window.clearInterval` workaround becomes unnecessary. A `done`-level change.
 
-  **Changed:** A scalar signal seed declares its harvest parser with a second `harvest()` overload — `createState(harvest(price, asNumber()))` (ADR 0046 s7, LT-443) — beside LT-429's list map in `@zeix/le-truc-compiler/macros` (`harvest<T>(seed: T, parser: FieldParser<T>): T`; same stub, binding recognition, stripping). It is consumed by every scalar harvest read: the direct text/attribute site, the substituted DOM read of a seed that IS the arg (`createCell(harvest(due, asParser(…)))` round-trips a `Date` this way — a `Date` cannot pass a typed sink raw), and a membership value read (the parser owns the no-match miss, so the typed default is unused then). The parser splices into the client as authored (parenthesized when a call cannot follow it bare), with a source slice mapping a generated-module type error back onto the authored expression; its free names must resolve on the client (the LTC005 client-position face, as LT-429's map entries). The server reads the seed through unchanged, per LT-429's read-through. New code **LTC077** (tier 1 Prevented, statically decidable, no runtime half): a scalar-seeded signal whose harvest read is a raw DOM string — a direct site, an identity seed's substituted read, or a membership read — and whose seed type the compiler cannot read (anything but the bare `string`/`number`/`boolean` keyword) with no marker: the inferred-string fallback would silently connect `2.5` as `'2.5'`. Copy names the signal, the unreadable annotation (or the missing one), and the fix `createState(harvest(price, …))`; located at the seed. A marker whose parser no read takes is refused rather than silently ignored: a literal seed, an initializer reused verbatim, and a seed that DERIVES from the arg (`value.length`, `mode === 'wide'` — the substitution reproduces the derivation identically on both sides, so no parser applies there). A non-harvested signal is never refused (no raw site, a Parser-exposed prop, a context, a sensor), and a non-scalar signal with a direct site (a bare `{items}` list signal) keeps today's mapping. Marker forms are matched to constructors: the map on `createList`, the scalar on `createCell`/`createState`/`createStore`; a mismatched pairing and a malformed arity are refused, and the updated `misplacedMarker`/item-setup copy covers both forms. **ITERATION.md's code ledger:** LTC077 is now used (LT-443).
-  **How:** `macros.ts` (overload + JSDoc), `list-item.ts` (`harvestCallOf` returns the scalar form; `HarvestSeedIR` is now a `list | scalar` union on `DeclaredSignalIR.harvest`), `setup-extraction.ts` (`seedHarvestOf` recognizes both constructor families, read-through shared, mismatch/malformed refusals), `imports.ts` (client placement credits the scalar parser's free names), `analysis/harvest.ts` (`parserForSeed`: marker → authored parser spliced via `AuthoredParser` {text, start, wrap}; identity-seed guard on the substitute limb; dead-marker refusals; membership parser), `analysis/plan.ts` (`AuthoredParser`; optional `parser` on substitute/membership plans), `emit-client.ts` (`parserExpression` splice + slices), `diagnostics.ts` (LTC077 + updated marker-face copy), `vocabulary.ts` (`SCALAR_HARVEST_CONSTRUCTORS`). Tests: `server/tests/compiler/scalar-harvest.test.ts` (46, both surfaces: LTC077 on text/attr/substitute/membership routes + keyword exemption; the wrapped number connects 2.5 in the realm; the Date round-trips through `asParser` on the substitute route; never-refused pins incl. the deriving-seed carve-out; dead-marker, mismatch, malformed, server-only-parser-name, membership pins). Authored `.tsx`: `fixtures/tsx/harvest-scalar.tsx` typechecks clean; `harvest-bad-scalar.tsx` fails tsc — pinned in `tsx/typecheck.test.ts` as TS2769 whose matching-overload clause carries `Parser<string>` → `FieldParser<number>` (both overloads now fail together, so LT-429's list probe pin moved from positional TS2322 to the same TS2769 shape). Suite fixtures updated for the new rule/copy: `plain-imports.test.ts` (a helper-called seed at a direct site now needs the marker — `bothHelper` placement unchanged), `client.golden.test.ts` (convergence import line), `list-harvest.test.ts` (two refusal-copy substrings). Docs: HOST_PROFILE (*Scalar harvest* paragraph; markers paragraph), LE_TRUC_COMPILER (module table, refusal bullet), VOCABULARY_LEDGER, CHANGELOG, `skills/le-truc` errors.md + compiled.md. Deviations from the entry, both accepted-shape calls to confirm at review: (1) "recognized wherever a harvested signal's seed is spelled today — the createState argument, a server-arg expose() initializer" — I read the second position as the exposed prop seeded from the harvested signal; the marker itself is NOT recognized inside an `expose()` entry (the unclaimed-marker sweep reports it as LTC005), because a plain-value prop's client seed is the initializer evaluated once, which cannot parse a DOM read — if the owner meant `expose({ value: harvest(…) })` to work, that is a new feature, not a spelling. (2) The substitute-limb rule is narrower than "inference as today": LTC077 and the parser apply only when the seed IS the arg; a deriving seed was never silently stringy (the substituted read re-evaluates the authored derivation), and refusing form-textbox's `createCell(value.length)` — the interim broader rule did — would be a false positive with a fix-it that miscompiles (`asNumber()(input.value).length`). **Corpus census:** at the shipped rule, zero components refused; during development the broader interim rule refused form-textbox's `length` (a deriving seed), which motivated the carve-out — no corpus source changed. Gates on the worktree HEAD: test:server 3250 pass / 0 fail, typecheck, lint:server (biome clean, no residue), check:contract, check:corpus (39 components, exit 0), build:docs, check:links (731). Every generated-module snapshot and golden is byte-identical to the pre-change corpus except form-textbox's, which is unchanged too after the carve-out (its earlier snapshot churn was reverted). Not run: `test:variants` — no `examples/` source changed and every generated module is byte-identical, so the served artifacts the Playwright specs exercise are the ones already green at HEAD; run at integration if wanted. The new copy (LTC077, the dead-marker/mismatch refusals) is a first draft per writer → error-messages; a `writer` pass at iteration close would be in keeping with LT-429's.
-    **Review:** Changes requested ↩ (Architect, 2026-10-06). Gates re-verified fresh at ca99ecba: test:server 3250/0, typecheck, lint, check:contract, check:corpus (39 components), build:docs, check:links (731) — all green; the snapshots and goldens confirm the byte-identity claim. **Both deviations accepted.** (1) The identity-vs-deriving carve-out on the substitute limb is right: the substitution re-evaluates the authored derivation identically on both sides, so a deriving seed (`value.length`, `mode === 'wide'`) was never silently stringy, and the entry's fix-it applied to one would miscompile (`asNumber()(input.value).length`). Backing the interim broader rule out was the correct call. HOST_PROFILE's *Scalar harvest* paragraph records the rule; ADR 0046 s7's sentence stays true as written. (2) The `expose()` reading is the only implementable one — a plain-value prop's client seed is evaluated once and cannot parse a DOM read — so the marker outside a scalar constructor's seed staying LTC005 is confirmed. If the owner meant `expose({ value: harvest(…) })` to work, that is a new feature and a new task, not rework. Census claim confirmed: zero components refused at the shipped rule. Copy draft accepted; `writer` pass at iteration close as proposed.
-    1. **The marker's fix-it emits a generated module that fails tsc at an attribute site.** `coerceToString` on the watch-attr plan is decided by `returnsNumber` (`analysis/harvest.ts`), which consults only `inferredType === 'number'` — the marker does not inform inference, so an aliased-`number` seed wrapped in `harvest(price, asNumber())` and rendered at its reactive attribute site emits `watch(() => p.get(), bindAttribute(el, attr))` with `p` a `State<number>`: `SingleMatchHandlers<string | boolean>` is not assignable to the `number`-sourced overload (`watch<T>(source: () => T, handlers: SingleMatchHandlers<T>)`, `src/helpers/reactive.ts`), and `check:corpus`'s emit-then-check fails on the very component the diagnostic's fix produced. Verified against ca99ecba by compiling `<data aria-valuenow={() => p.get()}>{p}</data>` over the wrapped seed — the compiler reports clean and the generated client does not typecheck. Fix: extend `returnsNumber`'s signal predicate to recognize a signal whose scalar marker parser is number-valued (`asNumber`, `asInteger`, `asClampedInteger`, with or without `()` — a parserText match, the same syntactic honesty as `CALLABLE_AS_WRITTEN`; an aliased factory name misses and fails tsc honestly). One fix covers both callers (top-level and loop-body watch-attr). Do NOT coerce `asString`/`asBoolean` markers — a string/boolean source is assignable to `bindAttribute` today, and coercing a boolean would turn toggle semantics into `'true'`/`'false'` writes. Pin the coerced emission (`String((() => p.get())())`) for the wrapped attribute site on both surfaces in `scalar-harvest.test.ts`, and add the wrapped attr-site module to `client.golden.test.ts`'s emit-then-check list so the tsc-level proof is in the suite.
+- [ ] LT-451: A signal initializer over a Parser-backed `host` prop compiles clean and miscompiles three ways — server reads `refStub`, client hoists the signal above `expose()`, and a list's options argument is dropped.
+  **Area:** compiler
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from the LT-110 session's H4 probe):** a confirmed silent
+  miscompile. The shape `expose({ seed: asJSON<T[]>([]) })` followed by
+  `const tickers = createList<T>(host.seed, { keyConfig: t => t.symbol })` and a root
+  `seed={JSON.stringify(rows)}` compiles on both surfaces with **no diagnostic**. Three
+  defects follow:
+  (1) **Server:** the initializer evaluates `host.seed` against `refStub`, so the list is
+  empty and the render shows no items. The reactive-site fold for a Parser-backed host prop
+  (the parser applied to the rendered root attribute, `evaluability.ts:hostSeedExpr`) does
+  not reach signal initializers.
+  (2) **Client:** the generated factory emits signal declarations before `expose()`, out of
+  source order. `host.seed` is therefore unset at `createList`, and connect fails with
+  `NullishSignalValueError` (Contained; the component stays un-enhanced).
+  (3) **Client:** a list with no rendered site takes the generic substitution path
+  (`analysis/harvest.ts`, the `own.length === 0` branch). That path rebuilds the call from
+  the initializer alone, and emits `createList(host.seed)` without its options. The list
+  would then be keyed by generated keys, and `byKey(symbol)` would return `undefined`.
+  **Ruling:** the shape is **supported**. A signal initializer reading a Parser-backed host
+  prop follows the same fold and routing rules as a reactive site: it folds through
+  `hostSeedExpr` where the attribute is server-rendered, and routes per ADR 0029 otherwise.
+  The client emits setup in source order (an initializer after `expose()` sees the
+  installed props). Every substitution preserves the call's other arguments verbatim.
+  Regression tests on both surfaces: a server render showing the folded items, a realm
+  connect with no diagnostics, `byKey` resolving by the configured key, and the declaration
+  order. Note: the reproduction lives in the LT-110 session record (fixture `h4.tsx`).
+  This shape is not the ticker's; ADR 0047 is.
+  **Channel/tier:** none new (a fix to an accepted shape).
+
+- [ ] LT-447: A host-declared `deriveList` consumed only inside a reactive-list body compiles to a server `ReferenceError` with no diagnostic — emit the declaration or refuse the shape.
+  **Area:** compiler
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-109's review):** a contributor hit this live during the
+  `module-calctable` migration. Source shape: `const rowPrices = deriveList(items, item => …)`
+  declared at host level, whose ONLY consumer is an item-scope const inside the reactive-list
+  body (`const price = rowPrices.byKey(k)` in the `map` callback / `@for` body). The compiler
+  accepted the source on both surfaces with no diagnostic; the generated SERVER module emitted
+  the item const but omitted the `deriveList` declaration entirely — every render throws
+  `ReferenceError: rowPrices is not defined`. The sim realm caught it during `build:docs`
+  (before the fix, `module-calctable`'s build-docs connect reported exactly this); neither
+  `check:corpus` nor `tsc` sees it, because the generated module fails at RUNTIME, not
+  typecheck. The client module has the same hole (the declaration is emitted neither there).
+  **Design questions:** (1) Is a host-level `deriveList` whose only read is a list body's
+  `byKey` a supported shape? ADR 0046 s5 admits signal declarations in item setup, and
+  `deriveList` is a loop source (LT-425) — but the item-const route here reads it as a SIGNAL
+  MAP, not a loop source, and the both-phase classification (`extractItemSetup`) emits the item
+  const while the declaration walker never follows the dependency. (2) If supported: the
+  declaration must ride both modules whenever a list-body position reads it (the same
+  import-placement rule LT-426 applies to item setup). (3) If not: an LTC refusal (next free
+  code LTC079), tier 1 Prevented, statically decidable, naming the supported alternative (the
+  per-item `createMemo` over the item's own fields, which is what LT-109 shipped). The
+  evidence lives on `task/LT-109`'s pre-restructure state and in LT-109's handoff; the
+  equivalence-audit/sim snapshots on that branch carried the failing render.
+  **Channel/tier:** compiler; decided by the task per question (3). Parity cases on both
+  surfaces regardless.
 
 ### D — CSS departures
 
