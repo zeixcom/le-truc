@@ -3,7 +3,7 @@ name: cause-effect
 description: Non-obvious semantics of the @zeix/cause-effect reactive primitives that @zeix/le-truc re-exports (State, Memo, Task, Sensor, Slot, Store, List, deriveList, createEffect, createScope, match, batch). Use for signal-level questions - async Tasks and pending state, equality, ownership and disposal, errors thrown on read, keyed collections. For authoring or debugging a Le Truc component (defineComponent, expose, watch, on, pass), use the le-truc skill instead.
 ---
 
-Describes **@zeix/cause-effect 1.5.x** (verified against 1.5.2), as re-exported by **@zeix/le-truc 3.x**. Exported signatures and JSDoc cover the rest; this file lists only what a developer used to Solid or Preact signals gets wrong. When this file and the installed `node_modules/@zeix/cause-effect/src/` disagree, the source wins.
+Describes **@zeix/cause-effect 1.6.x** (verified against 1.6.1), as re-exported by **@zeix/le-truc 3.x**. Exported signatures and JSDoc cover the rest; this file lists only what a developer used to Solid or Preact signals gets wrong. When this file and the installed `node_modules/@zeix/cause-effect/src/` disagree, the source wins.
 
 Import from `@zeix/le-truc`. It re-exports the public surface except the deprecated helpers `isEqual` (use `DEEP_EQUALITY`), `valueString` and `isObjectOfType`. Component-level behavior is in [`../le-truc/SKILL.md`](../le-truc/SKILL.md).
 
@@ -27,7 +27,7 @@ Import from `@zeix/le-truc`. It re-exports the public surface except the depreca
 
 - Writes are synchronous and push-pull. Outside `batch`, `set()` flushes effects before it returns, so **`set()` rethrows errors thrown by any effect it triggered** (as an `AggregateError` when more than one throws). The other effects still run.
 - Inside `batch(fn)`, reading a Memo returns the fresh value. Only effects are deferred until the outermost batch ends.
-- `equals` (default `===`) is checked on write and on recompute. An equal result stops propagation for the whole downstream subtree. The defaults are not uniform: List items, `store.set` diffing, and `deriveStore` properties use `DEEP_EQUALITY` (structural; Date/RegExp by value; cycle-safe). `SKIP_EQUALITY` re-propagates every write; use it with a Sensor that re-`set`s the same mutated object.
+- `equals` (default `===`) is checked on write and on recompute. An equal result stops propagation for the whole downstream subtree. The defaults are not uniform: List items, per-item `deriveList` results, `store.set` diffing, and `deriveStore` properties use `DEEP_EQUALITY` (structural; Date/RegExp by value; cycle-safe). `SKIP_EQUALITY` re-propagates every write; use it with a Sensor that re-`set`s the same mutated object.
 - An effect that writes to its own dependency re-runs until the graph settles. After 1000 flush passes it throws `EffectConvergenceError`. A Memo that reads itself throws `CircularDependencyError`.
 
 ## Ownership and disposal

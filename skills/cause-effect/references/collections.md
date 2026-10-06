@@ -1,6 +1,6 @@
 # Collections: Store, List, DerivedList
 
-Describes @zeix/cause-effect 1.5.x. Only the behaviors that differ from what a plain object or array suggests.
+Describes @zeix/cause-effect 1.6.x. Only the behaviors that differ from what a plain object or array suggests.
 
 ## MutableStore (`createStore`)
 
@@ -13,6 +13,7 @@ Describes @zeix/cause-effect 1.5.x. Only the behaviors that differ from what a p
 ## MutableList (`createList`)
 
 - Iteration, `at(i)` and `byKey(key)` return **item signals**, not values. Use `.get()` for the plain array.
+- `map((item, key) => …)` and `forEach((item, key) => …)` (also on `DerivedList`) pass the item **signal** and its stable key, value first as in `Map.prototype.forEach`. `map` returns a plain array snapshot, not a signal; use `deriveList` for a reactive mapping. Like iteration, both subscribe to the list structure only.
 - Options are `keyConfig`, `itemEquals` (default `DEEP_EQUALITY`), `createItem` and `watched: () => Cleanup`. There is no `equals` or `guard`.
 - `keyConfig` decides what identity survives a `list.set(next)`:
   - omitted: position is identity, and a changed item at index *i* keeps its key.
@@ -24,6 +25,7 @@ Describes @zeix/cause-effect 1.5.x. Only the behaviors that differ from what a p
 ## DerivedList (`deriveList`) — read-only
 
 - `deriveList(source, itemFn)` accepts a `MutableList`, a `DerivedList`, **or any `Signal<T[]>`** (Memo, Task, State, Slot). A plain array signal is keyed on read with `keyConfig` (positional by default). An unresolved Task source reads as `[]`.
+- Per-item results compare with `DEEP_EQUALITY`. A fresh but deep-equal object from `itemFn` does not re-notify the list's subscribers.
 - Items whose per-item result is nullish, or whose async per-item Task has not resolved yet, are left out of `.get()` but still count in `.keys()`/`.length`.
 - External push, `deriveList(seed, { watched: apply => cleanup })`: `apply({ add, change, remove })` matches `change`/`remove` entries by the exact tracked object reference, unless `keyConfig` is a function. An untracked item throws `UnresolvableKeyError`. A mutation pushed through `apply` does not restart the `watched` lifecycle.
 - Reading a derived list activates `watched` callbacks up the whole chain. Cleanup cascades upstream when the last subscriber leaves.
