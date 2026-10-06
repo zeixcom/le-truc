@@ -206,3 +206,10 @@ Full entry text: `git log -p -- DONE.md`.
 ---
 
 **Since the 2026-10-03 prune:**
+
+- **A key alias behind an arm set, a server-data loop or a composed child is LTC005, not
+  LTC080** (LT-453): it narrows ADR 0047 s3's "across all enclosing scopes" to enclosing list
+  items, under the ADR's "wider forms wait for a component that needs them". LT-456 widens it.
+- **A key-alias field with no parser or only a formatted site keeps LTC076/LTC059** (LT-453):
+  "with s7's parsers and raw-source rule" reuses s7's codes; LTC080 covers only the four s1
+  conditions.

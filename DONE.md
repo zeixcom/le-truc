@@ -207,6 +207,13 @@ Full entry text: `git log -p -- DONE.md`.
 
 **Since the 2026-10-03 prune:**
 
+- **A key alias behind an arm set, a server-data loop or a composed child is LTC005, not
+  LTC080** (LT-453): it narrows ADR 0047 s3's "across all enclosing scopes" to enclosing list
+  items, under the ADR's "wider forms wait for a component that needs them". LT-456 widens it.
+- **A key-alias field with no parser or only a formatted site keeps LTC076/LTC059** (LT-453):
+  "with s7's parsers and raw-source rule" reuses s7's codes; LTC080 covers only the four s1
+  conditions.
+
 - [x] LT-109: Migrate `module-calctable` to `.tsx` with same-commit cutover. — reviewed ✓
   **Area:** examples
   **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429
@@ -222,6 +229,55 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Check:** gates on the final code in the worktree: `typecheck` ✓ (0 errors, examples program included after the members joined `files`), `test:server` 3217 pass / 0 fail (snapshot diffs reviewed: the equivalence-audit connect diff is serializer normalization plus the composed basic-number clients writing their formatted text at mount — the designed boundary, no server-state overwrites), `check:corpus` ✓ (translation census 0 gaps), `check:contract` ✓, `build:docs` ✓ (the sim realm connects module-calctable during the build — it passed after the deriveList restructure; build:docs is the gate that CAUGHT the gap), `check:links` 731 ✓, biome clean on changed paths (snapshot re-pinned after the biome pass, per the LT-111 lesson). No `.spec.ts` exists in the folder, so `test:variants` skips it; smoke-checked over HTTP instead: `/test/module-calctable` 200, and BOTH surface bundles (`?surface=tsrx`, `?surface=tsx`) build and serve 200. Census: +1 entry, Folded (38 total, 30 Folded / 8 Simulated) — by design. Doubts for review: (1) the deriveList gap above is the headline; (2) the authored mirror's price cells carry static "CHF 37.50" text (the upgrade overwrites them; the un-upgraded page shows the steady state) and `value="0"` on the composed basic-number — the server-rendered args bake 0, the pass supplies the real value at mount, mirroring basic-number's own demo; (3) `input.value` thunks read through `String(...)`/harvest-sanctioned serialization only; the amount input shows `12.5` where the twin's `change` commit showed `12.50` — cosmetic, number inputs normalize; (4) `getNumberFormatter`'s validation logging no longer runs client-side for the totals (basic-number does its own options parsing inline) — the composed child reuses basic-number's exact contract, so behavior matches the sibling component rather than the twin's helper.
   **Review:** Approved (Architect, 2026-10-06). Every probe verified against the emitted artifacts, not just the sources: per-field harvest reads exactly the fields (String-sanctioned), the remove-on-zero commit goes through the key in the item's own listener, the trailing entry row is the LT-186 shape, and the formatted price composes `<BasicNumber>` with the raw value on a per-item memo — which folds the Intl formatting per row server-side through the child's own render, a better shape than the twin's hoisted formatter and squarely inside LT-142's fold rule. The tier moved to Folded by the classifier (hand-written was effectively Simulated); census 38 entries, 30 Folded / 8 Simulated — this entry's by-design change. Rulings on the doubts: (1) the headline deriveList gap is OUT of this task's scope — filed as LT-447 with the reproduction; the shipped sources never exercise it; (2) the mirror's static price texts and value="0" compose args are the designed pre-upgrade steady state, pinned by the audit snapshot; (3) the 12.5-vs-12.50 input display is accepted (number inputs normalize; the harvest rule bars toFixed on the site); (4) accepted — the composed child defines the formatting contract now, matching basic-number rather than the twin's helper. Reviewer nits fixed on the branch (ac34e2fe): stale mid-sentence splice in the .tsx docblock (deriveList draft residue), `ModuleCalctableAttrs.options` tightened to `string`. Gates re-run green on the branch after the nit commit (server suite 3217/0). No spec lives in the folder — the HTTP smoke check (test page + both surface bundles 200) and the sim-realm connect during build:docs stand in; a Playwright spec is not owed by this entry.
+
+- [x] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover. — done ✓
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429, LT-452, LT-453, LT-454
+  **Re-scoped (Architect, 2026-10-06, after the blocked session):** the first session found two
+  compiler gaps in the ruled shape. Both are ruled and filed: the nested list in a `<tbody>`
+  item root (template hoisting, ADR 0046 s2 → LT-454), and `tickers` harvested only through
+  `byKey` (ADR 0047 → LT-453). LT-452 removes the `window.clearInterval` workaround. The
+  first session's draft is uncommitted in `.worktrees/LT-110/examples/module/ticker/module-ticker.tsx`.
+  Start from it, but check it against this entry.
+  **The shape (LT-280 ruling, unchanged):** an outer reactive list over `<tbody>` blocks.
+  Each block has a per-item `createSensor` on the scope root (`first('tbody')`,
+  `{ value: true }`) and a per-block `height` state written from
+  `IntersectionObserverEntry.boundingClientRect.height` before `visible` flips (one `batch`).
+  Inside it, an inner list over a scope-declared `deriveList` that is empty while invisible;
+  the placeholder is the inner loop's empty arm with a reactive height.
+  **Data (ADR 0047):** `tickers` is a host-level `createList` seeded from the `rows` arg and
+  harvested through the rows' alias, `const ticker = tickers.byKey(s)`, in the inner item
+  setup. The inner list's item is the symbol, and its key config returns it verbatim.
+  Every `TickerItem` field needs a canonical alias site with a raw source: a formatted cell
+  carries its raw value (`<data value>` or a `data-*` attribute; corpus choice). For `open`,
+  either give it a site or drop it from the harvested item type and seed it per row from the
+  harvested `price`, as the hand-written twin does (`open: price`); corpus choice, stated in
+  the handoff. The witness requires every row to render on the server, which the
+  `{ value: true }` sensor seed guarantees.
+  **Blocks:** the block list's seed is the corpus's choice among the shapes that compile. The
+  first session found that a scalar seed needs the item rendered somewhere; the key alone
+  does not count. A `deriveList` over `tickers.keys()` chunked by `BLOCK_SIZE` is
+  recommended: no seed, and "Add 100 rows" becomes one `tickers.splice`.
+  **Formatting:** list-body thunks cannot read setup consts (LTC005), so format through
+  per-item `createMemo`s in item setup that read the setup-level `Intl.NumberFormat`
+  consts. The first session verified this compiles.
+  **Tier:** classifier's decision, reported in the handoff. The old "LT-165 step 7 corpus
+  pin" clause is withdrawn (ITERATION ruling 16): `Math.random()` sits only in handlers, so
+  no rendered site is suppressed. Reword the ticker references in `server/compiler/tier.ts`,
+  `LE_TRUC_COMPILER.md` (the "`module-ticker` is why the two facts stay separate" paragraph)
+  and the `suppression.test.ts`/`tier.test.ts`/`sim-driver.test.ts` comments to the synthetic
+  pin. `ARCHITECTURE.md` is already reworded.
+  **Variant set:** `.tsx` (served) and `.tsrx` members; the hand-written `.ts` stays as the
+  twin (ruling 5). The authored `.html` is regenerated from the compiled render. It need not
+  be byte-identical to today's hand-written fixture (owner, 2026-10-06), but the twin must
+  enhance the regenerated markup, so adapt the twin where it must. CSS stays byte-identical
+  across the set.
+
+  **Changed:** `module-ticker` is now a `.tsx` (served) + `.tsrx` variant set beside the hand-written `.ts` twin, in the LT-280 shape. The outer list is a `deriveList` of `<tbody>` blocks, chunked from `tickers.length`. Each block has its own sensor and `height` state, and an inner `deriveList` whose empty arm is the placeholder. `tickers` is harvested through the key alias (`tickers.byKey(s)!`). The `.html` is regenerated from `renderModuleTicker`, and the twin is adapted to it (`tr[data-key]`, `data.price`/`data.volume`, `template[data-list="1"]`). The CSS moved into `<style>` and `main.css` imports the generated CSS. A new `module-ticker.spec.ts` runs per surface. The ticker references in `tier.ts`, `LE_TRUC_COMPILER.md` and the suppression/tier/sim-driver test comments are reworded to the synthetic pin.
+  **How:** Corpus choices: `open` gets its own site (`data-open`) and is not seeded from `price`. `price`/`volume` sit in `<data class value>` beside the formatted memo text. Blocks use the recommended derived chunking, so "Add 100 rows" is a single `tickers.splice`. Tier: **Folded** (no routing signals). The block derivation spells `100` out instead of reading `BLOCK_SIZE`, because `substituteArgExpr` refuses a free setup-const name in a verbatim derivation. With the const, `blocks` gets LTC004 and the whole component routes Simulated. The random tick and the add-rows handler are inlined into the `watch` and the `onClick`. As setup consts they read no client-only name, so the server module kept them, and `check:corpus` failed: the server harness has no `ServerCell.update` or `ServerList.splice`. `host-profile.d.ts` gains `ModuleTickerAttrs` (`fraction`), `label` on `basic-button`'s pass surface, `td colspan`, and a `data` intrinsic. The wiring follows LT-109: `examples/tsconfig.json`, `corpus-args.ts`, the `tier-corpus` list, and three appended snapshots (no existing entry changed).
+  **Check:** Green: typecheck, `bunx tsc -p examples/tsconfig.json`, test:server (3360/0), check:contract, check:corpus (34 folded / 8 simulated), build:docs, check:links, and biome on the touched paths. Byte checks: the `.tsx` and `.tsrx` clients are identical apart from formatting, and the `.html` matches the current render. **Unrunnable:** `test:variants module-ticker` and Playwright. Every test timed out in `beforeEach` on all three surfaces, and the known-good `module-todo` spec failed the same way in this session, so the owner should run `bun run test:variants module-ticker` (the new spec is also the main evidence that the twin enhances the regenerated markup). Doubts for review: (1) two classifier/harness gaps are worked around in the corpus and may deserve follow-ups. The setup-const read routes a derivation to LTC004, and a portable handler const that mutates a list fails the server-module typecheck. (2) The host-profile additions (`data`, `td colspan`, `basic-button` `label` pass) are compiler-side typing. (3) The `fraction` arg renders as `String(fraction)`.
+
+  **Review:** Approved (Architect, 2026-10-06). The LT-280 shape as ruled: derived `<tbody>` blocks chunked from `tickers.length` ("Add 100 rows" is one splice), a per-block sensor on `first('tbody')` seeded `true` with `height` written before the flip in one `batch`, and an inner derived list whose empty arm is the placeholder. Key-alias harvest (ADR 0047) through `tickers.byKey(s)!` with a raw site for every field — `open` on `data-open`, a stated corpus choice. Tier Folded; the ticker references are reworded to the synthetic pin. The regenerated page (100 keyed rows plus both list templates) is enhanced by the adapted `.ts` twin. Doubts: (2) host-profile additions follow the LT-109 precedent, (3) `String(fraction)` is right for a parser-read attribute — both accepted; (1) the two compiler gaps are out of scope and filed as LT-458 (literal setup const in a verbatim derivation) and LT-459 (client-position-only setup consts in the server module). Re-run on the branch: typecheck, check:corpus, compiler tests 2472/0; the owner ran `test:variants module-ticker` — all pass on every surface.
 
 - [x] LT-111: Migrate `module-todo` to `.tsx` with same-commit cutover — last hand-written example, completes the corpus port. — reviewed ✓
   **Area:** examples
@@ -662,6 +718,30 @@ Full entry text: `git log -p -- DONE.md`.
   ForIR sentence now scopes the server classification to the shadowing case, matching errors.md.
   All gates green in the worktree; typecheck re-run green on the merge (d6521444 — the branch's
   duplicate `worktree.ts` strict-mode hunk resolved to v3's `dadcbaba` version).
+
+- [x] LT-390: A corpus consumer for reactive conditions and the boundary, with audit coverage. — done ✓
+  **Area:** examples
+  **Needs:** LT-375, LT-385, LT-449
+  **Context:** LT-274/LT-276 landed with no corpus component using either, so their golden
+  and equivalence-audit acceptance items pass vacuously; adoption's designed connect diff is
+  pinned only by `reactive-conditions.test.ts`. Migrate one example that wants a reactive
+  `@if` (a disclosure or a tab-like switch) and pair the boundary with LT-449 (lazyload),
+  extend `equivalence-audit.test.ts` to the arm-adoption class.
+  **Depends on** LT-385 and LT-449 (lazyload's boundary migration, ruled 2026-10-06). It
+  waits on nothing from LT-448 — the allow-scripts design is downstream of this track, not
+  upstream.
+
+  **Changed:** `form-inplace-edit` is the corpus's reactive-condition consumer: display and edit mode are the arms of `@if (host.editing)` (ADR 0037), so the edit-mode `<form-textbox>` exists only while editing — the hand-written create/destroy behavior, recovered (the `hidden`-toggle workaround and its header caveat are gone). `equivalence-audit.test.ts` gains an arm-adoption block over every compiled component whose phase-1 render ships a live arm set, in any tier: it currently covers `form-inplace-edit` (reactive `@if`, Folded), `module-lazyload` (the boundary, Simulated) and `module-listnav` (through its composed lazyload).
+
+  **How:** The component addresses the cloned textbox at event time (`host.querySelector('form-textbox')`), because a host-level `first()` into an arm is refused. It pre-fills the textbox and focuses it on entry, relying on the synchronous arm flip (verified in the realm), and reads it back on commit. The `watch` + `bindProperty` mirror is retired, and `HOST_PROFILE.md`'s pass-vs-bindProperty paragraph now says how an arm-resident child differs. `value` still harvests the live `.text` span as the fallback (children-are-data), with the `value` attribute that the compiled render always writes taking precedence. Pages: `form-inplace-edit.html` is regenerated from `renderFormInplaceEdit({ name: 'label', value: 'Edit me' })`, and in `module-todo.html` the item template's nested inplace-edit now carries its arm templates. The `.md` descendant table is updated. Spec: three `.edit` → `toBeHidden()` legs become `not.toBeAttached()` — the twin's original assertion, now true again — and the reset leg's comment names the attribute baseline. Audit: an inert parse gives the server's arm sets. A MutationObserver (collecting from its callback too, because the drain delivers records) then asserts that no arm root carrying a server-live key is inserted during connect, which would mean the winner was re-cloned and not adopted. It also asserts the templates serialize unchanged and the final live key matches. `SETTLED_IN_REALM` pins lazyload/listnav's flip `nil → err`, a realm artifact: on `about:blank`, `isValidURL` rejects the relative `src` after adoption. A coverage test fails if either arm form loses its corpus consumer. Snapshots: the Folded connect diff for inplace-edit is now empty (the `hidden` serializer diff is gone; module-todo's loses the same region), and sim-driver re-pins inplace-edit/module-todo.
+
+  **Check:** `test:server` 3319 pass / 0 fail. `typecheck`, `check:corpus`, `check:contract`, `build:docs` and `check:links` (753) are green, and biome passes on the changed paths. Discrimination: patching `reconcile()` to re-clone the adopted winner fails all three adoption tests on `recloned` (restored). Realm probe of the edit flow is green: click/dblclick enter with the value pre-filled and the input focused, Enter commits, Escape cancels, disabled blocks dblclick. **Unrunnable:** Playwright, because every leg times out (the sandbox's browser cannot reach the test server). The owner runs `bun run test:component form-inplace-edit` and `module-todo`, plus `test:variants` for module-todo, whose `.ts` twin composes the changed child. The form-association legs (FormData, reset, disabled propagation) cannot be shown in jsdom either; the pre-migration component shows the same result there. **Doubts:** (1) A server render with `editing` set shows the edit arm's textbox with the template's empty value, because the pre-fill runs only on a user-driven entry and the retired `bindProperty` mirror used to cover it. No corpus page renders `editing`. (2) `SETTLED_IN_REALM` pins a realm artifact; a realm URL option would let lazyload stay `nil`, but that is compiler infrastructure outside this task.
+
+  **Review:** Changes requested (Architect, 2026-10-06). The audit block is sound (node identity, discriminated against a re-cloning `reconcile()`), the arm swap is right. (1) **Server-rendered `editing` destroys the value on commit.** `editing` is a public render arg; with it set the adopted edit arm's textbox is empty (the entry pre-fill runs only on user-driven entry, and the retired `bindProperty` mirror used to cover it), so Enter runs `stopEditing(true)` and writes `''` into `host.value`. Seed the edit arm's textbox from the render arg — `<FormTextbox name="" label="Edit" value={value} />`, the entry pre-fill still overwrites on every later entry; if the compiler refuses a server-arg site in an arm, pre-fill once at connect when `host.editing` is already true. Add a server-test leg rendering `{ editing: true, value: 'x' }` that asserts the textbox carries `x`. (2) The `.md` descendant table still lists `first('button')` and now marks it **required**, but the component calls no `first()`; describe it like the new `.text`/`.edit` rows (selector + location), not as required. Doubt (2) — the `SETTLED_IN_REALM` pin — is accepted here and filed as LT-457.
+
+  **Reworked:** (1) Fixed: the edit arm's textbox now takes the render value — `<FormTextbox name="" label="Edit" {value} />` — so a server-rendered `editing` arm ships `value="x"` on the textbox and its input; the compiler accepts the server-arg site in the arm, so the connect-time fallback was not needed. A user-driven entry still pre-fills from `host.value` (`startEditing`), so the static value in the cloned template is always overwritten. Regression leg in `equivalence-audit.test.ts`: renders `{ name: 'label', value: 'x', editing: true }`, asserts the live `then` arm's input carries `x`, connects in the realm, asserts `textbox.value === 'x'`, dispatches Enter and asserts `host.value` stays `x` (fails with `Received: ""` when the seed is removed). `form-inplace-edit.html`'s edit-arm template is regenerated (`value="Edit me"`); `module-todo.html` is unchanged (its item renders `value=""`). (2) Fixed: the button row reads `button` / host child, not `first('button')` / required. **Check:** typecheck, check:contract, check:corpus (0 warnings), test:server 3320/0 (pre-format run; audit file re-run 39/0 after formatting), build:docs, check:links (753), biome on changed paths — all green. **Unrunnable:** `bun run test:component form-inplace-edit` hung past 10 minutes in the sandbox; owner please run it and `test:variants` for module-todo.
+
+  **Review:** Approved (Architect, 2026-10-06). Both findings fixed: the edit arm's textbox is seeded from the render `value` (the compiler accepts the server-arg site in the arm), pinned by a regression leg that fails with `""` when the seed is removed; the descendant table's button row is now selector + location. Audit file 39/0 and typecheck re-run green on the branch; the owner ran `test:component` for form-inplace-edit and module-todo and `test:variants` for module-todo — all pass. Not blocking: the `&[editing] .text { display: none }` rule is now dead (the span exists only outside edit mode); drop it in a later CSS pass.
 
 - [x] LT-391: An arm kind for `SuppressedSite` (ADR 0037 s5 under the Simulated tier). — reviewed ✓
   **Area:** compiler
@@ -1426,6 +1506,12 @@ Full entry text: `git log -p -- DONE.md`.
   **Check:** `bun test server/tests/compiler/tsx/diagnostic-parity.test.ts`: the parity case "LTC078 an expression in place of the stylesheet" and the `.tsx`-only asymmetry cases (shadowed `css`, another module's `css`, foreign tag, substitution tagged and bare, JSX text, second child, accepted spellings). A shadowed `css`, a foreign tag and a substitution have no `.tsrx` spelling, so they sit under "grammar asymmetry", not in FAMILIES. Gates in the worktree: test:server 3132 pass / 0 fail, typecheck clean, biome check ./server clean, check:contract ✓, check:corpus 0 LTC078 hits and 0 standing warnings, build:docs ✓, check:links 730/730, goldens unchanged (server.golden in the suite). Not touched: no variant set and no `.tsrx` corpus file, so test:variants was not required and not run (it cannot run in this sandbox anyway). Doubts for review: (1) ignoring blank JSX text around the child is a small widening of what is accepted, chosen over refusing a formatter's multi-line layout. (2) A non-marker `css` import from another module also draws LTC014 (unused import) next to LTC078. (3) The `content` reason for a second child is worded "not a stylesheet" even when that child is a valid template.
   **Review:** Approved (Architect, 2026-10-05). Each surface's `stylesheetOf` returns the CSS text or a `StyleBlockRefusal`; the shared hoist in `template-output.ts` reports LTC078 and reads the sheet once (it read it three times before). Fix-it wording goes through `surface.ts` (`stylesheetForm`). Item 2: `.tsrx` cannot carry a substitution (the CSS body parses, `${x}` is LTC008), but `<style>{expr}</style>` was the same silent drop and is now LTC078 on both surfaces. The shadowed/foreign/substitution cases are `.tsx`-only grammar, pinned as single-surface cases. Doubts ruled: blank JSX text around the template is accepted (a formatter's layout, not a new spelling); LTC014 beside LTC078 for a foreign `css` stands, since both are true. The six string-style fixtures that relied on the drop now use an empty `<style>`. `test:variants` is the owner's (sandbox).
 
+- [x] LT-445: Migrate `module-cem-list` to `.tsx` with same-commit cutover — the filter layer over `{% cem-list %}`'s page-authored cards. — reviewed ✓
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
+  **Changed:** `module-cem-list` is a compiled variant set — `module-cem-list.tsx` (served) beside a `module-cem-list.tsrx` twin; the hand-written `.ts` stays as the set's `.ts` twin (ruling 5). Both members take `children = ''` and wrap the page-authored `{% cem-list %}` output; `module-cem-list.html` is unchanged. `examples/main.css` imports the generated stylesheet; host profile gains `ModuleCemListAttrs`; tier map +`module-cem-list: folded` (census 33 Folded / 8 Simulated). Setup is one filter State, `on(first('form-textbox'), 'input', …)` and ONE `watch` whose source reads the filter and `all('card-collapsible')` inline; the sheet is `:host`-led with no `:global` (no custom element in the template, so no scope boundary — ADR 0033 s7).
+  **Review:** Approved (Architect, 2026-10-06). Ruling on the doubt: reading `all()` in the watch source rather than the handler is accepted — it is the pin's "one watch that re-reads the cards per run", and it also filters cards added after connect. Each run builds a fresh element memo and observer (`all()` does not memoize per selector) and the superseded one disconnects unwatched; `module-catalog` sets the precedent. Gates re-run green on the branch (typecheck, check:corpus, test:server 3328/0). Owner-run legs: `test:variants` and the live demo filter.
+
 - [x] LT-449: Migrate `module-lazyload`'s async boundary to `<truc:try>` — per-arm callouts, `truc:html` ok arm, beside-watch scroll. — reviewed ✓
   **Area:** examples
   **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
@@ -1547,6 +1633,20 @@ Full entry text: `git log -p -- DONE.md`.
   `window.clearInterval` workaround becomes unnecessary. A `done`-level change.
 
   **Changed:** `JS_GLOBALS` (`server/compiler/vocabulary.ts`) now lists `clearInterval`, `clearTimeout` and `cancelAnimationFrame`, so a `watch()` cleanup that cancels its own timer compiles without LTC005; regression test `server/tests/compiler/timer-cancellers.test.ts` covers all three on `.tsx` and `.tsrx`.
+
+- [x] LT-453: Harvest a host-level arg-seeded list through a key alias, with the render witness (ADR 0047). — reviewed ✓
+  **Area:** compiler
+  **Gates:** check:sim
+  **Area:** compiler
+  **Changed:** ADR 0047 on both surfaces. A host-level arg-seeded `createList` that no list renders
+  through its own `map`, read in an item setup as `const t = list.byKey(k)`, harvests per field
+  from the alias scope (`key-alias.ts`, `planKeyAliasHarvest`). New **LTC080** (one message per
+  s1 condition). The server runtime's `witnessHarvest`/`HarvestWitnessError` is the render witness.
+  Docs: `HOST_PROFILE.md` (*Key-alias harvest*), `LE_TRUC_COMPILER.md`, `VOCABULARY_LEDGER.md`,
+  `errors.md`, `compiled.md` (writer), `CHANGELOG.md`.
+  **Review:** Approved (Architect, 2026-10-06; owner confirmed). Rulings in `queue/LEDGER.md`.
+  Template-target routing handed to LT-257; the arm-scope alias filed as LT-456. Deno leg of
+  `check:sim` not run in the sandbox (owner to run it).
 
 - [x] LT-454: Hoist every compiled list template to the host's end; drop the "list directly under an item root" refusal (ADR 0046 s2). — reviewed ✓
   **Area:** compiler

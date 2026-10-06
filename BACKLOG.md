@@ -204,7 +204,10 @@ shaped like this repo's internal tool. That part is **LT-271** (carved out of LT
   D-26, D-30, D-33; recorded in ADRs 0032, 0033, 0034, 0040, 0044 and `HOST_PROFILE.md` the same
   day). D-04 is parked, D-28 and D-32 are deferred to design sessions, section 15 is open; none of
   those has a task yet.
-
+  **Added (Architect, 2026-10-06, from LT-453's review, ADR 0047 s4):** a key-alias harvest is
+  not emittable to a target: classify it as a census routing outcome (ADR 0043 s2), because a
+  backend template cannot carry the render witness. `key-alias.ts`'s `isAliasHarvestable` and
+  `aliasScopeOf` identify the lists.
 
 - [ ] LT-259: The 2.x → 3.0 codemod, and the drift-cost measurement it instruments.
   **Area:** compiler
@@ -1182,6 +1185,78 @@ the foreign-runtime "Mounted" tier (ADR 0032, amended 2026-09-19), and publishin
   rendered)? (5) **Template targets** (ADR 0043): can a backend emit the partial route?
   (6) **The probe component**: `module-ticker` past BLOCK_SIZE × N, or a new corpus example.
   Traces to M17 (every pattern expressible), M19, M27.
+
+- [ ] LT-456: Key alias reached through an arm scope — let the client harvest walk into a live arm, or keep the LTC005 refusal.
+  **Area:** design
+  **Area:** design
+  **Filed (Architect, 2026-10-06, from LT-453's review):** ADR 0047 s3 harvests "from every
+  alias-scope root in document order, across all enclosing scopes", but LT-453 reaches the alias
+  roots through enclosing list items only. An alias scope behind a reactive conditional, an
+  async boundary, a server-data loop or a composed child is refused with LTC005
+  (`planKeyAliasHarvest`). **Problem:** a grouped view whose groups sit in an arm (a collapsed
+  section, a tab panel) cannot use the key alias. **Better shape to decide:** the client path
+  steps into the live arm root (`data-key` on the arm root, beside its `<template data-arms>`),
+  proved unique by ADR 0045; the witness already covers an arm the server did not render.
+  Open until a component needs it (ADR 0047: "Wider forms wait for a component that needs them").
+
+- [ ] LT-457: A base URL for the simulation realm, so the arm-adoption audit stops pinning lazyload's realm-only `err` flip.
+  **Area:** compiler
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-390's review):** the realm's document is `about:blank`,
+  so `module-lazyload`'s relative `src` fails `isValidURL` after adoption and the task rejects —
+  the adopted `nil` arm flips to `err`, which no browser does at connect. LT-390's arm-adoption
+  block in `server/tests/compiler/equivalence-audit.test.ts` therefore pins it in
+  `SETTLED_IN_REALM` (`module-lazyload`, `module-listnav`). **Problem:** the pin hard-codes a
+  realm artifact; a real adoption regression that happened to land on `err` would pass.
+  **Better shape:** the realm takes a document base URL (an http(s) origin; the fetch itself
+  never needs to resolve during the connect drain), so the relative `src` validates and the
+  task stays pending — `nil` stays live. Then delete `SETTLED_IN_REALM` and let the final-key
+  assertion compare against the server's live keys for every entry. Check that no sim-driver or
+  build:docs snapshot depends on the `about:blank` behavior; re-pin any that move, by design.
+  **Verification:** test:server; the adoption block passes for lazyload/listnav with no
+  per-tag override.
+
+- [ ] LT-458: A literal-initialized setup const is readable in a verbatim client derivation.
+  **Area:** compiler
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-110's review):** `module-ticker`'s host-level block
+  derivation (`deriveList(() => Array.from({ length: Math.ceil(tickers.length / BLOCK_SIZE) }, …))`)
+  cannot read `const BLOCK_SIZE = 100`: `substituteArgExpr` refuses any free setup-const name in a
+  verbatim derivation, so `blocks` gets LTC004 (no harvest route) and the whole component routes
+  Simulated. The corpus spells `100` out there and reads `BLOCK_SIZE` at three other sites.
+  **Problem:** a pure literal constant is server- and client-known, yet reading it costs the
+  component its tier; authors duplicate the literal and the copies can drift.
+  **Better shape:** a setup const whose initializer is a literal (number, string, boolean, `null`,
+  or a `const` chain of them; no call, no reference to args or signals) is inlined into the
+  verbatim derivation by `substituteArgExpr`, exactly as an arg is substituted. Any other
+  initializer keeps today's refusal and LTC004 wording. **Channel/tier:** compiler only; no new
+  runtime check; the existing LTC004 narrows, its message unchanged.
+  **Then:** restore `BLOCK_SIZE` in `module-ticker.tsx`/`.tsrx`'s block derivation, delete the
+  spelled-out comment; the tier stays Folded and the clients stay identical.
+  **Verification:** test:server with a unit leg (literal const inlined; a call-initialized const
+  still LTC004); check:corpus; the ticker's tier-corpus entry unchanged.
+
+- [ ] LT-459: A setup const referenced only from client positions stays out of the server module.
+  **Area:** compiler
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-110's review):** `module-ticker`'s random tick and its
+  add-rows handler were first authored as setup consts (`const tick = () => …`,
+  `const addRows = () => tickers.splice(…)`) referenced only from `watch` and `onClick`. They
+  read no client-only name, so the server module kept them, and `check:corpus` failed its
+  typecheck: the server harness's `ServerCell`/`ServerList` carry no `update`/`splice`. The
+  corpus inlines both bodies into their client positions instead.
+  **Problem:** the server module's membership is decided by what a const *reads*, not by where it
+  is *used*; a portable helper used only by handlers is dead code on the server and, when it
+  mutates a signal, a type error there.
+  **Better shape:** a setup const (and its transitive setup-const dependencies) whose every
+  reference sits in a client position — handler, `watch`/effect body, `expose()` method,
+  client-only setup statement — is classified client-only and omitted from the server module,
+  the same way a const that reads a client-only name already is. A const with any server-position
+  reference keeps today's placement. **Channel/tier:** compiler only; no new runtime check and no
+  new LTC rule (the change removes a failure, it diagnoses nothing).
+  **Then:** optionally hoist `module-ticker`'s tick and add-rows bodies back to named consts.
+  **Verification:** test:server with a unit leg (handler-only const absent from the server
+  module; a const also read in a rendered thunk still present); check:corpus.
 
 ## Unbanded
 

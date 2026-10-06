@@ -10,8 +10,11 @@ owner-run integration; worktrees branch from the current branch). Still open, al
 and not the code's: (1) `bun install` in a fresh worktree can hit a tempdir EPERM; symlinking the
 main checkout's `node_modules` works, and the symlink must not be staged. (2) `check:sim`'s Deno
 leg cannot create its npm cache. (3) A fresh worktree has no built `docs/`, so `serve.test.ts`
-fails there with 404s until `build:docs` runs. (4) Signed commits in the main checkout fail: the
-1Password prompt never reaches an agent session, so the owner commits there.
+fails there with 404s until `build:docs` runs. (4) Signed commits in the main checkout need the
+1Password agent socket in the sandbox's `network.allowUnixSockets`; with it, `integrate`'s merge
+commit signs (2026-10-06). (5) `integrate`'s `git worktree remove` fails on `.git/worktrees/LT-NNN`
+(EPERM) even though the checkout is writable; finish with `git worktree remove --force`,
+`git worktree prune` and `git branch -d` outside the sandbox.
 
 ---
 

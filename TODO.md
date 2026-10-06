@@ -148,7 +148,7 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 - **0 — test hygiene** (ruling 9). ~~LT-415~~ (reviewed ✓). ~~LT-441~~ (reviewed ✓).
 - **C — corpus port** — every example folder served compiled (ruling 5), through ADR 0046
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
-  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → ~~LT-449~~ (reviewed ✓) → **next, critical path (compiler list emission, one at a time):** ~~LT-454~~ (reviewed ✓) → LT-453 (key-alias harvest) → LT-110 (ticker; LT-452 landed, so it needs only LT-453 and LT-454; ruling 16) → LT-446 (section-menu, design — the sweep's last folder). **Beside it (example folders only, pickable now):** LT-445 (cem-list, filed from LT-111's sweep), LT-390 (its last prerequisite, LT-449, landed).
+  ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → ~~LT-449~~ (reviewed ✓) → **next, critical path (compiler list emission, one at a time):** ~~LT-454~~ (reviewed ✓) → ~~LT-453~~ (reviewed ✓) → ~~LT-110~~ (done ✓) → LT-446 (section-menu, design — the sweep's last folder). **Beside it (example folders only, pickable now):** ~~LT-445~~ (reviewed ✓), ~~LT-390~~ (done ✓).
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
   ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). ~~LT-443~~ (reviewed ✓). ~~LT-452~~ (done ✓). ~~LT-451~~ (reviewed ✓). **Next:** LT-447, once its design question 1 is ruled (support the shape or refuse it as LTC079 — a supported-shape decision, so the owner's). It touches list-item setup emission (`extractItemSetup`), so it runs after LT-453, not beside LT-454. LT-455 (a nested list in a server branch of an item; filed from LT-454's review) touches the same nested-list emission as LT-453, so it needs LT-453.
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
@@ -175,7 +175,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-456.** Next free diagnostic code: LTC081 (LTC080 is LT-453's; LTC079 is reserved for LT-447's refusal option; LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-460.** Next free diagnostic code: LTC081 (LTC080 is LT-453's; LTC079 is reserved for LT-447's refusal option; LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -272,86 +272,6 @@ recorded against the 30.4k opening measurement.
 
 ### C — corpus port
 
-- [ ] LT-453: Harvest a host-level arg-seeded list through a key alias, with the render witness (ADR 0047).
-  **Area:** compiler
-  **Gates:** check:sim
-  **Area:** compiler
-  **Context (Architect, 2026-10-06, ADR 0047):** implement ADR 0047 on both surfaces. The
-  motivating shape is `module-ticker` (LT-110): the host-level `tickers` list, seeded from the
-  `rows` arg, is rendered only through per-block derived lists of symbols. Each row binds
-  `const ticker = tickers.byKey(s)` in item setup and renders the fields through
-  `ticker.get().<field>`. Today this is refused: LTC005 "The initializer of signal `tickers`
-  references server-only name `rows`".
-  **Static half:** recognize the alias in the harvest pass (`analysis/harvest.ts`, beside the
-  per-field plan `planListFieldHarvest`). The four ADR 0047 s1 conditions are each refused
-  with **LTC080** (tier 1 Prevented, compiler channel; one code, one message per condition,
-  each naming its fix). The conditions: the alias list's item is its key; `byKey` over the
-  loop key, unconditional, in item setup; one alias scope per list; every field at a canonical
-  site through `t.get().<field>`, with s7's parsers and raw-source rule. The harvested list's
-  declaration rides both modules (the alias read counts as a read in both phases; compare
-  LT-447's dropped-declaration class).
-  **Dynamic half:** the server module records the keys rendered at the alias scope, in order,
-  and asserts at render end that their first occurrences equal the list's keys. The failure
-  is a thrown error from the server runtime (`server/compiler/runtime.ts`). Its message names
-  the component, the list and the first missing or out-of-order key, and follows
-  `.agents/skills/writer/references/error-messages.md`. Channel: the server render; it fails
-  the build under static generation and the realm (ADR 0028: Prevented in effect). No client
-  counterpart. A client cannot detect an item it never saw.
-  **Client:** harvest the list at connect, before any consumer reads it, from every
-  alias-scope root in document order across enclosing scopes. The selector path is
-  synthesized by the structural proof (ADR 0045).
-  **Template targets:** under a configured target, a key-alias harvest is not emittable (a
-  census routing outcome, ADR 0043 s2), until a target operation carries the witness.
-  **Tests:** a fixture of a flat list rendered through two levels of derived grouping, on both
-  surfaces. Pin: the per-field harvest from the alias sites; the client list's keys and order
-  after connect; each LTC080 refusal; a witness failure, with the server render showing a
-  missing key (for example, a block gated off on the server); parity between the surfaces.
-  Docs: `LE_TRUC_COMPILER.md` (harvest, the diagnostic inventory), `HOST_PROFILE.md`
-  (per-item setup: the alias), `VOCABULARY_LEDGER.md` (LTC080).
-
-- [ ] LT-110: Migrate `module-ticker` to `.tsx` with same-commit cutover.
-  **Area:** examples
-  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-428, LT-429, LT-452, LT-453, LT-454
-  **Re-scoped (Architect, 2026-10-06, after the blocked session):** the first session found two
-  compiler gaps in the ruled shape. Both are ruled and filed: the nested list in a `<tbody>`
-  item root (template hoisting, ADR 0046 s2 → LT-454), and `tickers` harvested only through
-  `byKey` (ADR 0047 → LT-453). LT-452 removes the `window.clearInterval` workaround. The
-  first session's draft is uncommitted in `.worktrees/LT-110/examples/module/ticker/module-ticker.tsx`.
-  Start from it, but check it against this entry.
-  **The shape (LT-280 ruling, unchanged):** an outer reactive list over `<tbody>` blocks.
-  Each block has a per-item `createSensor` on the scope root (`first('tbody')`,
-  `{ value: true }`) and a per-block `height` state written from
-  `IntersectionObserverEntry.boundingClientRect.height` before `visible` flips (one `batch`).
-  Inside it, an inner list over a scope-declared `deriveList` that is empty while invisible;
-  the placeholder is the inner loop's empty arm with a reactive height.
-  **Data (ADR 0047):** `tickers` is a host-level `createList` seeded from the `rows` arg and
-  harvested through the rows' alias, `const ticker = tickers.byKey(s)`, in the inner item
-  setup. The inner list's item is the symbol, and its key config returns it verbatim.
-  Every `TickerItem` field needs a canonical alias site with a raw source: a formatted cell
-  carries its raw value (`<data value>` or a `data-*` attribute; corpus choice). For `open`,
-  either give it a site or drop it from the harvested item type and seed it per row from the
-  harvested `price`, as the hand-written twin does (`open: price`); corpus choice, stated in
-  the handoff. The witness requires every row to render on the server, which the
-  `{ value: true }` sensor seed guarantees.
-  **Blocks:** the block list's seed is the corpus's choice among the shapes that compile. The
-  first session found that a scalar seed needs the item rendered somewhere; the key alone
-  does not count. A `deriveList` over `tickers.keys()` chunked by `BLOCK_SIZE` is
-  recommended: no seed, and "Add 100 rows" becomes one `tickers.splice`.
-  **Formatting:** list-body thunks cannot read setup consts (LTC005), so format through
-  per-item `createMemo`s in item setup that read the setup-level `Intl.NumberFormat`
-  consts. The first session verified this compiles.
-  **Tier:** classifier's decision, reported in the handoff. The old "LT-165 step 7 corpus
-  pin" clause is withdrawn (ITERATION ruling 16): `Math.random()` sits only in handlers, so
-  no rendered site is suppressed. Reword the ticker references in `server/compiler/tier.ts`,
-  `LE_TRUC_COMPILER.md` (the "`module-ticker` is why the two facts stay separate" paragraph)
-  and the `suppression.test.ts`/`tier.test.ts`/`sim-driver.test.ts` comments to the synthetic
-  pin. `ARCHITECTURE.md` is already reworded.
-  **Variant set:** `.tsx` (served) and `.tsrx` members; the hand-written `.ts` stays as the
-  twin (ruling 5). The authored `.html` is regenerated from the compiled render. It need not
-  be byte-identical to today's hand-written fixture (owner, 2026-10-06), but the twin must
-  enhance the regenerated markup, so adapt the twin where it must. CSS stays byte-identical
-  across the set.
-
 - [ ] LT-446: Scope the `section-menu` migration (site chrome: external toggle by document id, imperative backdrop, layout-wide registration) — decide, then write the implementation task.
   **Area:** design
   **Area:** design
@@ -369,38 +289,6 @@ recorded against the 30.4k opening measurement.
   5. **Layout-wide registration.** The migration flips the tag every docs page serves onto the compiled client. Verify the page bundle registers it (it is in the registry like any other corpus tag) and that `section-menu.spec.ts` runs unchanged against the served surface — plus which surface the LAYOUT pages get (the canonical artifacts, not a variant route).
   Decide each, then write the implementation task with the standard prerequisite set (LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429). The `.spec.ts` is unchanged; `test:variants` covers the folder once the set exists.
   ---
-
-- [ ] LT-445: Migrate `module-cem-list` to `.tsx` with same-commit cutover — the filter layer over `{% cem-list %}`'s page-authored cards.
-  **Area:** examples
-  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
-  **Area:** examples
-  **Updated (Architect, 2026-10-05):** filed from LT-111's sweep report (ruling 5) — one of the
-  two corpus-port residues the iteration's exit criterion cannot close without.
-  **Context:** The component owns NO template: the `{% cem-list %}` Markdoc tag renders the full
-  `card-collapsible` markup into the page, and the hand-written client (39 lines) only wires the
-  `form-textbox` filter — an input State, and a per-card `hidden` write matching the card's text
-  content. The `.tsx` migration therefore takes the reserved `children` parameter (ADR 0024
-  sub-design 10; the `module-scrollarea` precedent) and wraps the page-authored cards.
-  **Shape (pinned so no decision is needed mid-task):**
-  1. `ModuleCemList({ children }: { children?: string })` renders `<module-cem-list>{children}</module-cem-list>` with the folder's sheet inline (`:host`-led per ADR 0033; check what `module-cem-list.css`'s selectors cross the `card-collapsible` boundary — those need `:global`, the codeblock precedent). Both `.tsx` and `.tsrx` members; the hand-written `.ts` stays as the twin (ruling 5).
-  2. The filter wiring stays ONE client-only effect over `all('card-collapsible')` — `all()` is an admitted compiled construct (form-listbox/form-radiogroup/module-catalog precedents) — whose handler writes `card.hidden` per filter value; do NOT port the per-card `each()` + haystack closure (the compiled per-card setup has no page-authored cards to mount into; the single watch re-reads `cards.get()` per run, which is the same behavior).
-  3. `module-cem-list.html` is authored page markup with Markdoc-tag-generated ids — it does NOT change (the occurrence stays authored; there is no server render to mirror, the component has no own markup). Swap `examples/main.css` to the generated stylesheet. Host profile: `ModuleCemListAttrs` per the wave-4 rule.
-  4. No `.spec.ts` exists in the folder — `test:variants` skips it; the demo page and the docs pages (which embed `{% cem-list %}`) are the live exercise; run them in the browser or name the leg unrunnable.
-  **Verification:** full gates; the cem-list demo filters live (type in the box, cards hide); goldens/snapshots extend for the new compiled members; tier census change recorded by design.
-  ---
-
-- [ ] LT-390: A corpus consumer for reactive conditions and the boundary, with audit coverage.
-  **Area:** examples
-  **Needs:** LT-375, LT-385, LT-449
-  **Context:** LT-274/LT-276 landed with no corpus component using either, so their golden
-  and equivalence-audit acceptance items pass vacuously; adoption's designed connect diff is
-  pinned only by `reactive-conditions.test.ts`. Migrate one example that wants a reactive
-  `@if` (a disclosure or a tab-like switch) and pair the boundary with LT-449 (lazyload),
-  extend `equivalence-audit.test.ts` to the arm-adoption class.
-  **Depends on** LT-385 and LT-449 (lazyload's boundary migration, ruled 2026-10-06). It
-  waits on nothing from LT-448 — the allow-scripts design is downstream of this track, not
-  upstream.
-
 
 ### B — correctness
 
@@ -431,43 +319,6 @@ recorded against the 30.4k opening measurement.
   **Channel/tier:** compiler; decided by the task per question (3). Parity cases on both
   surfaces regardless.
 
-- [ ] LT-453: Harvest a host-level arg-seeded list through a key alias, with the render witness (ADR 0047).
-  **Area:** compiler
-  **Gates:** check:sim
-  **Area:** compiler
-  **Context (Architect, 2026-10-06, ADR 0047):** implement ADR 0047 on both surfaces. The
-  motivating shape is `module-ticker` (LT-110): the host-level `tickers` list, seeded from the
-  `rows` arg, is rendered only through per-block derived lists of symbols. Each row binds
-  `const ticker = tickers.byKey(s)` in item setup and renders the fields through
-  `ticker.get().<field>`. Today this is refused: LTC005 "The initializer of signal `tickers`
-  references server-only name `rows`".
-  **Static half:** recognize the alias in the harvest pass (`analysis/harvest.ts`, beside the
-  per-field plan `planListFieldHarvest`). The four ADR 0047 s1 conditions are each refused
-  with **LTC080** (tier 1 Prevented, compiler channel; one code, one message per condition,
-  each naming its fix). The conditions: the alias list's item is its key; `byKey` over the
-  loop key, unconditional, in item setup; one alias scope per list; every field at a canonical
-  site through `t.get().<field>`, with s7's parsers and raw-source rule. The harvested list's
-  declaration rides both modules (the alias read counts as a read in both phases; compare
-  LT-447's dropped-declaration class).
-  **Dynamic half:** the server module records the keys rendered at the alias scope, in order,
-  and asserts at render end that their first occurrences equal the list's keys. The failure
-  is a thrown error from the server runtime (`server/compiler/runtime.ts`). Its message names
-  the component, the list and the first missing or out-of-order key, and follows
-  `.agents/skills/writer/references/error-messages.md`. Channel: the server render; it fails
-  the build under static generation and the realm (ADR 0028: Prevented in effect). No client
-  counterpart. A client cannot detect an item it never saw.
-  **Client:** harvest the list at connect, before any consumer reads it, from every
-  alias-scope root in document order across enclosing scopes. The selector path is
-  synthesized by the structural proof (ADR 0045).
-  **Template targets:** under a configured target, a key-alias harvest is not emittable (a
-  census routing outcome, ADR 0043 s2), until a target operation carries the witness.
-  **Tests:** a fixture of a flat list rendered through two levels of derived grouping, on both
-  surfaces. Pin: the per-field harvest from the alias sites; the client list's keys and order
-  after connect; each LTC080 refusal; a witness failure, with the server render showing a
-  missing key (for example, a block gated off on the server); parity between the surfaces.
-  Docs: `LE_TRUC_COMPILER.md` (harvest, the diagnostic inventory), `HOST_PROFILE.md`
-  (per-item setup: the alias), `VOCABULARY_LEDGER.md` (LTC080).
-
 - [ ] LT-455: A reactive list in a server-known branch of a list item compiles clean, then throws in every item mount when the branch is not taken — query its container optionally and guard the nested `reconcile`.
   **Area:** compiler
   **Needs:** LT-453, LT-454
@@ -493,80 +344,6 @@ recorded against the 30.4k opening measurement.
   adopt-and-clone behavior is unchanged. Parity modules stay byte-identical across surfaces.
   **Channel/tier:** compiler emission; no new check. A Contained runtime failure (tier 2) becomes
   the correct path, and no shape is refused.
-
-- [ ] LT-453: Harvest a host-level arg-seeded list through a key alias, with the render witness (ADR 0047).
-  **Area:** compiler
-  **Gates:** check:sim
-  **Area:** compiler
-  **Context (Architect, 2026-10-06, ADR 0047):** implement ADR 0047 on both surfaces. The
-  motivating shape is `module-ticker` (LT-110): the host-level `tickers` list, seeded from the
-  `rows` arg, is rendered only through per-block derived lists of symbols. Each row binds
-  `const ticker = tickers.byKey(s)` in item setup and renders the fields through
-  `ticker.get().<field>`. Today this is refused: LTC005 "The initializer of signal `tickers`
-  references server-only name `rows`".
-  **Static half:** recognize the alias in the harvest pass (`analysis/harvest.ts`, beside the
-  per-field plan `planListFieldHarvest`). The four ADR 0047 s1 conditions are each refused
-  with **LTC080** (tier 1 Prevented, compiler channel; one code, one message per condition,
-  each naming its fix). The conditions: the alias list's item is its key; `byKey` over the
-  loop key, unconditional, in item setup; one alias scope per list; every field at a canonical
-  site through `t.get().<field>`, with s7's parsers and raw-source rule. The harvested list's
-  declaration rides both modules (the alias read counts as a read in both phases; compare
-  LT-447's dropped-declaration class).
-  **Dynamic half:** the server module records the keys rendered at the alias scope, in order,
-  and asserts at render end that their first occurrences equal the list's keys. The failure
-  is a thrown error from the server runtime (`server/compiler/runtime.ts`). Its message names
-  the component, the list and the first missing or out-of-order key, and follows
-  `.agents/skills/writer/references/error-messages.md`. Channel: the server render; it fails
-  the build under static generation and the realm (ADR 0028: Prevented in effect). No client
-  counterpart. A client cannot detect an item it never saw.
-  **Client:** harvest the list at connect, before any consumer reads it, from every
-  alias-scope root in document order across enclosing scopes. The selector path is
-  synthesized by the structural proof (ADR 0045).
-  **Template targets:** under a configured target, a key-alias harvest is not emittable (a
-  census routing outcome, ADR 0043 s2), until a target operation carries the witness.
-  **Tests:** a fixture of a flat list rendered through two levels of derived grouping, on both
-  surfaces. Pin: the per-field harvest from the alias sites; the client list's keys and order
-  after connect; each LTC080 refusal; a witness failure, with the server render showing a
-  missing key (for example, a block gated off on the server); parity between the surfaces.
-  Docs: `LE_TRUC_COMPILER.md` (harvest, the diagnostic inventory), `HOST_PROFILE.md`
-  (per-item setup: the alias), `VOCABULARY_LEDGER.md` (LTC080).
-
-- [ ] LT-453: Harvest a host-level arg-seeded list through a key alias, with the render witness (ADR 0047).
-  **Area:** compiler
-  **Gates:** check:sim
-  **Area:** compiler
-  **Context (Architect, 2026-10-06, ADR 0047):** implement ADR 0047 on both surfaces. The
-  motivating shape is `module-ticker` (LT-110): the host-level `tickers` list, seeded from the
-  `rows` arg, is rendered only through per-block derived lists of symbols. Each row binds
-  `const ticker = tickers.byKey(s)` in item setup and renders the fields through
-  `ticker.get().<field>`. Today this is refused: LTC005 "The initializer of signal `tickers`
-  references server-only name `rows`".
-  **Static half:** recognize the alias in the harvest pass (`analysis/harvest.ts`, beside the
-  per-field plan `planListFieldHarvest`). The four ADR 0047 s1 conditions are each refused
-  with **LTC080** (tier 1 Prevented, compiler channel; one code, one message per condition,
-  each naming its fix). The conditions: the alias list's item is its key; `byKey` over the
-  loop key, unconditional, in item setup; one alias scope per list; every field at a canonical
-  site through `t.get().<field>`, with s7's parsers and raw-source rule. The harvested list's
-  declaration rides both modules (the alias read counts as a read in both phases; compare
-  LT-447's dropped-declaration class).
-  **Dynamic half:** the server module records the keys rendered at the alias scope, in order,
-  and asserts at render end that their first occurrences equal the list's keys. The failure
-  is a thrown error from the server runtime (`server/compiler/runtime.ts`). Its message names
-  the component, the list and the first missing or out-of-order key, and follows
-  `.agents/skills/writer/references/error-messages.md`. Channel: the server render; it fails
-  the build under static generation and the realm (ADR 0028: Prevented in effect). No client
-  counterpart. A client cannot detect an item it never saw.
-  **Client:** harvest the list at connect, before any consumer reads it, from every
-  alias-scope root in document order across enclosing scopes. The selector path is
-  synthesized by the structural proof (ADR 0045).
-  **Template targets:** under a configured target, a key-alias harvest is not emittable (a
-  census routing outcome, ADR 0043 s2), until a target operation carries the witness.
-  **Tests:** a fixture of a flat list rendered through two levels of derived grouping, on both
-  surfaces. Pin: the per-field harvest from the alias sites; the client list's keys and order
-  after connect; each LTC080 refusal; a witness failure, with the server render showing a
-  missing key (for example, a block gated off on the server); parity between the surfaces.
-  Docs: `LE_TRUC_COMPILER.md` (harvest, the diagnostic inventory), `HOST_PROFILE.md`
-  (per-item setup: the alias), `VOCABULARY_LEDGER.md` (LTC080).
 
 ### D — CSS departures
 
