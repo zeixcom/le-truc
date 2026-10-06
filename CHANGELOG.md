@@ -92,6 +92,7 @@
 - **`reconcile()` mounts an entering item after inserting it**: Previously, a cloned item mounted before insertion, so a `pass()` in `bindItem` met a not-yet-upgraded composed child and threw. Now the item is inserted first.
 - **A throwing `bindItem` stays in its scope**: Previously, it escaped `reconcile()` uncaught, and on the first run took the whole list down. Now it is reported once, naming the item key and the container, and that element stays in place unbound.
 - **`watch(prop, { stale })` behind `pass()`**: Previously, `stale` never fired when a parent `pass()`ed an async thunk into the prop, because the Slot hid the `Task`. Now it fires.
+- **A `truc:pass` onto a composed child in a server-known branch never bound**: Previously, in a reactive-list item the compose minted a required local, so with the branch folded off every item mount threw `MissingElementError` and the pass entries never bound; at the host the entries were silently unplanned. Now the shape fails the compile (`LTC005`) with the reactive-conditional remedy, and a pass-less composed child in a branch stays legal (LT-470).
 
 ## 2.6.0
 

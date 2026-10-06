@@ -540,6 +540,11 @@ refused (LT-468): the fold may leave the element out of every clone, and the
 item walk is the only walk that both descends server branches and emits
 construct effects, so the refusal lives in it. A reactive conditional in the
 item is the remedy — its arm set binds the construct existence-guarded.
+A `truc:pass`-carrying compose in such a branch is refused too (LT-470):
+the item walk refuses it at the local-minting site in `collectCompose`, and
+the arm-set placement walk refuses it for the host's own server branches,
+where the branch handlers never reach a compose node and the entries would
+be silently unplanned.
 Every plan node carries source spans for the remapping tables.
 The passes run as functions over a typed shared environment (`PassShared` —
 the order-carrying accumulators: queries, used names, ambients, child tags,
