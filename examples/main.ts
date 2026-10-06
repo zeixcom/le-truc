@@ -89,10 +89,14 @@ import '../server/generated/components/module-pagination.client.ts'
 import '../server/generated/components/module-scrollarea.client.ts'
 import '../server/generated/components/module-splitview.client.ts'
 import '../server/generated/components/module-tabgroup.client.ts'
+// module-todo serves its compiled client (the variant set's selected
+// surface, LT-111). Until LT-467 this graph imported the hand-written twin,
+// which then held the tag on every page and in every `test:variants` surface
+// bundle, so the compiled spellings were never the ones exercised.
+import '../server/generated/components/module-todo.client.ts'
 import '../server/generated/components/test-listitem-tsx.client.ts'
 import '../server/generated/components/test-listitem.client.ts'
 import './module/ticker/module-ticker.ts'
-import './module/todo/module-todo.ts'
 import './section/menu/section-menu.ts'
 import './test/audit/test-audit.ts'
 import './test/aria/test-aria.ts'
