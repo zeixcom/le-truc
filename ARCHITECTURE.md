@@ -91,7 +91,7 @@ The first run adopts server-rendered children that carry `data-key`. Children ca
 
 A list reached only through `byKey` in another list's item setup (a flat list rendered through a nested grouping) harvests from those alias sites instead. The server render witnesses that every key rendered, in order, and fails the build otherwise ([ADR 0047](adr/0047-harvest-through-a-key-alias-witnessed-by-the-render.md)).
 
-In compiled output every list template is a direct child of the host, after its rendered content, stamped `data-list="N"` and queried from the host, so a container — a scope root included — holds only its items. Arm templates stay beside their arm, because the arm form anchors on them (below; [ADR 0046](adr/0046-reactive-list-items-as-mount-scopes.md) s2).
+In compiled output every list template is a direct child of the host, after its rendered content, stamped `data-list="N"` and queried from the host, so a container — a scope root included — holds only its items. A list below a server-known branch ships its template only when the branch rendered it. Arm templates stay beside their arm, because the arm form anchors on them (below; [ADR 0046](adr/0046-reactive-list-items-as-mount-scopes.md) s2).
 
 Per-item bindings mount via `bindItem` in root-keyed scopes, reusing the `keyedScopes` ownership discipline (ADR 0014). The driving effect tracks structural changes (source keys) only. A leaving item's scope is disposed before its element is removed, so cleanups see a connected element.
 

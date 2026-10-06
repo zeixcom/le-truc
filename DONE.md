@@ -1547,3 +1547,52 @@ Full entry text: `git log -p -- DONE.md`.
   `window.clearInterval` workaround becomes unnecessary. A `done`-level change.
 
   **Changed:** `JS_GLOBALS` (`server/compiler/vocabulary.ts`) now lists `clearInterval`, `clearTimeout` and `cancelAnimationFrame`, so a `watch()` cleanup that cancels its own timer compiles without LTC005; regression test `server/tests/compiler/timer-cancellers.test.ts` covers all three on `.tsx` and `.tsrx`.
+
+- [x] LT-454: Hoist every compiled list template to the host's end; drop the "list directly under an item root" refusal (ADR 0046 s2). — reviewed ✓
+  **Area:** compiler
+  **Gates:** check:sim
+  **Area:** compiler
+  **Context (Architect, 2026-10-06, ADR 0046 s2 as amended):** a list's `<template
+  data-list="N">` sits today right after its container's close tag, and the client queries
+  it from the container's parent. When the container is itself a scope root (a `<tbody>` as
+  a list item, holding the rows list), the slot after the container belongs to the outer
+  list's container, so the compiler refuses the shape (LTC005, `analysis/effects.ts:1779`).
+  `module-ticker` (LT-110) needs exactly this shape.
+  **Change:**
+  - **Placement.** Every list template, at every nesting depth, is emitted once per
+    instance as a direct child of the host, after the rendered content, in document order
+    of N.
+  - **Query.** Every mount queries `host.querySelector(':scope > template[data-list="N"]')`.
+  - **Nested copies.** A nested list's template is no longer copied into its outer
+    template or into live items.
+  - **Refusal retired.** The `effects.ts:1779` refusal goes; a list container may be any
+    element, a Mount Scope root included.
+  - **Unchanged.** N's derivation (`walk.ts:listIndexOf`); the refusal of a list directly
+    under the component root (the host is never a container); LTC061.
+  **Arm templates are out of scope** (owner ruling, 2026-10-06): they stay beside their arm,
+  because `reconcile()`'s arm form uses the first template as its insertion and adoption
+  anchor (`src/helpers/reactive.ts`, `reconcileArms`).
+  **The invariant to pin.** A hoisted template renders with every enclosing scope's
+  bindings unbound. Today a live outer item's copy of an inner template bakes outer-item
+  values (`data-group="x"` from an outer key, via `emit-server.ts`'s `templateUnbound`),
+  while the outer template's copy bakes them empty. The client's inner mount writes them on
+  every adopt and clone, so the baked values are redundant. Pin with regression tests that
+  the single copy carries no enclosing-scope value and that a cloned inner item in a cloned
+  outer item still gets it. Cover list-in-list, list-in-arm and arm-in-list, on both
+  surfaces.
+  **Also pin:** a list whose container is the item root (`<tbody>` item holding a `<tr>`
+  list with an empty arm) compiles, renders, connects with no realm diagnostics, and clones
+  a new outer item with working inner reconciliation.
+  **Docs:** `LE_TRUC_COMPILER.md` and `HOST_PROFILE.md` (template placement, the
+  `:host > :last-child` gotcha: trailing host children are compiler templates), the
+  `emit-server.ts`/`walk.ts`/`loops.ts`/`plan.ts` comments that describe the old placement.
+  Snapshot churn (parity, equivalence audit, sim driver) is expected and is the diff to review.
+  **Channel/tier:** no new check; one refusal retired.
+
+  **Changed:** Every reactive list's `<template data-list="N">` now renders once per instance as a direct child of the host, after the rendered content, in N order, at any nesting depth. The client queries all of them as `host.querySelector(':scope > template[data-list="N"]')`. Nested copies, which sat in live outer items, outer templates and arm templates, are gone. So is the "reactive list directly under an arm/item root" LTC005 refusal: a container may be a Mount Scope root (`<tbody>` holding `<tr>` rows). The refusal of a list directly under the component root, N's derivation and LTC061 are unchanged. Arm templates stay beside their arm.
+  **How:** Server: `emit-server.ts` drops the per-element `templateQueue` and emits all list templates in a new `emitListTemplates` pass before the root close tag. Each template renders with `templateUnbound` set to the item, key and setup names of its enclosing lists (new `walk.ts:enclosingLists`). `inArmTemplate` is set when the list sits in a nested scope, so client-written and compose sites bake empty, as in the old outer-template copy. Client: `ReconcilePlan.parent` is removed. `loops.ts` no longer queries the container's parent (that query's LTC007 for a non-unique parent is gone with it). `effects.ts:planNestedList` drops the refusal and adds `host` to the ambient. Docs: `LE_TRUC_COMPILER.md` (plan shape, addressing limits), `HOST_PROFILE.md` (new "List templates sit at the host's end" paragraph with the `:host > :last-child` gotcha) and the emitter, walk and plan comments.
+  **Check:** New `mount-scopes` suites, run on both surfaces with byte-identical modules: "a list whose container is the item root" (`<tbody>` item, `<tr>` list, `@empty` arm; compiles, renders, connects with no realm diagnostics, clones a new outer item whose inner list reconciles, and keeps `data-group` set from the outer key) and "a list whose container is the arm root". The single-copy/unbound invariant is pinned in list-in-list (one `data-list="1"` copy, no `data-group`/`data-key` in the templates; the cloned-outer test still sees `g3:x`), list-in-arm and arm-in-list. The parity refusal case moved to the lifted list, with an item-root twin. Snapshot churn to review: sim-driver (5 corpus fixtures) and equivalence-audit (form-tokenbox, module-calctable, module-todo) move the template to the host's end; calctable's now sits after `</table>` rather than inside it. In the variant parity snapshot, calctable's `table` query is replaced by `host`. Gates: typecheck, test:server (3313 pass / 0 fail, after build:docs), lint, check:contract, check:corpus, build:docs, check:links (753) green. check:sim: bun and node agree, but the Deno leg is unrunnable in the sandbox (dl.deno.land blocked). Playwright is unrunnable (browser launch EPERM in the sandbox); the owner should run `bun run test` for form-tokenbox, module-calctable, module-list, module-todo and test-listitem, whose served markup changed. Doubt for review: a host-level list inside a server-rendered branch now ships its template even when the branch isn't taken. That is harmless, because its template query only runs if the list mounts, but it is a byte change wherever that shape occurs (none in the corpus).
+
+  **Addendum (owner review question, f44fd9c8):** A list below a server-known branch (a server conditional or a sync `@try`) now ships its hoisted template only when the branch rendered it. A top-level `let __listN = false` flag is set wherever the list renders: a live item, an arm template, or an enclosing list's template, which folds the same branch. Lists outside such a branch keep byte-identical output. At host level the shape was already refused (LTC005, client construct below a branch root), so it only arises inside an item. This is pinned in `mount-scopes` ("a list in a server branch of an item": show true ships one `data-list="1"`, show false ships none). The `module-calctable.ts` twin now queries `first(':scope > template', …)`. Its HTML already placed the templates after `</table>`. Gates re-run: typecheck, test:server (3315 / 0), check:contract, check:corpus, build:docs, check:links (753) green. Playwright (owner: 1008 pass on fa788f72) and `test:variants` for the calctable twin are unrunnable here. **Out of scope, for the Architect:** in the same shape, the item mount queries the nested container as required (`first('ol', 'c-el: ol missing')`), so with the branch not taken every item mount throws (Contained per scope, LT-436). This predates LT-454. The query should be optional and the nested reconcile guarded, as key-derived attributes in a server branch already are.
+
+  **Review (Architect, 2026-10-06):** approved, no findings. The hoist matches ADR 0046 s2 as amended: one copy per instance in N order, enclosing scopes unbound through `enclosingLists` plus `templateUnbound`, and `inArmTemplate` set for nested lists so client-written and compose sites bake empty. The branch-guard addendum (`listFlags`) is correct because pre-order N renders an outer template, which folds the branch, before the inner one. Arm templates are untouched. Re-ran the compiler suites on f44fd9c8: 2427 pass. The owner ran Playwright on fa788f72: 1008 pass. Follow-up outside scope: LT-455 (the required nested-container query in a branch, which predates this task).
