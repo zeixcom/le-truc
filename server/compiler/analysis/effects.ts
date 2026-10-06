@@ -2295,6 +2295,7 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 		node: TemplateNode,
 		enclosed: boolean,
 		loop: ForIR | null,
+		inArm: boolean,
 	): void => {
 		const own = loopOutputs.get(node) ?? null
 		if (hasArmSet(node)) {
@@ -2330,14 +2331,43 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 				),
 			)
 		}
+		// A `truc:pass` onto a composed child in a server-rendered branch of
+		// the host is refused here (LT-470): the branch handlers never visit
+		// a compose node — probed before this refusal, the shape compiled
+		// clean on both surfaces with the pass silently unplanned — so
+		// without it the author's entries vanish with no error. The same
+		// fold-fixed once-only addressing the item walk refuses one scope
+		// down; the guarded alternative is rejected for the same reason (a
+		// pass entry has no reactive core to guard). Skipped inside an arm
+		// (the arm walk refuses the shape through `unmountableInArm`,
+		// including nested server branches) and inside any list (the item
+		// walk refuses it in the item's own branches; an `each()` body keeps
+		// today's behavior).
+		if (
+			node.kind === 'compose' &&
+			enclosed &&
+			!inArm &&
+			loop === null &&
+			node.attrs.some(a => a.kind === 'pass')
+		)
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					node.node,
+					'A `truc:pass` onto a composed child in a server-rendered branch',
+					'The branch folds once per render, so the pass would address markup that never re-renders — make the condition reactive: the composed child then renders as its arm’s root.',
+				),
+			)
 		// An arm and a reactive-list item are Mount Scopes: what sits inside
 		// starts over from its own mount. A server-data loop body stays
 		// `each()`'s; a server-rendered branch or composed content encloses.
 		let innerLoop = loop
 		let innerEnclosed = enclosed
+		let innerInArm = inArm
 		if (hasArmSet(node)) {
 			innerLoop = null
 			innerEnclosed = false
+			innerInArm = true
 		} else if (own !== null) {
 			innerLoop = own
 			if (own.kind === 'reconcile') innerEnclosed = false
@@ -2347,9 +2377,10 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 			node.kind === 'compose'
 		)
 			innerEnclosed = true
-		for (const child of childNodes(node)) visit(child, innerEnclosed, innerLoop)
+		for (const child of childNodes(node))
+			visit(child, innerEnclosed, innerLoop, innerInArm)
 	}
-	visit(component.root, false, null)
+	visit(component.root, false, null, false)
 }
 
 /**
@@ -2712,7 +2743,7 @@ const planReconcileItem = (
 				return
 			}
 			if (node.kind === 'compose') {
-				collectCompose(node)
+				collectCompose(node, inBranch)
 				return
 			}
 			if (node.kind === 'conditional' && node.mode === 'server')
@@ -2726,13 +2757,31 @@ const planReconcileItem = (
 		// registry-discovery tolerance applies: that pass runs with no
 		// `composeRegistry` and needs only this component's own entry, so a
 		// site it cannot resolve says nothing (the LT-015 tolerance).
-		function collectCompose(node: ComposeNode): void {
+		// `inBranch`: a `truc:pass`-carrying compose in a server-rendered
+		// branch of the item is refused before any local is minted (LT-470) —
+		// the fold is fixed per render and per clone, so the required local
+		// would throw in every item mount whenever the branch folded off, the
+		// construct trap LT-468 refuses one scope down. A pass-less compose
+		// stays legal: it is server-rendered markup the client never
+		// addresses.
+		function collectCompose(node: ComposeNode, inBranch = false): void {
 			const passAttrs = node.attrs.filter(
 				(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
 					a.kind === 'pass',
 			)
 			if (passAttrs.length === 0) return
 			if (fx.composeRefs.mode === 'skipped') return
+			if (inBranch) {
+				diagnostics.push(
+					diagnostic.unsupported(
+						source,
+						node.node,
+						`A \`truc:pass\` onto a composed child in a server-rendered branch of the ${wording.loop} item <${output.tag}>`,
+						'The branch folds once per render and every clone copies the fold, so the pass would address markup that never re-renders — make the condition reactive: the item then plans an arm set with live switching, and the composed child renders as its arm’s root.',
+					),
+				)
+				return
+			}
 			const childTag = fx.composeRefs.registry.get(node.source)?.tag ?? null
 			if (!childTag) {
 				diagnostics.push(

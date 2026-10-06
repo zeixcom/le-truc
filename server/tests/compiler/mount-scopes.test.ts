@@ -967,6 +967,221 @@ describe('a construct in a server branch of an item is refused (LT-468)', () => 
 	})
 })
 
+/* === A `truc:pass` compose in a server branch (LT-470) === */
+
+const PASS_CHILD_TSRX = `export function BasicChild({ label }: { label: string })
+	@{
+		expose({ value: '' })
+			<basic-child>{label}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-child>
+	}`
+
+const PASS_CHILD_TSX = `import { css } from '@zeix/le-truc-compiler/macros'
+import type { FactoryContext } from '@zeix/le-truc'
+
+export function BasicChild({ label }: { label: string }, { expose }: FactoryContext<{ label: string }>) {
+	expose({ value: '' })
+	return (
+		<basic-child>{label}
+			<style>{css\`:host {
+	  display: block;
+	}\`}</style>
+		</basic-child>
+	)
+}`
+
+/** Both surfaces compiled against their own surface's child registry. */
+const compileComposeBoth = (sources: { tsrx: string; tsx: string }) => {
+	const childTsrx = compileComponent(
+		PASS_CHILD_TSRX,
+		'examples/child/basic-child.tsrx',
+		new Set(),
+	)
+	if (!childTsrx.component)
+		throw new Error(
+			`child must compile: ${JSON.stringify(childTsrx.diagnostics)}`,
+		)
+	const childTsx = compileComponentTsx(
+		PASS_CHILD_TSX,
+		'examples/child/basic-child.tsx',
+		new Set(),
+	)
+	if (!childTsx.component)
+		throw new Error(
+			`child must compile: ${JSON.stringify(childTsx.diagnostics)}`,
+		)
+	const fromTsrx = compileComponent(
+		sources.tsrx,
+		'examples/parent/basic-parent.tsrx',
+		new Set(),
+		undefined,
+		new Map([[childTsrx.component.entry.source, childTsrx.component.entry]]),
+	)
+	const fromTsx = compileComponentTsx(
+		sources.tsx,
+		'examples/parent/basic-parent.tsx',
+		new Set(),
+		undefined,
+		new Map([[childTsx.component.entry.source, childTsx.component.entry]]),
+	)
+	return { fromTsrx, fromTsx, childTsrx, childTsx }
+}
+
+const COMPOSE_IN_BRANCH = (withPass: boolean) => ({
+	tsrx: tsrx(
+		"import { createList } from '@zeix/le-truc'\nimport { BasicChild } from '../child/basic-child.tsrx'",
+		`const items = createList<string>(['a'], { keyConfig: s => s })
+		expose({})`,
+		`
+				<ul class="list">
+					@for (const item of items) {
+						<li><span>{item}</span>@if (show) { <BasicChild class="branched" label="hi"${withPass ? " truc:pass={{ value: () => 'x' }}" : ''} /> }</li>
+					}
+				</ul>`,
+		'{ show }: { show: boolean }',
+	),
+	tsx: tsx(
+		"import { createList } from '@zeix/le-truc'\nimport { BasicChild } from '../child/basic-child.tsx'",
+		'{ show: boolean }',
+		`const items = createList<string>(['a'], { keyConfig: s => s })
+	expose({})`,
+		`
+				<ul class="list">
+					{items.map(item => (
+						<li><span>{item}</span>{show ? <BasicChild class="branched" label="hi"${withPass ? " truc:pass={{ value: () => 'x' }}" : ''} /> : null}</li>
+					))}
+				</ul>`,
+		'{ show }: { show: boolean }',
+	),
+})
+
+const COMPOSE_IN_HOST_BRANCH = (withPass: boolean) => ({
+	tsrx: tsrx(
+		"import { BasicChild } from '../child/basic-child.tsrx'",
+		'expose({})',
+		`
+				@if (show) {
+					<BasicChild class="branched" label="hi"${withPass ? " truc:pass={{ value: () => 'x' }}" : ''} />
+				}`,
+		'{ show }: { show: boolean }',
+	),
+	tsx: tsx(
+		"import { BasicChild } from '../child/basic-child.tsx'",
+		'{ show: boolean }',
+		'expose({})',
+		`
+				{show ? (
+					<BasicChild class="branched" label="hi"${withPass ? " truc:pass={{ value: () => 'x' }}" : ''} />
+				) : null}`,
+		'{ show }: { show: boolean }',
+	),
+})
+
+describe('a `truc:pass` compose in a server branch is refused (LT-470)', () => {
+	const expectRefused = (
+		diagnostics: readonly { code: string; message: string }[],
+	) => {
+		const ltc005 = diagnostics.filter(d => d.code === 'LTC005')
+		expect(ltc005.length).toBeGreaterThan(0)
+		for (const d of ltc005) {
+			expect(d.message).toContain(
+				'A `truc:pass` onto a composed child in a server-rendered branch',
+			)
+			expect(d.message).toContain('make the condition reactive')
+		}
+		return ltc005.length
+	}
+
+	test('onto a child in a server branch of a list item: refused on both surfaces, nothing minted', () => {
+		const { fromTsrx, fromTsx } = compileComposeBoth(COMPOSE_IN_BRANCH(true))
+		const tsrxHits = expectRefused(fromTsrx.diagnostics)
+		const tsxHits = expectRefused(fromTsx.diagnostics)
+		expect(tsxHits).toBe(tsrxHits)
+		// The refusal mints no query and emits no pass (no client module at
+		// all when the compile fails).
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain(
+			"first('basic-child",
+		)
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain('pass(')
+	})
+
+	test('onto a child in a server branch of the host: refused the same way, nothing unplanned silently', () => {
+		const { fromTsrx, fromTsx } = compileComposeBoth(
+			COMPOSE_IN_HOST_BRANCH(true),
+		)
+		const tsrxHits = expectRefused(fromTsrx.diagnostics)
+		const tsxHits = expectRefused(fromTsx.diagnostics)
+		expect(tsxHits).toBe(tsrxHits)
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain(
+			"first('basic-child",
+		)
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain('pass(')
+	})
+
+	test('a pass-less compose in the same branch still compiles and renders into the item', async () => {
+		const { fromTsrx, fromTsx, childTsrx } = compileComposeBoth(
+			COMPOSE_IN_BRANCH(false),
+		)
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain('pass(')
+		// The branch folds per render call: shown, the composed child renders
+		// into the item; hidden, the item mounts without it and nothing
+		// queries for it.
+		generated.emit('basic-child.server.ts', childTsrx.component!.serverCode)
+		const shown = await render(fromTsrx.component!.serverCode, { show: true })
+		expect(shown).toContain('<basic-child class="branched">hi</basic-child>')
+		const hidden = await render(fromTsrx.component!.serverCode, {
+			show: false,
+		})
+		expect(hidden).not.toContain('<basic-child')
+	})
+
+	test('a compose with `truc:pass` directly in the item still compiles and binds', () => {
+		const direct = {
+			tsrx: tsrx(
+				"import { createList } from '@zeix/le-truc'\nimport { BasicChild } from '../child/basic-child.tsrx'",
+				`const items = createList<string>(['a'], { keyConfig: s => s })
+		expose({})`,
+				`
+				<ul class="list">
+					@for (const item of items) {
+						<li><BasicChild class="direct" label="hi" truc:pass={{ value: () => 'x' }} /></li>
+					}
+				</ul>`,
+			),
+			tsx: tsx(
+				"import { createList } from '@zeix/le-truc'\nimport { BasicChild } from '../child/basic-child.tsx'",
+				'{}',
+				`const items = createList<string>(['a'], { keyConfig: s => s })
+	expose({})`,
+				`
+				<ul class="list">
+					{items.map(item => (
+						<li><BasicChild class="direct" label="hi" truc:pass={{ value: () => 'x' }} /></li>
+					))}
+				</ul>`,
+			),
+		}
+		const { fromTsrx, fromTsx } = compileComposeBoth(direct)
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		for (const { component } of [fromTsrx, fromTsx]) {
+			// One site in the item needs no discriminator: the local is named
+			// after the child tag (LT-338's fallback) and binds the pass.
+			expect(component?.clientCode).toContain(
+				"first('basic-child', 'c-el: basic-child missing')",
+			)
+			expect(component?.clientCode).toContain(
+				"pass(basicChild, { value: { get: () => 'x' } })",
+			)
+		}
+	})
+})
+
 /* === A list whose container is the arm root (LT-454) === */
 
 const LIST_AS_ARM = {
