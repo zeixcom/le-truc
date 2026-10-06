@@ -584,20 +584,23 @@ export const resolveSelectorIn = (
  * apply, and its composed-child exclusions (`:not(child-tag *)`) would
  * exclude the element's own rendered position. The runtime query still
  * reaches it: an arm-scoped `first()` descends into the composed child's
- * markup (LT-096). Candidates use `resolveSelectorIn`'s vocabulary over the
- * element's own static attributes — role, then the class/id/data-*
- * discriminators, then the bare tag last (most collision-prone inside
- * markup the compiler cannot see); no uniqueness is claimed.
+ * markup (LT-096). The candidates are the element's `role` and its
+ * class/id/data-* discriminators; there is NO bare-tag fallback (LT-460
+ * rework): unlike LT-449's raw-tag callout — which contributes no markup
+ * of its own to the parent's DOM — a composed child renders markup the
+ * compiler cannot see, and a bare tag could match one of its own elements,
+ * writing the arm's value into the child's markup. Null when the element
+ * carries no distinguishing attribute; the caller refuses with the fix.
  */
 export const resolveComposeContentSelector = (
 	el: ElementNode,
-): { selector: string; unique: boolean } => {
+): { selector: string; unique: false } | null => {
 	const candidates = [
 		buildSelector(el, 'role'),
 		...discriminatorCandidates(el),
-		buildSelector(el, 'bare'),
 	].filter((s): s is string => s !== null)
-	return { selector: candidates[0] ?? el.tag, unique: false }
+	const selector = candidates[0]
+	return selector === undefined ? null : { selector, unique: false }
 }
 
 /**

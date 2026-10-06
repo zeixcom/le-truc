@@ -1221,6 +1221,126 @@ export function BasicParent({}: {})
 		ensureEmitted('basic-parent', component.serverCode)
 	})
 
+	test('a bare-tag message element inside composed content is refused — the child renders markup the compiler cannot see (LT-460 rework)', () => {
+		// The child's own label <p> shares the tag with the parent-authored
+		// message element; a bare `p` selector would hit the child's markup
+		// on an err flip and overwrite the label instead of the message.
+		const labeledChild = `export function ChildrenChild({ label, children }: {
+	label: string
+	children?: string
+})
+	@{
+		expose({ value: '' })
+			<children-child><p>{label}</p>{children}</children-child>
+	}`
+		const childComponent = compileComponent(
+			labeledChild,
+			'examples/child/children-child.tsrx',
+			new Set(['children-child']),
+		)
+		if (!childComponent.component)
+			throw new Error(
+				`child must compile: ${JSON.stringify(childComponent.diagnostics)}`,
+			)
+		const parent = withImports(
+			"import { ChildrenChild } from '../child/children-child.tsrx'",
+			asyncParent(
+				'<div class="loading">loading</div>',
+				'<ChildrenChild label={"failed"}><p>{e.message}</p></ChildrenChild>',
+			),
+		)
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['children-child']),
+			undefined,
+			composeRegistryOf(childComponent.component.entry),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain(
+			'message element <p> inside composed content has no `role`, `class` or `id` attribute',
+		)
+		expect(hit?.message).toContain('distinguishing attribute')
+	})
+
+	test('a lazy child DIRECTLY inside composed content is refused with the wrap-in-an-element fix (LT-460 rework)', () => {
+		const childComponent = compileChildrenChild()
+		const parent = withImports(
+			"import { ChildrenChild } from '../child/children-child.tsrx'",
+			asyncParent(
+				'<div class="loading">loading</div>',
+				'<ChildrenChild label={"failed"}>{e.message}</ChildrenChild>',
+			),
+		)
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['children-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain('A client construct below the root element')
+		// The generic "move it onto the arm's root element" advice is
+		// impossible here — the fix names the wrapper element instead.
+		expect(hit?.message).toContain('wrap the read in an element of your own')
+	})
+
+	test('a compose arm root of a REACTIVE conditional keys the child root and plans the arm mount (LT-460 rework)', async () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { BasicChild } from '../child/basic-child.tsrx'
+import { createCell } from '@zeix/le-truc'
+
+export function BasicParent({}: {})
+	@{
+		const open = createCell(true)
+		expose({})
+			<basic-parent>
+				@if (open.get()) {
+					<BasicChild label={"open"} class="branch" />
+				} @else {
+					<div class="closed">closed</div>
+				}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		expect(diagnostics).toEqual([])
+		if (!component) throw new Error('parent must compile')
+		// The live winner's child root carries the arm key; the inert
+		// then-template holds the composed arm unkeyed.
+		expect(component.serverCode).toContain(
+			'"class": "branch", "data-key": "then"',
+		)
+		expect(component.serverCode).toContain(
+			'composeHostAttrs(renderBasicChild({ "label": "open" }), "basic-child", { "class": "branch" })',
+		)
+		// The client switches arms through `reconcile()`'s arm form; with no
+		// constructs on the compose root the mount itself is a no-op body,
+		// so the key thunk carries the arm switching.
+		expect(component.clientCode).toContain("? 'then' : 'else'")
+		// Execution: the true arm renders, keyed on the child's root.
+		ensureEmitted('basic-child', childComponent.serverCode)
+		ensureEmitted('basic-parent', component.serverCode)
+		const mod = await generated.importModule('basic-parent.server.ts')
+		const html = (
+			mod as { renderBasicParent: (args: Record<string, unknown>) => string }
+		).renderBasicParent({})
+		expect(html).toContain('<basic-child class="branch" data-key="then">')
+	})
+
 	test('a catch-parameter read in a compose ARG is refused — the child renders args itself (no client write channel)', () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const { component, diagnostics } = compileComponent(

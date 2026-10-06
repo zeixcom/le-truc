@@ -1557,17 +1557,31 @@ const handleAsyncBoundary = (
 			}
 		}
 	}
-	if (
-		boundaryDeepConstructOf(okRoot, null, null) !== null ||
-		boundaryDeepConstructOf(pendingRoot, null, null) !== null ||
-		boundaryDeepConstructOf(errRoot, errMsgEl, catchParam) !== null
-	) {
+	// The ok/err arms' construct walk. An offender INSIDE composed content
+	// renders into the child's markup, where no write can address it — the
+	// fix is wrapping it in an element of the author's own, not moving it
+	// onto the arm root (LT-460 rework: the generic advice is impossible
+	// there, the root being a compose site or the construct sitting in the
+	// composed content of a child).
+	const okOffender = boundaryDeepConstructOf(okRoot, null, null)
+	const errOffender = boundaryDeepConstructOf(errRoot, errMsgEl, catchParam)
+	const constructHit =
+		okOffender !== null
+			? { root: okRoot, node: okOffender }
+			: errOffender !== null
+				? { root: errRoot, node: errOffender }
+				: null
+	if (constructHit !== null) {
+		const { root: hitRoot, node: hitNode } = constructHit
+		const inComposed = isInsideCompose(hitRoot, hitNode)
 		diagnostics.push(
 			diagnostic.unsupported(
 				source,
-				node.node,
+				hitNode.node,
 				'A client construct below the root element of an async-boundary arm',
-				"Deeper elements have no addressing (ADR 0024 sub-design 13) — move the construct onto the arm's root element.",
+				inComposed
+					? `The composed content renders inside the child's markup, where no write can address it — wrap the read in an element of your own, for example \`<p class="error">{${catchParam ?? 'e'}.message}</p>\`, which the arm's value channel writes on flip.`
+					: "Deeper elements have no addressing (ADR 0024 sub-design 13) — move the construct onto the arm's root element.",
 			),
 		)
 		return
@@ -1707,14 +1721,30 @@ const handleAsyncBoundary = (
 	}
 	// The nested message element (LT-449, through composed content since
 	// LT-460) writes through an arm-scoped `first` local; the depth-0
-	// channel keeps writing the root.
+	// channel keeps writing the root. Inside composed content the selector
+	// must be a role or a class/id/data-* discriminator: the child renders
+	// markup the compiler cannot see, so a bare tag could match one of ITS
+	// elements and the arm's value would overwrite it (LT-460 rework).
 	const errArm = arm('err')
 	if (errMsgEl !== null) {
+		const inComposed = isInsideCompose(component.root, errMsgEl)
+		const resolved = inComposed
+			? resolveComposeContentSelector(errMsgEl)
+			: resolveSelector(fx, errMsgEl)
+		if (resolved === null) {
+			diagnostics.push(
+				diagnostic.unsupported(
+					source,
+					errMsgEl.node,
+					`The ${wording.catchArm}'s message element <${errMsgEl.tag}> inside composed content has no \`role\`, \`class\` or \`id\` attribute`,
+					`The arm's write addresses it by selector, and the child's own markup can carry the same bare <${errMsgEl.tag}> — give the message element a distinguishing attribute, for example \`<p class="error">{${catchParam ?? 'e'}.message}</p>\`.`,
+				),
+			)
+			return
+		}
 		errArm.locals.push({
 			name: uniqueName(usedNames, 'errMessage'),
-			selector: isInsideCompose(component.root, errMsgEl)
-				? resolveComposeContentSelector(errMsgEl).selector
-				: resolveSelector(fx, errMsgEl).selector,
+			selector: resolved.selector,
 			message: `the ${wording.catchArm}'s message element`,
 		})
 	}

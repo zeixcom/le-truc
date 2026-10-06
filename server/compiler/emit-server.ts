@@ -1099,10 +1099,11 @@ const isComposeHostAttr = (name: string): boolean =>
  *
  * The option carrier (LT-460) serves the arm-root form: `extraHostAttrs`
  * splices the arm's `data-key` onto the child's rendered root through the
- * same `composeHostAttrs` path as authored `class`/`id`/`data-*`, and
- * `armValue` routes the composed content's binding-scope reads (the catch
- * parameter) through the arm's value channel — written in the live arm,
- * baked empty in the inert templates.
+ * same `composeHostAttrs` path as authored `class`/`id`/`data-*`. The
+ * composed content emits through the generic paths — the catch parameter's
+ * reads inside a message element are ordinary reactive text sites (live
+ * arm: in scope; inert template: baked empty, LT-385c), and a reactive
+ * expression directly inside composed content is refused upstream.
  */
 const emitCompose = (
 	ctx: EmitContext,
@@ -1110,7 +1111,6 @@ const emitCompose = (
 	scope: ReadonlySet<string>,
 	opts: {
 		extraHostAttrs?: Array<AttributeIR & { kind: 'static' }>
-		armValue?: { text: string | null }
 	} = {},
 ): void => {
 	const entry = ctx.composeRegistry?.get(node.source)
@@ -1140,20 +1140,7 @@ const emitCompose = (
 		ctx.out.line(`const ${childrenVar}: string[] = []`)
 		const outerBuffer = ctx.buffer
 		ctx.buffer = childrenVar
-		for (const child of node.children) {
-			if (
-				opts.armValue &&
-				child.kind === 'expr' &&
-				child.reactivity === 'reactive'
-			) {
-				// Inside an inert arm template nothing is live — the client's
-				// arm mount writes the site on enter (LT-385c).
-				if (ctx.inArmTemplate || opts.armValue.text === null) continue
-				pushText(ctx, ctx.out, 'text', opts.armValue.text, child)
-				continue
-			}
-			emit(ctx, child, scope)
-		}
+		for (const child of node.children) emit(ctx, child, scope)
 		ctx.buffer = outerBuffer
 		args.push(`children: ${childrenVar}.join('')`)
 	}
@@ -1273,7 +1260,8 @@ const emitAsyncBoundary = (
 	// the client's arm mount writes it. A compose root (LT-460) lowers as
 	// a compose site: `data-key` and the arm marker attributes splice onto
 	// the child's rendered root via `composeHostAttrs`, and the composed
-	// content's binding-scope reads ride the same value channel.
+	// content — the message element and its catch-parameter read — emits
+	// through the generic paths (in scope live, baked empty in templates).
 	const emitArmRoot = (
 		root: BoundaryArmRoot,
 		armScope: ReadonlySet<string>,
@@ -1281,10 +1269,7 @@ const emitAsyncBoundary = (
 		extraAttrs: Array<AttributeIR & { kind: 'static' }> = [],
 	): void => {
 		if (root.kind === 'compose') {
-			emitCompose(ctx, root, armScope, {
-				extraHostAttrs: extraAttrs,
-				armValue: { text: value },
-			})
+			emitCompose(ctx, root, armScope, { extraHostAttrs: extraAttrs })
 			return
 		}
 		emitElement(ctx, root, armScope, extraAttrs)
@@ -1295,12 +1280,6 @@ const emitAsyncBoundary = (
 				// `{data}` read as `data.get()`, the catch parameter's read
 				// verbatim — so the child's slice locates it.
 				pushText(ctx, ctx.out, 'text', value, child)
-				continue
-			}
-			// A compose child inside the arm root (the wrapper shape): its
-			// composed content's binding-scope reads ride the value channel.
-			if (child.kind === 'compose') {
-				emitCompose(ctx, child, armScope, { armValue: { text: value } })
 				continue
 			}
 			emit(ctx, child, armScope)
