@@ -27,7 +27,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 2. **LT-461 is implementation, not a session.** The owner ruled its design on 2026-10-06, so its
    area flips from `design` to `compiler` and it becomes pickable. LTC081 is reserved for its
    rule 6.
-3. **Compose enablers run one at a time** (track E): LT-460 → LT-470 → LT-461 all change
+3. **Compose enablers run one at a time** (track E): LT-460 → LT-470 → LT-481 → LT-482 → LT-461 all change
    compose-site lowering and its Mount Scope placement. Run in parallel, they would conflict at
    integration.
 4. **LT-463 is split (owner).** Its two sites that need the children contract
@@ -73,7 +73,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-461.
+  LT-481 → LT-482 → LT-461.
 - **S — children-contract spike** — fed the LT-462 session (ruling 10). LT-465.
 - **T — module-todo** — ruling 5. LT-466 → LT-467.
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469.
@@ -95,7 +95,7 @@ census by design, and LT-246, which needs a settled census. The fetched-partials
 **Exit criterion.** Every chain task except the two design sessions is reviewed and
 integrated. LT-462 has ruled into ADR 0048, or its open state is recorded here (ruling 7). The
 compiled corpus composes every site LT-463 names, and every example folder is served compiled,
-section-menu included. No compose-lowering miscompile LT-460 or LT-470 names remains. The tier
+section-menu included. No compose-lowering miscompile LT-460, LT-470, LT-481 or LT-482 names remains. The tier
 census and the warning baseline are unchanged from the opening measurement below, except where
 a task states a by-design change: LT-469 adds `section-menu: folded`, LT-467 removes
 basic-pluralize's entry, and LT-093 may move components from Simulated to Folded. The warning
@@ -109,7 +109,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-481.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-483.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -123,50 +123,76 @@ LTC056 is LT-358's).
 
 ### E — compose enablers
 
-- [ ] LT-470: A composed child carrying `truc:pass` in a server-rendered branch of a list item mints a required local and throws in every item mount when the branch is not taken — refuse it after LT-468's manner. — in progress ⚙
+- [ ] LT-481: A `truc:pass` on a compose site that is a reactive arm root compiles clean and never binds — plan the entries in the arm's mount. — in progress ⚙
   **Area:** compiler
-  **Needs:** LT-468
+  **Needs:** LT-470
+  **Gates:** check:corpus, test:server
   **Area:** compiler
-  **Filed (Architect, 2026-10-06, from LT-468's review):** the residue LT-468's entry flagged as
-  a doubt, confirmed statically during that review. In `planReconcileItem`'s `visitElements`
-  (`server/compiler/analysis/effects.ts`), a compose node inside a server conditional's arm is
-  reached with `inBranch = true`, but `collectCompose` runs with no branch awareness: it mints a
-  scope local with no `optional` flag (`item.locals.push`, the "`…` missing" message), so with
-  the branch folded off every adopted and cloned item throws `MissingElementError` at mount
-  (contained per scope by LT-436) and the child's `truc:pass` entries never bind. A
-  `truc:pass` onto a fold-fixed branch's child is the same once-only addressing of markup that
-  can never re-render that LT-468 refuses for constructs. A pass-less compose needs nothing: it
-  is server-rendered markup in the extracted template, addressed by no client binding, and must
-  stay legal.
-  **Ruling (Architect):** refuse, after LT-468's manner — same LTC005 family, wording after
-  LT-468's message with the compose-specific address, same remedy (make the condition reactive).
-  The LT-455 guard shape (optional local, guarded binding) is not the alternative: a compose's
-  pass entries have no reactive core of their own, so guarding them would mint per-entry
-  existence guards for one-shot addressing — the over-engineering the construct ruling
-  rejected.
-  **Change:** in `collectCompose` (or its `visitElements` call site), when the compose site sits
-  in a server-rendered branch of the item (`inBranch`) and carries at least one `truc:pass`
-  entry — the point where a local would be minted — report `diagnostic.unsupported` in the
-  LTC005 family and mint nothing. A pass-less compose in a branch stays legal, and a compose
-  outside a branch keeps today's behavior.
-  **Probe first:** neither the author nor the review found a refusal of the shape outside the
-  item walk. The host-level walk routes an if-node to `handleIfEffects`, which never reaches
-  arm children through `emitTopEffects`'s compose arm, so whether a composed child in a server
-  branch of the HOST is refused upstream (classifier), silently unplanned, or differently broken
-  is unverified — probe it before the change and record what the probe shows in this entry. If
-  the host shape is real, the fix covers both scopes in one pass; if the host already refuses
-  it, the item walk is the only site.
-  **Check:** both surfaces refuse a `truc:pass`-carrying compose in a server branch of a
-  reactive-list item; the refusal names the remedy; a pass-less compose in the same branch still
-  compiles and the composed child renders into the template; a compose with `truc:pass`
-  directly in the item (no branch) still compiles and binds. If the host-level probe shows the
-  shape compiles there, pin the host-level refusal (or recorded behavior) too. Catalog face for
-  the refusal instance; HOST_PROFILE.md's item/Mount-Scope passage and AGENTS.md's
-  conditional-placement paragraph gain the compose case where LT-468 named the construct case;
-  CHANGELOG Fixed entry.
-  **Channel/tier:** compiler check; tier 1 Prevented (statically decidable where the walk
-  already knows `inBranch`); no runtime check, so nothing owes the sim-realm an entry beyond the
-  catalog face.
+  **Needs:** LT-470
+  **Filed (Architect, 2026-10-06, from LT-470's probe finding 3, reproduced in review):** LT-460
+  made a compose site legal as an arm root of a reactive conditional or an async boundary, and
+  splices the arm's `data-key` onto the child's rendered root. Its `truc:pass` entries are never
+  planned: `@if (open.get()) { <BasicChild truc:pass={{ value: () => 'x' }} /> }` (and the `.tsx`
+  ternary) compiles with no diagnostic to `reconcile(div, …, () => …, () => {})` — an empty
+  `bindArm` — on both surfaces. The arm walk checks only the arm root's descendants against
+  `unmountableInArm`, never the root itself, so the pass on the root is neither refused nor
+  lowered. LT-470's refusal names exactly this shape as its remedy ("make the condition reactive:
+  the composed child then renders as its arm's root"), so until this lands the remedy steers an
+  author from a compile error into a silent drop.
+  **Change:** in the arm planning (`armContainer`'s caller in `server/compiler/analysis/effects.ts`,
+  the `arms` map that builds each `ArmPlan`), when the arm root is a compose site carrying
+  `truc:pass` entries, plan those entries as `pass()` effects in the arm's mount against the arm
+  element parameter — the arm root IS the child's element, so no query or local is minted. Same
+  entry lowering as a host-level or item-level compose (reuse the path `collectCompose` takes;
+  do not fork the entry validation). Applies to every arm-set kind whose root may be a compose
+  site: reactive `@if`/`@switch` arms and async-boundary `pending`/`ok`/`catch` arms. A
+  `truc:ref`/`first()` on a compose arm root stays refused (the element is recreated on every
+  flip).
+  **Check:** both surfaces, for a reactive `@if` arm root and an async-boundary arm root: the
+  generated `bindArm` emits `pass(<armElement>, …)` with the entries, nothing is queried from the
+  host for the child; a render-and-flip test shows the child's prop takes the passed value on the
+  adopted arm and again on a cloned arm after a flip (the clone is inserted before its mount —
+  confirm `reconcile()`'s arm path keeps the insert-then-mount order the item path gained, or the
+  pass meets an un-upgraded child); a compose arm root without `truc:pass` is unchanged. LT-470's
+  remedy sentence then holds as written — re-read it in the message, `errors.md` and
+  HOST_PROFILE.md, and change nothing unless it no longer matches. CHANGELOG Fixed entry.
+  **Channel/tier:** compiler lowering only; no new check, no runtime check.
+
+- [ ] LT-482: A server-only `@try` is a server-rendered branch the plan walks don't treat as one — a `truc:pass` compose in its body compiles clean and never binds.
+  **Area:** compiler
+  **Needs:** LT-470
+  **Gates:** test:server
+  **Area:** compiler
+  **Needs:** LT-470
+  **Filed (Architect, 2026-10-06, from LT-470's rework residue, reproduced in review):** a `try`
+  with no `pending` arm is not an arm set (`hasArmSet` in `server/compiler/walk.ts`): the server
+  folds it once per render into its body or its catch arm. Both are server-rendered branches,
+  but LT-470's host refusal (`validateArmSetPlacement`) keys `inServerBranch` on a
+  `conditional` with `mode === 'server'` only, so `@try { <BasicChild truc:pass={…} /> } @catch
+  (e) { … }` at the host compiles with no diagnostic and emits no `pass()`. The silent drop
+  LT-470 closed for `@if` is still open one node kind over. The item walk
+  (`planReconcileItem`'s `visitElements`) recurses only into server `conditional` arms, so
+  inside a reactive-list item a server-only `try` is not descended at all. That walk also
+  carries LT-468's construct refusal, so constructs there may be unplanned too.
+  **Ruling (Architect):** a server-only `try`'s body and catch arm are server-rendered branches
+  in every walk that tracks one. LT-468's and LT-470's refusals apply to them unchanged, with
+  the same wording and remedy. No new diagnostic family and no new code.
+  **Probe first:** probe the shapes below on both surfaces where the surface can spell a
+  server-only boundary, and record what each one does today in this entry: (a) a `truc:pass`
+  compose in a server-only `try` at the host; (b) the same inside a reactive-list item; (c) a
+  client construct (reactive attribute, handler) on an element in a server-only `try` inside an
+  item; (d) the same at the host. A shape that is already refused, or that already plans
+  correctly, stays as it is. Fix only the shapes the probe shows silently unplanned or throwing
+  at mount.
+  **Change:** at the host, set `inServerBranch` for a `try` that is not an arm set. In the item
+  walk, descend a server-only `try`'s body and catch children with `inBranch = true`, the way it
+  descends server `conditional` arms. Mirror the item walk's key-attribute descent
+  (`collectKeySites`, `collectBranchKeyAttrs`) only if the probe shows a key-derived attribute
+  there is lost.
+  **Check:** each probed shape the change touches gets a both-surface test: refused with the
+  LT-468/LT-470 message, or bound. A pass-less compose in a server-only `try` still compiles.
+  Add a CHANGELOG Fixed line only if a shape that was silently dropped now fails the compile.
+  **Channel/tier:** compiler check, tier 1 Prevented; no runtime check.
 
 - [ ] LT-461: Handler args — an `on`-prefixed function arg the child places on an owned element lowers to a parent-side `on()`.
   **Area:** compiler

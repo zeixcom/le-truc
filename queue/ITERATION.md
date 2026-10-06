@@ -27,7 +27,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 2. **LT-461 is implementation, not a session.** The owner ruled its design on 2026-10-06, so its
    area flips from `design` to `compiler` and it becomes pickable. LTC081 is reserved for its
    rule 6.
-3. **Compose enablers run one at a time** (track E): LT-460 → LT-470 → LT-461 all change
+3. **Compose enablers run one at a time** (track E): LT-460 → LT-470 → LT-481 → LT-482 → LT-461 all change
    compose-site lowering and its Mount Scope placement. Run in parallel, they would conflict at
    integration.
 4. **LT-463 is split (owner).** Its two sites that need the children contract
@@ -73,7 +73,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-461.
+  LT-481 → LT-482 → LT-461.
 - **S — children-contract spike** — fed the LT-462 session (ruling 10). LT-465.
 - **T — module-todo** — ruling 5. LT-466 → LT-467.
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469.
@@ -95,7 +95,7 @@ census by design, and LT-246, which needs a settled census. The fetched-partials
 **Exit criterion.** Every chain task except the two design sessions is reviewed and
 integrated. LT-462 has ruled into ADR 0048, or its open state is recorded here (ruling 7). The
 compiled corpus composes every site LT-463 names, and every example folder is served compiled,
-section-menu included. No compose-lowering miscompile LT-460 or LT-470 names remains. The tier
+section-menu included. No compose-lowering miscompile LT-460, LT-470, LT-481 or LT-482 names remains. The tier
 census and the warning baseline are unchanged from the opening measurement below, except where
 a task states a by-design change: LT-469 adds `section-menu: folded`, LT-467 removes
 basic-pluralize's entry, and LT-093 may move components from Simulated to Folded. The warning
@@ -109,7 +109,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-481.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-483.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
