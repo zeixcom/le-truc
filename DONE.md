@@ -269,6 +269,39 @@ Full entry text: `git log -p -- DONE.md`.
   ancestor of the host, which no composition produces.
 - **Scrollarea's wall time at demo scale is noise** (LT-103).
 
+- [x] LT-093: Make LTC004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall). — reviewed ✓
+  **Area:** compiler
+  **Area:** compiler
+  **Context:** LTC004 fired "no harvestable initial-DOM site" for a signal that IS rendered
+  through a thunk when its initializer read a plain setup const or an import, so the component
+  tiered Simulated with no warning (ADR 0029). The task absorbed LT-135 (a predicate hoisted
+  into a setup const un-credited its signal).
+
+  **Changed:** a thunk-rendered signal now reuses an initializer that reads plain setup consts
+  (transitively) or authored imports. The client already placed those names: a signal
+  declaration is a client position in `computeClientNeededNames`, so only the harvest gate
+  (`substituteArgExpr`) refused them. That gate is now `unportableNames` in
+  `analysis/harvest.ts`. A server arg counts as portable only at the initializer's top level.
+  When the initializer still cannot be reused, the LTC004 census detail names its free names
+  instead of claiming no site. The harvested client declaration keeps its authored type
+  arguments (`createTask<string>(…)`; `typeArguments` in `emit-client.ts`). form-combobox
+  (`.tsrx` and `.tsx`) hoists its popup predicate into `const isOpen`; the workaround comment is
+  gone. Corpus effect: **module-lazyload moves from Simulated to Folded.** Its only routing
+  signal was this false firing. Its served HTML is unchanged (both tiers serve the pending arm),
+  and the equivalence audit records its nil→err connect diff. Tests:
+  `server/tests/compiler/initializer-portability.test.ts` (const, const chain, import, type
+  arguments, `.tsx`, the LT-091 `plainLocalNames` reactive-thunk leg, the routing-reason
+  wording). `tier-corpus.test.ts` and `host-seeded-signal.test.ts` are updated.
+  **Already landed before this task (verified, not redone):** the LT-135 half, through LT-323's
+  `carriedBy`, with the negative case already flipped in `client-setup-credit.test.ts`; and the
+  `returnsNumber` number-signal coercion (LT-126, `dirty-flag-dispatch.test.ts`).
+
+  **Review:** Approved. Ruling: folding a component whose only async state is a `Task` is the
+  intended tier. The server renders the nil arm, which is what the client shows until the task
+  settles, so the realm bought nothing. The reviewer ran the unrunnable gates outside the
+  sandbox: `test:variants form-combobox` (tsrx 60, tsx 60) and `test:variants module-lazyload`
+  (ts 40, tsx 40), all green.
+
 - [x] LT-460: A compose site in an async-boundary arm — lower it as arm root, keep the arm binding in its children. — reviewed ✓
   **Area:** compiler
   **Gates:** check:corpus, test:server
@@ -338,6 +371,46 @@ Full entry text: `git log -p -- DONE.md`.
   **Changed:** ruled 2026-10-06 (owner design session) into ADR 0048. ADR 0024 s10, ADR 0033 s7
   and ADR 0046 s1 were amended in place, and CONTEXT.md gained **Children Region** and **Role**.
   The implementation is track C: LT-472 to LT-479 (ITERATION ruling 10).
+
+- [x] LT-464: form-checkbox gains a .tsx spelling. — done, pending review ⏳
+  **Area:** examples
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, owner request):** `form-checkbox` exists only as
+  `form-checkbox.tsrx`. Add `form-checkbox.tsx` beside it as a variant-set member (ADR 0039): same
+  canonical tag, its own `declare global` `HTMLElementTagNameMap` entry (s4), byte-identical CSS,
+  typed second parameter `FormFactoryContext<FormCheckboxProps>` (LT-209). Keep the current
+  `label: string` arg — the switch to `children` waits for LT-462's children contract and lands in
+  LT-463. The `.tsx` member becomes the served surface; the `.tsrx` twin stays.
+  **Verification:** check:corpus, test:variants, `form-checkbox.spec.ts`.
+
+  **Changed:** added `examples/form/checkbox/form-checkbox.tsx` as a variant-set member (ADR 0039): same canonical tag, own `HTMLElementTagNameMap` entry, byte-identical CSS, `FormFactoryContext<FormCheckboxProps>` second param, `label: string` arg kept; it is now the served surface. `check:corpus` and `typecheck` green; `test:variants form-checkbox` died without output and was not verified (committed on owner instruction) — owner to re-run.
+
+  **Review (Architect, 2026-10-07):** changes requested. `check:corpus` passes, and
+  `test:variants form-checkbox` passes on both surfaces (the reviewer ran it outside the
+  sandbox, 40 + 40). The member reads as a faithful spelling of the twin. But `test:server`
+  fails one test the entry's gates do not name and the handoff does not mention:
+  `server/tests/compiler/tsx/typecheck.test.ts` "the examples variant-set members typecheck",
+  which runs tsc over `examples/tsconfig.json`. `bun run typecheck` does not cover that program.
+  (1) `form-checkbox.tsx:63`: `name` and `checked` are not in the host profile's
+  `FormCheckboxAttrs` (`server/compiler/frontend/tsx/host-profile.d.ts`). Add them as the
+  root's light-DOM attributes, following the profile's Wave-4 rule (a migrated tag gains its
+  entry in the same commit). (2) `form-checkbox.tsx:68`: `disabled` is not on the profile's
+  `input` intrinsic. Add it as `Reactive<boolean>`. (3) The member is a pass target, since
+  `test-listitem` passes `checked` into it. Declare `'truc:pass'?: { checked?: … }` on its args
+  type, as `form-listbox.tsx` does. Then switch
+  `examples/test/listitem/test-listitem-tsx.tsx`'s import from `form-checkbox.tsrx` to
+  `form-checkbox.tsx`. The fixture predates the `.tsx` member, so the `.tsrx` import is an
+  artifact, not a choice (owner flag). The switch pins that a `.tsx` parent composes the `.tsx`
+  member with a typed pass. The reviewer tried the switch alone: it fails with "`truc:pass`
+  does not exist" until (3) lands. (4) `test:server` writes a new form-checkbox entry into
+  `server/tests/compiler/tsx/__snapshots__/parity.test.ts.snap` on first run. Review it and
+  commit it. Gates: `test:server` green (run `build:docs` first in a fresh worktree),
+  `check:corpus`, and `test:variants form-checkbox` and `test:component test-listitem`, outside the sandbox or
+  stated as unrun.
+
+  **Reworked:** (1) `FormCheckboxAttrs` in `host-profile.d.ts` gains `name?: Reactive<string>` and `checked?: Reactive<boolean>` (Wave-4 rule). (2) The profile's `input` intrinsic gains `disabled?: Reactive<boolean>`. (3) `form-checkbox.tsx` declares `'truc:pass'?: { checked?: (() => boolean) | { get; set } }` on its args type, and `test-listitem-tsx.tsx` now imports `form-checkbox.tsx`. The same key also went on the `.tsrx` twin's args type, so the parity test's render signature stays identical rather than adding form-checkbox to `AUTHORED_ARGS_DRIFT` — check that you want this extra edit to the twin. (4) Reviewed and committed the new form-checkbox client snapshot in `parity.test.ts.snap`. It matches the twin's wiring: checked/disabled binds, a change handler, `formAssociatedCheckbox()`.
+  **Check:** `test:server` (3487 pass, after `build:docs`), `check:corpus`, `typecheck`, `lint:server` all green. `test:variants form-checkbox` and `test:component test-listitem` are unrunnable in this sandbox: every test timed out in `beforeEach` on both browsers, including the untouched `.tsrx` fixture. The owner needs to run them outside the sandbox.
 
 - [x] LT-465: Spike — style scope for parent-owned children inside a composed child. — reviewed ✓
   **Area:** compiler

@@ -445,20 +445,6 @@ LTC056 is LT-358's).
 
   ---
 
-### F — form-checkbox `.tsx`
-
-- [ ] LT-464: form-checkbox gains a .tsx spelling. — in progress ⚙
-  **Area:** examples
-  **Gates:** check:corpus, test:variants
-  **Area:** examples
-  **Filed (Architect, 2026-10-06, owner request):** `form-checkbox` exists only as
-  `form-checkbox.tsrx`. Add `form-checkbox.tsx` beside it as a variant-set member (ADR 0039): same
-  canonical tag, its own `declare global` `HTMLElementTagNameMap` entry (s4), byte-identical CSS,
-  typed second parameter `FormFactoryContext<FormCheckboxProps>` (LT-209). Keep the current
-  `label: string` arg — the switch to `children` waits for LT-462's children contract and lands in
-  LT-463. The `.tsx` member becomes the served surface; the `.tsrx` twin stays.
-  **Verification:** check:corpus, test:variants, `form-checkbox.spec.ts`.
-
 ### K — composition
 
 - [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
@@ -690,46 +676,6 @@ LTC056 is LT-358's).
   **Check:** `test:component form-checkbox module-todo` is unchanged.
 
 ### P — compiler cleanup
-
-- [ ] LT-093: Make LTC004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall). — in progress ⚙
-  **Area:** compiler
-  **Context:** Re-confirmed empirically 2026-08-29: `const DEFAULT = 'red'; const color =
-  createCell(DEFAULT)` consumed only through a style-map still fires LTC004's "never rendered"
-  message, though the signal IS credited as rendered (`thunkRendered`) —
-  `substituteArgExpr`'s free-name gate rejects the verbatim initializer because the client
-  module may not define the name. **Step 1 (small):** split the diagnostic — "rendered but
-  initializer not client-portable" (name the offending free names) vs "never rendered".
-  **Step 2 (goal):** feed signal-initializer free names into `computeClientNeededNames` as
-  client-needed seed positions so plain-setup and import-local names in initializers place
-  client-side; the fixpoint has grown accretively (clientSetup statements, composed refs, pass
-  set-thunks — LT-069/087/088), so the plumbing gap is much narrower than when option (b) was
-  judged heavy. Also fold in a compiler unit test for the `imports.plainLocalNames`
-  `badFreeNames` widening (currently unexercised after the LT-091 redesign), and the LT-116
-  finding that `returnsNumber`'s heuristic misses number-signal reads (`count.get()`) in `value`
-  thunks, which now lack `String()` coercion under property dispatch — consult `inferredType` so
-  the coercion fires for number-typed signal reads (no corpus offender today; add the unit test).
-  **Absorbs LT-135 (owner, planning 2026-10-06)** — the same free-name-through-a-const wall from
-  the other direction. LT-119 credits a signal in `thunkRendered` when a `clientSetup` statement
-  reads it, but only through `containsSignalGet(stmt.node, …)` on the statement itself, so
-  hoisting a predicate into a plain setup const (`const isOpen = () => open.get(); watch(() =>
-  !isOpen(), …)`) un-credits the signal and the component tiers into Simulated with no warning.
-  Resolve reads through the `component.plainSetup` consts a statement names, with the same
-  one-hop widening `computeClientNeededNames` already does. Flip the negative case pinned in
-  `server/tests/compiler/client-setup-credit.test.ts`, and drop the "repeat the predicate"
-  workaround comment in `form-combobox.tsrx` (in the `.tsx` member too, if it carries one) if the
-  fix makes it unnecessary. **Order inside the task:** do the LT-135 half and step 1 first; step 2
-  builds on both.
-  **Channel/tier:** compiler only. Step 1 re-words a routing reason, not a diagnostic (LTC004
-  rides the tier census, ADR 0029); no new LTC code, no runtime check.
-  **Re-triaged 2026-09-06 (LT-165 step 5 landed).** The ADR 0029 concern stands and has
-  sharpened: LTC004 left the diagnostic channel, so a false firing on a fully
-  phase-1-resolvable component now tiers it into simulation **silently** — it buys a realm and
-  says nothing. It is not invisible, though: the tier census records the reason with its
-  LTC004 origin and line, so the failure mode is inspectable rather than lost. Stays in P6 on
-  that basis. **Cheap check to run at the end of wave 4, before this task:** scan the census for
-  any Simulated component whose ONLY reason is a LTC004 origin — each one is a candidate false
-  firing, and the list sizes this task's real payoff.
-
 
 - [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
   **Area:** compiler
