@@ -379,7 +379,8 @@ front-end modules, then the two front ends:
 | `analysis/compose-refs.ts` | Registry-aware resolution of `first()` references addressing composed children |
 | `analysis/naming.ts` | `uniqueName`, `addQuery` (query table + name allocation) |
 | `analysis/harvest.ts` | Passes 2+3: render sites (`collectRenderSites`), harvest-plan selection and arg→DOM-site substitution (`planHarvests`) |
-| `analysis/list-harvest.ts` | Pass 3's per-field plan for a list seeded from server args (ADR 0046 s7, LT-429): each field's site in the adopted item (`data-key`, else the first text child or reactive attribute reading exactly the field) and its parser; LTC072/LTC076, LTC059 per field |
+| `analysis/list-harvest.ts` | Pass 3's per-field plan for a list seeded from server args (ADR 0046 s7, LT-429): each field's site in the adopted item (`data-key`, else the first text child or reactive attribute reading exactly the field) and its parser; LTC072/LTC076, LTC059 per field. The key-alias plan (ADR 0047, LT-453, `planKeyAliasHarvest`): the same field plan read from the alias scope, the container path through the enclosing list items, LTC080 |
+| `key-alias.ts` | The key alias's syntactic half (ADR 0047, LT-453), shared by Pass 3 and the server emitter: which host-level lists the alias may harvest (`isAliasHarvestable`), every `list.byKey(…)` read in an item setup (`byKeyReadsOf`), and the alias scope the witness records (`aliasScopeOf`) |
 | `analysis/loops.ts` | Passes 1+1b: `each()` (`runEachLoops`) and `reconcile()` (`runReconcileLoops`) planning |
 | `analysis/effects.ts` | Pass 4: document-ordered per-construct effect planning |
 | `emit-server.ts` | `ComponentIR` → server render module |
@@ -510,7 +511,9 @@ checks read the class; none re-derives it from the expression.
 `queries` (`first`/`all`/non-throwing, with cardinality `'one' | 'many' |
 'maybe'`), `harvests` (how each signal seeds from the DOM at connect — text,
 attribute, list membership, initializer substitution, or List container
-adoption; a `requestContext` signal never appears: it has no DOM seed), and
+adoption, per field from the alias scope's roots for a key-alias harvest —
+`through`, the container path inside each enclosing item root, ADR 0047 s3;
+a `requestContext` signal never appears: it has no DOM seed), and
 `effects` (the document-ordered effect list: `watch`-bindings, `pass`, `on`,
 `each`/`reconcile` blocks, guarded optional-branch effects for server-known
 conditionals, the arm blocks of reactive conditionals and the async
@@ -786,7 +789,17 @@ list iterates the item cells it hands out (`map((cell, key))`, `forEach`,
 emitted loop reads `[key, cell]` from an internal `entries()` and the bare
 `{item}` fill reads `item.get()`), a store's fields are signals (nested
 objects stores, arrays lists), and `createSensor`'s `{ value }` seed is its
-server value. An unseeded sensor, or one whose seed no phase can answer, is
+server value. A list harvested through a key alias (ADR 0047 s2, LT-453)
+carries the render witness: the alias scope's live items push their keys
+to a `__witnessN` array, and after the render `witnessHarvest` compares
+their first occurrences with the list's keys and throws
+`HarvestWitnessError` on the first key missing, out of order or unknown —
+static generation and the realm fail the build there. The witness call
+reads the list, so its declaration rides the server module even when the
+alias is its only reader. A template target (ADR 0043) cannot carry the
+witness: once the target emitter exists (LT-257), a key-alias harvest is
+a census routing outcome there, not emittable, until a target operation
+carries it. An unseeded sensor, or one whose seed no phase can answer, is
 left out of `serverKnown`: every read of it is omitted, and an `LTC013`
 routing signal with resolution `none` records why. A thunk whose closure is not directly server-known gets the
 **host-derived fold**: an expression whose every read has a compiler-known
@@ -1058,7 +1071,16 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   harvest site in the item (LTC072; LTC059 when its only site formats it),
   and a field with a site but no parser — neither a type the compiler infers
   one from nor a `harvest()` entry — or an unreadable item type with no
-  `harvest()` map (LTC076).
+  `harvest()` map (LTC076). A host-level one never rendered by its own
+  `map` is harvested through its key alias (ADR 0047, LT-453): one LTC080
+  message per unmet s1 condition — the aliasing list does not key each item
+  by itself, a `byKey` read is not the alias statement over the loop key, a
+  second alias scope, a field with no site in the alias scope (LTC059 and
+  LTC076 apply per field as above) — and an alias scope behind an arm set, a
+  server-data loop or a composed child is LTC005, since no connect-time path
+  crosses it. The dynamic half is the render witness: the server module
+  throws `HarvestWitnessError` (`runtime.ts`) when the alias scope's keys do
+  not reach every key of the list, in order.
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

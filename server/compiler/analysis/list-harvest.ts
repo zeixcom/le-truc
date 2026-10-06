@@ -21,17 +21,32 @@ import {
 	text,
 	walkNodes,
 } from '../ast-utils'
+import type { LocalDiagnostic } from '../diagnostics'
 import { diagnostic } from '../diagnostics'
 import type {
+	ComponentIR,
 	DeclaredSignalIR,
 	ListItemFieldIR,
 	ReconcileForIR,
 	TemplateNode,
 } from '../ir'
+import {
+	type ByKeyRead,
+	byKeyReadsOf,
+	harvestsPerField,
+	isAliasHarvestable,
+} from '../key-alias'
+import { wordingOf } from '../surface'
 import { DIRTY_FLAG_ATTRS } from '../vocabulary'
+import { childNodes, hasArmSet } from '../walk'
 import { reportServerOnlyNames } from './effects'
 import { formattingOf } from './harvest'
-import type { HarvestPlan, ListFieldPlan, PassShared } from './plan'
+import type {
+	HarvestPlan,
+	ListFieldPlan,
+	PassShared,
+	ReconcilePlan,
+} from './plan'
 import { type ElementNode, isElement, resolveScopedSelector } from './selectors'
 
 /* === Internal Functions === */
@@ -165,31 +180,21 @@ const collectSites = (
 	return { sites, formatted }
 }
 
-/* === Exported Functions === */
-
 /**
- * Whether an arg-seeded list harvests per field (ADR 0046 s7): a
- * `harvest()` seed, or an item type that is not a primitive. A `string`
- * (or untyped) item keeps the whole-item read of its bare `{item}` hole.
+ * Plan each field of an arg-seeded list's item, read from `output` — the
+ * root of the scope that renders the item through `item` — or report why a
+ * field cannot be planned and return null. `missingSite` builds the
+ * diagnostic for a field with no site and no formatted one.
  */
-export const harvestsPerField = (signal: DeclaredSignalIR): boolean =>
-	signal.harvest?.kind === 'list' ||
-	signal.listItem?.shape.kind === 'fields' ||
-	signal.listItem?.shape.kind === 'opaque'
-
-/**
- * Plan an arg-seeded list's per-field harvest, or report why it cannot be
- * planned (LTC072, LTC059, LTC076) and return null. `container` is the
- * list container's query.
- */
-export const planListFieldHarvest = (
+const planFields = (
 	shared: PassShared,
 	signal: DeclaredSignalIR,
-	loop: ReconcileForIR,
-	container: string,
-): HarvestPlan | null => {
+	output: ElementNode,
+	item: string,
+	missingSite: (field: string) => LocalDiagnostic,
+): ListFieldPlan[] | null => {
 	const { component, source, diagnostics } = shared
-	const item = signal.listItem
+	const listItem = signal.listItem
 	const marker = signal.harvest?.kind === 'list' ? signal.harvest : undefined
 	const seedNode = signal.init
 	const seedText = seedNode ? text(source, seedNode) : signal.name
@@ -198,28 +203,27 @@ export const planListFieldHarvest = (
 		(marker?.entries ?? []).map(entry => [entry.field, entry]),
 	)
 	const typed: ListItemFieldIR[] =
-		item?.shape.kind === 'fields' ? item.shape.fields : []
+		listItem?.shape.kind === 'fields' ? listItem.shape.fields : []
 	// An unreadable item type lists its fields only through `harvest()`.
-	if (!marker && item?.shape.kind === 'opaque') {
+	if (!marker && listItem?.shape.kind === 'opaque') {
 		diagnostics.push(
 			diagnostic.listFieldWithoutParser(
 				source,
 				seedSite,
 				signal.name,
 				null,
-				item.typeText ?? '',
+				listItem.typeText ?? '',
 				seedText,
 				false,
 			),
 		)
-		shared.rawSourceRefused.add(signal.name)
 		return null
 	}
 	const names = [
 		...typed.map(field => field.name),
 		...[...entries.keys()].filter(name => !typed.some(f => f.name === name)),
 	]
-	const { sites, formatted } = collectSites(loop.output, loop.itemName, shared)
+	const { sites, formatted } = collectSites(output, item, shared)
 	const reported = diagnostics.length
 	const fields: ListFieldPlan[] = []
 	for (const name of names) {
@@ -227,15 +231,15 @@ export const planListFieldHarvest = (
 		const declared = typed.find(field => field.name === name)
 		// The key field reads `data-key`; any other field its first site.
 		let site: ListFieldPlan['site'] | null = null
-		if (item?.keyField === name) site = { kind: 'key' }
+		if (listItem?.keyField === name) site = { kind: 'key' }
 		else {
 			const found = sites.get(name)
 			if (found) {
 				const selector =
-					found.element === loop.output
+					found.element === output
 						? null
 						: resolveScopedSelector(
-								loop.output,
+								output,
 								found.element,
 								component.composedShapes,
 							)
@@ -269,12 +273,7 @@ export const planListFieldHarvest = (
 							`Field \`${name}\` of list \`${signal.name}\``,
 							shown.formatting,
 						)
-					: diagnostic.listFieldWithoutSite(
-							source,
-							loop.output.node,
-							signal.name,
-							name,
-						),
+					: missingSite(name),
 			)
 			continue
 		}
@@ -303,7 +302,7 @@ export const planListFieldHarvest = (
 					seedSite,
 					signal.name,
 					name,
-					declared?.typeText ?? item?.typeText ?? '',
+					declared?.typeText ?? listItem?.typeText ?? '',
 					seedText,
 					!!marker,
 				),
@@ -312,9 +311,239 @@ export const planListFieldHarvest = (
 		}
 		fields.push({ field: name, site, parser })
 	}
-	if (diagnostics.length > reported) {
+	return diagnostics.length > reported ? null : fields
+}
+
+/** The template nodes from `root` down to `target`, both included, or null. */
+const pathTo = (
+	root: TemplateNode,
+	target: TemplateNode,
+): TemplateNode[] | null => {
+	if (root === target) return [root]
+	for (const child of childNodes(root)) {
+		const found = pathTo(child, target)
+		if (found) return [root, ...found]
+	}
+	return null
+}
+
+/** The declaring call of list signal `name`: host-level, or in an enclosing item's setup. */
+const listCallOf = (
+	component: ComponentIR,
+	name: string,
+	enclosing: readonly ReconcileForIR[],
+): AstNode | null => {
+	for (const loop of [...enclosing].reverse()) {
+		const stmt = loop.setup.find(s => s.kind === 'signal' && s.name === name)
+		if (stmt) return stmt.node
+	}
+	return component.setup.find(s => s.name === name)?.node ?? null
+}
+
+/**
+ * The parameter name of a `keyConfig` that keys each item by itself
+ * (`s => s`) in any options object of `call`, else null.
+ */
+const identityKeyOf = (call: AstNode | null): string | null => {
+	for (const arg of asArray(call?.arguments)) {
+		if (nodeType(arg) !== 'ObjectExpression') continue
+		for (const prop of asArray(arg.properties)) {
+			if (prop.type !== 'Property' || identifierName(prop.key) !== 'keyConfig')
+				continue
+			const fn = prop.value as AstNode | undefined
+			const params = asArray(fn?.params)
+			const param = params.length === 1 ? identifierName(params[0]) : null
+			return nodeType(fn) === 'ArrowFunctionExpression' &&
+				param !== null &&
+				identifierName(fn?.body) === param
+				? param
+				: null
+		}
+	}
+	return null
+}
+
+/* === Exported Functions === */
+
+export { harvestsPerField }
+
+/**
+ * Plan an arg-seeded list's per-field harvest, or report why it cannot be
+ * planned (LTC072, LTC059, LTC076) and return null. `container` is the
+ * list container's query.
+ */
+export const planListFieldHarvest = (
+	shared: PassShared,
+	signal: DeclaredSignalIR,
+	loop: ReconcileForIR,
+	container: string,
+): HarvestPlan | null => {
+	const fields = planFields(shared, signal, loop.output, loop.itemName, name =>
+		diagnostic.listFieldWithoutSite(
+			shared.source,
+			loop.output.node,
+			signal.name,
+			name,
+		),
+	)
+	if (!fields) {
 		shared.rawSourceRefused.add(signal.name)
 		return null
 	}
 	return { kind: 'list', signal: signal.name, seed: { container, fields } }
+}
+
+/**
+ * Plan the harvest of a host-level arg-seeded list through its key alias
+ * (ADR 0047, LT-453), or report why it cannot be planned and return null.
+ * Undefined when nothing in any item setup reads the list by key: the list
+ * is not alias-harvested, and the caller plans it as any other signal.
+ *
+ * The four s1 conditions are LTC080's, one message each: the aliasing list
+ * keys each item by itself; every `byKey` read is the alias statement
+ * over the loop key; one alias scope per list; every field renders at a
+ * site in the alias scope (LTC059 and LTC076 as for any per-field
+ * harvest). The client reads the alias roots across every enclosing list
+ * item, so an arm set, a server-data loop or a composed child between the
+ * host and the alias scope is refused: no connect-time path crosses it.
+ */
+export const planKeyAliasHarvest = (
+	shared: PassShared,
+	signal: DeclaredSignalIR,
+	reconcilePlans: ReadonlyMap<ReconcileForIR, ReconcilePlan>,
+): HarvestPlan | null | undefined => {
+	const { component, source, diagnostics } = shared
+	if (!isAliasHarvestable(component, signal) || !harvestsPerField(signal))
+		return undefined
+	const reads = byKeyReadsOf(component, signal.name)
+	if (reads.length === 0) return undefined
+	const reported = diagnostics.length
+	const refuse = (): null => {
+		shared.rawSourceRefused.add(signal.name)
+		return null
+	}
+	let first: ByKeyRead | null = null
+	for (const read of reads) {
+		const overKey =
+			read.loop.keyName !== null &&
+			identifierName(read.arg) === read.loop.keyName
+		if (read.alias === null || !overKey) {
+			diagnostics.push(
+				diagnostic.keyAliasRefused(source, read.call, signal.name, {
+					kind: 'read',
+					loopList: read.loop.listSignal,
+					key: read.loop.keyName,
+				}),
+			)
+			continue
+		}
+		if (first === null) {
+			first = read
+			continue
+		}
+		if (read.stmt === first.stmt) continue
+		diagnostics.push(
+			diagnostic.keyAliasRefused(source, read.stmt.range, signal.name, {
+				kind: 'second-scope',
+				alias: read.alias,
+				first: first.alias as string,
+				firstList: first.loop.listSignal,
+			}),
+		)
+	}
+	if (first === null) return refuse()
+	const alias = first.alias as string
+	const scope = first.loop
+
+	// The client walks from the host's outermost list down to the alias
+	// scope's container; every step must be a list item.
+	const path = pathTo(component.root, scope.output) ?? []
+	const byOutput = new Map<TemplateNode, ReconcileForIR>()
+	for (const loop of component.fors.values())
+		if (loop.kind === 'reconcile') byOutput.set(loop.output, loop)
+	const crossed = path
+		.slice(1, -1)
+		.find(
+			node =>
+				hasArmSet(node) ||
+				node.kind === 'compose' ||
+				[...component.fors.values()].some(
+					loop => loop.kind === 'each' && loop.output === node,
+				),
+		)
+	if (crossed) {
+		diagnostics.push(
+			diagnostic.unsupported(
+				source,
+				first.stmt.range,
+				`The key alias \`${alias}\` of list \`${signal.name}\`, inside a conditional arm, a server-data ${wordingOf(component).loop} or a composed child,`,
+				`The client rebuilds \`${signal.name}\` at connect from the alias scope's items, reached through enclosing list items only — render the ${wordingOf(component).loop} that holds the alias outside conditional arms, server-data loops and composed children.`,
+			),
+		)
+		return refuse()
+	}
+	const enclosing = path.slice(0, -1).flatMap(node => byOutput.get(node) ?? [])
+
+	const call = listCallOf(component, scope.listSignal, enclosing)
+	if (identityKeyOf(call) === null)
+		diagnostics.push(
+			diagnostic.keyAliasRefused(
+				source,
+				call ?? first.stmt.range,
+				signal.name,
+				{
+					kind: 'item-key',
+					alias,
+					loopList: scope.listSignal,
+					item: scope.itemName,
+				},
+			),
+		)
+
+	// The container of each nested list, inside the item root of the list
+	// enclosing it: null when that item root is the container.
+	const through: Array<string | null> = []
+	const lists = [...enclosing, scope]
+	for (let i = 1; i < lists.length; i++) {
+		const outer = (lists[i - 1] as ReconcileForIR).output
+		const inner = (lists[i] as ReconcileForIR).output
+		const at = path.indexOf(inner)
+		const container = path
+			.slice(0, at)
+			.reverse()
+			.find(node => isElement(node)) as ElementNode | undefined
+		if (!container || container === outer) {
+			through.push(null)
+			continue
+		}
+		const resolved = resolveScopedSelector(
+			outer,
+			container,
+			component.composedShapes,
+		)
+		if (!resolved.unique)
+			diagnostics.push(
+				diagnostic.unaddressableElement(
+					source,
+					container.node,
+					`No unique selector for the container <${container.tag}> the client reads the key alias \`${alias}\` of list \`${signal.name}\` through — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
+				),
+			)
+		through.push(resolved.selector)
+	}
+	const outermost = reconcilePlans.get(lists[0] as ReconcileForIR)
+
+	const fields = planFields(shared, signal, scope.output, alias, name =>
+		diagnostic.keyAliasRefused(source, scope.output.node, signal.name, {
+			kind: 'field',
+			alias,
+			field: name,
+		}),
+	)
+	if (!fields || !outermost || diagnostics.length > reported) return refuse()
+	return {
+		kind: 'list',
+		signal: signal.name,
+		seed: { container: outermost.container, fields, through },
+	}
 }

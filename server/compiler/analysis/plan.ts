@@ -143,7 +143,19 @@ export type HarvestPlan =
 			seed:
 				| 'verbatim'
 				| { container: string; valueSelector: string }
-				| { container: string; fields: ListFieldPlan[] }
+				| {
+						container: string
+						fields: ListFieldPlan[]
+						/**
+						 * A key-alias harvest (ADR 0047 s3, LT-453): the items are
+						 * the alias scope's roots, reached from `container`'s items
+						 * through each nested list's container — its scoped selector
+						 * inside the enclosing item root, null when that root is
+						 * the container. Absent for a list rendered by its own
+						 * `map`, whose items are `container`'s.
+						 */
+						through?: Array<string | null>
+				  }
 	  }
 
 /**

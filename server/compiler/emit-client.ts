@@ -262,7 +262,11 @@ const fieldRead = (site: ListFieldPlan['site']): string => {
 const fieldListDeclaration = (
 	source: string,
 	signal: InitSignalIR,
-	seed: { container: string; fields: readonly ListFieldPlan[] },
+	seed: {
+		container: string
+		fields: readonly ListFieldPlan[]
+		through?: ReadonlyArray<string | null>
+	},
 	imports: ClientImports,
 ): { text: string; slices: SourceSlice[] } | null => {
 	if (signal.family !== 'declared') return null
@@ -286,8 +290,17 @@ const fieldListDeclaration = (
 		{ text: children, start: cut.start },
 		{ text: '({', start: cut.start },
 	]
+	// A key alias (ADR 0047 s3) reads the alias scope's roots, in document
+	// order, through every enclosing list's items.
+	const adopted = ".filter(el => el.hasAttribute('data-key'))"
+	const roots = (seed.through ?? [])
+		.map(
+			selector =>
+				`.flatMap(el => [...${selector === null ? 'el.children' : `(el.querySelector(${jsString(selector)})?.children ?? [])`}])${adopted}`,
+		)
+		.join('')
 	const lines = [
-		`${children}.filter(el => el.hasAttribute('data-key')).map((el)${itemType ? `: ${itemType}` : ''} => ({`,
+		`${children}${adopted}${roots}.map((el)${itemType ? `: ${itemType}` : ''} => ({`,
 	]
 	for (const { field, site, parser } of seed.fields) {
 		const read = fieldRead(site)

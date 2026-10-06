@@ -184,6 +184,13 @@ the shared hoist (`template-output.ts`) reports it. Its `.tsx`-only reasons
 (another tag, a `css` that is not the marker, a `${}` substitution) are
 template-literal shapes, not `.tsrx` grammar; the shared reason — an
 expression in place of the sheet — fires on both surfaces.
+`LTC080` (a key alias that does not meet ADR 0047 s1: the aliasing list
+does not key each item by itself, a `byKey` read is not the alias statement
+over the loop key, a second alias scope, or a field with no site in the
+alias scope; LT-453) skips `LTC079`, which LT-447 reserved. It is `LTC`, not
+`TSRX`: Pass 3 (`analysis/list-harvest.ts`) raises it, on both surfaces. Its
+dynamic half is the server runtime's `HarvestWitnessError`, which has no
+code.
 
 ## 5. Kept, with the surface named correctly
 

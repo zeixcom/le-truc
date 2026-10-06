@@ -373,6 +373,58 @@ export const deriveStore = <T>(compute: () => T): ServerCell<T> =>
 export const expose = (_props: Record<string, unknown>): void => {}
 
 /**
+ * The render witness of a key-alias harvest failed (ADR 0047 s2, LT-453):
+ * the keys the alias scope rendered do not reach every key of the
+ * harvested list, in list order. The client rebuilds the list at connect
+ * from the rendered items only, so it would connect a list with an item
+ * missing or out of place, and no client check can see an item it never
+ * received. Channel: the server render — static generation and the Server
+ * Simulation realm fail the build (ADR 0028: Prevented in effect). The
+ * static half is LTC080. No client counterpart.
+ */
+export class HarvestWitnessError extends Error {
+	constructor(message: string) {
+		super(message)
+		this.name = 'HarvestWitnessError'
+	}
+}
+
+/**
+ * Assert the render witness of a key-alias harvest (ADR 0047 s2): the
+ * first occurrences of `rendered` — the keys the alias scope rendered, in
+ * render order — equal the keys of `list`. Throws
+ * {@link HarvestWitnessError} naming the first key missing, out of order,
+ * or not in the list.
+ */
+export const witnessHarvest = (
+	component: string,
+	list: string,
+	keys: Iterable<string>,
+	rendered: readonly string[],
+): void => {
+	const expected = [...keys]
+	const seen = [...new Set(rendered)]
+	const at = (i: number): string => `position ${i + 1}`
+	for (let i = 0; i < Math.max(expected.length, seen.length); i++) {
+		const want = expected[i]
+		const got = seen[i]
+		if (want === got) continue
+		if (got !== undefined && !expected.includes(got))
+			throw new HarvestWitnessError(
+				`<${component}> rendered key \`${got}\` through the key alias of list \`${list}\`, which holds no item with that key, so the client would rebuild \`${list}\` with an item the server data does not have. Render only keys of \`${list}\` at the alias scope — derive the grouped lists from its items.`,
+			)
+		if (want === undefined) continue
+		if (!seen.includes(want))
+			throw new HarvestWitnessError(
+				`<${component}> rendered no item with key \`${want}\` of list \`${list}\` through its key alias, so the client would rebuild \`${list}\` without it. The client reads the list back from the rendered items only — render every item of \`${list}\` once at the alias scope, and do not gate a group off on the server.`,
+			)
+		throw new HarvestWitnessError(
+			`<${component}> rendered key \`${want}\` of list \`${list}\` out of order through its key alias: the list holds it at ${at(i)}, the render first reached it at ${at(seen.indexOf(want))}. The client rebuilds \`${list}\` in rendered order, so it would reorder the list — render the groups and their items in the order of \`${list}\`.`,
+		)
+	}
+}
+
+/**
  * Stand-in for a client-only ambient the server render function still
  * has to DECLARE — a `first()`-bound element reference, `host`,
  * `internals` (LT-121). Those name connect-time DOM the server never
