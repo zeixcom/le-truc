@@ -57,6 +57,8 @@
 		"module/scrollarea/module-scrollarea.ts",
 		"module/scrollarea/module-scrollarea.tsx",
 		"module/splitview/module-splitview.ts",
+		"module/ticker/module-ticker.ts",
+		"module/ticker/module-ticker.tsx",
 		"module/todo/module-todo.ts",
 		"module/todo/module-todo.tsx",
 		"module/splitview/module-splitview.tsx",

@@ -274,6 +274,9 @@ declare namespace JSX {
 	interface meta extends CommonLightDom, Microdata {
 		content?: Reactive<string>
 	}
+	interface data extends CommonLightDom {
+		value?: Reactive<string>
+	}
 	interface time extends CommonLightDom, Microdata {
 		datetime?: Reactive<string>
 	}
@@ -298,7 +301,9 @@ declare namespace JSX {
 	interface th extends CommonLightDom {
 		scope?: string
 	}
-	interface td extends CommonLightDom {}
+	interface td extends CommonLightDom {
+		colspan?: string
+	}
 	interface p extends CommonLightDom {}
 	interface pre extends CommonLightDom {}
 	interface span extends CommonLightDom, Microdata {}
@@ -357,9 +362,9 @@ declare namespace JSX {
 	type BasicBlogmetaAttrs = CommonLightDom
 	/** A `.tsrx` leaf authored raw (module-list's buttons): it declares a
 	 * pass surface for its `disabled` prop; module-todo's clear-completed
-	 * button passes its `badge` too. */
+	 * button passes its `badge` too, module-ticker's toggle its `label`. */
 	type BasicButtonAttrs = CommonLightDom & {
-		'truc:pass'?: { disabled?: PassEntry; badge?: PassEntry }
+		'truc:pass'?: { disabled?: PassEntry; badge?: PassEntry; label?: PassEntry }
 	}
 	/** A `.tsrx` leaf authored raw (module-todo's per-item checkbox): it
 	 * declares a pass surface for its `checked` prop. */
@@ -397,6 +402,10 @@ declare namespace JSX {
 	type ModuleDialogAttrs = CommonLightDom
 	type ModuleListAttrs = CommonLightDom
 	type ModuleListnavAttrs = CommonLightDom
+	type ModuleTickerAttrs = CommonLightDom & {
+		/** Parser-backed: read once at connect; the `fraction` property owns it after. */
+		fraction?: string
+	}
 	type ModuleTodoAttrs = CommonLightDom
 	type ModuleLazyloadAttrs = CommonLightDom & {
 		/** Parser-backed: read once at connect; the `src` property owns it after. */
@@ -504,6 +513,7 @@ declare namespace JSX {
 		small: small
 		span: span
 		svg: svg
+		data: data
 		time: time
 		strong: strong
 		summary: summary
@@ -534,6 +544,7 @@ declare namespace JSX {
 		'module-pagination': ModulePaginationAttrs
 		'module-scrollarea': ModuleScrollareaAttrs
 		'module-splitview': ModuleSplitviewAttrs
+		'module-ticker': ModuleTickerAttrs
 		'module-todo': ModuleTodoAttrs
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs

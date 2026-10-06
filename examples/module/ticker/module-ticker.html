@@ -1,16 +1,24 @@
+<!-- Regenerated from the compiled server render (LT-110 cutover):
+     renderModuleTicker({ rows, fraction }) from
+     server/generated/components/module-ticker.server.ts — the demo serves exactly
+     the markup the compiled client hydrates. The variant set serves
+     module-ticker.tsx (ADR 0039); module-ticker.tsrx and the hand-written
+     module-ticker.ts stay as variants. Each <tbody> is one block item; its
+     rows are the key-alias harvest sites (ADR 0047): the symbol from the
+     row's data-key, open from data-open, price and volume from the <data>
+     values beside their formatted text. Every block renders visible on the
+     server; the hidden placeholder row is the inner list's empty arm. -->
 <module-ticker fraction="0.1">
 	<div class="controls">
 		<basic-button class="toggle">
-			<button type="button">
-				<span class="label">⏸️ Pause</span>
-			</button>
+			<button type="button" class="toggle"><span class="label">⏸️ Pause</span></button>
 		</basic-button>
 		<basic-button class="add-rows">
-			<button type="button"><span class="label">➕ Add 100 rows</span></button>
+			<button type="button" class="add-rows"><span class="label">➕ Add 100 rows</span></button>
 		</basic-button>
 	</div>
 	<table>
-		<thead>
+		<thead data-unreconciled>
 			<tr>
 				<th scope="col">Symbol</th>
 				<th scope="col">Price (USD)</th>
@@ -18,615 +26,621 @@
 				<th scope="col">Volume</th>
 			</tr>
 		</thead>
-		<tbody>
-			<tr data-symbol="AAPL" data-direction="flat">
+		<tbody data-key="0">
+			<tr data-key="AAPL" data-open="189.3" data-direction="flat">
 				<th scope="row">AAPL</th>
-				<td class="price">189.30</td>
+				<td class="price"><data value="189.3" class="price">189.30</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="MSFT" data-direction="flat">
+			<tr data-key="MSFT" data-open="417.5" data-direction="flat">
 				<th scope="row">MSFT</th>
-				<td class="price">417.50</td>
+				<td class="price"><data value="417.5" class="price">417.50</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="NVDA" data-direction="flat">
+			<tr data-key="NVDA" data-open="875.4" data-direction="flat">
 				<th scope="row">NVDA</th>
-				<td class="price">875.40</td>
+				<td class="price"><data value="875.4" class="price">875.40</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="AMZN" data-direction="flat">
+			<tr data-key="AMZN" data-open="183.2" data-direction="flat">
 				<th scope="row">AMZN</th>
-				<td class="price">183.20</td>
+				<td class="price"><data value="183.2" class="price">183.20</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="GOOGL" data-direction="flat">
+			<tr data-key="GOOGL" data-open="162.6" data-direction="flat">
 				<th scope="row">GOOGL</th>
-				<td class="price">162.60</td>
+				<td class="price"><data value="162.6" class="price">162.60</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="META" data-direction="flat">
+			<tr data-key="META" data-open="494.8" data-direction="flat">
 				<th scope="row">META</th>
-				<td class="price">494.80</td>
+				<td class="price"><data value="494.8" class="price">494.80</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="TSLA" data-direction="flat">
+			<tr data-key="TSLA" data-open="238.1" data-direction="flat">
 				<th scope="row">TSLA</th>
-				<td class="price">238.10</td>
+				<td class="price"><data value="238.1" class="price">238.10</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BRK.B" data-direction="flat">
+			<tr data-key="BRK.B" data-open="406.7" data-direction="flat">
 				<th scope="row">BRK.B</th>
-				<td class="price">406.70</td>
+				<td class="price"><data value="406.7" class="price">406.70</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="JPM" data-direction="flat">
+			<tr data-key="JPM" data-open="197.4" data-direction="flat">
 				<th scope="row">JPM</th>
-				<td class="price">197.40</td>
+				<td class="price"><data value="197.4" class="price">197.40</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="V" data-direction="flat">
+			<tr data-key="V" data-open="277.9" data-direction="flat">
 				<th scope="row">V</th>
-				<td class="price">277.90</td>
+				<td class="price"><data value="277.9" class="price">277.90</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAB" data-direction="flat">
+			<tr data-key="BAB" data-open="10.42" data-direction="flat">
 				<th scope="row">BAB</th>
-				<td class="price">10.42</td>
+				<td class="price"><data value="10.42" class="price">10.42</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAC" data-direction="flat">
+			<tr data-key="BAC" data-open="11.79" data-direction="flat">
 				<th scope="row">BAC</th>
-				<td class="price">11.79</td>
+				<td class="price"><data value="11.79" class="price">11.79</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAD" data-direction="flat">
+			<tr data-key="BAD" data-open="13.16" data-direction="flat">
 				<th scope="row">BAD</th>
-				<td class="price">13.16</td>
+				<td class="price"><data value="13.16" class="price">13.16</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAF" data-direction="flat">
+			<tr data-key="BAF" data-open="14.53" data-direction="flat">
 				<th scope="row">BAF</th>
-				<td class="price">14.53</td>
+				<td class="price"><data value="14.53" class="price">14.53</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAG" data-direction="flat">
+			<tr data-key="BAG" data-open="15.9" data-direction="flat">
 				<th scope="row">BAG</th>
-				<td class="price">15.90</td>
+				<td class="price"><data value="15.9" class="price">15.90</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAH" data-direction="flat">
+			<tr data-key="BAH" data-open="17.27" data-direction="flat">
 				<th scope="row">BAH</th>
-				<td class="price">17.27</td>
+				<td class="price"><data value="17.27" class="price">17.27</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAJ" data-direction="flat">
+			<tr data-key="BAJ" data-open="18.64" data-direction="flat">
 				<th scope="row">BAJ</th>
-				<td class="price">18.64</td>
+				<td class="price"><data value="18.64" class="price">18.64</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAK" data-direction="flat">
+			<tr data-key="BAK" data-open="20.01" data-direction="flat">
 				<th scope="row">BAK</th>
-				<td class="price">20.01</td>
+				<td class="price"><data value="20.01" class="price">20.01</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAL" data-direction="flat">
+			<tr data-key="BAL" data-open="21.38" data-direction="flat">
 				<th scope="row">BAL</th>
-				<td class="price">21.38</td>
+				<td class="price"><data value="21.38" class="price">21.38</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAM" data-direction="flat">
+			<tr data-key="BAM" data-open="22.75" data-direction="flat">
 				<th scope="row">BAM</th>
-				<td class="price">22.75</td>
+				<td class="price"><data value="22.75" class="price">22.75</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAN" data-direction="flat">
+			<tr data-key="BAN" data-open="24.12" data-direction="flat">
 				<th scope="row">BAN</th>
-				<td class="price">24.12</td>
+				<td class="price"><data value="24.12" class="price">24.12</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAP" data-direction="flat">
+			<tr data-key="BAP" data-open="25.49" data-direction="flat">
 				<th scope="row">BAP</th>
-				<td class="price">25.49</td>
+				<td class="price"><data value="25.49" class="price">25.49</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAQ" data-direction="flat">
+			<tr data-key="BAQ" data-open="26.86" data-direction="flat">
 				<th scope="row">BAQ</th>
-				<td class="price">26.86</td>
+				<td class="price"><data value="26.86" class="price">26.86</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAR" data-direction="flat">
+			<tr data-key="BAR" data-open="28.23" data-direction="flat">
 				<th scope="row">BAR</th>
-				<td class="price">28.23</td>
+				<td class="price"><data value="28.23" class="price">28.23</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAS" data-direction="flat">
+			<tr data-key="BAS" data-open="29.6" data-direction="flat">
 				<th scope="row">BAS</th>
-				<td class="price">29.60</td>
+				<td class="price"><data value="29.6" class="price">29.60</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAT" data-direction="flat">
+			<tr data-key="BAT" data-open="30.97" data-direction="flat">
 				<th scope="row">BAT</th>
-				<td class="price">30.97</td>
+				<td class="price"><data value="30.97" class="price">30.97</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAV" data-direction="flat">
+			<tr data-key="BAV" data-open="32.34" data-direction="flat">
 				<th scope="row">BAV</th>
-				<td class="price">32.34</td>
+				<td class="price"><data value="32.34" class="price">32.34</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAW" data-direction="flat">
+			<tr data-key="BAW" data-open="33.71" data-direction="flat">
 				<th scope="row">BAW</th>
-				<td class="price">33.71</td>
+				<td class="price"><data value="33.71" class="price">33.71</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAX" data-direction="flat">
+			<tr data-key="BAX" data-open="35.08" data-direction="flat">
 				<th scope="row">BAX</th>
-				<td class="price">35.08</td>
+				<td class="price"><data value="35.08" class="price">35.08</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BAZ" data-direction="flat">
+			<tr data-key="BAZ" data-open="36.45" data-direction="flat">
 				<th scope="row">BAZ</th>
-				<td class="price">36.45</td>
+				<td class="price"><data value="36.45" class="price">36.45</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEB" data-direction="flat">
+			<tr data-key="BEB" data-open="37.82" data-direction="flat">
 				<th scope="row">BEB</th>
-				<td class="price">37.82</td>
+				<td class="price"><data value="37.82" class="price">37.82</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEC" data-direction="flat">
+			<tr data-key="BEC" data-open="39.19" data-direction="flat">
 				<th scope="row">BEC</th>
-				<td class="price">39.19</td>
+				<td class="price"><data value="39.19" class="price">39.19</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BED" data-direction="flat">
+			<tr data-key="BED" data-open="40.56" data-direction="flat">
 				<th scope="row">BED</th>
-				<td class="price">40.56</td>
+				<td class="price"><data value="40.56" class="price">40.56</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEF" data-direction="flat">
+			<tr data-key="BEF" data-open="41.93" data-direction="flat">
 				<th scope="row">BEF</th>
-				<td class="price">41.93</td>
+				<td class="price"><data value="41.93" class="price">41.93</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEG" data-direction="flat">
+			<tr data-key="BEG" data-open="43.3" data-direction="flat">
 				<th scope="row">BEG</th>
-				<td class="price">43.30</td>
+				<td class="price"><data value="43.3" class="price">43.30</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEH" data-direction="flat">
+			<tr data-key="BEH" data-open="44.67" data-direction="flat">
 				<th scope="row">BEH</th>
-				<td class="price">44.67</td>
+				<td class="price"><data value="44.67" class="price">44.67</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEJ" data-direction="flat">
+			<tr data-key="BEJ" data-open="46.04" data-direction="flat">
 				<th scope="row">BEJ</th>
-				<td class="price">46.04</td>
+				<td class="price"><data value="46.04" class="price">46.04</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEK" data-direction="flat">
+			<tr data-key="BEK" data-open="47.41" data-direction="flat">
 				<th scope="row">BEK</th>
-				<td class="price">47.41</td>
+				<td class="price"><data value="47.41" class="price">47.41</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEL" data-direction="flat">
+			<tr data-key="BEL" data-open="48.78" data-direction="flat">
 				<th scope="row">BEL</th>
-				<td class="price">48.78</td>
+				<td class="price"><data value="48.78" class="price">48.78</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEM" data-direction="flat">
+			<tr data-key="BEM" data-open="50.15" data-direction="flat">
 				<th scope="row">BEM</th>
-				<td class="price">50.15</td>
+				<td class="price"><data value="50.15" class="price">50.15</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEN" data-direction="flat">
+			<tr data-key="BEN" data-open="51.52" data-direction="flat">
 				<th scope="row">BEN</th>
-				<td class="price">51.52</td>
+				<td class="price"><data value="51.52" class="price">51.52</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEP" data-direction="flat">
+			<tr data-key="BEP" data-open="52.89" data-direction="flat">
 				<th scope="row">BEP</th>
-				<td class="price">52.89</td>
+				<td class="price"><data value="52.89" class="price">52.89</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEQ" data-direction="flat">
+			<tr data-key="BEQ" data-open="54.26" data-direction="flat">
 				<th scope="row">BEQ</th>
-				<td class="price">54.26</td>
+				<td class="price"><data value="54.26" class="price">54.26</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BER" data-direction="flat">
+			<tr data-key="BER" data-open="55.63" data-direction="flat">
 				<th scope="row">BER</th>
-				<td class="price">55.63</td>
+				<td class="price"><data value="55.63" class="price">55.63</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BES" data-direction="flat">
+			<tr data-key="BES" data-open="57" data-direction="flat">
 				<th scope="row">BES</th>
-				<td class="price">57.00</td>
+				<td class="price"><data value="57" class="price">57.00</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BET" data-direction="flat">
+			<tr data-key="BET" data-open="58.37" data-direction="flat">
 				<th scope="row">BET</th>
-				<td class="price">58.37</td>
+				<td class="price"><data value="58.37" class="price">58.37</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEV" data-direction="flat">
+			<tr data-key="BEV" data-open="59.74" data-direction="flat">
 				<th scope="row">BEV</th>
-				<td class="price">59.74</td>
+				<td class="price"><data value="59.74" class="price">59.74</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEW" data-direction="flat">
+			<tr data-key="BEW" data-open="61.11" data-direction="flat">
 				<th scope="row">BEW</th>
-				<td class="price">61.11</td>
+				<td class="price"><data value="61.11" class="price">61.11</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEX" data-direction="flat">
+			<tr data-key="BEX" data-open="62.48" data-direction="flat">
 				<th scope="row">BEX</th>
-				<td class="price">62.48</td>
+				<td class="price"><data value="62.48" class="price">62.48</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BEZ" data-direction="flat">
+			<tr data-key="BEZ" data-open="63.85" data-direction="flat">
 				<th scope="row">BEZ</th>
-				<td class="price">63.85</td>
+				<td class="price"><data value="63.85" class="price">63.85</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIB" data-direction="flat">
+			<tr data-key="BIB" data-open="65.22" data-direction="flat">
 				<th scope="row">BIB</th>
-				<td class="price">65.22</td>
+				<td class="price"><data value="65.22" class="price">65.22</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIC" data-direction="flat">
+			<tr data-key="BIC" data-open="66.59" data-direction="flat">
 				<th scope="row">BIC</th>
-				<td class="price">66.59</td>
+				<td class="price"><data value="66.59" class="price">66.59</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BID" data-direction="flat">
+			<tr data-key="BID" data-open="67.96" data-direction="flat">
 				<th scope="row">BID</th>
-				<td class="price">67.96</td>
+				<td class="price"><data value="67.96" class="price">67.96</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIF" data-direction="flat">
+			<tr data-key="BIF" data-open="69.33" data-direction="flat">
 				<th scope="row">BIF</th>
-				<td class="price">69.33</td>
+				<td class="price"><data value="69.33" class="price">69.33</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIG" data-direction="flat">
+			<tr data-key="BIG" data-open="70.7" data-direction="flat">
 				<th scope="row">BIG</th>
-				<td class="price">70.70</td>
+				<td class="price"><data value="70.7" class="price">70.70</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIH" data-direction="flat">
+			<tr data-key="BIH" data-open="72.07" data-direction="flat">
 				<th scope="row">BIH</th>
-				<td class="price">72.07</td>
+				<td class="price"><data value="72.07" class="price">72.07</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIJ" data-direction="flat">
+			<tr data-key="BIJ" data-open="73.44" data-direction="flat">
 				<th scope="row">BIJ</th>
-				<td class="price">73.44</td>
+				<td class="price"><data value="73.44" class="price">73.44</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIK" data-direction="flat">
+			<tr data-key="BIK" data-open="74.81" data-direction="flat">
 				<th scope="row">BIK</th>
-				<td class="price">74.81</td>
+				<td class="price"><data value="74.81" class="price">74.81</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIL" data-direction="flat">
+			<tr data-key="BIL" data-open="76.18" data-direction="flat">
 				<th scope="row">BIL</th>
-				<td class="price">76.18</td>
+				<td class="price"><data value="76.18" class="price">76.18</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIM" data-direction="flat">
+			<tr data-key="BIM" data-open="77.55" data-direction="flat">
 				<th scope="row">BIM</th>
-				<td class="price">77.55</td>
+				<td class="price"><data value="77.55" class="price">77.55</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIN" data-direction="flat">
+			<tr data-key="BIN" data-open="78.92" data-direction="flat">
 				<th scope="row">BIN</th>
-				<td class="price">78.92</td>
+				<td class="price"><data value="78.92" class="price">78.92</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIP" data-direction="flat">
+			<tr data-key="BIP" data-open="80.29" data-direction="flat">
 				<th scope="row">BIP</th>
-				<td class="price">80.29</td>
+				<td class="price"><data value="80.29" class="price">80.29</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIQ" data-direction="flat">
+			<tr data-key="BIQ" data-open="81.66" data-direction="flat">
 				<th scope="row">BIQ</th>
-				<td class="price">81.66</td>
+				<td class="price"><data value="81.66" class="price">81.66</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIR" data-direction="flat">
+			<tr data-key="BIR" data-open="83.03" data-direction="flat">
 				<th scope="row">BIR</th>
-				<td class="price">83.03</td>
+				<td class="price"><data value="83.03" class="price">83.03</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIS" data-direction="flat">
+			<tr data-key="BIS" data-open="84.4" data-direction="flat">
 				<th scope="row">BIS</th>
-				<td class="price">84.40</td>
+				<td class="price"><data value="84.4" class="price">84.40</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIT" data-direction="flat">
+			<tr data-key="BIT" data-open="85.77" data-direction="flat">
 				<th scope="row">BIT</th>
-				<td class="price">85.77</td>
+				<td class="price"><data value="85.77" class="price">85.77</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIV" data-direction="flat">
+			<tr data-key="BIV" data-open="87.14" data-direction="flat">
 				<th scope="row">BIV</th>
-				<td class="price">87.14</td>
+				<td class="price"><data value="87.14" class="price">87.14</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIW" data-direction="flat">
+			<tr data-key="BIW" data-open="88.51" data-direction="flat">
 				<th scope="row">BIW</th>
-				<td class="price">88.51</td>
+				<td class="price"><data value="88.51" class="price">88.51</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIX" data-direction="flat">
+			<tr data-key="BIX" data-open="89.88" data-direction="flat">
 				<th scope="row">BIX</th>
-				<td class="price">89.88</td>
+				<td class="price"><data value="89.88" class="price">89.88</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BIZ" data-direction="flat">
+			<tr data-key="BIZ" data-open="91.25" data-direction="flat">
 				<th scope="row">BIZ</th>
-				<td class="price">91.25</td>
+				<td class="price"><data value="91.25" class="price">91.25</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOB" data-direction="flat">
+			<tr data-key="BOB" data-open="92.62" data-direction="flat">
 				<th scope="row">BOB</th>
-				<td class="price">92.62</td>
+				<td class="price"><data value="92.62" class="price">92.62</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOC" data-direction="flat">
+			<tr data-key="BOC" data-open="93.99" data-direction="flat">
 				<th scope="row">BOC</th>
-				<td class="price">93.99</td>
+				<td class="price"><data value="93.99" class="price">93.99</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOD" data-direction="flat">
+			<tr data-key="BOD" data-open="95.36" data-direction="flat">
 				<th scope="row">BOD</th>
-				<td class="price">95.36</td>
+				<td class="price"><data value="95.36" class="price">95.36</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOF" data-direction="flat">
+			<tr data-key="BOF" data-open="96.73" data-direction="flat">
 				<th scope="row">BOF</th>
-				<td class="price">96.73</td>
+				<td class="price"><data value="96.73" class="price">96.73</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOG" data-direction="flat">
+			<tr data-key="BOG" data-open="98.1" data-direction="flat">
 				<th scope="row">BOG</th>
-				<td class="price">98.10</td>
+				<td class="price"><data value="98.1" class="price">98.10</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOH" data-direction="flat">
+			<tr data-key="BOH" data-open="99.47" data-direction="flat">
 				<th scope="row">BOH</th>
-				<td class="price">99.47</td>
+				<td class="price"><data value="99.47" class="price">99.47</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOJ" data-direction="flat">
+			<tr data-key="BOJ" data-open="100.84" data-direction="flat">
 				<th scope="row">BOJ</th>
-				<td class="price">100.84</td>
+				<td class="price"><data value="100.84" class="price">100.84</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOK" data-direction="flat">
+			<tr data-key="BOK" data-open="102.21" data-direction="flat">
 				<th scope="row">BOK</th>
-				<td class="price">102.21</td>
+				<td class="price"><data value="102.21" class="price">102.21</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOL" data-direction="flat">
+			<tr data-key="BOL" data-open="103.58" data-direction="flat">
 				<th scope="row">BOL</th>
-				<td class="price">103.58</td>
+				<td class="price"><data value="103.58" class="price">103.58</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOM" data-direction="flat">
+			<tr data-key="BOM" data-open="104.95" data-direction="flat">
 				<th scope="row">BOM</th>
-				<td class="price">104.95</td>
+				<td class="price"><data value="104.95" class="price">104.95</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BON" data-direction="flat">
+			<tr data-key="BON" data-open="106.32" data-direction="flat">
 				<th scope="row">BON</th>
-				<td class="price">106.32</td>
+				<td class="price"><data value="106.32" class="price">106.32</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOP" data-direction="flat">
+			<tr data-key="BOP" data-open="107.69" data-direction="flat">
 				<th scope="row">BOP</th>
-				<td class="price">107.69</td>
+				<td class="price"><data value="107.69" class="price">107.69</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOQ" data-direction="flat">
+			<tr data-key="BOQ" data-open="109.06" data-direction="flat">
 				<th scope="row">BOQ</th>
-				<td class="price">109.06</td>
+				<td class="price"><data value="109.06" class="price">109.06</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOR" data-direction="flat">
+			<tr data-key="BOR" data-open="110.43" data-direction="flat">
 				<th scope="row">BOR</th>
-				<td class="price">110.43</td>
+				<td class="price"><data value="110.43" class="price">110.43</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOS" data-direction="flat">
+			<tr data-key="BOS" data-open="111.8" data-direction="flat">
 				<th scope="row">BOS</th>
-				<td class="price">111.80</td>
+				<td class="price"><data value="111.8" class="price">111.80</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOT" data-direction="flat">
+			<tr data-key="BOT" data-open="113.17" data-direction="flat">
 				<th scope="row">BOT</th>
-				<td class="price">113.17</td>
+				<td class="price"><data value="113.17" class="price">113.17</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOV" data-direction="flat">
+			<tr data-key="BOV" data-open="114.54" data-direction="flat">
 				<th scope="row">BOV</th>
-				<td class="price">114.54</td>
+				<td class="price"><data value="114.54" class="price">114.54</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOW" data-direction="flat">
+			<tr data-key="BOW" data-open="115.91" data-direction="flat">
 				<th scope="row">BOW</th>
-				<td class="price">115.91</td>
+				<td class="price"><data value="115.91" class="price">115.91</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOX" data-direction="flat">
+			<tr data-key="BOX" data-open="117.28" data-direction="flat">
 				<th scope="row">BOX</th>
-				<td class="price">117.28</td>
+				<td class="price"><data value="117.28" class="price">117.28</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BOZ" data-direction="flat">
+			<tr data-key="BOZ" data-open="118.65" data-direction="flat">
 				<th scope="row">BOZ</th>
-				<td class="price">118.65</td>
+				<td class="price"><data value="118.65" class="price">118.65</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUB" data-direction="flat">
+			<tr data-key="BUB" data-open="120.02" data-direction="flat">
 				<th scope="row">BUB</th>
-				<td class="price">120.02</td>
+				<td class="price"><data value="120.02" class="price">120.02</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUC" data-direction="flat">
+			<tr data-key="BUC" data-open="121.39" data-direction="flat">
 				<th scope="row">BUC</th>
-				<td class="price">121.39</td>
+				<td class="price"><data value="121.39" class="price">121.39</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUD" data-direction="flat">
+			<tr data-key="BUD" data-open="122.76" data-direction="flat">
 				<th scope="row">BUD</th>
-				<td class="price">122.76</td>
+				<td class="price"><data value="122.76" class="price">122.76</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUF" data-direction="flat">
+			<tr data-key="BUF" data-open="124.13" data-direction="flat">
 				<th scope="row">BUF</th>
-				<td class="price">124.13</td>
+				<td class="price"><data value="124.13" class="price">124.13</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUG" data-direction="flat">
+			<tr data-key="BUG" data-open="125.5" data-direction="flat">
 				<th scope="row">BUG</th>
-				<td class="price">125.50</td>
+				<td class="price"><data value="125.5" class="price">125.50</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUH" data-direction="flat">
+			<tr data-key="BUH" data-open="126.87" data-direction="flat">
 				<th scope="row">BUH</th>
-				<td class="price">126.87</td>
+				<td class="price"><data value="126.87" class="price">126.87</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUJ" data-direction="flat">
+			<tr data-key="BUJ" data-open="128.24" data-direction="flat">
 				<th scope="row">BUJ</th>
-				<td class="price">128.24</td>
+				<td class="price"><data value="128.24" class="price">128.24</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUK" data-direction="flat">
+			<tr data-key="BUK" data-open="129.61" data-direction="flat">
 				<th scope="row">BUK</th>
-				<td class="price">129.61</td>
+				<td class="price"><data value="129.61" class="price">129.61</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUL" data-direction="flat">
+			<tr data-key="BUL" data-open="130.98" data-direction="flat">
 				<th scope="row">BUL</th>
-				<td class="price">130.98</td>
+				<td class="price"><data value="130.98" class="price">130.98</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
-			<tr data-symbol="BUM" data-direction="flat">
+			<tr data-key="BUM" data-open="132.35" data-direction="flat">
 				<th scope="row">BUM</th>
-				<td class="price">132.35</td>
+				<td class="price"><data value="132.35" class="price">132.35</data></td>
 				<td class="change">+0.00%</td>
-				<td class="volume">0</td>
+				<td class="volume"><data value="0" class="volume">0</data></td>
 			</tr>
+			<tr data-unreconciled hidden class="placeholder"><td colspan="4" style="height:0px;padding:0;border:none" class="spacer"></td></tr>
 		</tbody>
 	</table>
-	<template>
-		<tr data-symbol="" data-direction="flat">
+	<template data-list="0">
+		<tbody>
+			<tr data-unreconciled class="placeholder"><td colspan="4" class="spacer"></td></tr>
+		</tbody>
+	</template>
+	<template data-list="1">
+		<tr>
 			<th scope="row"></th>
-			<td class="price">0.00</td>
-			<td class="change">+0.00%</td>
-			<td class="volume">0</td>
+			<td class="price"><data class="price"></data></td>
+			<td class="change"></td>
+			<td class="volume"><data class="volume"></data></td>
 		</tr>
 	</template>
 </module-ticker>

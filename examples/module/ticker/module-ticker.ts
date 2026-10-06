@@ -86,15 +86,16 @@ export default defineComponent<ModuleTickerProps>(
 			fraction: asNumber(0.1),
 		})
 
-		// Read initial state from server-rendered HTML rows
-		const initial: TickerItem[] = queryAll(host, 'tr[data-symbol]').map(row => {
-			const symbol = row.dataset.symbol ?? ''
+		// Read initial state from server-rendered HTML rows: the symbol is the
+		// row's key, the raw values sit beside the formatted text
+		const initial: TickerItem[] = queryAll(host, 'tr[data-key]').map(row => {
+			const symbol = row.dataset.key ?? ''
 			// Seed usedSymbols so generated symbols never collide with static ones
 			_usedSymbols.add(symbol)
-			const price = parseFloat(
-				(query(row, '.price')?.textContent ?? '0').replace(/,/g, ''),
-			)
-			return { symbol, open: price, price, volume: 0 }
+			const price = parseFloat(query(row, 'data.price')?.value ?? '0')
+			const open = parseFloat(row.dataset.open ?? String(price))
+			const volume = parseFloat(query(row, 'data.volume')?.value ?? '0')
+			return { symbol, open, price, volume }
 		})
 
 		// Closure-held reactive list, keyed by symbol.
@@ -104,7 +105,10 @@ export default defineComponent<ModuleTickerProps>(
 			keyConfig: item => item.symbol,
 		})
 
-		const template = first('template') as HTMLTemplateElement | null
+		// The row template (template[data-list="0"] holds the compiled block)
+		const template = first(
+			'template[data-list="1"]',
+		) as HTMLTemplateElement | null
 		const table = first('table')
 
 		// Block registry: each <tbody> holds BLOCK_SIZE rows (materialized) or
@@ -118,6 +122,18 @@ export default defineComponent<ModuleTickerProps>(
 				initial.map(i => i.symbol),
 			)
 
+		// Clone one row from the template, keyed and showing its price.
+		function cloneRow(symbol: string, price: number): HTMLTableRowElement {
+			const clone = template!.content.cloneNode(true) as DocumentFragment
+			const tr = clone.firstElementChild as HTMLTableRowElement
+			tr.dataset.key = symbol
+			const th = query(tr, 'th')
+			const priceEl = query(tr, 'data.price')
+			if (th) th.textContent = symbol
+			if (priceEl) priceEl.textContent = priceFormat.format(price)
+			return tr
+		}
+
 		// Materialize: remove placeholder, re-clone rows from template with
 		// current price from tickers list (which kept ticking while off-screen).
 		function materializeBlock(tbody: HTMLTableSectionElement): void {
@@ -127,17 +143,10 @@ export default defineComponent<ModuleTickerProps>(
 			const fragment = document.createDocumentFragment()
 			for (const symbol of symbols) {
 				const price = tickers.byKey(symbol)?.get().price ?? 0
-				const clone = template.content.cloneNode(true) as DocumentFragment
-				const tr = clone.firstElementChild as HTMLTableRowElement
-				tr.dataset.symbol = symbol
-				const th = query(tr, 'th')
-				const priceEl = query(tr, '.price')
-				if (th) th.textContent = symbol
-				if (priceEl) priceEl.textContent = priceFormat.format(price)
-				fragment.append(tr)
+				fragment.append(cloneRow(symbol, price))
 			}
 			tbody.append(fragment)
-			// each(rows, …) picks up the new tr[data-symbol] rows via
+			// each(rows, …) picks up the new tr[data-key] rows via
 			// MutationObserver and wires watch effects for them automatically.
 		}
 
@@ -146,7 +155,7 @@ export default defineComponent<ModuleTickerProps>(
 		function virtualizeBlock(tbody: HTMLTableSectionElement): void {
 			const height = tbody.offsetHeight
 			tbody.innerHTML = `<tr><td colspan="4" style="height:${height}px;padding:0;border:none"></td></tr>`
-			// Removing tr[data-symbol] rows triggers the MutationObserver;
+			// Removing tr[data-key] rows triggers the MutationObserver;
 			// each(rows, …) tears down their watch effects automatically.
 		}
 
@@ -190,7 +199,7 @@ export default defineComponent<ModuleTickerProps>(
 			watch(
 				() => visible.get(),
 				isVisible => {
-					const isVirtualized = !first('tr[data-symbol]')
+					const isVirtualized = !first('tr[data-key]')
 					if (isVisible && isVirtualized) materializeBlock(tbody)
 					else if (!isVisible && !isVirtualized) virtualizeBlock(tbody)
 				},
@@ -211,20 +220,20 @@ export default defineComponent<ModuleTickerProps>(
 			return () => clearInterval(id)
 		})
 
-		// Per-row effects: only wired for materialized rows (tr[data-symbol]
+		// Per-row effects: only wired for materialized rows (tr[data-key]
 		// in DOM). each() auto-tears-down when a row is virtualized and
 		// auto-sets-up when it re-materializes. The row.isConnected guard
 		// covers the brief window between DOM removal and MutationObserver
 		// firing where the row is detached but the effect hasn't cleaned up.
-		const rows = all('tr[data-symbol]')
+		const rows = all('tr[data-key]')
 		each(rows, (row, first) => {
-			const symbol = row.dataset.symbol ?? ''
+			const symbol = row.dataset.key ?? ''
 			const item = tickers.byKey(symbol)
 			if (!item || !row.isConnected) return
 
-			const priceEl = first('.price')
-			const changeEl = first('.change')
-			const volumeEl = first('.volume')
+			const priceEl = first('data.price')
+			const changeEl = first('td.change')
+			const volumeEl = first('data.volume')
 			if (!priceEl || !changeEl || !volumeEl) return
 
 			const changeMemo = createMemo(() => {
@@ -266,16 +275,8 @@ export default defineComponent<ModuleTickerProps>(
 				newItems.map(i => i.symbol),
 			)
 			const fragment = document.createDocumentFragment()
-			for (const { symbol, price } of newItems) {
-				const clone = template.content.cloneNode(true) as DocumentFragment
-				const tr = clone.firstElementChild as HTMLTableRowElement
-				tr.dataset.symbol = symbol
-				const th = query(tr, 'th')
-				const priceEl = query(tr, '.price')
-				if (th) th.textContent = symbol
-				if (priceEl) priceEl.textContent = priceFormat.format(price)
-				fragment.append(tr)
-			}
+			for (const { symbol, price } of newItems)
+				fragment.append(cloneRow(symbol, price))
 			newTbody.append(fragment)
 			table.append(newTbody)
 		})
