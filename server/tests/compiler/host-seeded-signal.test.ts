@@ -175,7 +175,7 @@ describe('a list seeded from a Parser-backed host prop (LT-451)', () => {
 			test('the client declares the list after expose(), with its options', () => {
 				const client = component.clientCode
 				const declared = client.indexOf(
-					'const tickers = createList(host.seed, { keyConfig: item => item.symbol })',
+					'const tickers = createList<Row>(host.seed, { keyConfig: item => item.symbol })',
 				)
 				expect(declared).toBeGreaterThan(-1)
 				expect(client.indexOf('expose({')).toBeLessThan(declared)

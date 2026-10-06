@@ -92,6 +92,11 @@ describe('tier assignment over the migrated corpus', () => {
 		// tier. form-colorgraph and module-coloreditor follow through compose
 		// reads of it (sub-design 3), as form-combobox already did for
 		// form-listbox.
+		// LT-093 (2026-10-07): module-lazyload's task initializer reads
+		// authored imports (`fetchWithCache`, `isValidURL`, …), which the
+		// client binds; its only routing signal was that LTC004 false firing,
+		// so it folds. Its served HTML is unchanged: the realm never settled
+		// the task either, so both tiers serve the pending arm.
 		expect(byTier).toEqual({
 			folded: [
 				'basic-blogmeta',
@@ -118,6 +123,7 @@ describe('tier assignment over the migrated corpus', () => {
 				'module-codeblock',
 				'module-colorinfo',
 				'module-dialog',
+				'module-lazyload',
 				'module-list',
 				'module-pagination',
 				'module-scrollarea',
@@ -135,7 +141,6 @@ describe('tier assignment over the migrated corpus', () => {
 				'form-spinbutton',
 				'module-carousel',
 				'module-coloreditor',
-				'module-lazyload',
 				'module-listnav',
 			],
 			static: [],

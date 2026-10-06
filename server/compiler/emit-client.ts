@@ -357,6 +357,15 @@ const restArguments = (signal: InitSignalIR): SourceSlice | null => {
 	return { text, start: seed.end }
 }
 
+/**
+ * The declaring call's type arguments as authored — `<string>` in
+ * `createTask<string>(…)` — or `''`. A harvested declaration rebuilds the
+ * call head around the client initializer, and dropping them widens the
+ * signal's type (LT-093: a `Task<unknown>` no longer fits its `watch`).
+ */
+const typeArguments = (signal: InitSignalIR): string =>
+	/^[\w$.]+\s*(<[\s\S]*?>)\s*\(/.exec(signal.text)?.[1] ?? ''
+
 const sliceOf = (text: string, start: number | undefined): SourceSlice[] =>
 	start === undefined ? [] : [{ text, start }]
 
@@ -839,7 +848,7 @@ export const emitClientModule = (
 			// synthesized and maps nowhere. The call's other arguments follow
 			// the seed verbatim (LT-451): a dropped `{ keyConfig }` would key
 			// the client's items apart from the server's.
-			const head = `const ${signal.name} = ${imports.local(signal.constructor)}(`
+			const head = `const ${signal.name} = ${imports.local(signal.constructor)}${typeArguments(signal)}(`
 			const rest = restArguments(signal)
 			pushAt(
 				signal.textStart,

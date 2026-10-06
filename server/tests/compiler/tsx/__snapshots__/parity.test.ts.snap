@@ -107,14 +107,10 @@ export default defineComponent<FormComboboxProps>(
 				textbox.focus()
 			}),
 		})
-		watch(
-			() => String(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
-			bindAttribute(textbox, 'aria-expanded'),
-		)
-		watch(
-			() => !(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
-			bindAttribute(popup, 'hidden'),
-		)
+		const isOpen = () =>
+		showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0
+		watch(() => String(isOpen()), bindAttribute(textbox, 'aria-expanded'))
+		watch(() => !isOpen(), bindAttribute(popup, 'hidden'))
 		watch(() => host.value, bindProperty(textbox, 'value'))
 		on(textbox, 'input', () => {
 			host.value = textbox.value

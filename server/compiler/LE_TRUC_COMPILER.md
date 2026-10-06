@@ -742,7 +742,11 @@ or the gate compares a suppressed tree against an unsuppressed one.
 - **Phase-1 totality** reuses `evaluability.ts` (`isServerEvaluable`,
   `hostDerivedFold`) and `analysis/harvest.ts`'s site detection unchanged in
   mechanism, inverted in polarity. Every site that used to trigger a refusal
-  is now a Simulated-tier routing signal: no harvestable render site (old `LTC004`),
+  is now a Simulated-tier routing signal: no harvestable render site (old `LTC004`;
+  a signal rendered only through a thunk reuses its initializer instead, so
+  only an initializer the client cannot reuse routes it — the census detail
+  names its free names; plain setup consts and authored imports are
+  reusable, LT-093),
   no server-renderable value for a semantically-loaded attribute (old
   `LTC034`), a setup const reading a `first()` ref (old `LTC043`), a
   client-only primitive or a `host`/`internals` read in a plain setup const
