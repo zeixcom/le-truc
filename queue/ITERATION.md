@@ -76,13 +76,16 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   LT-481 → LT-482 → LT-461.
 - **S — children-contract spike** — fed the LT-462 session (ruling 10). LT-465.
 - **T — module-todo** — ruling 5. LT-466 → LT-467.
+- **G — layout graph** — the variant sets `main.ts` still registers through their `.ts` twins,
+  so `test:variants` has never measured their compiled clients. Before LT-463, which converts
+  them. LT-485.
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469.
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
 - **K — composition** — after tracks E and T (ruling 4). LT-463.
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
-- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282.
+- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486.
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
 
@@ -109,7 +112,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-485.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-488.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

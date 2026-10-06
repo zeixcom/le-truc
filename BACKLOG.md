@@ -304,9 +304,9 @@ repeats on a page. Small and independent; nothing here gates another band.
   against wording the build no longer serves. Add one server test that renders the instance's
   args at its `lang` and compares the attribute bytes with the page's. Prefer a small table of
   (page, instance id, tag, args) over a per-component test, so the next hand-copied instance
-  is one row. Since LT-252 the table also needs `basic-pluralize.html`'s six locale instances
-  (`#welsh-test`, `#german-test`, `#chinese-test`, `#arabic-test`, `#polish-test`,
-  `#latvian-test`). **Runs after LT-354**, which rebaselines these bytes. Add
+  is one row. (LT-252's six `basic-pluralize.html` locale instances are gone with the example,
+  LT-467. module-todo's `pl` spec leg swaps in a real server render, so it holds no hand copy.)
+  **Runs after LT-354**, which rebaselines these bytes. Add
   `module-coloreditor.html`'s pre-rendered form-colorgraph and form-spinbutton (`:22`) as rows:
   they carry no attribute, which is correct at en once LT-354 omits source-equal keys, and the
   pin keeps it so. **Channel:** none (a test). **Check:** editing `form-tokenbox.added` in de.json
@@ -939,6 +939,26 @@ of them touches the compose machinery.
   **Area:** compiler
   **Merged into LT-093 (owner, planning 2026-10-06).** Same wall, one pass through the
   client-needed fixpoint; LT-093's entry carries this task's fix and its test flip.
+
+- [ ] LT-487: module-todo's ar/cy/lv strings need a translator pass — six empty labels per locale and a doubtful `remaining` plural.
+  **Area:** docs
+  **Needs:** LT-467
+  **Gates:** check:corpus
+  **Area:** docs
+  **Needs:** LT-467
+  **Filed (Architect, 2026-10-07, from LT-467's doubt 2):** LT-467 added seven `module-todo.*`
+  keys to every locale. de, pl and zh are translated. In ar, cy and lv the six labels (`addTodo`,
+  `filter`, `all`, `active`, `completed`, `clearCompleted`) are empty `i18n:sync` placeholders,
+  which fall back to the source string by design (HOST_PROFILE.md, "A missing translation is
+  not your problem to fix"). The `remaining` patterns reuse the retired example's noun forms.
+  lv `other {Atlikuši # uzdevumu}` uses the genitive plural where Latvian likely wants the
+  nominative (`uzdevumi`), and cy `other {# tasgiau ar ôl}` may want the singular after a
+  numeral.
+  **Do:** a native or careful reviewer fills the ar/cy/lv labels and corrects each `remaining`
+  arm per locale. Keep every plural category the locale's CLDR rules name, plus the `=0` arm.
+  No code change.
+  **Check:** `check:corpus` translation census stays at 0 gaps. The `pl` leg in
+  `module-todo.spec.ts` is the model if a locale leg is wanted.
 ## P7 — Backlog (not scheduled)
 
 Owner-parked designs, explicit 3.0 non-goals, and items gated on a real need. The non-goals

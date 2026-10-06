@@ -76,13 +76,16 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   LT-481 → LT-482 → LT-461.
 - **S — children-contract spike** — fed the LT-462 session (ruling 10). LT-465.
 - **T — module-todo** — ruling 5. LT-466 → LT-467.
+- **G — layout graph** — the variant sets `main.ts` still registers through their `.ts` twins,
+  so `test:variants` has never measured their compiled clients. Before LT-463, which converts
+  them. LT-485.
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469.
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
 - **K — composition** — after tracks E and T (ruling 4). LT-463.
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
-- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282.
+- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486.
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
 
@@ -109,7 +112,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-485.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-488.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -122,47 +125,6 @@ LTC056 is LT-358's).
 <!-- entries -->
 
 ### E — compose enablers
-
-- [ ] LT-482: A server-only `@try` is a server-rendered branch the plan walks don't treat as one — a `truc:pass` compose in its body compiles clean and never binds.
-  **Area:** compiler
-  **Needs:** LT-470
-  **Gates:** test:server
-  **Area:** compiler
-  **Needs:** LT-470
-  **Filed (Architect, 2026-10-06, from LT-470's rework residue, reproduced in review):** a `try`
-  with no `pending` arm is not an arm set (`hasArmSet` in `server/compiler/walk.ts`): the server
-  folds it once per render into its body or its catch arm. Both are server-rendered branches,
-  but LT-470's host refusal (`validateArmSetPlacement`) keys `inServerBranch` on a
-  `conditional` with `mode === 'server'` only, so `@try { <BasicChild truc:pass={…} /> } @catch
-  (e) { … }` at the host compiles with no diagnostic and emits no `pass()`. The silent drop
-  LT-470 closed for `@if` is still open one node kind over. The item walk
-  (`planReconcileItem`'s `visitElements`) recurses only into server `conditional` arms, so
-  inside a reactive-list item a server-only `try` is not descended at all. That walk also
-  carries LT-468's construct refusal, so constructs there may be unplanned too.
-  **Ruling (Architect):** a server-only `try`'s body and catch arm are server-rendered branches
-  in every walk that tracks one. LT-468's and LT-470's refusals apply to them unchanged, with
-  the same wording and remedy. No new diagnostic family and no new code.
-  **Probe first:** probe the shapes below on both surfaces where the surface can spell a
-  server-only boundary, and record what each one does today in this entry: (a) a `truc:pass`
-  compose in a server-only `try` at the host; (b) the same inside a reactive-list item; (c) a
-  client construct (reactive attribute, handler) on an element in a server-only `try` inside an
-  item; (d) the same at the host; (e) a compose site as the root of a server-only `try`'s body or
-  catch arm carrying `truc:pass` (LT-481's residue: `handleOptionalBranch` filters `isElement`
-  and never sees a compose root, so the entries compile clean and never bind; probed live by
-  LT-481's author). A shape that is already refused, or that already plans
-  correctly, stays as it is. Fix only the shapes the probe shows silently unplanned or throwing
-  at mount.
-  **Change:** at the host, set `inServerBranch` for a `try` that is not an arm set. In the item
-  walk, descend a server-only `try`'s body and catch children with `inBranch = true`, the way it
-  descends server `conditional` arms. Mirror the item walk's key-attribute descent
-  (`collectKeySites`, `collectBranchKeyAttrs`) only if the probe shows a key-derived attribute
-  there is lost.
-  Shape (e) is a fold-fixed branch like the others, so it takes LT-470's refusal. A server-only
-  `try` arm is not an arm mount, so LT-481's arm-mount planning does not reach it.
-  **Check:** each probed shape the change touches gets a both-surface test: refused with the
-  LT-468/LT-470 message, or bound. A pass-less compose in a server-only `try` still compiles.
-  Add a CHANGELOG Fixed line only if a shape that was silently dropped now fails the compile.
-  **Channel/tier:** compiler check, tier 1 Prevented; no runtime check.
 
 - [ ] LT-461: Handler args — an `on`-prefixed function arg the child places on an owned element lowers to a parent-side `on()`.
   **Area:** compiler
@@ -210,6 +172,77 @@ LTC056 is LT-358's).
   **Verification:** test:server unit legs (host, arm and list-item compose sites; forwarding; each
   LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
   converted list remove button.
+
+### G — layout graph
+
+- [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
+  **Area:** examples
+  **Needs:** LT-460, LT-461, LT-466, LT-467, LT-485
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
+  child component's markup by hand (`<basic-button><button>…</button></basic-button>`) instead of
+  composing it (`<BasicButton … />`), duplicating markup the child owns. Composition is allowed
+  to be raw, but the corpus should model ownership: the child's template renders its markup, the
+  parent passes args, `class` discriminators and `truc:pass`. Convert each site below in every
+  variant-set member (`.tsx` and `.tsrx` twin together; CSS must stay byte-identical, ADR 0039);
+  the `.ts` twins are hand-written runtime sources and stay as they are.
+  **Sites:**
+  - `module-lazyload` — pending/catch callouts → `<CardCallout>` / `<CardCallout kind="danger">`
+    (needs LT-460).
+  - `module-dialog`, `module-splitview` — `<module-scrollarea>` → `<ModuleScrollarea>`; no parent
+    reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
+    documented reason stands).
+  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers become
+    `onClick` args (LT-461).
+  - `module-list`, `module-todo` — submit buttons and list-item remove buttons → `<BasicButton>`
+    with `type`, `ariaLabel` and `onClick` args (LT-461). `module-todo`'s clear-completed → `<BasicButton>` with its
+    existing `truc:pass`.
+  - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
+    `class="split-button"`.
+  `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
+  in prose.
+  **Split (owner, planning 2026-10-06):** the two sites that need the children contract —
+  `module-codeblock`'s `<module-scrollarea>` and `module-todo`'s `<form-checkbox>` with its label as
+  children — moved to LT-462's implementation tasks. Leave both raw here. `module-todo` is touched
+  after LT-466 and LT-467 land, so the three edits to it run in sequence.
+  **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
+  or changes the rendered DOM or a spec's expectation beyond the composed root's attributes,
+  stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
+  **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
+
+- [ ] LT-485: The examples layout graph registers module-calctable, module-cem-list and module-ticker through their `.ts` twins — switch them to the compiled clients.
+  **Area:** examples
+  **Needs:** LT-467
+  **Gates:** test:variants, test:server, check:corpus
+  **Area:** examples
+  **Needs:** LT-467
+  **Filed (Architect, 2026-10-07, from LT-467's rework and its NOTES entry):** `examples/main.ts`
+  imports `./module/calctable/module-calctable.ts`, `./module/cem-list/module-cem-list.ts` and
+  `./module/ticker/module-ticker.ts`, the hand-written twins, instead of
+  `server/generated/components/<tag>.client.ts`. The graph is the default page bundle and the
+  base of every `test:variants` surface bundle. `buildSurfaceBundle` (`server/routes.ts`) empties
+  only the generated-client slot, so the twin holds the tag on every surface: the `tsx` bundle
+  carries no compiled client, and the `tsrx` module's `define` throws. A green `test:variants`
+  for these three sets has measured the twin three times. That breaks the iteration's exit
+  criterion ("every example folder is served compiled") and leaves the compiled spellings
+  untested in a browser before LT-463 converts them.
+  **Change:** for each of the three, replace the twin import with the generated client import,
+  in the same position and with the same comment style as LT-467's module-todo switch. Remove
+  the tag from `KNOWN_TWIN_IMPORTS` in `server/tests/layout-graph.test.ts`. When the set is
+  empty, the first test asserts `[]`; keep it as the standing guard.
+  **Expect failures:** the compiled clients have never run in a browser. Triage each failing
+  leg by cause:
+  - a spec that asserted twin-only behavior is adjusted, with the reason stated;
+  - a compiled-client defect the corpus compile did not catch is NOT fixed in this task. File
+    it in `NOTES.md` with the leg, the surface and a minimal reproduction, and leave that one
+    tag on its twin (back in `KNOWN_TWIN_IMPORTS`, with a comment naming the note). The other
+    switches still land.
+  **Check:** `bun run test:variants module-calctable module-cem-list module-ticker` (or one at
+  a time) is green on every surface for each switched tag. Run it outside the sandbox if
+  Playwright cannot launch; otherwise state it as unrun for the owner. `test:server`
+  (layout-graph) and `check:corpus` are also green.
+  **Channel/tier:** none — serving-path and test fix, no runtime check.
 
 ### M — section-menu
 
@@ -341,7 +374,7 @@ LTC056 is LT-358's).
 
 - [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
   **Area:** examples
-  **Needs:** LT-460, LT-461, LT-466, LT-467
+  **Needs:** LT-460, LT-461, LT-466, LT-467, LT-485
   **Gates:** check:corpus, test:variants
   **Area:** examples
   **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
@@ -673,3 +706,32 @@ LTC056 is LT-358's).
   Filed while its staleness was
   re-observed during the LT-179 review.
 
+
+- [ ] LT-486: Prose still cites the retired basic-pluralize — repoint each reference (writer).
+  **Area:** docs
+  **Needs:** LT-467
+  **Gates:** build:docs, check:links
+  **Area:** docs
+  **Needs:** LT-467
+  **Filed (Architect, 2026-10-07, from LT-467's handoff):** LT-467 retired `basic-pluralize`.
+  Its coverage moved to the `c-plural` test fixture (`server/tests/compiler/fixtures/plural/`),
+  and module-todo now words its count through its own ICU message. These prose references still
+  cite the example as live:
+  - `AGENTS.md`: the built-in IDL property paragraph ("`basic-pluralize` materializes its
+    walked locale onto the `lang` attribute at connect; LT-191"). The behavior is still
+    compiled (`c-plural` pins it), but no served example shows it now.
+  - `server/compiler/HOST_PROFILE.md` :158 (locale precedence) and :178 (source strings and
+    catalogs).
+  - `server/compiler/LE_TRUC_COMPILER.md` :770.
+  - `server/TESTS.md` :184 and :192.
+  - `i18n/README.md` :9 and :18 (example keys).
+  - `spike/size-bet/FINDING.md` :31.
+  - `examples/main.ts` :53 (comment).
+  **Do:** repoint each to module-todo's `remaining` message where it illustrates a parent's own
+  ICU plural. Point it at the `c-plural` fixture where it illustrates compiler coverage (walked
+  locale, nested `select`/`selectordinal`). Delete it where the example was incidental. ADR text
+  stays as history. CHANGELOG records the removal at iteration close (Architect hands it to
+  `writer` with the iteration).
+  **Check:** `git grep basic-pluralize -- ':!adr' ':!CHANGELOG.md' ':!queue' ':!server/tests'`
+  returns only lines that name the retirement deliberately. `build:docs` and `check:links` are
+  green.
