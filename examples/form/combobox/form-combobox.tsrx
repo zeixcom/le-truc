@@ -134,18 +134,10 @@ export function FormCombobox(
 	// (`hidden`, `aria-expanded="false"`), which is what the server rendered
 	// anyway with `showPopup` seeded false, and these two watches take over
 	// from the first binding pass.
-	//
-	// The predicate is repeated rather than hoisted into a shared const: the
-	// signal-render credit above is established per STATEMENT, and a const
-	// would put `showPopup.get()` one level of indirection away from both.
-	watch(
-		() => String(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
-		bindAttribute(textbox, 'aria-expanded'),
-	);
-	watch(
-		() => !(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
-		bindAttribute(popup, 'hidden'),
-	);
+	const isOpen = () =>
+		showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0;
+	watch(() => String(isOpen()), bindAttribute(textbox, 'aria-expanded'));
+	watch(() => !isOpen(), bindAttribute(popup, 'hidden'));
 
 	<form-combobox {name} {value}>
 		<label for={inputId}>{label}</label>

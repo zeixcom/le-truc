@@ -687,10 +687,21 @@ const planHarvests = (
 	 * shape compiles and works in every tier; what changed is only who
 	 * produces the served HTML.
 	 */
-	const reportUnharvestable = (signal: InitSignalIR): void => {
+	const reportUnharvestable = (
+		signal: InitSignalIR,
+		/**
+		 * The initializer's free names the client cannot bind, for a signal
+		 * that IS rendered (LT-093): the reason is then the initializer, not
+		 * a missing site, and the detail names the free names.
+		 */
+		unportable: readonly string[] = [],
+	): void => {
 		routingSignals.push({
 			origin: 'LTC004',
-			detail: `signal \`${signal.name}\` has no harvestable initial-DOM site`,
+			detail:
+				unportable.length > 0
+					? `signal \`${signal.name}\` is rendered, but its initializer reads ${unportable.map(n => `\`${n}\``).join(', ')}, so the client cannot reuse it to seed the signal`
+					: `signal \`${signal.name}\` has no harvestable initial-DOM site`,
 			...rangeFields(source, signal.init),
 			resolution:
 				signal.init == null
@@ -874,6 +885,53 @@ const planHarvests = (
 		return null
 	}
 
+	const signalNames = new Set(component.signals.map(s => s.name))
+	const plainConsts = new Map(
+		component.plainSetup.flatMap(stmt =>
+			stmt.name === null ? [] : [[stmt.name, stmt.node] as const],
+		),
+	)
+	/**
+	 * The free names of a signal initializer the client module cannot bind
+	 * (LT-093). A plain setup const or an authored import is portable: the
+	 * signal's declaration is a client-emitted position, so the placement
+	 * fixpoint (`computeClientNeededNames`) already emits the const — and,
+	 * through it, the imports and consts it reads — into the client module.
+	 * The const's own free names are checked the same way, transitively;
+	 * a server arg is substituted only at the initializer's top level, so
+	 * one reached through a const is unportable.
+	 */
+	const unportableNames = (
+		init: AstNode,
+		allowContextMembers: boolean,
+	): string[] => {
+		const bad = new Set<string>()
+		const seen = new Set<string>()
+		const visit = (node: AstNode, topLevel: boolean): void => {
+			for (const name of dependenciesOf(node)) {
+				const constNode = plainConsts.get(name)
+				if (constNode) {
+					if (!seen.has(name)) {
+						seen.add(name)
+						visit(constNode, false)
+					}
+				} else if (
+					!JS_GLOBALS.has(name) &&
+					!(topLevel && component.paramNames.includes(name)) &&
+					!signalNames.has(name) &&
+					!CONTEXT_NAMES.has(name) &&
+					!(allowContextMembers && FACTORY_CONTEXT_MEMBERS.has(name)) &&
+					!refNames.has(name) &&
+					!component.imports.plainLocalNames.has(name) &&
+					!component.imports.clientLeTrucNames.has(name)
+				)
+					bad.add(name)
+			}
+		}
+		visit(init, true)
+		return [...bad]
+	}
+
 	/**
 	 * Rewrite a pure-arg initializer by replacing each param identifier with
 	 * its DOM read (`value.length` → `input.value.length`), right-to-left by
@@ -922,19 +980,7 @@ const planHarvests = (
 		allowContextMembers = false,
 	): string | null => {
 		const free = dependenciesOf(init)
-		const signalNames = new Set(component.signals.map(s => s.name))
-		if (
-			[...free].some(
-				n =>
-					!JS_GLOBALS.has(n) &&
-					!component.paramNames.includes(n) &&
-					!signalNames.has(n) &&
-					!CONTEXT_NAMES.has(n) &&
-					!(allowContextMembers && FACTORY_CONTEXT_MEMBERS.has(n)) &&
-					!refNames.has(n),
-			)
-		)
-			return null
+		if (unportableNames(init, allowContextMembers).length > 0) return null
 		const params = [...free].filter(n => component.paramNames.includes(n))
 		if (typeof init.start !== 'number' || typeof init.end !== 'number')
 			return null
@@ -1257,12 +1303,14 @@ const planHarvests = (
 			// reuse its initializer verbatim — same soundness as a derived
 			// callback, per `allowVerbatim`'s contract above.
 			const reported = diagnostics.length
+			const allowContextMembers =
+				clientCredited.has(signal.name) && !renderCredited.has(signal.name)
 			const substituted = signal.init
 				? substituteArgExpr(
 						signal.init,
 						isDerivedCallback || thunkRendered.has(signal.name) || hostSeeded,
 						isDerivedCallback,
-						clientCredited.has(signal.name) && !renderCredited.has(signal.name),
+						allowContextMembers,
 					)
 				: null
 			if (substituted) {
@@ -1340,7 +1388,12 @@ const planHarvests = (
 				rawSourceRefused.add(signal.name)
 				continue
 			}
-			reportUnharvestable(signal)
+			reportUnharvestable(
+				signal,
+				signal.init && thunkRendered.has(signal.name)
+					? unportableNames(signal.init, allowContextMembers)
+					: [],
+			)
 			continue
 		}
 		const direct = own.find(s => s.kind === 'text' || s.kind === 'attr') as
