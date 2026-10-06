@@ -123,7 +123,7 @@ LTC056 is LT-358's).
 
 ### E — compose enablers
 
-- [ ] LT-470: A composed child carrying `truc:pass` in a server-rendered branch of a list item mints a required local and throws in every item mount when the branch is not taken — refuse it after LT-468's manner.
+- [ ] LT-470: A composed child carrying `truc:pass` in a server-rendered branch of a list item mints a required local and throws in every item mount when the branch is not taken — refuse it after LT-468's manner. — in progress ⚙
   **Area:** compiler
   **Needs:** LT-468
   **Area:** compiler
@@ -216,22 +216,6 @@ LTC056 is LT-358's).
   converted list remove button.
 
 ### T — module-todo
-
-- [ ] LT-466: module-todo — move the in-place editor out of the checkbox label.
-  **Area:** examples
-  **Gates:** check:corpus, test:variants
-  **Area:** examples
-  **Filed (Architect, 2026-10-06; owner-confirmed bug):** each todo item places a `FormInplaceEdit`
-  inside the `<label>` of its `form-checkbox`. Interactive content inside a label is invalid
-  (HTML content model) and leaks activation: the edit button stops its click, but the
-  double-click that starts editing bubbles to the label and toggles the checkbox. Move the
-  `FormInplaceEdit` to beside the `form-checkbox` within the item, in both `module-todo.tsx` and
-  `.tsrx` (CSS byte-identical, ADR 0039). The checkbox keeps an accessible name: a
-  `.visually-hidden` label text bound to the item label (`{() => item.label.get()}`), so the
-  visible text is the editor's and the name follows edits. Adjust the item grid in the sheet.
-  **Verification:** a Playwright leg — double-clicking the label text enters edit mode without
-  toggling the checkbox; the checkbox's accessible name tracks a committed edit; check:corpus,
-  test:variants, `module-todo.spec.ts`.
 
 - [ ] LT-467: Retire basic-pluralize — module-todo words its own count through an ICU message.
   **Area:** examples
