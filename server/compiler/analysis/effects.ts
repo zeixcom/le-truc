@@ -1586,17 +1586,26 @@ const handleAsyncBoundary = (
 		)
 		return
 	}
+	// The pending arm keeps the DEEP construct walk (LT-460 rework round 2):
+	// `hasOwnConstruct` alone sees only the root's own attrs and direct lazy
+	// children, so a reactive construct nested below the pending root
+	// compiled silently after the ok/err walk grew offender attribution.
+	const pendingOffender = boundaryDeepConstructOf(pendingRoot, null, null)
 	if (
 		pendingRoot.kind === 'element'
-			? hasOwnConstruct(pendingRoot)
-			: boundaryDeepConstructOf(pendingRoot, null, null) !== null
+			? hasOwnConstruct(pendingRoot) || pendingOffender !== null
+			: pendingOffender !== null
 	) {
+		const inComposed =
+			pendingOffender !== null && isInsideCompose(pendingRoot, pendingOffender)
 		diagnostics.push(
 			diagnostic.unsupported(
 				source,
-				pendingRoot.node,
+				pendingOffender?.node ?? pendingRoot.node,
 				`A client construct in the ${wording.pendingArm} of an async boundary`,
-				'Nothing watches the pending arm once the signal resolves — keep it to static and server markup.',
+				inComposed
+					? "The composed content renders inside the child's markup, where no write can address it — and nothing watches the pending arm once the signal resolves. Keep the arm to static and server markup."
+					: 'Nothing watches the pending arm once the signal resolves — keep it to static and server markup.',
 			),
 		)
 		return
@@ -1736,7 +1745,7 @@ const handleAsyncBoundary = (
 				diagnostic.unsupported(
 					source,
 					errMsgEl.node,
-					`The ${wording.catchArm}'s message element <${errMsgEl.tag}> inside composed content has no \`role\`, \`class\` or \`id\` attribute`,
+					`The ${wording.catchArm}'s message element <${errMsgEl.tag}> inside composed content has no \`role\`, \`class\`, \`id\` or \`data-*\` attribute`,
 					`The arm's write addresses it by selector, and the child's own markup can carry the same bare <${errMsgEl.tag}> — give the message element a distinguishing attribute, for example \`<p class="error">{${catchParam ?? 'e'}.message}</p>\`.`,
 				),
 			)

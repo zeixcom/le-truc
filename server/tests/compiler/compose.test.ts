@@ -1260,9 +1260,49 @@ export function BasicParent({}: {})
 		const hit = diagnostics.find(d => d.code === 'LTC005')
 		expect(hit?.severity).toBe('error')
 		expect(hit?.message).toContain(
-			'message element <p> inside composed content has no `role`, `class` or `id` attribute',
+			'message element <p> inside composed content has no `role`, `class`, `id` or `data-*` attribute',
 		)
 		expect(hit?.message).toContain('distinguishing attribute')
+	})
+
+	test('a reactive construct nested below the PENDING root is refused — the deep construct walk covers the pending arm (LT-460 rework round 2)', () => {
+		const childComponent = compileChild('examples/child/basic-child.tsrx')
+		const parent = `import { deriveCell } from '@zeix/le-truc'
+
+export function BasicParent({ busy }: { busy: boolean })
+	@{
+		const data = deriveCell(async () => 'x')
+		expose({})
+			<basic-parent>
+				@try {
+					<div class="content">{data}</div>
+				} @pending {
+					<div class="loading"><span class={() => (host.busy ? 'b' : null)}>loading</span></div>
+				} @catch (e) {
+					<p class="error">{e.message}</p>
+				}
+			</basic-parent>
+	}`
+		const { component, diagnostics } = compileComponent(
+			parent,
+			'examples/parent/basic-parent.tsrx',
+			new Set(['basic-child']),
+			undefined,
+			composeRegistryOf(childComponent.entry),
+		)
+		// Regression: splitting the deep-construct check per arm in the
+		// first rework left the pending arm with `hasOwnConstruct` only,
+		// so this compiled silently and planned no client code for the
+		// span.
+		expect(component).toBeNull()
+		const hit = diagnostics.find(d => d.code === 'LTC005')
+		expect(hit?.severity).toBe('error')
+		expect(hit?.message).toContain(
+			'A client construct in the `@pending` arm of an async boundary',
+		)
+		expect(hit?.message).toContain(
+			'Nothing watches the pending arm once the signal resolves',
+		)
 	})
 
 	test('a lazy child DIRECTLY inside composed content is refused with the wrap-in-an-element fix (LT-460 rework)', () => {
