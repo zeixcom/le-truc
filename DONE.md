@@ -269,6 +269,35 @@ Full entry text: `git log -p -- DONE.md`.
   ancestor of the host, which no composition produces.
 - **Scrollarea's wall time at demo scale is noise** (LT-103).
 
+- [x] LT-460: A compose site in an async-boundary arm — lower it as arm root, keep the arm binding in its children. — reviewed ✓
+  **Area:** compiler
+  **Gates:** check:corpus, test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from a composition probe for LT-463; owner: both are bugs):**
+  (1) a compose site as an arm root (`pending={…}`, `catch={e => …}`, `.tsrx` `@pending`/`@catch`/`@if`
+  bodies) was refused with a stale LTC011 message naming "`.map()` output"; (2) a catch-parameter read
+  in a compose site's children compiled with no diagnostic into a server module that read `e` outside
+  the catch callback (TS2552 under `check:corpus`, ReferenceError at execution).
+
+  **Changed:** Compose sites are legal in arm positions on both surfaces. An arm root that is a compose
+  site lowers as one, and its `data-key` splices onto the child's rendered root through
+  `composeHostAttrs`, for reactive conditionals and async boundaries, in both the live arm and the inert
+  templates. A catch-parameter read inside composed content (one compose hop) is in scope in the live
+  arm, baked empty in the err template, and rewritten by the client's err watch through an arm-scoped
+  `first()`. LTC011's composed-position wording now names a loop's output root. New LTC005 refusals
+  (compiler, tier 1): a compose **arg** reading the catch parameter; a bare-tag message element inside
+  composed content (it needs a `role`, `class`, `id` or `data-*`, since the child's own markup could
+  match a bare tag); a reactive read placed directly in composed content (fix-it: wrap it in an element
+  of your own). The pending arm keeps its deep-construct refusal. Documented in
+  `server/compiler/HOST_PROFILE.md` (compose-arm paragraph) and `LE_TRUC_COMPILER.md`.
+
+  **Review:** Approved after two rework rounds. Round 1 fixed: a bare-tag selector miswrite, dead
+  `armValue` code, wrong fix-it advice for composed content, and a missing reactive-`@if` compose-arm
+  test. Round 2 fixed: a pending-arm deep-construct regression introduced by round 1, and the
+  message's missing `data-*` mention. Rulings: an ok-arm compose root stays refused (composed content
+  cannot carry the task read); item/key reads in composed content stay LTC075; the LT-221 probe pin
+  ("compose site in a `@pending` arm is rejected") is overruled.
+
 - [x] LT-462: Children contract — parent-owned children, child-declared roles and content model (design; ADR 0048). — done ✓
   **Area:** design
   **Needs:** LT-465
