@@ -884,7 +884,9 @@ It carries two kinds of work: the standing cleanup items (LT-093, LT-135, LT-136
 LT-437), and the composition batch — convert the compiled corpus from raw custom-element
 markup to sub-components (LT-463) through the design spine LT-465 → LT-462 (ADR 0048) and
 LT-461's ruled handler-args design, the compiler enabler LT-460 (kept in P2b), LT-464 and
-LT-466, retiring basic-pluralize last (LT-467). Ordering matters: the design spine and
+LT-466, retiring basic-pluralize last (LT-467). The section-menu chrome migration (LT-469, from
+LT-446's ruled design) closes the last uncompiled example folder and interleaves freely.
+Ordering matters: the design spine and
 enablers before the corpus conversion, while the cleanup items interleave freely because none
 of them touches the compose machinery.
 
@@ -1193,6 +1195,116 @@ of them touches the compose machinery.
   **Channel/tier:** none — no runtime check, no diagnostic.
   **Verification:** check:corpus (census 0 gaps), test:variants, test:server, `module-todo.spec.ts`
   with a leg per count class (0, 1, many) in `en` and one locale with more categories (`pl`).
+
+- [ ] LT-469: Migrate `section-menu` to `.tsx` with same-commit cutover — the site's sidebar chrome: external toggle by document id, imperative backdrop, layout-wide registration.
+  **Area:** examples
+  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
+  **Area:** examples
+  **Scopes (LT-446 design session, 2026-10-06):** the last folder the "every example folder
+  served compiled" exit criterion cannot close without, and the four shapes no compiled corpus
+  member has carried together — an external toggle wired by `document.getElementById`, an
+  imperative backdrop created at connect, a writable State-backed expose, and layout-wide
+  registration. Every authored shape below is probe-verified against both front ends
+  (both surfaces compile clean, byte-identical client/server modules) — do not re-derive them.
+  **The set:** `section-menu.tsx` (served) beside a `section-menu.tsrx` twin; the hand-written
+  `section-menu.ts` stays as the set's `.ts` twin (LT-111 ruling 5). Both compiled members emit
+  byte-identical server renders and CSS (LTC051). Every member declares the identical
+  `declare global { 'section-menu': HTMLElement & SectionMenuProps }` entry, each with its own
+  identical `SectionMenuProps` alias (`{ open: boolean }`) — divergence is TS 2717.
+  **Template:** root = host, `{children}` passthrough, one `<style>{css`…`}</style>` child —
+  nothing else. The component is behavior-only chrome: the nav content arrives as page-authored
+  children (`server/templates/menu.ts` and the example page author it), and the compiled server
+  render must stay byte-compatible with `menu()`'s hand-written output plus the compose-site
+  attributes (`id="sidebar"`) menu.ts writes itself. `module-scrollarea` inside the children is
+  NOT a compile-time boundary (the template composes no child — ADR 0033 s7), so the sheet's
+  `& module-scrollarea` selectors stay legal.
+  **Setup rulings (LT-446):**
+  1. **`expose({ open })` stays the live-State identifier form, verbatim:** `const open =
+     createState(false)` + `expose({ open })`. The classifier's kind is `slot` (the
+     no-diagnostic answer); the generated client carries both statements verbatim and the
+     server module carries the signal declaration with the expose shim, so the fold sees the
+     seed. `el.open = …` writes through the installed Slot — the unchanged spec's Programmatic
+     Control probe proves it per surface. The toggle handler's `() => ({ open: !open.get() })`
+     return-updates idiom is an authored `on()` call — library contract, carried as written.
+  2. **`.js`/`.ready` sequencing is two bare client-only setup statements, verbatim:**
+     `host.classList.add(JS_CLASS)` and `requestAnimationFrame(() => host.classList.add(READY_CLASS))`
+     — `host` is context, `requestAnimationFrame` a JS global, the callback an inline arrow in a
+     client-only statement. The five name constants (`JS_CLASS`, `READY_CLASS`, `OPEN_CLASS`,
+     `BACKDROP_CLASS`, `TOGGLE_ID`) MOVE from module scope into setup — module-scope names are
+     not client-known (LTC005; the module-scrollarea deviation note is the precedent). The
+     served HTML carries no `.js` class — the progressive-enhancement contract holds by
+     construction (probe: the server render emits `<section-menu>{children}</section-menu>`
+     only).
+  3. **The backdrop stays imperative:** `ensureBackdrop()` — a function const that finds or
+     creates `:scope > .backdrop`, prepends it, and RETURNS the element (the existence check
+     keeps the twin's tolerance of authored markup); wired by
+     `on(ensureBackdrop(), 'click', () => ({ open: false }))` — the call is the `on()`
+     argument, so no setup const ever holds a page-context value. Do NOT author the backdrop
+     `hidden` in the template: the no-JS DOM shape stays byte-identical to the twin's (no
+     backdrop element at all), which is the contract the sheet's header comment documents.
+  4. **The external toggle stays component-owned; the guard lives in the helpers, the lookups
+     inline as call arguments:** `on(document.getElementById(TOGGLE_ID), 'click', () => ({ open:
+     !open.get() }))` — `on()`'s target accepts `Falsy` and the descriptor no-ops on it; and
+     `watch(open, bindAria(document.getElementById(TOGGLE_ID), 'ariaExpanded'))` — `bindAria`
+     accepts nullish targets and makes every handler a no-op. The twin's `if (toggle)` guard is
+     therefore built into the runtime; do NOT hold the element in a setup const (a const whose
+     value reads `document` is a build error, LTC054 — page context), and do NOT call
+     `watch`/`on` inside a function const (LTC045 — the ambient collector is gone by the time a
+     deferred callback runs). NOT the layout's job: the drawer state has one owner (the
+     component's exposed Slot), the id is the documented chrome contract (TOGGLE_ID's docblock,
+     LT-001, SERVER.md), and the wiring must exist exactly when the drawer behavior does.
+     The outside-click handler re-queries the toggle inside the descriptor body — no held
+     reference.
+  5. **Document-level listeners ride the twin's `watch(() => true, descriptor)` idiom
+     verbatim** (module-listnav's compiled form is the corpus precedent): raw
+     `addEventListener`/`removeEventListener` on `document`, `open.get()`/`open.set()` inside,
+     cleanup returned. Keep the twin's `el instanceof HTMLAnchorElement` check — which needs
+     the rider below.
+  **Compiler rider — JS_GLOBALS:** `server/compiler/vocabulary.ts`'s `JS_GLOBALS` set lists
+  `HTMLButtonElement`…`HTMLTextAreaElement` but NOT `HTMLAnchorElement`, so the twin's
+  `instanceof HTMLAnchorElement` outside-click check is a false unknown name and refuses with
+  LTC005 (probe-verified; a `nodeName === 'A'` re-spelling compiles but deviates from the twin
+  for no reason once the set is fixed). Add the entry — the set's own docblock scope ("DOM
+  globals (generated handlers reference element types)") — and pin it in
+  `server/tests/compiler/globals.test.ts`. No diagnostic changes, no ADR 0028 inventory change.
+  **Styles:** re-author the sheet to ADR 0033 form — `:host`-led (a rule led by the component's
+  own tag is LTC066, fix-it `:host`); the page-shell rules (`.docs-body`, `.docs-main`,
+  `#sidebar-toggle`, `.quicklinks`, `.docs-header-bar`, `header`) ride the two whole-rule
+  `:global` forms, the at-rule-conditioned ones inside a bare `:global { @media … }` block
+  (LTC069); `module-dialog`'s `:global(body.scroll-lock)` is the corpus precedent and the
+  sheet's header comment documenting the `.docs-body`/`.docs-main` exception stays. Members'
+  CSS byte-identical (LTC051). `examples/main.css` flips its import to the generated sheet.
+  **Cutover:** `examples/main.ts` imports
+  `../server/generated/components/section-menu.client.ts` — the canonical client, so the
+  LAYOUT pages serve the canonical `.tsx` surface (main.js bundles it on every docs page) and
+  `/test/section-menu`'s default page is the registry's selected surface; `?surface=` and the
+  runner's `TEST_SURFACE` reach the `.ts` twin and the `.tsrx` variant
+  (`routes.ts` `resolveSurfaceModule`). `server/templates/menu.ts` stays hand-written and
+  byte-compatible with the compiled server render — the markup contract SERVER.md documents;
+  `templates/menu.test.ts` keeps pinning it, unchanged. The authored `section-menu.html` is
+  regenerated from the compiled server render (the module-todo header-comment pattern),
+  keeping `#sidebar-toggle` before the host and `#outside-target` after `<main>`.
+  `examples/tsconfig.json` lists the new members; the strict `IntrinsicElements` table in
+  `server/compiler/frontend/tsx/host-profile.d.ts` gains `type SectionMenuAttrs =
+  CommonLightDom` and the `'section-menu'` entry (a migration extends the table in the same
+  commit). The component has no `.md`/gallery entry before or after (structural chrome).
+  **Tier:** the component stays Folded — no setup const holds a page-context value (probe: no
+  LTC013 routing signal, no LTC054). The tier-corpus census pins +`section-menu: folded`; that
+  shift is this entry's by-design change.
+  **The spec is unchanged.** `test:variants section-menu` is the acceptance gate: the unchanged
+  suite (drawer, toggle, aria reflection, programmatic control, Escape/outside-click/link-nav
+  close) passes against all three surfaces.
+  **Check:** gates inside the worktree: `typecheck`; `test:server` (extend the
+  parity/equivalence-audit snapshots for the new generated modules; `templates/menu.test.ts`
+  stays green unchanged); `check:corpus` (census re-pin); `check:contract`; `test:variants
+  section-menu` (browser gate — LT-111 proved it can run green in the sandbox; else an
+  owner-run leg); `test:component section-menu` on the default page. `build:docs` +
+  `check:links` when the JSDoc/host-profile changes are doc-visible.
+  **Channel/tier:** no new runtime check and no diagnostic change; the rider is a vocabulary
+  omission fix (compiler) that removes a false LTC005 — it adds no check, so nothing owes the
+  catalog or the ADR 0028 inventory an entry.
+
+  ---
 ## P7 — Backlog (not scheduled)
 
 Owner-parked designs, explicit 3.0 non-goals, and items gated on a real need. The non-goals
@@ -1552,115 +1664,3 @@ else moves up only by owner direction.
   **Then:** optionally hoist `module-ticker`'s tick and add-rows bodies back to named consts.
   **Verification:** test:server with a unit leg (handler-only const absent from the server
   module; a const also read in a rendered thunk still present); check:corpus.
-
-## Unbanded
-
-- [ ] LT-469: Migrate `section-menu` to `.tsx` with same-commit cutover — the site's sidebar chrome: external toggle by document id, imperative backdrop, layout-wide registration.
-  **Area:** examples
-  **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429
-  **Area:** examples
-  **Scopes (LT-446 design session, 2026-10-06):** the last folder the "every example folder
-  served compiled" exit criterion cannot close without, and the four shapes no compiled corpus
-  member has carried together — an external toggle wired by `document.getElementById`, an
-  imperative backdrop created at connect, a writable State-backed expose, and layout-wide
-  registration. Every authored shape below is probe-verified against both front ends
-  (both surfaces compile clean, byte-identical client/server modules) — do not re-derive them.
-  **The set:** `section-menu.tsx` (served) beside a `section-menu.tsrx` twin; the hand-written
-  `section-menu.ts` stays as the set's `.ts` twin (LT-111 ruling 5). Both compiled members emit
-  byte-identical server renders and CSS (LTC051). Every member declares the identical
-  `declare global { 'section-menu': HTMLElement & SectionMenuProps }` entry, each with its own
-  identical `SectionMenuProps` alias (`{ open: boolean }`) — divergence is TS 2717.
-  **Template:** root = host, `{children}` passthrough, one `<style>{css`…`}</style>` child —
-  nothing else. The component is behavior-only chrome: the nav content arrives as page-authored
-  children (`server/templates/menu.ts` and the example page author it), and the compiled server
-  render must stay byte-compatible with `menu()`'s hand-written output plus the compose-site
-  attributes (`id="sidebar"`) menu.ts writes itself. `module-scrollarea` inside the children is
-  NOT a compile-time boundary (the template composes no child — ADR 0033 s7), so the sheet's
-  `& module-scrollarea` selectors stay legal.
-  **Setup rulings (LT-446):**
-  1. **`expose({ open })` stays the live-State identifier form, verbatim:** `const open =
-     createState(false)` + `expose({ open })`. The classifier's kind is `slot` (the
-     no-diagnostic answer); the generated client carries both statements verbatim and the
-     server module carries the signal declaration with the expose shim, so the fold sees the
-     seed. `el.open = …` writes through the installed Slot — the unchanged spec's Programmatic
-     Control probe proves it per surface. The toggle handler's `() => ({ open: !open.get() })`
-     return-updates idiom is an authored `on()` call — library contract, carried as written.
-  2. **`.js`/`.ready` sequencing is two bare client-only setup statements, verbatim:**
-     `host.classList.add(JS_CLASS)` and `requestAnimationFrame(() => host.classList.add(READY_CLASS))`
-     — `host` is context, `requestAnimationFrame` a JS global, the callback an inline arrow in a
-     client-only statement. The five name constants (`JS_CLASS`, `READY_CLASS`, `OPEN_CLASS`,
-     `BACKDROP_CLASS`, `TOGGLE_ID`) MOVE from module scope into setup — module-scope names are
-     not client-known (LTC005; the module-scrollarea deviation note is the precedent). The
-     served HTML carries no `.js` class — the progressive-enhancement contract holds by
-     construction (probe: the server render emits `<section-menu>{children}</section-menu>`
-     only).
-  3. **The backdrop stays imperative:** `ensureBackdrop()` — a function const that finds or
-     creates `:scope > .backdrop`, prepends it, and RETURNS the element (the existence check
-     keeps the twin's tolerance of authored markup); wired by
-     `on(ensureBackdrop(), 'click', () => ({ open: false }))` — the call is the `on()`
-     argument, so no setup const ever holds a page-context value. Do NOT author the backdrop
-     `hidden` in the template: the no-JS DOM shape stays byte-identical to the twin's (no
-     backdrop element at all), which is the contract the sheet's header comment documents.
-  4. **The external toggle stays component-owned; the guard lives in the helpers, the lookups
-     inline as call arguments:** `on(document.getElementById(TOGGLE_ID), 'click', () => ({ open:
-     !open.get() }))` — `on()`'s target accepts `Falsy` and the descriptor no-ops on it; and
-     `watch(open, bindAria(document.getElementById(TOGGLE_ID), 'ariaExpanded'))` — `bindAria`
-     accepts nullish targets and makes every handler a no-op. The twin's `if (toggle)` guard is
-     therefore built into the runtime; do NOT hold the element in a setup const (a const whose
-     value reads `document` is a build error, LTC054 — page context), and do NOT call
-     `watch`/`on` inside a function const (LTC045 — the ambient collector is gone by the time a
-     deferred callback runs). NOT the layout's job: the drawer state has one owner (the
-     component's exposed Slot), the id is the documented chrome contract (TOGGLE_ID's docblock,
-     LT-001, SERVER.md), and the wiring must exist exactly when the drawer behavior does.
-     The outside-click handler re-queries the toggle inside the descriptor body — no held
-     reference.
-  5. **Document-level listeners ride the twin's `watch(() => true, descriptor)` idiom
-     verbatim** (module-listnav's compiled form is the corpus precedent): raw
-     `addEventListener`/`removeEventListener` on `document`, `open.get()`/`open.set()` inside,
-     cleanup returned. Keep the twin's `el instanceof HTMLAnchorElement` check — which needs
-     the rider below.
-  **Compiler rider — JS_GLOBALS:** `server/compiler/vocabulary.ts`'s `JS_GLOBALS` set lists
-  `HTMLButtonElement`…`HTMLTextAreaElement` but NOT `HTMLAnchorElement`, so the twin's
-  `instanceof HTMLAnchorElement` outside-click check is a false unknown name and refuses with
-  LTC005 (probe-verified; a `nodeName === 'A'` re-spelling compiles but deviates from the twin
-  for no reason once the set is fixed). Add the entry — the set's own docblock scope ("DOM
-  globals (generated handlers reference element types)") — and pin it in
-  `server/tests/compiler/globals.test.ts`. No diagnostic changes, no ADR 0028 inventory change.
-  **Styles:** re-author the sheet to ADR 0033 form — `:host`-led (a rule led by the component's
-  own tag is LTC066, fix-it `:host`); the page-shell rules (`.docs-body`, `.docs-main`,
-  `#sidebar-toggle`, `.quicklinks`, `.docs-header-bar`, `header`) ride the two whole-rule
-  `:global` forms, the at-rule-conditioned ones inside a bare `:global { @media … }` block
-  (LTC069); `module-dialog`'s `:global(body.scroll-lock)` is the corpus precedent and the
-  sheet's header comment documenting the `.docs-body`/`.docs-main` exception stays. Members'
-  CSS byte-identical (LTC051). `examples/main.css` flips its import to the generated sheet.
-  **Cutover:** `examples/main.ts` imports
-  `../server/generated/components/section-menu.client.ts` — the canonical client, so the
-  LAYOUT pages serve the canonical `.tsx` surface (main.js bundles it on every docs page) and
-  `/test/section-menu`'s default page is the registry's selected surface; `?surface=` and the
-  runner's `TEST_SURFACE` reach the `.ts` twin and the `.tsrx` variant
-  (`routes.ts` `resolveSurfaceModule`). `server/templates/menu.ts` stays hand-written and
-  byte-compatible with the compiled server render — the markup contract SERVER.md documents;
-  `templates/menu.test.ts` keeps pinning it, unchanged. The authored `section-menu.html` is
-  regenerated from the compiled server render (the module-todo header-comment pattern),
-  keeping `#sidebar-toggle` before the host and `#outside-target` after `<main>`.
-  `examples/tsconfig.json` lists the new members; the strict `IntrinsicElements` table in
-  `server/compiler/frontend/tsx/host-profile.d.ts` gains `type SectionMenuAttrs =
-  CommonLightDom` and the `'section-menu'` entry (a migration extends the table in the same
-  commit). The component has no `.md`/gallery entry before or after (structural chrome).
-  **Tier:** the component stays Folded — no setup const holds a page-context value (probe: no
-  LTC013 routing signal, no LTC054). The tier-corpus census pins +`section-menu: folded`; that
-  shift is this entry's by-design change.
-  **The spec is unchanged.** `test:variants section-menu` is the acceptance gate: the unchanged
-  suite (drawer, toggle, aria reflection, programmatic control, Escape/outside-click/link-nav
-  close) passes against all three surfaces.
-  **Check:** gates inside the worktree: `typecheck`; `test:server` (extend the
-  parity/equivalence-audit snapshots for the new generated modules; `templates/menu.test.ts`
-  stays green unchanged); `check:corpus` (census re-pin); `check:contract`; `test:variants
-  section-menu` (browser gate — LT-111 proved it can run green in the sandbox; else an
-  owner-run leg); `test:component section-menu` on the default page. `build:docs` +
-  `check:links` when the JSDoc/host-profile changes are doc-visible.
-  **Channel/tier:** no new runtime check and no diagnostic change; the rider is a vocabulary
-  omission fix (compiler) that removes a false LTC005 — it adds no check, so nothing owes the
-  catalog or the ADR 0028 inventory an entry.
-
-  ---

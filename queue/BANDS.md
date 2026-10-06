@@ -85,7 +85,9 @@ It carries two kinds of work: the standing cleanup items (LT-093, LT-135, LT-136
 LT-437), and the composition batch — convert the compiled corpus from raw custom-element
 markup to sub-components (LT-463) through the design spine LT-465 → LT-462 (ADR 0048) and
 LT-461's ruled handler-args design, the compiler enabler LT-460 (kept in P2b), LT-464 and
-LT-466, retiring basic-pluralize last (LT-467). Ordering matters: the design spine and
+LT-466, retiring basic-pluralize last (LT-467). The section-menu chrome migration (LT-469, from
+LT-446's ruled design) closes the last uncompiled example folder and interleaves freely.
+Ordering matters: the design spine and
 enablers before the corpus conversion, while the cleanup items interleave freely because none
 of them touches the compose machinery.
 
