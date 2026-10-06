@@ -239,6 +239,7 @@ declare namespace JSX {
 		placeholder?: Reactive<string>
 		autocomplete?: string
 		checked?: Reactive<boolean>
+		disabled?: Reactive<boolean>
 		min?: Reactive<string>
 		max?: Reactive<string>
 		step?: string
@@ -355,9 +356,11 @@ declare namespace JSX {
 	type BasicButtonAttrs = CommonLightDom & {
 		'truc:pass'?: { disabled?: PassEntry; badge?: PassEntry; label?: PassEntry }
 	}
-	/** A `.tsrx` leaf authored raw (module-todo's per-item checkbox): it
-	 * declares a pass surface for its `checked` prop. */
+	/** Migrated to `.tsx` (LT-464); also a pass target (module-todo's and
+	 * test-listitem's per-item checkbox) for its `checked` prop. */
 	type FormCheckboxAttrs = CommonLightDom & {
+		name?: Reactive<string>
+		checked?: Reactive<boolean>
 		'truc:pass'?: { checked?: PassEntry }
 	}
 	/** A `.tsrx` leaf authored raw (module-todo's filter): no pass surface —

@@ -1341,8 +1341,11 @@ const COMPOSE_IN_HOST_TRY = (passOnBody: boolean) => ({
 })
 
 describe('a `truc:pass` compose in a server-only `try` is refused (LT-482)', () => {
+	// LT-488 worded the refusal's fix per enclosure; a `try` has no
+	// condition, so the conditional remedy must not leak into either arm.
 	const expectRefused = (
 		diagnostics: readonly { code: string; message: string }[],
+		fix: string,
 	) => {
 		const ltc005 = diagnostics.filter(d => d.code === 'LTC005')
 		expect(ltc005.length).toBeGreaterThan(0)
@@ -1350,15 +1353,22 @@ describe('a `truc:pass` compose in a server-only `try` is refused (LT-482)', () 
 			expect(d.message).toContain(
 				'A `truc:pass` onto a composed child in a server-rendered branch',
 			)
-			expect(d.message).toContain('make the condition reactive')
+			expect(d.message).toContain(fix)
+			expect(d.message).not.toContain('make the condition reactive')
 		}
 		return ltc005.length
 	}
 
-	test('as the body root: refused with the LT-470 message on both surfaces, nothing minted', () => {
+	test('as the body root: refused with the move-out remedy on both surfaces, nothing minted', () => {
 		const { fromTsrx, fromTsx } = compileComposeBoth(COMPOSE_IN_HOST_TRY(true))
-		const tsrxHits = expectRefused(fromTsrx.diagnostics)
-		const tsxHits = expectRefused(fromTsx.diagnostics)
+		const tsrxHits = expectRefused(
+			fromTsrx.diagnostics,
+			'its body cannot hold the pass — move the composed child out of the `try`',
+		)
+		const tsxHits = expectRefused(
+			fromTsx.diagnostics,
+			'its body cannot hold the pass — move the composed child out of the `try`',
+		)
 		expect(tsxHits).toBe(tsrxHits)
 		// The refusal mints no query and emits no pass (no client module at
 		// all when the compile fails).
@@ -1368,10 +1378,16 @@ describe('a `truc:pass` compose in a server-only `try` is refused (LT-482)', () 
 		expect(fromTsrx.component?.clientCode ?? '').not.toContain('pass(')
 	})
 
-	test('as the catch-arm root: refused the same way', () => {
+	test('as the catch-arm root: refused with the pending-arm remedy', () => {
 		const { fromTsrx, fromTsx } = compileComposeBoth(COMPOSE_IN_HOST_TRY(false))
-		const tsrxHits = expectRefused(fromTsrx.diagnostics)
-		const tsxHits = expectRefused(fromTsx.diagnostics)
+		const tsrxHits = expectRefused(
+			fromTsrx.diagnostics,
+			'add a pending arm, which makes the `try` an async boundary whose catch arm binds the pass',
+		)
+		const tsxHits = expectRefused(
+			fromTsx.diagnostics,
+			'add a pending arm, which makes the `try` an async boundary whose catch arm binds the pass',
+		)
 		expect(tsxHits).toBe(tsrxHits)
 		expect(fromTsrx.component?.clientCode ?? '').not.toContain('pass(')
 	})

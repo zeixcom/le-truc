@@ -113,14 +113,10 @@ export function FormCombobox(
 	// read from the composed listbox's public `visibleOptions` prop. Both
 	// watches are deliberately CLIENT-ONLY setup statements (copied
 	// verbatim from the .tsrx original — see its comment block).
-	watch(
-		() => String(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
-		bindAttribute(textbox, 'aria-expanded'),
-	)
-	watch(
-		() => !(showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0),
-		bindAttribute(popup, 'hidden'),
-	)
+	const isOpen = () =>
+		showPopup.get() && (listbox.visibleOptions?.length ?? 0) > 0
+	watch(() => String(isOpen()), bindAttribute(textbox, 'aria-expanded'))
+	watch(() => !isOpen(), bindAttribute(popup, 'hidden'))
 
 	return (
 		<form-combobox name={name} value={value}>

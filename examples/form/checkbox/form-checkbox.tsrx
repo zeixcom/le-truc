@@ -41,6 +41,16 @@ export function FormCheckbox(
 			name: string
 			label: string
 			checked?: boolean
+			/**
+			 * Compiler-consumed compose surface (truc:pass), never a render
+			 * arg — mirrors the `.tsx` member's key so both spell one args
+			 * type (ADR 0024 s10).
+			 */
+			'truc:pass'?: {
+				checked?:
+					| (() => boolean)
+					| { get: () => boolean; set: (value: boolean) => void }
+			}
 		},
 )
 @{
