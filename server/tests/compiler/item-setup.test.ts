@@ -12,7 +12,9 @@
  *   its server value, and a condition over it switches arms in the item;
  * - `first()` naming the item root resolves to the element parameter;
  * - a client-only side effect runs in `bindItem` only;
- * - a `deriveList` declared in the item drives a nested list.
+ * - a `deriveList` declared in the item drives a nested list;
+ * - a host-declared `deriveList` whose only consumer is a `byKey()` item
+ *   const rides both generated modules and renders (LT-447).
  *
  * The refusals are pinned for parity in `tsx/diagnostic-parity.test.ts`.
  */
@@ -405,6 +407,105 @@ describe('a nested list over an item-declared deriveList', async () => {
 		;(group('z').querySelector('button.tag') as HTMLElement).click()
 		await settle()
 		expect(tagsOf('z')).toEqual(['r', 's'])
+	})
+})
+
+/* === A host-declared deriveList read only through a `byKey()` item const === */
+
+const ROWS_PRE =
+	"import { createList, createStore, deriveList, type MutableStore } from '@zeix/le-truc'\ntype Row = { id: string; amount: number }"
+const ROWS_DECL = `const rows = createList<Row, MutableStore<Row>>([{ id: 'a', amount: 2 }, { id: 'b', amount: 3 }], { keyConfig: r => r.id, createItem: createStore })`
+const PRICES_DECL = `const prices = deriveList(rows, row => row.amount * 2)`
+const PRICE_ITEM_SETUP = `const price = prices.byKey(k)`
+const PRICE_ITEM_BODY = `<li><span class="price">{() => String(price.get())}</span></li>`
+
+const HOST_LIST = {
+	tsrx: tsrx(
+		ROWS_PRE,
+		`${ROWS_DECL}
+		${PRICES_DECL}
+		expose({})`,
+		`
+				<button type="button" class="add" onClick={() => { rows.add({ id: 'c', amount: 5 }) }}>Add</button>
+				<ul class="rows">
+					@for (const row of rows; key k) {
+						${PRICE_ITEM_SETUP}
+						${PRICE_ITEM_BODY}
+					}
+				</ul>`,
+	),
+	tsx: tsx(
+		ROWS_PRE,
+		'expose',
+		`${ROWS_DECL}
+	${PRICES_DECL}
+	expose({})`,
+		`
+				<button type="button" class="add" onClick={() => { rows.add({ id: 'c', amount: 5 }) }}>Add</button>
+				<ul class="rows">
+					{rows.map((row, k) => {
+						${PRICE_ITEM_SETUP}
+						return (
+							${PRICE_ITEM_BODY}
+						)
+					})}
+				</ul>`,
+	),
+}
+
+describe('a host-declared deriveList whose only consumer is a byKey() item const (LT-447)', async () => {
+	const { fromTsrx, fromTsx } = compileBoth(HOST_LIST)
+	const component = fromTsrx.component
+	if (!component) throw new Error(JSON.stringify(fromTsrx.diagnostics))
+	const markup = await render(component.serverCode)
+	const { realm, html, diagnostics } = await mount(
+		'host-list',
+		component.clientCode,
+		markup,
+	)
+	afterAll(() => realm.dispose())
+	const price = (key: string) =>
+		realm.document.querySelector(
+			`c-el ul.rows > li[data-key="${key}"] .price`,
+		) as HTMLElement
+
+	test('both surfaces compile clean, to the same modules', () => {
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		expect(body(fromTsx.component?.serverCode)).toBe(body(component.serverCode))
+		expect(body(fromTsx.component?.clientCode)).toBe(body(component.clientCode))
+	})
+
+	test('the deriveList declaration rides the server module beside the item const that reads it', () => {
+		expect(component.serverCode).toContain(
+			'const prices = deriveList(rows, row => row.amount * 2)',
+		)
+		const loop = component.serverCode.slice(
+			component.serverCode.indexOf('for (const [k, row] of rows.entries())'),
+		)
+		expect(loop).toContain('const price = prices.byKey(k)')
+	})
+
+	test('each live item renders its derived price', () => {
+		expect(markup).toContain(
+			'<ul class="rows"><li data-key="a"><span class="price">4</span></li><li data-key="b"><span class="price">6</span></li></ul>',
+		)
+	})
+
+	test('the deriveList declaration rides the client module too, into bindItem', () => {
+		expect(component.clientCode).toContain(
+			'const prices = deriveList(rows, row => row.amount * 2)',
+		)
+		expect(component.clientCode).toContain('const price = prices.byKey(k)')
+	})
+
+	test('connect adopts every item without touching it, and a cloned item reads the same deriveList', async () => {
+		expect(diagnostics).toEqual([])
+		expect(html).toBe(serialized(markup))
+		expect(price('a').textContent).toBe('4')
+		;(realm.document.querySelector('c-el button.add') as HTMLElement).click()
+		await settle()
+		expect(price('c')?.textContent).toBe('10')
 	})
 })
 

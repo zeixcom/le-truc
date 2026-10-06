@@ -187,7 +187,8 @@ expression in place of the sheet — fires on both surfaces.
 `LTC080` (a key alias that does not meet ADR 0047 s1: the aliasing list
 does not key each item by itself, a `byKey` read is not the alias statement
 over the loop key, a second alias scope, or a field with no site in the
-alias scope; LT-453) skips `LTC079`, which LT-447 reserved. It is `LTC`, not
+alias scope; LT-453) skips `LTC079`, which LT-447 released unused — its
+shape is supported, not refused (2026-10-06 review). It is `LTC`, not
 `TSRX`: Pass 3 (`analysis/list-harvest.ts`) raises it, on both surfaces. Its
 dynamic half is the server runtime's `HarvestWitnessError`, which has no
 code.
