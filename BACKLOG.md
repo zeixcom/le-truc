@@ -987,81 +987,88 @@ to `TODO.md`.
   **Check:** every behavioral claim in both files traces to the 1.6.1 source; the stamp names 1.6.x
   and the version verified.
 
-- [ ] LT-461: Handler args — a parent passes an event handler that the child places on its own element (design).
+- [ ] LT-461: Handler args — an `on`-prefixed function arg the child places on an owned element lowers to a parent-side `on()`.
   **Area:** design
-  **Area:** design
-  **Filed (Architect, 2026-10-06, blocks part of LT-463; owner direction: a handler is an arg the
-  child places on its owned elements):** today `onClick` on `<BasicButton>` is classified as a server
-  arg, forwarded into `renderBasicButton({ …, onClick })`, and dropped — no listener exists anywhere.
-  On `.tsx` the excess property is a tsc error only in `check:corpus`; in a reactive-list item it is
-  LTC075, the wrong diagnosis for client-only code. List-item buttons (`module-list`, `module-todo`)
-  have no workaround.
-  **Shape to ratify:**
-  - The child declares a function-typed arg (`onPress?: (e: MouseEvent) => void`) and places it on
-    an owned element as an event attribute (`<button onClick={onPress}>`). The child's element, the
-    child's binding — no parent reach-in.
-  - The server never renders or serializes it (a function has no HTML form; `setAttribute` rejects
-    `on*` anyway). It is a **client arg**: the compiler records it in the child's compose contract.
-  - The child's client binds `on(button, 'click', e => host.<arg>?.(e))`, reading a client-only
-    property at event time — a plain instance field, not a Slot: a handler needs no reactivity, and
-    an unbranded function in `expose()` would be wrapped as a `MemoCallback` (AGENTS.md, branding).
-  - The parent's client assigns the function at the compose site's mount, in the enclosing Mount
-    Scope — host, arm (`bindArm`) or list item (`bindItem`) — so item/key reads are legal; LTC075
-    exempts client args. Page-authored instances simply have none and stay usable through bubbling.
-  **Decide:** the naming rule (any function-typed arg vs. an `on`-prefixed convention — the
-  latter collides visually with native `onclick` IDL props, the former needs type information the
-  compiler reads without a checker); whether a compose-site `onClick` on a child that declares no
-  such arg becomes a host listener or a refusal (recommend refusal, new LTC, tier 1, naming the
-  child's declared handler args); `.tsrx` parity. Then write the compiler task with channel/tier,
-  and the `BasicButton` contract change (`onPress` or equivalent, plus `type` and `ariaLabel`).
+  **Gates:** check:corpus, test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06; design by the owner, 2026-10-06):** today `onClick` on
+  `<BasicButton>` is forwarded as a server arg into `renderBasicButton({ …, onClick })` and dropped:
+  no listener exists anywhere. In a reactive-list item it is misdiagnosed as LTC075.
+  **Design (owner):** a handler is an ordinary server arg — never exposed, never stored on the
+  host, never a reactive property. The child declares delegation by placing the arg on an owned
+  raw element:
+  `export function BasicButton({ type = 'button', onClick, … }: { onClick?: (e: MouseEvent) => void; … })`
+  with `<basic-button><button {type} {onClick}>…</button></basic-button>`. The parent's compose site
+  `<BasicButton class="remove" onClick={e => items.remove(k)} />` lowers in the parent's client to
+  `on(first('basic-button.remove button'), 'click', e => items.remove(k))`.
+  **Rules:**
+  1. **Which args:** a parameter whose name matches `on[A-Z]…` and whose declared type is a function
+     type, read syntactically from the child's parameter annotation (no checker).
+  2. **The event comes from the placement, not the arg name:** `onPress` placed as
+     `<button onClick={onPress}>` delegates `click`.
+  3. **Server:** the child's render never emits the arg (no attribute, no serialization); the
+     child's client emits nothing for it. Page-authored instances simply carry no handler.
+  4. **Selector:** the compose site's tag-plus-discriminator selector (LT-127/LT-338), joined with
+     the placement element's selector from the child's template, proven unique by the structural
+     verifier (ADR 0045). The compiler synthesizes it; an author never writes it, so it is no
+     reach-in (HOST_PROFILE § data account, bullet 3): the child's signature is the contract.
+  5. **Scope:** the `on()` emits into the compose site's enclosing Mount Scope — host, arm
+     (`bindArm`), list item (`bindItem`) — so item/key reads are legal; LTC075 exempts handler args.
+     The `on()` return-value contract applies to the **parent's** host (`{ prop: value }` batches
+     into the parent), as for any parent handler.
+  6. **Placements the parent cannot address are refused** in the child (new **LTC081**, tier 1
+     Prevented, compiler; statically decidable, no runtime half): a handler arg placed anywhere but
+     as an event attribute on a raw element; inside one of the child's reactive arms or list items
+     (recreated on flip or reconcile, so the parent's `first()` would go stale); or an `on[A-Z]` arg
+     whose type is not a function type. Several placements of one arg emit one `on()` each.
+  7. **Forwarding:** a child that passes its handler arg on to its own compose site
+     (`<Inner onClick={onClick} />`) resolves through the registry to the inner placement; the
+     selector descends through both boundaries.
+  8. **Typing:** on `.tsx`, compose-site handler args typecheck as ordinary props; an undeclared
+     `onX` stays the existing tsc excess-property error. `.tsrx` parity on the same IR.
+  **Then:** `BasicButton` gains `type?: 'button' | 'submit'`, `ariaLabel?: string` (rendered as
+  `aria-label`) and `onClick?: (e: MouseEvent) => void`, placed on its native button.
+  **Verification:** test:server unit legs (host, arm and list-item compose sites; forwarding; each
+  LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
+  converted list remove button.
 
-- [ ] LT-462: Children contract — parent-owned children, child-declared content model and roles (design; ADR).
+- [ ] LT-462: Children contract — parent-owned children, child-declared roles and content model (design; ADR 0048).
   **Area:** design
+  **Needs:** LT-465
   **Area:** design
-  **Filed (Architect, 2026-10-06; owner rulings 2026-10-06 recorded below):** composing
-  `<ModuleScrollarea>` around `module-codeblock`'s `<pre><code>` fails LTC026: the structural
-  verifier excludes everything under a composed child (`:not(<child-tag> *)`, LT-316), and ADR 0033
-  s7 leaves "template-authored content inside a composed child" outside the parent's style scope.
-  **Owner rulings:** (a) content a parent passes as `children` is owned by the parent, not the
-  child. (b) A component may still act on its children: `<BasicPluralize>` takes its `.none`/`.some`
-  markup as children yet toggles them and writes the count from its own `count` prop. (c)
-  `<FormCheckbox>` takes its label as `children` (rich content) and should refuse interactive
-  content in it.
-  **Proposed model — the children contract, declared by the child:**
-  1. **Parent owns the content.** Structure, text, its own bindings and `first()` references reach
-     the children region; the verifier excludes only the child's own template. Platform analogue:
-     light-DOM content assigned to a slot belongs to the light-DOM author.
-  2. **The child acts only through declared roles.** The child's `children` type names the roles
-     it addresses and the effects it applies (sketch: `children: Children<{ none: 'p', some: 'p',
-     count: 'span' }>` — roles matched by class), the way `<select>` acts on `<option>` and
-     `<details>` on `<summary>`. The child's `first()`/`all()` into children may target declared
-     roles only; anything else is a reach-in (new LTC, tier 1).
-  3. **One writer per property.** A parent binding a property the child's contract writes on a
-     role element (`hidden` on `.some`) is a conflict (new LTC, tier 1, statically decidable
-     from the compose registry).
-  4. **Content model.** The child may declare its children non-interactive (sketch:
-     `Children<…, { interactive: false }>`); the compiler checks the compose site's literal
-     children — `a[href]`, `button`, `input`, `select`, `textarea`, `label`, `details`, `iframe`,
-     `[tabindex]`, media with `controls` — and composed children whose template contains one,
-     transitively through the registry (new LTC, tier 1). TypeScript cannot carry this: JSX
-     element types are opaque. Page-authored HTML is unchecked (no compiler; HTML's own content
-     model applies).
-  5. **Styles.** Parent rules reach its children content; ADR 0033 s7's exclusion is reversed for
-     that region, which changes the `@scope … to (boundary)` lowering (the limit must become the
-     child's own template nodes, not the child host). The child's rules reach only declared role
-     elements' own boxes (the `::slotted()` analogue). This part is the costliest and needs a
-     lowering probe before the ADR is written.
-  **Consequences to carry:** `module-todo` places a `FormInplaceEdit` inside the checkbox label —
-  interactive content in a `<label>`, already an a11y defect (clicking edit toggles the checkbox);
-  under (c) it must move beside the checkbox. `basic-button`'s label harvest (`span.label`) stays
-  child-owned: it renders from the `label` arg, not from children.
-  **Output:** an ADR (children ownership; amends ADR 0033 s7 and HOST_PROFILE § data account
-  bullet 3), then compiler tasks per numbered point with channel/tier and LTC codes, and the
-  corpus tasks (LT-463, LT-464).
+  **Filed (Architect, 2026-10-06; owner rulings 2026-10-06):** composing `<ModuleScrollarea>` around
+  `module-codeblock`'s `<pre><code>` fails LTC026 — the structural verifier excludes everything
+  under a composed child (`:not(<child-tag> *)`, LT-316) — and ADR 0033 s7 leaves content a parent
+  places inside a composed child outside the parent's style scope.
+  **Owner rulings:** (a) content a parent passes as `children` is owned by the parent. (b) A child
+  may act on its children through its contract (first raised for `BasicPluralize`, since retired
+  in LT-467; `<select>`/`<option>` is the standing analogue).
+  (c) `FormCheckbox` takes its label as `children` and refuses interactive content in it. (d) The
+  CSS boundary consequence is decided by a spike first (LT-465).
+  **Model to record in ADR 0048:**
+  1. **Parent owns the content** — structure, text, its own bindings and `first()` references reach
+     the children region; the verifier excludes only the child's own template.
+  2. **The child acts only through declared roles** — its `children` type names the roles it
+     addresses (sketch: `children: Children<{ tab: 'button', panel: 'section' }>`, roles matched by
+     class), as `<select>` acts on `<option>`. A child `first()`/`all()` into children that targets
+     no declared role is a reach-in (new LTC, tier 1).
+  3. **One writer per property** — a parent binding a property the child's contract writes on a role
+     element is a conflict (new LTC, tier 1, decidable from the compose registry).
+  4. **Content model** — a child may declare its children non-interactive; the compiler checks the
+     compose site's literal children (`a[href]`, `button`, `input`, `select`, `textarea`, `label`,
+     `details`, `iframe`, `[tabindex]`, media with `controls`) and composed children whose template
+     contains one, transitively through the registry (new LTC, tier 1). TypeScript cannot carry it
+     (JSX element types are opaque); page-authored HTML is unchecked.
+  5. **Styles** — per LT-465's recommendation.
+  **ADR edits riding with 0048** (none of these is published on `main`, so all are in-place
+  amendments): ADR 0024 s10 (children ownership; cross-reference), ADR 0033 s7 (the
+  "template-authored content in a composed child" difference, per LT-465), ADR 0046 (point 1's
+  verifier change inside list items), HOST_PROFILE § data account bullet 3 and § element references.
+  **Output:** ADR 0048, then compiler tasks per numbered point with channel, tier and LTC codes.
 
 - [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
   **Area:** examples
-  **Needs:** LT-460, LT-461, LT-462, LT-464
+  **Needs:** LT-460, LT-461, LT-462, LT-464, LT-466
   **Gates:** check:corpus, test:variants
   **Area:** examples
   **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
@@ -1078,19 +1085,16 @@ to `TODO.md`.
     reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
     documented reason stands).
   - `module-codeblock` — `<module-scrollarea>` → `<ModuleScrollarea>` per LT-462's ruling.
-  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers move to
-    `on(first('basic-button.toggle'), 'click', …)` today, or the compose-site form if LT-461 lands it.
-  - `module-list`, `module-todo` — submit buttons → `<BasicButton>`; `BasicButton` gains a
-    `type?: 'button' | 'submit'` arg (default `'button'`) rendered on its native button. List-item
-    remove buttons per LT-461's ruling (they also need an `ariaLabel?` arg on `BasicButton`, rendered
-    as the button's `aria-label`). `module-todo`'s clear-completed → `<BasicButton>` with its
+  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers become
+    `onClick` args (LT-461).
+  - `module-list`, `module-todo` — submit buttons and list-item remove buttons → `<BasicButton>`
+    with `type`, `ariaLabel` and `onClick` args (LT-461). `module-todo`'s clear-completed → `<BasicButton>` with its
     existing `truc:pass`.
   - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
     `class="split-button"`.
-  - `module-todo` — `<basic-pluralize>` → `<BasicPluralize>` with its `none`/`some` markup as
-    children, and `<form-checkbox>` → `<FormCheckbox>` with its label as children — both per
-    LT-462's children contract. The `FormInplaceEdit` moves out of the label to beside the checkbox
-    (interactive content in a label; LT-462 point 4); the checkbox keeps an accessible name.
+  - `module-todo` — `<form-checkbox>` → `<FormCheckbox>` with its label as children (LT-462), after
+    LT-466 moved the `FormInplaceEdit` out of the label. (Its `<basic-pluralize>` is retired in
+    LT-467.)
   `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
   in prose.
   **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
@@ -1109,6 +1113,92 @@ to `TODO.md`.
   `label: string` arg — the switch to `children` waits for LT-462's children contract and lands in
   LT-463. The `.tsx` member becomes the served surface; the `.tsrx` twin stays.
   **Verification:** check:corpus, test:variants, `form-checkbox.spec.ts`.
+
+- [ ] LT-465: Spike — style scope for parent-owned children inside a composed child.
+  **Area:** compiler
+  **Area:** compiler (spike — no production change; output is a report)
+  **Filed (Architect, 2026-10-06, owner ruling (d) in LT-462):** under parent-owned children the
+  parent's rules should reach the content it passes into a composed child, and the child's rules
+  should not (beyond declared role elements' own boxes). ADR 0033 s3 emits
+  `@scope (parent) to (<boundary> > *)`, which cuts off everything below the child host —
+  children included, wherever the child's template inserts them (`<pre><code>{children}</code></pre>`
+  puts them two levels deep). A `to` limit cannot re-include a subtree it excluded.
+  **Probe these shapes, both emissions (native `@scope` and lowered `:where()`), self-nesting
+  included (ADR 0033 s7's `A > B > A′`):**
+  (a) **A second scope root at the insertion point:** the server marks the element enclosing a
+  `{children}` insertion (sketch `data-children`), and the parent's sheet emits once more as
+  `@scope ([data-children]) to (<boundary> > *)`, guarded to the parent's own instances — cost:
+  doubled rules, the marker attribute in served HTML, the instance guard.
+  (b) **A `display: contents` wrapper element** around inserted children, as the scope root of (a)
+  without marking a template element — cost: a non-semantic element in the DOM, child selectors
+  (`:host > p`) that now miss.
+  (c) **Status quo plus `:global`** — children stay outside the scope; record what ownership then
+  means for styles only.
+  For each: which rules match, specificity parity between emissions, served-byte cost on the
+  corpus's composing components, and the child-side half (the child's own `to` limit must now stop
+  at the insertion point). Also confirm the structural verifier change (LT-462 point 1) composes
+  with the chosen marker.
+  **Output:** a recommendation with fixtures under `server/tests/` (kept, skipped if the chosen
+  shape is not adopted) and a short report in `NOTES.md` for the Architect, who writes ADR 0048
+  and the ADR 0033 s7 amendment from it.
+
+- [ ] LT-466: module-todo — move the in-place editor out of the checkbox label.
+  **Area:** examples
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06; owner-confirmed bug):** each todo item places a `FormInplaceEdit`
+  inside the `<label>` of its `form-checkbox`. Interactive content inside a label is invalid
+  (HTML content model) and leaks activation: the edit button stops its click, but the
+  double-click that starts editing bubbles to the label and toggles the checkbox. Move the
+  `FormInplaceEdit` to beside the `form-checkbox` within the item, in both `module-todo.tsx` and
+  `.tsrx` (CSS byte-identical, ADR 0039). The checkbox keeps an accessible name: a
+  `.visually-hidden` label text bound to the item label (`{() => item.label.get()}`), so the
+  visible text is the editor's and the name follows edits. Adjust the item grid in the sheet.
+  **Verification:** a Playwright leg — double-clicking the label text enters edit mode without
+  toggling the checkbox; the checkbox's accessible name tracks a committed edit; check:corpus,
+  test:variants, `module-todo.spec.ts`.
+
+- [ ] LT-467: Retire basic-pluralize — module-todo words its own count through an ICU message.
+  **Area:** examples
+  **Needs:** LT-466
+  **Gates:** check:corpus, test:variants, test:server
+  **Area:** examples
+  **Filed (Architect, 2026-10-06; owner ruling 2026-10-06):** a parent words a count with its own
+  ICU `plural` message: folded into the HTML when the count is server-known, re-evaluated by the
+  inlined client evaluator when it is reactive (ADR 0030 s9). That leaves `basic-pluralize` no job —
+  it also owns a catalog that knows one noun ("tasks"), which no reusable pluralizer should. Retire
+  it.
+  **Do:**
+  1. **module-todo** (`.tsx` and `.tsrx`): replace the raw `<basic-pluralize>` with the parent's
+     own message and condition — declare e.g. `remaining: '{count, plural, =0 {Well done, all done!}
+     one {# task remaining} other {# tasks remaining}}'` in its `i18n` record and render
+     `<p class="remaining">{() => t.remaining({ count: activeCount.get() })}</p>` (the `=0` arm
+     replaces the `none`/`some` toggle — no markup varies, so no arm set; should the MF2 exit gate refuse the `=0` selector, use two keys and a ternary on
+     `activeCount.get() === 0`). Drop the `:global
+     module-todo basic-pluralize p` rule. The `.ts` twin and `module-todo.html` bind the same text
+     with `Intl.PluralRules` in a `watch` (the hand-written runtime has no ICU evaluator); the
+     wording matches the source locale.
+  2. **Translations:** move the `basic-pluralize.*` entries in every `i18n/*.json` locale to the new
+     `module-todo.remaining` key, reworded per locale into one MF1 pattern with that locale's
+     plural categories (the existing `tasks` patterns carry them); the census stays at 0 gaps.
+  3. **Coverage that must not be lost** — move each to `module-todo` or a fixture under
+     `examples/test/`, never delete it: `selectordinal`/`select` nesting (mf2-exit, `MF2_EXIT.md`),
+     the walked-locale materialization onto `lang` (LT-191; `basic-number` already carries the
+     same contract — confirm its spec covers it, else add the leg there), the client-message
+     `i18n` attribute pins (LT-352), the frozen-`deriveCell` harvest case (`harvest.ts` comment),
+     and every `server/tests/compiler` leg naming `basic-pluralize` (`i18n.test.ts`,
+     `i18n-client.test.ts`, `diagnostics.test.ts`, `root-harvest.test.ts`, `corpus-args.ts`, smoke
+     and gate-wave legs); regenerate the equivalence and sim snapshots and state each diff in the
+     handoff.
+  4. **Remove:** `examples/basic/pluralize/`, its entries in `examples/main.ts`, `examples/main.css`,
+     `docs-src/pages/examples.md`, `custom-elements-manifest.config.mjs`, `scripts/measure-size-bet.ts`.
+  5. **Prose references** (`AGENTS.md`'s built-in-IDL-property example, HOST_PROFILE's locale
+     precedence and anchors, `LE_TRUC_COMPILER.md`, `server/TESTS.md`, `i18n/README.md`): list
+     them in the handoff for a `writer` session; ADR text stays as history, and `CHANGELOG.md`
+     records the removal at iteration close.
+  **Channel/tier:** none — no runtime check, no diagnostic.
+  **Verification:** check:corpus (census 0 gaps), test:variants, test:server, `module-todo.spec.ts`
+  with a leg per count class (0, 1, many) in `en` and one locale with more categories (`pl`).
 ## P7 — Backlog (not scheduled)
 
 **Moved to TODO.md 2026-10-02:** LT-393.
