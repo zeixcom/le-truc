@@ -177,7 +177,7 @@ test.describe('module-todo component', () => {
 
 			const item = list.locator('li').first()
 			const checkbox = item.locator('form-checkbox > input')
-			const checkboxLabel = item.locator('form-checkbox .text')
+			const checkboxLabel = item.locator('form-checkbox label')
 
 			// Initially unchecked
 			await expect(checkbox).not.toBeChecked()
@@ -243,7 +243,7 @@ test.describe('module-todo component', () => {
 			const firstCheckboxLabel = list
 				.locator('li')
 				.first()
-				.locator('form-checkbox .text')
+				.locator('form-checkbox label')
 			await firstCheckboxLabel.click()
 
 			// Should show 1 task remaining
@@ -254,7 +254,7 @@ test.describe('module-todo component', () => {
 			const secondCheckboxLabel = list
 				.locator('li')
 				.nth(1)
-				.locator('form-checkbox .text')
+				.locator('form-checkbox label')
 			await secondCheckboxLabel.click()
 
 			// Should show "all done"
@@ -278,7 +278,7 @@ test.describe('module-todo component', () => {
 			const checkboxLabel = list
 				.locator('li')
 				.first()
-				.locator('form-checkbox .text')
+				.locator('form-checkbox label')
 			await checkboxLabel.click()
 
 			// Should show "all done"
@@ -321,7 +321,7 @@ test.describe('module-todo component', () => {
 			const firstCheckboxLabel = list
 				.locator('li')
 				.first()
-				.locator('form-checkbox .text')
+				.locator('form-checkbox label')
 			await firstCheckboxLabel.click()
 
 			// Should be enabled with badge showing 1
@@ -332,7 +332,7 @@ test.describe('module-todo component', () => {
 			const secondCheckboxLabel = list
 				.locator('li')
 				.nth(1)
-				.locator('form-checkbox .text')
+				.locator('form-checkbox label')
 			await secondCheckboxLabel.click()
 
 			// Should show badge with 2
@@ -357,8 +357,8 @@ test.describe('module-todo component', () => {
 			await expect(list.locator('li')).toHaveCount(3)
 
 			// Complete first and third tasks
-			await list.locator('li').first().locator('form-checkbox .text').click()
-			await list.locator('li').nth(2).locator('form-checkbox .text').click()
+			await list.locator('li').first().locator('form-checkbox label').click()
+			await list.locator('li').nth(2).locator('form-checkbox label').click()
 
 			// Click clear completed
 			await clearButton.click()
@@ -387,7 +387,7 @@ test.describe('module-todo component', () => {
 			const secondCheckboxLabel = list
 				.locator('li')
 				.nth(1)
-				.locator('form-checkbox .text')
+				.locator('form-checkbox label')
 			await secondCheckboxLabel.click()
 
 			// Initially on "All" - should show both
@@ -472,7 +472,7 @@ test.describe('module-todo component', () => {
 			const checkboxLabel = todo
 				.locator('[data-container] li')
 				.first()
-				.locator('form-checkbox .text')
+				.locator('form-checkbox label')
 
 			// Rapidly toggle checkbox (5 clicks = checked, since it starts unchecked)
 			for (let i = 0; i < 5; i++) {
@@ -508,7 +508,7 @@ test.describe('module-todo component', () => {
 			await todo
 				.locator('li[data-key]')
 				.first()
-				.locator('form-checkbox .text')
+				.locator('form-checkbox label')
 				.click()
 			await expect(count.locator('.none')).toBeVisible()
 		})
@@ -532,7 +532,7 @@ test.describe('module-todo component', () => {
 			await expect(items).toHaveCount(2)
 			await expect(count.locator('.count')).toHaveText('2')
 
-			await items.nth(1).locator('form-checkbox .text').click()
+			await items.nth(1).locator('form-checkbox label').click()
 			await expect(count.locator('.count')).toHaveText('1')
 		})
 
@@ -554,7 +554,7 @@ test.describe('module-todo component', () => {
 			await expect(items).toHaveCount(2)
 			await expect(count.locator('.count')).toHaveText('2')
 
-			await items.nth(0).locator('form-checkbox .text').click()
+			await items.nth(0).locator('form-checkbox label').click()
 			await expect(count.locator('.count')).toHaveText('1')
 		})
 
@@ -576,7 +576,7 @@ test.describe('module-todo component', () => {
 
 			// Check item 2 — verifies both the setter (updates list) and the getter
 			// (watch inside form-checkbox syncs the native checkbox's checked state).
-			await items.nth(1).locator('form-checkbox .text').click()
+			await items.nth(1).locator('form-checkbox label').click()
 			expect(await isHostChecked(items.nth(1).locator('form-checkbox'))).toBe(
 				true,
 			)
@@ -603,7 +603,7 @@ test.describe('module-todo component', () => {
 			await submitButton.click()
 			await expect(items).toHaveCount(2)
 
-			await items.nth(0).locator('form-checkbox .text').click()
+			await items.nth(0).locator('form-checkbox label').click()
 			await expect(count.locator('.count')).toHaveText('1')
 			expect(await isHostChecked(items.nth(0).locator('form-checkbox'))).toBe(
 				true,
@@ -656,7 +656,7 @@ test.describe('module-todo component', () => {
 			await expect(count.locator('.count')).toHaveText('2')
 
 			// Check second item BEFORE any reorder — should work
-			await items.nth(1).locator('form-checkbox .text').click()
+			await items.nth(1).locator('form-checkbox label').click()
 			await expect(count.locator('.count')).toHaveText('1')
 
 			// Reorder: move second item to top
@@ -729,13 +729,13 @@ test.describe('module-todo component', () => {
 			await expect(items).toHaveCount(3)
 			await expect(count.locator('.count')).toHaveText('3')
 
-			await items.nth(2).locator('form-checkbox .text').click()
+			await items.nth(2).locator('form-checkbox label').click()
 			await expect(count.locator('.count')).toHaveText('2')
 
-			await items.nth(0).locator('form-checkbox .text').click()
+			await items.nth(0).locator('form-checkbox label').click()
 			await expect(count.locator('.count')).toHaveText('1')
 
-			await items.nth(1).locator('form-checkbox .text').click()
+			await items.nth(1).locator('form-checkbox label').click()
 			await expect(count.locator('.none')).toBeVisible()
 		})
 	})
@@ -789,6 +789,60 @@ test.describe('module-todo component', () => {
 			await items.nth(0).locator('basic-button.remove button').click()
 			await expect(items).toHaveCount(1)
 			await expect(items.nth(0).locator('button.reorder')).toBeDisabled()
+		})
+	})
+
+	test.describe('Editor placement (LT-466)', () => {
+		// The in-place editor lives beside the <form-checkbox>, not inside
+		// its label — interactive content in a label is invalid HTML and the
+		// double-click that starts editing used to bubble to the label and
+		// toggle the checkbox. These hold on every surface of the variant set.
+		test('double-clicking the item text enters edit mode without toggling the checkbox', async ({
+			page,
+		}) => {
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form > form-textbox input')
+			const submitButton = todo.locator('.submit button')
+
+			await textboxInput.fill('edit me')
+			await submitButton.click()
+
+			const item = todo.locator('li[data-key]').first()
+			const edit = item.locator('form-inplace-edit')
+			const checkbox = item.locator('form-checkbox > input')
+
+			await expect(checkbox).not.toBeChecked()
+			await edit.locator('.text').dblclick()
+			await expect(edit).toHaveAttribute('editing')
+			// The dblclick must not leak activation to the checkbox label.
+			await expect(checkbox).not.toBeChecked()
+			await page.keyboard.press('Escape')
+			await expect(edit).not.toHaveAttribute('editing')
+			await expect(checkbox).not.toBeChecked()
+		})
+
+		test('the checkbox accessible name follows a committed edit', async ({
+			page,
+		}) => {
+			const todo = page.locator('module-todo')
+			const textboxInput = todo.locator('form > form-textbox input')
+			const submitButton = todo.locator('.submit button')
+
+			await textboxInput.fill('initial name')
+			await submitButton.click()
+
+			const item = todo.locator('li[data-key]').first()
+			const checkbox = item.locator('form-checkbox > input')
+			const edit = item.locator('form-inplace-edit')
+
+			await expect(checkbox).toHaveAccessibleName('initial name')
+
+			await edit.locator('.text').dblclick()
+			await edit.locator('form-textbox input').fill('renamed task')
+			await page.keyboard.press('Enter')
+
+			await expect(edit.locator('.text')).toHaveText('renamed task')
+			await expect(checkbox).toHaveAccessibleName('renamed task')
 		})
 	})
 })

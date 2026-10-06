@@ -40,6 +40,24 @@ module-todo {
 			margin: 0;
 			padding: 0;
 
+			/* LT-466: the editor sits beside the checkbox, not inside
+			   its label — the checkbox's own flex-grow cedes the free
+			   space to the editor, and a completed item keeps the text
+			   treatment its label used to carry. */
+			& > form-checkbox {
+				flex-grow: 0;
+			}
+
+			& > form-inplace-edit {
+				flex: 1;
+				min-width: 0;
+			}
+
+			&:has(input:checked) > form-inplace-edit {
+				opacity: var(--opacity-translucent);
+				text-decoration: line-through;
+			}
+
 			&.dragging {
 				position: fixed;
 				z-index: 100;
