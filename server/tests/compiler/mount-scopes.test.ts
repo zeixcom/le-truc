@@ -1309,6 +1309,107 @@ export function OuterChild({ label, children }: {
 	})
 })
 
+/* === A `truc:pass` compose in a server-only `try` (LT-482) === */
+
+// A `try` with no `@pending` is not an arm set: the server folds it once per
+// render into its body or catch arm, so both are server-rendered branches
+// like a server conditional's. The host walk's server-branch flag now covers
+// them, and the LT-470 refusal fires for a pass-carrying compose in either
+// arm — one node kind over from `@if`, where LT-470 closed the same silent
+// drop. A pass-less compose stays legal server markup.
+
+const COMPOSE_IN_HOST_TRY = (passOnBody: boolean) => ({
+	tsrx: tsrx(
+		"import { BasicChild } from '../child/basic-child.tsrx'",
+		'expose({})',
+		`
+				@try {
+					${passOnBody ? '<BasicChild class="branched" label="hi" truc:pass={{ value: () => \'x\' }} />' : '<em class="ok">fine</em>'}
+				} @catch (e) {
+					${passOnBody ? '<em class="error">failed</em>' : '<BasicChild class="errored" label="hi" truc:pass={{ value: () => \'y\' }} />'}
+				}`,
+	),
+	tsx: tsx(
+		"import { BasicChild } from '../child/basic-child.tsx'",
+		'{}',
+		'expose({})',
+		`
+				<truc:try catch={e => ${passOnBody ? '<em class="error">failed</em>' : '<BasicChild class="errored" label="hi" truc:pass={{ value: () => \'y\' }} />'}}>
+					${passOnBody ? '<BasicChild class="branched" label="hi" truc:pass={{ value: () => \'x\' }} />' : '<em class="ok">fine</em>'}
+				</truc:try>`,
+	),
+})
+
+describe('a `truc:pass` compose in a server-only `try` is refused (LT-482)', () => {
+	const expectRefused = (
+		diagnostics: readonly { code: string; message: string }[],
+	) => {
+		const ltc005 = diagnostics.filter(d => d.code === 'LTC005')
+		expect(ltc005.length).toBeGreaterThan(0)
+		for (const d of ltc005) {
+			expect(d.message).toContain(
+				'A `truc:pass` onto a composed child in a server-rendered branch',
+			)
+			expect(d.message).toContain('make the condition reactive')
+		}
+		return ltc005.length
+	}
+
+	test('as the body root: refused with the LT-470 message on both surfaces, nothing minted', () => {
+		const { fromTsrx, fromTsx } = compileComposeBoth(COMPOSE_IN_HOST_TRY(true))
+		const tsrxHits = expectRefused(fromTsrx.diagnostics)
+		const tsxHits = expectRefused(fromTsx.diagnostics)
+		expect(tsxHits).toBe(tsrxHits)
+		// The refusal mints no query and emits no pass (no client module at
+		// all when the compile fails).
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain(
+			"first('basic-child",
+		)
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain('pass(')
+	})
+
+	test('as the catch-arm root: refused the same way', () => {
+		const { fromTsrx, fromTsx } = compileComposeBoth(COMPOSE_IN_HOST_TRY(false))
+		const tsrxHits = expectRefused(fromTsrx.diagnostics)
+		const tsxHits = expectRefused(fromTsx.diagnostics)
+		expect(tsxHits).toBe(tsrxHits)
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain('pass(')
+	})
+
+	test('a pass-less compose in a server-only `try` still compiles and renders', async () => {
+		const passless = {
+			tsrx: tsrx(
+				"import { BasicChild } from '../child/basic-child.tsrx'",
+				'expose({})',
+				`
+				@try {
+					<BasicChild class="branched" label="hi" />
+				} @catch (e) {
+					<em class="error">failed</em>
+				}`,
+			),
+			tsx: tsx(
+				"import { BasicChild } from '../child/basic-child.tsx'",
+				'{}',
+				'expose({})',
+				`
+				<truc:try catch={e => <em class="error">failed</em>}>
+					<BasicChild class="branched" label="hi" />
+				</truc:try>`,
+			),
+		}
+		const { fromTsrx, fromTsx, childTsrx } = compileComposeBoth(passless)
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		expect(fromTsrx.component?.clientCode ?? '').not.toContain('pass(')
+		// The fold renders the body arm's compose once, like any server
+		// branch's markup.
+		generated.emit('basic-child.server.ts', childTsrx.serverCode)
+		const shown = await render(fromTsrx.component!.serverCode, {})
+		expect(shown).toContain('<basic-child class="branched">hi</basic-child>')
+	})
+})
+
 /* === A list whose container is the arm root (LT-454) === */
 
 const LIST_AS_ARM = {

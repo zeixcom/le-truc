@@ -542,9 +542,11 @@ construct effects, so the refusal lives in it. A reactive conditional in the
 item is the remedy — its arm set binds the construct existence-guarded.
 A `truc:pass`-carrying compose in such a branch is refused too (LT-470):
 the item walk refuses it at the local-minting site in `collectCompose`, and
-the arm-set placement walk refuses it for the host's own server branches,
-where the branch handlers never reach a compose node and the entries would
-be silently unplanned. A compose site as an ARM root is the sanctioned
+the arm-set placement walk refuses it for the host's own server branches —
+a server-mode conditional's arms, and since LT-482 a server-only `try`'s
+body and catch arm, which fold once per render the same way — where the
+branch handlers never reach a compose node and the entries would be
+silently unplanned. A compose site as an ARM root is the sanctioned
 shape (LT-460): since LT-481 its `truc:pass` entries plan as `pass()`
 effects in the arm's mount against the arm element parameter — the arm root
 IS the child's rendered element, so no query or local is minted (same
