@@ -14,7 +14,10 @@
 // - `CUSTOM_ELEMENT_HANDLING`: the default allowlist has no custom elements
 //   and would unwrap every corpus tag a partial carries. Any valid custom
 //   element name passes — an undefined tag stays inert, so the demo
-//   partial's `shake-hands` renders without behavior until LT-448.
+//   partial's `shake-hands` renders without behavior until LT-448. The
+//   attribute check excludes `on*`: DOMPurify applies no separate handler
+//   filter to attributes admitted here, so `onfocus` plus `autofocus` on a
+//   custom element would run script on insertion.
 import { configureHtmlSanitizer } from '@zeix/le-truc'
 import DOMPurify from 'dompurify'
 
@@ -23,7 +26,7 @@ configureHtmlSanitizer(html =>
 		FORCE_BODY: true,
 		CUSTOM_ELEMENT_HANDLING: {
 			tagNameCheck: /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/,
-			attributeNameCheck: /^[a-z][a-z0-9-]*$/,
+			attributeNameCheck: /^(?!on)[a-z][a-z0-9-]*$/,
 			allowCustomizedBuiltInElements: false,
 		},
 	}),

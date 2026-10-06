@@ -526,14 +526,15 @@ test.describe('module-lazyload component', () => {
 		test('sanitizes a style tag that smuggles an event handler', async ({
 			page,
 		}) => {
-			// LT-449 review: a policy that splits `<style>` out around the
-			// sanitizer and re-concatenates lets this partial parse into a live
-			// `<style onload>`. The whole string must pass through DOMPurify.
-			// Served inline: the payload is malformed HTML by design.
+			// LT-449 review: two vectors. A policy that splits `<style>` out
+			// around the sanitizer and re-concatenates lets the first parse into
+			// a live `<style onload>`; a custom-element attribute check that
+			// admits `on*` keeps the second's `onfocus`, which `autofocus` fires
+			// on insertion. Served inline: the payload is malformed by design.
 			await page.route('**/mocks/style-injection.html', route =>
 				route.fulfill({
 					contentType: 'text/html',
-					body: '<style a="</style>" onload=window.__lazyloadInjected=true <b>Injection probe</b></style><p>After the probe</p>',
+					body: '<style a="</style>" onload=window.__lazyloadInjected=true <b>Injection probe</b></style><x-probe onfocus="window.__lazyloadInjected=true" autofocus tabindex="0"></x-probe><p>After the probe</p>',
 				}),
 			)
 			const loader = page.locator('#dynamic-src-test')
