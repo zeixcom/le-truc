@@ -157,17 +157,25 @@ export function ModuleTodo(
 								class="visually-hidden"
 							/>
 							<label class="label" for={`${k}-checkbox`}>
-								<FormInplaceEdit
-									name=""
-									truc:pass={{
-										value: {
-											get: () => item.label.get(),
-											set: (v: unknown) => item.label.set(v as string),
-										},
-									}}
-								/>
+								{/* Interactive content inside a label is invalid HTML and
+								    leaks activation (LT-466): the editor lives beside the
+								    checkbox; the label keeps only a visually-hidden text
+								    bound to the item label, so the accessible name of the
+								    box follows edits while the visible text is the
+								    editor's. The label itself stays visible — its ::before
+								    draws the checkbox box (form-checkbox.css). */}
+								<span class="visually-hidden">{() => item.label.get()}</span>
 							</label>
 						</form-checkbox>
+						<FormInplaceEdit
+							name=""
+							truc:pass={{
+								value: {
+									get: () => item.label.get(),
+									set: (v: unknown) => item.label.set(v as string),
+								},
+							}}
+						/>
 						<basic-button class="remove">
 							<button
 								type="button"
@@ -280,6 +288,24 @@ export function ModuleTodo(
 						gap: var(--space-m);
 						margin: 0;
 						padding: 0;
+
+						/* LT-466: the editor sits beside the checkbox, not inside
+						   its label — the checkbox's own flex-grow cedes the free
+						   space to the editor, and a completed item keeps the text
+						   treatment its label used to carry. */
+						& > form-checkbox {
+							flex-grow: 0;
+						}
+
+						& > form-inplace-edit {
+							flex: 1;
+							min-width: 0;
+						}
+
+						&:has(input:checked) > form-inplace-edit {
+							opacity: var(--opacity-translucent);
+							text-decoration: line-through;
+						}
 
 						&.dragging {
 							position: fixed;

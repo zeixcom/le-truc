@@ -193,8 +193,8 @@ export default defineComponent(
 		})
 
 		// Sync the container's children to the list. bindItem fills the cloned
-		// content — server-adopted items already carry ids and text, so the
-		// fill is naturally idempotent (no <slot> left to replace).
+		// content — server-adopted items already carry their ids, so the fill
+		// is naturally idempotent.
 		const template = first('template', 'Add a template element for items.')
 		reconcile(container, template, list, (_element, item, key, first) => {
 			const id = `${key}-checkbox`
@@ -202,7 +202,11 @@ export default defineComponent(
 			if (checkbox) checkbox.id = id
 			const label = first('label')
 			if (label) label.htmlFor = id
-			first('slot')?.replaceWith(document.createTextNode(item.label.get()))
+			// LT-466: the editor sits beside the checkbox, so the label keeps
+			// only a visually-hidden text — bound here so the accessible name
+			// follows a committed edit like it does on the compiled surfaces.
+			const name = first('label span')
+			if (name) watch(item.label, bindText(name))
 		})
 
 		const form = first('form', 'Add a form element to enter a new todo item.')
