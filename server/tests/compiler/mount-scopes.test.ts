@@ -894,6 +894,79 @@ describe('a list in a server branch of an item', async () => {
 		})
 })
 
+/* === A construct in a server branch of an item (LT-468) === */
+
+const CONSTRUCT_IN_BRANCH = (onContainer: boolean) => ({
+	tsrx: tsrx(
+		"import { createList } from '@zeix/le-truc'",
+		`const groups = createList<string>(['x'], { keyConfig: s => s })
+		const tags = createList<string>([], { keyConfig: s => s })
+		expose({})`,
+		`
+				<ul class="groups">
+					@for (const group of groups) {
+						<li><span>{group}</span>@if (show) { <>${onContainer ? '' : '<em class="mark" onClick={() => {}}>mark</em>'}<ol class="tags"${onContainer ? ' onClick={() => {}}' : ''}>@for (const tag of tags) { <li>{tag}</li> } @empty { <li class="placeholder">none</li> }</ol></> }</li>
+					}
+				</ul>`,
+		'{ show }: { show: boolean }',
+	),
+	tsx: tsx(
+		"import { createList } from '@zeix/le-truc'",
+		'{}',
+		`const groups = createList<string>(['x'], { keyConfig: s => s })
+	const tags = createList<string>([], { keyConfig: s => s })
+	expose({})`,
+		`
+				<ul class="groups">
+					{groups.map(group => (
+						<li><span>{group}</span>{show ? (<>${onContainer ? '' : '<em class="mark" onClick={() => {}}>mark</em>'}<ol class="tags"${onContainer ? ' onClick={() => {}}' : ''}>{tags.length === 0 ? <li class="placeholder">none</li> : tags.map(tag => <li>{tag}</li>)}</ol></>) : null}</li>
+					))}
+				</ul>`,
+		'{ show }: { show: boolean }',
+	),
+})
+
+describe('a construct in a server branch of an item is refused (LT-468)', () => {
+	test('on a nested element: LTC005 naming the reactive remedy, on both surfaces', () => {
+		const { fromTsrx, fromTsx } = compileBoth(CONSTRUCT_IN_BRANCH(false))
+		for (const { diagnostics, component } of [fromTsrx, fromTsx]) {
+			const ltc005 = diagnostics.filter(d => d.code === 'LTC005')
+			expect(ltc005.length).toBeGreaterThan(0)
+			for (const d of ltc005) {
+				expect(d.message).toContain(
+					'A client construct on an element in a server-rendered branch of the',
+				)
+				expect(d.message).toContain('make the condition reactive')
+			}
+			// The refusal does not mint the query nor emit the construct
+			// (no client module at all when the compile fails).
+			expect(component?.clientCode ?? '').not.toContain("first('em.mark'")
+			expect(component?.clientCode ?? '').not.toContain(
+				"addEventListener('click'",
+			)
+		}
+		expect(fromTsx.diagnostics.filter(d => d.code === 'LTC005').length).toBe(
+			fromTsrx.diagnostics.filter(d => d.code === 'LTC005').length,
+		)
+	})
+
+	test('on the branch-held container: refused the same way', () => {
+		const { fromTsrx, fromTsx } = compileBoth(CONSTRUCT_IN_BRANCH(true))
+		for (const { diagnostics, component } of [fromTsrx, fromTsx]) {
+			const ltc005 = diagnostics.filter(d => d.code === 'LTC005')
+			expect(ltc005.length).toBeGreaterThan(0)
+			for (const d of ltc005)
+				expect(d.message).toContain('make the condition reactive')
+			// The construct is not emitted (no client module at all when the
+			// compile fails); the nested list's guarded mount itself is
+			// proven by the LT-455 suite above.
+			expect(component?.clientCode ?? '').not.toContain(
+				"addEventListener('click'",
+			)
+		}
+	})
+})
+
 /* === A list whose container is the arm root (LT-454) === */
 
 const LIST_AS_ARM = {

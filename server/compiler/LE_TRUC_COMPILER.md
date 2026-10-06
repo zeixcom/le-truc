@@ -534,8 +534,13 @@ nested `ForClientPlan` is a static query against the scope root rather than
 `each(all())`. When a nested list's container sits in a server-rendered
 branch of its scope (LT-455), those locals are non-throwing queries and the
 nested mount binds under an `if` on the container: the branch folds per
-render call, the same for every clone, but may leave the list out. Every
-plan node carries source spans for the remapping tables.
+render call, the same for every clone, but may leave the list out. A client
+construct on an element in such a branch — the branch roots included — is
+refused (LT-468): the fold may leave the element out of every clone, and the
+item walk is the only walk that both descends server branches and emits
+construct effects, so the refusal lives in it. A reactive conditional in the
+item is the remedy — its arm set binds the construct existence-guarded.
+Every plan node carries source spans for the remapping tables.
 The passes run as functions over a typed shared environment (`PassShared` —
 the order-carrying accumulators: queries, used names, ambients, child tags,
 ref names, and the diagnostic sinks), each taking its producers' output as a
