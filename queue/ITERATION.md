@@ -171,8 +171,9 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
 design sessions. LT-381 changes the census and the warning baseline by design and needs the
 owner's sign-off first. LT-246 waits for LT-109–LT-111 to settle the census. LT-363, LT-369,
-LT-372 (after LT-371, post-publish-safe) and the P3/P4/P6 items stay in the backlog. LT-310 and
-LT-311 are design work and wait for P6.
+LT-372 (after LT-371, post-publish-safe) and the P3/P4/P6 items stay in the backlog. LT-310 is
+design work for a later session; LT-311 is closed as absorbed by LT-461's ruled handler-args
+design (2026-10-06).
 
 **Exit criterion.** Tier census and warning baseline unchanged from the iteration's opening
 measurement (recorded on the gate-zero commit, ruling 6), except where LT-109–LT-111, LT-390 or

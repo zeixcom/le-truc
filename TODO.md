@@ -171,8 +171,9 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
 2026-09-19), and with them the D-32 (public entry points) and D-28 (`Try` in template targets)
 design sessions. LT-381 changes the census and the warning baseline by design and needs the
 owner's sign-off first. LT-246 waits for LT-109–LT-111 to settle the census. LT-363, LT-369,
-LT-372 (after LT-371, post-publish-safe) and the P3/P4/P6 items stay in the backlog. LT-310 and
-LT-311 are design work and wait for P6.
+LT-372 (after LT-371, post-publish-safe) and the P3/P4/P6 items stay in the backlog. LT-310 is
+design work for a later session; LT-311 is closed as absorbed by LT-461's ruled handler-args
+design (2026-10-06).
 
 **Exit criterion.** Tier census and warning baseline unchanged from the iteration's opening
 measurement (recorded on the gate-zero commit, ruling 6), except where LT-109–LT-111, LT-390 or
@@ -212,47 +213,3 @@ recorded against the 30.4k opening measurement.
   5. **Layout-wide registration.** The migration flips the tag every docs page serves onto the compiled client. Verify the page bundle registers it (it is in the registry like any other corpus tag) and that `section-menu.spec.ts` runs unchanged against the served surface — plus which surface the LAYOUT pages get (the canonical artifacts, not a variant route).
   Decide each, then write the implementation task with the standard prerequisite set (LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429). The `.spec.ts` is unchanged; `test:variants` covers the folder once the set exists.
   ---
-
-### B — correctness
-
-- [ ] LT-468: A client construct on an element in a server-rendered branch of a list item compiles clean, then throws in every item mount — refuse it, as every other scope does. — in progress ⚙
-  **Area:** compiler
-  **Needs:** LT-455
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, from LT-455's review):** the residue LT-455's entry scoped out,
-  probed on that branch: `<em class="mark" onClick={() => {}}>` inside a server-known
-  conditional's arm of a reactive-list item compiles on both surfaces, but the item mount mints a
-  REQUIRED query for the element, so with the branch folded off every adopted and cloned item
-  throws `MissingElementError` (contained per scope by LT-436) — the same failure LT-455 just
-  fixed for nested lists. The same holds for a construct on a branch-held list's container
-  itself, where a later required request upgrades `localFor`'s optional query back to required
-  (by design) and reintroduces the throw through the new guard. Every other scope refuses the
-  shape: the host walk rejects "a client construct below a branch root" (the deeper element
-  exists only when its branch rendered), the arm walk stops at server branches and binds only
-  branch key-derived attributes (`collectBranchKeyAttrs`), and reactive arms give conditional
-  interactivity the existence-guarded arm treatment. The item walk's server-branch descent is
-  the only walk that both descends and emits construct effects.
-  **Ruling (Architect):** refuse, do not guard. A server-known branch's fold is fixed per render
-  and per clone, so an `onClick` there is once-only addressing of markup that can never
-  re-render — the trap LTC005 exists to prevent at host level. A nested reactive list earned its
-  guarded support (LT-455) because the list itself is reactive and the branch only gates
-  per-instance inclusion; a construct has no reactive core. The author's remedy is to make the
-  condition reactive, which plans an arm set in the item and gets live switching with
-  existence-guarded binding.
-  **Change:** in `planReconcileItem`'s `visitElements` (`analysis/effects.ts`), when descending a
-  server conditional's arms (the `inBranch = true` path LT-455 threaded), report a construct on
-  any element — the branch roots included — through `diagnostic.unsupported` in the LTC005
-  family, wording after the host rule with the item-specific remedy ("make the condition
-  reactive"). Do not mint the query. The walk keeps binding branch key-derived attributes and,
-  since LT-455, nested lists with guarded mounts; `emitConstructEffects` is simply not reached
-  below a branch root any more.
-  **Check:** both surfaces refuse the probed shape and a construct on the branch-held container;
-  the refusal names the remedy. The LT-455 fixture still compiles and its client tests stay
-  green (the placeholder `<li>` carries no construct). A reactive conditional with constructs in
-  an item still compiles and binds. `check:corpus` stays clean (no example carries the shape).
-  Catalog row for the new refusal instance; HOST_PROFILE.md's item/Mount-Scope passage and
-  LE_TRUC_COMPILER.md's item-walk passage gain a sentence each; AGENTS.md's
-  conditional-placement paragraph names the item case.
-  **Channel/tier:** compiler check; tier 1 Prevented (the shape is statically decidable at
-  planning time — the walk already knows `inBranch`); no runtime check, so nothing owes the
-  sim-realm an entry beyond the catalog row.
