@@ -1723,3 +1723,51 @@ Full entry text: `git log -p -- DONE.md`.
   **Addendum (owner review question, f44fd9c8):** A list below a server-known branch (a server conditional or a sync `@try`) now ships its hoisted template only when the branch rendered it. A top-level `let __listN = false` flag is set wherever the list renders: a live item, an arm template, or an enclosing list's template, which folds the same branch. Lists outside such a branch keep byte-identical output. At host level the shape was already refused (LTC005, client construct below a branch root), so it only arises inside an item. This is pinned in `mount-scopes` ("a list in a server branch of an item": show true ships one `data-list="1"`, show false ships none). The `module-calctable.ts` twin now queries `first(':scope > template', …)`. Its HTML already placed the templates after `</table>`. Gates re-run: typecheck, test:server (3315 / 0), check:contract, check:corpus, build:docs, check:links (753) green. Playwright (owner: 1008 pass on fa788f72) and `test:variants` for the calctable twin are unrunnable here. **Out of scope, for the Architect:** in the same shape, the item mount queries the nested container as required (`first('ol', 'c-el: ol missing')`), so with the branch not taken every item mount throws (Contained per scope, LT-436). This predates LT-454. The query should be optional and the nested reconcile guarded, as key-derived attributes in a server branch already are.
 
   **Review (Architect, 2026-10-06):** approved, no findings. The hoist matches ADR 0046 s2 as amended: one copy per instance in N order, enclosing scopes unbound through `enclosingLists` plus `templateUnbound`, and `inArmTemplate` set for nested lists so client-written and compose sites bake empty. The branch-guard addendum (`listFlags`) is correct because pre-order N renders an outer template, which folds the branch, before the inner one. Arm templates are untouched. Re-ran the compiler suites on f44fd9c8: 2427 pass. The owner ran Playwright on fa788f72: 1008 pass. Follow-up outside scope: LT-455 (the required nested-container query in a branch, which predates this task).
+
+- [x] LT-455: A reactive list in a server-known branch of a list item compiles clean, then throws in every item mount when the branch is not taken — query its container optionally and guard the nested `reconcile`. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-453, LT-454
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-454's review):** a confirmed silent failure. Source
+  shape: a reactive-list item holding a server-known conditional that holds a nested reactive
+  list, e.g. `<li><span>{group}</span>{show ? <ol class="tags">{tags.map(…)}</ol> : null}</li>`.
+  Both surfaces accept it. The branch folds per render call, the same for every clone, and since
+  LT-454 the nested template ships only when the branch rendered. But the item mount queries the
+  nested container as required, `first('ol', 'c-el: ol missing')`, so with `show` false every
+  item mount throws. LT-436 contains the throw per scope, which leaves every item unbound. The
+  same shape is already refused at host level (LTC005, a client construct below a branch root)
+  and inside an arm (LTC005, a nested control-flow branch), so only the item case reaches emission.
+  **Change:** in `planNestedList` (`analysis/effects.ts`), when the list's container sits in a
+  server-rendered branch of its scope, mint the container local as a non-throwing query
+  (`scope.localFor(el, true)`), the mechanism key-derived attributes in a branch already use
+  (`collectKeyAttrs`, `inBranch`). Do the same for the `@empty` roots. Emit the nested
+  `reconcile` call and its `@empty` watches under `if (<container>) { … }`. Nothing else about the
+  inner item mount changes.
+  **Check:** `mount-scopes.test.ts`'s "a list in a server branch of an item" fixture (LT-454) gains
+  the client half on both surfaces. With `show: false`, connect reports no realm diagnostics and
+  an added outer item clones and binds its own content. With `show: true`, the existing
+  adopt-and-clone behavior is unchanged. Parity modules stay byte-identical across surfaces.
+  **Channel/tier:** compiler emission; no new check. A Contained runtime failure (tier 2) becomes
+  the correct path, and no shape is refused.
+
+  **Changed:** A reactive list whose container sits in a server-rendered branch of its Mount Scope (an item) now mints the container and `@empty` locals as non-throwing queries and binds the nested `reconcile` and its empty watches under `if (<container>)`. Before, every item mount threw `MissingElementError` when the branch folded off, leaving every adopted and cloned item unbound (LT-436 contained the throw per item).
+
+  **How:** `planNested`/`planNestedList` (`analysis/effects.ts`) take an `inBranch` flag threaded from `planReconcileItem`'s `visitElements` through its server-branch descent — the walk mechanism `collectKeySites` already uses; `ReconcilePlan.inBranch` (`analysis/plan.ts`) drives the guarded emission in `emitReconcile` (`emit-client.ts`). Docs updated in the same change: HOST_PROFILE.md (list-templates paragraph), LE_TRUC_COMPILER.md (ClientPlan emission-recursion passage), CHANGELOG.md (Fixed). The LT-454 fixture gained the client half on both surfaces, plus an `@empty` arm (placeholder) on the inner list so the guarded empty watch is exercised — the pinned server-markup strings survive unchanged.
+
+  **Check:** All gates green in the worktree: test:server 3378 pass / 0 fail (run before and re-run after biome), lint:server (biome rewrote only my two files, no residue), typecheck (one test-cast error found and fixed), check:contract, check:corpus (42 components), build:docs + check:links (754 links). Regression proof: with the compiler change stashed, exactly the 3 new tests fail (the compiled-code pin and both branch-not-taken tests); with it, all 52 pass. test:variants and Playwright not run — no variant set touched, and no example carries the branch shape (calctable's hand-written `.ts` and its compiled twins have no `@if`), so example behavior cannot change. Residue worth filing: a plain client construct (e.g. `onClick`) on an element in a non-rendered branch of an item still mints a REQUIRED query and throws per item mount — same family, pre-existing at LT-424, untouched per the task's "nothing else about the inner item mount changes" (probed with `<em class="mark" onClick={() => {}}>` in a false branch). Same for any later required request for the branch-held container itself (a construct on the container element flips `localFor`'s optional back to required).
+
+  **Review:** Approved (Architect, 2026-10-06), integrated. The change is exactly the entry's
+  scope. The guard is complete: it wraps the template query (which must be guarded, since LT-454
+  ships the template only when the branch rendered), the item mount and the `@empty` watches,
+  and optional locals emit `first(sel)` without a message. `localFor`'s optional path is the
+  key-attrs mechanism verbatim, with the documented required-request upgrade. Verified the
+  second `planNested` call site (the arm walk) cannot reach the shape — it stops at server
+  branches, collecting only branch key-derived attrs — so the flag's absence there is safe, and
+  the shape stays refused in arms as the entry claims. Verified the `.tsx` fixture's
+  `length === 0 ? … : map` is the sanctioned LT-212 empty-state idiom (shape-recognized, one
+  `ForIR` with an `emptyArm`), not a LTC063 dodge. The pre-existing LT-454 pins are untouched.
+  Gates re-run in the worktree: test:server 3378 pass / 0 fail, lint:server (no fixes pending),
+  typecheck, check:contract, check:corpus (42 components). Residue outside scope filed as
+  LT-468, ruled refuse-not-guard: a construct in a server-rendered branch of an item is once-only
+  addressing (the fold is fixed per render), the trap LTC005 prevents at host level; only the
+  item walk descended and emitted there.

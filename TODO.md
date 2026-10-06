@@ -150,7 +150,7 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
   ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → ~~LT-449~~ (reviewed ✓) → **next, critical path (compiler list emission, one at a time):** ~~LT-454~~ (reviewed ✓) → ~~LT-453~~ (reviewed ✓) → ~~LT-110~~ (done ✓) → LT-446 (section-menu, design — the sweep's last folder). **Beside it (example folders only, pickable now):** ~~LT-445~~ (reviewed ✓), ~~LT-390~~ (done ✓).
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). ~~LT-443~~ (reviewed ✓). ~~LT-452~~ (done ✓). ~~LT-451~~ (reviewed ✓). ~~LT-447~~ (reviewed ✓ — the shape is supported and the declaration already rides both modules; the filed failure was a stale generated module, ruling on the task file; no LTC079). **Next:** LT-455 (a nested list in a server branch of an item; filed from LT-454's review) touches the same nested-list emission as LT-453, so it needs LT-453.
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). ~~LT-443~~ (reviewed ✓). ~~LT-452~~ (done ✓). ~~LT-451~~ (reviewed ✓). ~~LT-447~~ (reviewed ✓ — the shape is supported and the declaration already rides both modules; the filed failure was a stale generated module, ruling on the task file; no LTC079). ~~LT-455~~ (reviewed ✓ — a nested list in a server branch of an item now mounts under a guard on its container; the construct residue ruled refuse-not-guard). **Next:** LT-468 (refuse a client construct in a server-rendered branch of an item, filed from LT-455's review — the item walk was the only scope that both descended and emitted there).
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
@@ -292,31 +292,47 @@ recorded against the 30.4k opening measurement.
 
 ### B — correctness
 
-- [ ] LT-455: A reactive list in a server-known branch of a list item compiles clean, then throws in every item mount when the branch is not taken — query its container optionally and guard the nested `reconcile`.
+- [ ] LT-468: A client construct on an element in a server-rendered branch of a list item compiles clean, then throws in every item mount — refuse it, as every other scope does.
   **Area:** compiler
-  **Needs:** LT-453, LT-454
+  **Needs:** LT-455
   **Area:** compiler
-  **Filed (Architect, 2026-10-06, from LT-454's review):** a confirmed silent failure. Source
-  shape: a reactive-list item holding a server-known conditional that holds a nested reactive
-  list, e.g. `<li><span>{group}</span>{show ? <ol class="tags">{tags.map(…)}</ol> : null}</li>`.
-  Both surfaces accept it. The branch folds per render call, the same for every clone, and since
-  LT-454 the nested template ships only when the branch rendered. But the item mount queries the
-  nested container as required, `first('ol', 'c-el: ol missing')`, so with `show` false every
-  item mount throws. LT-436 contains the throw per scope, which leaves every item unbound. The
-  same shape is already refused at host level (LTC005, a client construct below a branch root)
-  and inside an arm (LTC005, a nested control-flow branch), so only the item case reaches emission.
-  **Change:** in `planNestedList` (`analysis/effects.ts`), when the list's container sits in a
-  server-rendered branch of its scope, mint the container local as a non-throwing query
-  (`scope.localFor(el, true)`), the mechanism key-derived attributes in a branch already use
-  (`collectKeyAttrs`, `inBranch`). Do the same for the `@empty` roots. Emit the nested
-  `reconcile` call and its `@empty` watches under `if (<container>) { … }`. Nothing else about the
-  inner item mount changes.
-  **Check:** `mount-scopes.test.ts`'s "a list in a server branch of an item" fixture (LT-454) gains
-  the client half on both surfaces. With `show: false`, connect reports no realm diagnostics and
-  an added outer item clones and binds its own content. With `show: true`, the existing
-  adopt-and-clone behavior is unchanged. Parity modules stay byte-identical across surfaces.
-  **Channel/tier:** compiler emission; no new check. A Contained runtime failure (tier 2) becomes
-  the correct path, and no shape is refused.
+  **Filed (Architect, 2026-10-06, from LT-455's review):** the residue LT-455's entry scoped out,
+  probed on that branch: `<em class="mark" onClick={() => {}}>` inside a server-known
+  conditional's arm of a reactive-list item compiles on both surfaces, but the item mount mints a
+  REQUIRED query for the element, so with the branch folded off every adopted and cloned item
+  throws `MissingElementError` (contained per scope by LT-436) — the same failure LT-455 just
+  fixed for nested lists. The same holds for a construct on a branch-held list's container
+  itself, where a later required request upgrades `localFor`'s optional query back to required
+  (by design) and reintroduces the throw through the new guard. Every other scope refuses the
+  shape: the host walk rejects "a client construct below a branch root" (the deeper element
+  exists only when its branch rendered), the arm walk stops at server branches and binds only
+  branch key-derived attributes (`collectBranchKeyAttrs`), and reactive arms give conditional
+  interactivity the existence-guarded arm treatment. The item walk's server-branch descent is
+  the only walk that both descends and emits construct effects.
+  **Ruling (Architect):** refuse, do not guard. A server-known branch's fold is fixed per render
+  and per clone, so an `onClick` there is once-only addressing of markup that can never
+  re-render — the trap LTC005 exists to prevent at host level. A nested reactive list earned its
+  guarded support (LT-455) because the list itself is reactive and the branch only gates
+  per-instance inclusion; a construct has no reactive core. The author's remedy is to make the
+  condition reactive, which plans an arm set in the item and gets live switching with
+  existence-guarded binding.
+  **Change:** in `planReconcileItem`'s `visitElements` (`analysis/effects.ts`), when descending a
+  server conditional's arms (the `inBranch = true` path LT-455 threaded), report a construct on
+  any element — the branch roots included — through `diagnostic.unsupported` in the LTC005
+  family, wording after the host rule with the item-specific remedy ("make the condition
+  reactive"). Do not mint the query. The walk keeps binding branch key-derived attributes and,
+  since LT-455, nested lists with guarded mounts; `emitConstructEffects` is simply not reached
+  below a branch root any more.
+  **Check:** both surfaces refuse the probed shape and a construct on the branch-held container;
+  the refusal names the remedy. The LT-455 fixture still compiles and its client tests stay
+  green (the placeholder `<li>` carries no construct). A reactive conditional with constructs in
+  an item still compiles and binds. `check:corpus` stays clean (no example carries the shape).
+  Catalog row for the new refusal instance; HOST_PROFILE.md's item/Mount-Scope passage and
+  LE_TRUC_COMPILER.md's item-walk passage gain a sentence each; AGENTS.md's
+  conditional-placement paragraph names the item case.
+  **Channel/tier:** compiler check; tier 1 Prevented (the shape is statically decidable at
+  planning time — the walk already knows `inBranch`); no runtime check, so nothing owes the
+  sim-realm an entry beyond the catalog row.
 
 ### D — CSS departures
 
