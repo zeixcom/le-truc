@@ -11,6 +11,7 @@ import createDOMPurify, { type WindowLike } from 'dompurify'
 import { JSDOM } from 'jsdom'
 import { sanitizeHtml as librarySanitizeHtml } from '../../../src/bindings'
 import { compileComponent } from '../../compiler/frontend/tsrx'
+import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import { configureHtmlSanitizer } from '../../compiler/runtime'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
@@ -511,6 +512,157 @@ import { createState } from '@zeix/le-truc'`
 		)
 		expect(hydrated).toBe(served)
 		expect(served).toBe('<b>seed</b>')
+	})
+})
+
+describe('async boundary, attribute channels (LT-449) — the ok root reads its driver through `truc:html`', () => {
+	// The ruled lazyload shape (LT-334's ruling, implemented in LT-449): the
+	// ok arm's root reads the driver through a reactive `truc:html` thunk and
+	// carries the arm's own client constructs (the html watch is the value
+	// channel; a reactive style map rides beside it), and the catch arm nests
+	// its message one element below the root — the per-arm callout shape.
+	const component = (driver: 'deriveCell' | 'createTask'): string =>
+		`import { ${driver}, isPending } from '@zeix/le-truc'
+export function C({}: {})
+	@{
+		${driver === 'deriveCell' ? "const data = deriveCell(async () => 'loaded')" : "const data = createTask<string>(async () => 'loaded')"}
+		expose({ data: data.get })
+			<c-el>
+				@try {
+					<div class="content" style={() => ({ opacity: isPending(data) ? 'var(--dim)' : null })} truc:html={() => data.get()}></div>
+				} @pending {
+					<card-callout><p class="loading">Loading</p></card-callout>
+				} @catch (e) {
+					<card-callout class="danger"><p class="error">{e.message}</p></card-callout>
+				}
+				<style>:host {
+	  color: red;
+	}</style>
+			</c-el>
+	}`
+
+	test('the html thunk drives the routing, and the ok root constructs are the ok arm’s effects', () => {
+		const { component: compiled, diagnostics } = compileComponent(
+			component('deriveCell'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		const code = compiled?.clientCode ?? ''
+		// The ok branch binds the arm root and mounts its watches — the html
+		// watch IS the value channel, so there is no text write.
+		expect(code).toContain("if (armKey === 'ok') {")
+		expect(code).toContain(
+			"const div = armElement as ElementFromSelector<'div'>",
+		)
+		expect(code).toContain('bindStyle(div, ')
+		expect(code).toContain(
+			'watch(() => data.get(), dangerouslyBindInnerHTML(div, { sanitize: sanitizeHtml }))',
+		)
+		expect(code).not.toContain(`ok: bindText(armElement)`)
+	})
+
+	test('the nested catch message writes through an arm-scoped local', () => {
+		const { component: compiled, diagnostics } = compileComponent(
+			component('deriveCell'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		const code = compiled?.clientCode ?? ''
+		expect(code).toContain("} else if (armKey === 'err') {")
+		expect(code).toContain(
+			"const errMessage = first('p', \"the `@catch` arm's message element\")",
+		)
+		expect(code).toContain('err: error => bindText(errMessage)(error.message)')
+	})
+
+	test('the server bakes the arm roots inert and renders the message live on the err arm', async () => {
+		const { component: compiled, diagnostics } = compileComponent(
+			component('deriveCell'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		if (!compiled) throw new Error('fixture must compile')
+		ensureEmitted('feat-async-html-channel', compiled.serverCode)
+		const html = await render('feat-async-html-channel', {})
+		// The pending arm is the live winner; the templates bake the html
+		// and style constructs empty (LT-385c) and the err message empty.
+		expect(html).toContain(
+			'<card-callout data-key="nil"><p class="loading">Loading</p></card-callout>',
+		)
+		expect(html).toContain(
+			'<template data-arms="0" data-key="err"><card-callout class="danger"><p class="error"></p></card-callout></template>',
+		)
+		expect(html).toContain(
+			'<template data-arms="0" data-key="ok"><div class="content"></div></template>',
+		)
+	})
+
+	test('a createTask driver routes to the pending arm server-side (the runtime shim never invokes the callback)', async () => {
+		const { component: compiled, diagnostics } = compileComponent(
+			component('createTask'),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		if (!compiled) throw new Error('fixture must compile')
+		expect(compiled.serverCode).not.toContain('@zeix/le-truc')
+		ensureEmitted('feat-async-task-driver', compiled.serverCode)
+		const html = await render('feat-async-task-driver', {})
+		expect(html).toContain('data-key="nil"')
+		// The err arm exists only as its inert template — the live winner is
+		// the pending arm (the shim's pending box never routes 'err').
+		expect(html).not.toContain('<p class="error" data-key="err"')
+		expect(html).not.toContain('<card-callout data-key="err"')
+	})
+
+	test('a catch read on the root beside a nested message element is refused (one text target per arm)', () => {
+		// Admitted, the err branch would write the root's `e.message` into
+		// the nested `<p>` and never write `e.name` (LT-449 review).
+		const source = component('deriveCell').replace(
+			'<card-callout class="danger"><p class="error">{e.message}</p></card-callout>',
+			'<card-callout class="danger">{e.message}<p class="error">{e.name}</p></card-callout>',
+		)
+		const { component: compiled, diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(compiled).toBeNull()
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC005'])
+		expect(diagnostics[0]?.message).toContain(
+			'reads the catch parameter `e` both on its root and in a nested element',
+		)
+		expect(diagnostics[0]?.message).toContain('Keep one read of `e` per arm')
+
+		const tsx = compileComponentTsx(
+			`import { deriveCell } from '@zeix/le-truc'
+export function C({}: {}) {
+	const data = deriveCell(async () => 'loaded')
+	expose({ data: data.get })
+	return (
+		<c-el>
+			<truc:try
+				pending={<card-callout><p class="loading">Loading</p></card-callout>}
+				catch={e => (
+					<card-callout class="danger">{e.message}<p class="error">{e.name}</p></card-callout>
+				)}
+			>
+				<div class="content" truc:html={() => data.get()}></div>
+			</truc:try>
+		</c-el>
+	)
+}`,
+			'c.tsx',
+			new Set(),
+		)
+		expect(tsx.component).toBeNull()
+		expect(tsx.diagnostics.map(d => d.code)).toEqual(['LTC005'])
+		expect(tsx.diagnostics[0]?.message).toContain(
+			'reads the catch parameter `e` both on its root and in a nested element',
+		)
 	})
 })
 

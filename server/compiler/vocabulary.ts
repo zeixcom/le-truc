@@ -34,6 +34,7 @@ export const SIGNAL_CONSTRUCTOR_NAMES = [
 	'deriveStore',
 	'createMemo',
 	'createSensor',
+	'createTask',
 ] as const
 
 export const SIGNAL_CONSTRUCTORS: ReadonlySet<string> = new Set<string>(

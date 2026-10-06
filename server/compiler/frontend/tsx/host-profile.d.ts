@@ -177,6 +177,12 @@ declare namespace JSX {
 		hidden?: Reactive<boolean>
 		id?: Reactive<string>
 		role?: string
+		/**
+		 * Static style text, or the reactive style map (LT-028): a thunk to a
+		 * per-property record whose `null` values remove the property
+		 * (`bindStyle`'s map form).
+		 */
+		style?: Reactive<string> | (() => Partial<Record<string, string | null>>)
 		tabindex?: Reactive<number>
 		title?: string
 		'aria-label'?: Reactive<string>

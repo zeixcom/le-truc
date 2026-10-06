@@ -532,6 +532,95 @@ const lazyChildOf = (el: ElementNode): ExprNode | undefined =>
 		(c): c is ExprNode => c.kind === 'expr' && c.reactivity === 'reactive',
 	)
 
+/**
+ * The err arm's message element (LT-449): the first direct child element of
+ * `el` whose direct reactive child reads the catch parameter (bare or a
+ * member read). The ruled callout shape nests the message one level below
+ * the arm root — `<card-callout class="danger"><p class="error">{e.message}
+ * </p></card-callout>` — and the text write targets that element through an
+ * arm-scoped `first()`. Null when the message sits on the root itself (the
+ * depth-0 channel the boundary has always carried). Shared with
+ * `emit-server.ts`, which must find the same live-arm child.
+ */
+export const lazyCatchMessageEl = (
+	el: ElementNode,
+	catchParam: string | null,
+): ElementNode | null => {
+	if (!catchParam) return null
+	for (const child of el.children) {
+		if (child.kind !== 'element') continue
+		if (directLazyCatchRef(child, catchParam) !== null) return child
+	}
+	return null
+}
+
+/**
+ * The offending construct below an async-boundary arm root, or null. Direct
+ * reactive children stay the sanctioned depth-0 channel; the err arm's
+ * message element is additionally exempt — its subtree may carry exactly
+ * one lazy child reading the catch parameter, its own attrs stay static,
+ * and no deeper element or second reactive child is allowed.
+ */
+const boundaryDeepConstructOf = (
+	el: ElementNode,
+	messageEl: ElementNode | null,
+	catchParam: string | null,
+): TemplateNode | null => {
+	// Without a catch parameter there is no message element to exempt.
+	const exempt =
+		messageEl !== null && catchParam !== null
+			? { el: messageEl, param: catchParam }
+			: null
+	let seenLazyInner = false
+	for (const child of el.children) {
+		if (exempt !== null && child === exempt.el) {
+			if (child.attrs.some(isClientConstructAttr)) return child
+			for (const inner of child.children) {
+				if (inner.kind === 'element') return inner
+				if (inner.kind === 'expr' && inner.reactivity === 'reactive') {
+					if (seenLazyInner) return inner
+					seenLazyInner = true
+					if (directLazyCatchRef(exempt.el, exempt.param) === null) return inner
+				}
+			}
+			continue
+		}
+		if (child.kind === 'expr' && child.reactivity === 'reactive') continue
+		if (
+			child.kind === 'element' &&
+			(child.attrs.some(isClientConstructAttr) || hasDeepConstruct(child))
+		)
+			return child
+	}
+	return null
+}
+
+/**
+ * The signal an async boundary's ok arm reads through a reactive
+ * `truc:html={() => name.get()}` thunk on its arm root (LT-449) — the
+ * attribute-channel counterpart of a direct lazy identifier child. The
+ * thunk must be exactly a `.get()` read; anything else is not a boundary
+ * driver. Shared with `emit-server.ts`, which must name the same signal
+ * the analysis admitted.
+ */
+export const htmlThunkSignalName = (el: ElementNode): string | null => {
+	for (const attr of el.attrs) {
+		if (attr.kind !== 'html' || !attr.reactive) continue
+		const body = (attr.thunk as { body?: unknown }).body
+		if (!isNode(body) || nodeType(body) !== 'CallExpression') continue
+		const callee = (body as AstNode).callee
+		if (!isNode(callee) || nodeType(callee) !== 'MemberExpression') continue
+		if (callee.computed) continue
+		const prop = callee.property
+		if (!isNode(prop) || prop.type !== 'Identifier') continue
+		if (String(prop.name) !== 'get') continue
+		const object = callee.object
+		if (isNode(object) && nodeType(object) === 'Identifier')
+			return String(object.name)
+	}
+	return null
+}
+
 /** An AST node's source offset, for the span table (LT-011). */
 const startOf = (node: AstNode | undefined): number | undefined =>
 	typeof node?.start === 'number' ? node.start : undefined
@@ -1346,7 +1435,13 @@ const handleAsyncBoundary = (
 	node: TryNode,
 	scope: MountScope | null = null,
 ): void => {
-	const { component, source, diagnostics, usedNames } = fx
+	const {
+		component,
+		source,
+		diagnostics,
+		usedNames,
+		badFreeNames: badNames,
+	} = fx
 	const wording = wordingOf(component)
 	const okRoot = node.children.find(isElement) as ElementNode
 	const pendingRoot = (node.pendingChildren as TemplateNode[]).find(
@@ -1355,10 +1450,11 @@ const handleAsyncBoundary = (
 	const errRoot = node.catchChildren.find(isElement) as ElementNode
 	const catchParam = node.catchParam
 
+	const errMsgEl = lazyCatchMessageEl(errRoot, catchParam)
 	if (
 		hasDeepConstruct(okRoot) ||
 		hasDeepConstruct(pendingRoot) ||
-		hasDeepConstruct(errRoot)
+		boundaryDeepConstructOf(errRoot, errMsgEl, catchParam) !== null
 	) {
 		diagnostics.push(
 			diagnostic.unsupported(
@@ -1383,29 +1479,36 @@ const handleAsyncBoundary = (
 	}
 
 	const okLazyName = directLazyIdentifier(okRoot)
+	const htmlSignalName = htmlThunkSignalName(okRoot)
+	const driverName = okLazyName ?? htmlSignalName
 	const boundaryCandidates = component.signals.filter(
-		s => s.constructor === 'deriveCell' && s.name === okLazyName,
+		s =>
+			(s.constructor === 'deriveCell' || s.constructor === 'createTask') &&
+			s.name === driverName,
 	)
-	if (!okLazyName || boundaryCandidates.length !== 1) {
+	if (!driverName || boundaryCandidates.length !== 1) {
 		diagnostics.push(
 			diagnostic.unsupported(
 				source,
 				okRoot.node,
-				`An async boundary whose ${wording.tryBody} does not render its async signal as a direct lazy child`,
-				'The compiler learns which signal drives the `isPending()` routing from that child — render the `deriveCell(async …)` signal directly, for example `{data}`.',
+				`An async boundary whose ${wording.tryBody} neither renders its async signal as a direct lazy child nor reads it through a \`truc:html\` thunk`,
+				'The compiler learns which signal drives the `isPending()` routing from that channel — render the `deriveCell(async …)` or `createTask(…)` signal directly, for example `{data}`, or read it on the arm root with `truc:html={() => data.get()}`.',
 			),
 		)
 		return
 	}
 	const signal = boundaryCandidates[0]?.name as string
-
-	if (okRoot.attrs.some(isClientConstructAttr)) {
+	// The attribute channel (LT-449): the value reaches the arm root through
+	// the `truc:html` watch, so the root's own client constructs become the
+	// ok arm's effects. The child channel keeps the child-only contract.
+	const viaHtmlThunk = okLazyName === null && htmlSignalName !== null
+	if (!viaHtmlThunk && okRoot.attrs.some(isClientConstructAttr)) {
 		diagnostics.push(
 			diagnostic.unsupported(
 				source,
 				okRoot.node,
 				`A reactive construct on the ${wording.tryBody} root of an async boundary`,
-				'That root takes static and server attributes and its one lazy signal child only; other constructs have no addressing there yet — move the construct onto a child element.',
+				"That root takes static and server attributes and its one lazy signal child only — move the construct onto a child element, or read the signal through `truc:html={() => data.get()}` on the root, which plans root constructs as the ok arm's effects.",
 			),
 		)
 		return
@@ -1422,12 +1525,17 @@ const handleAsyncBoundary = (
 		return
 	}
 
-	const errText = catchParam ? directLazyCatchRef(errRoot, catchParam) : null
+	const directErrText = catchParam
+		? directLazyCatchRef(errRoot, catchParam)
+		: null
+	const errText =
+		directErrText ??
+		(errMsgEl && catchParam ? directLazyCatchRef(errMsgEl, catchParam) : null)
 	if (
 		errRoot.children.some(
 			c => c.kind === 'expr' && c.reactivity === 'reactive',
 		) &&
-		errText === null
+		directErrText === null
 	) {
 		diagnostics.push(
 			diagnostic.unsupported(
@@ -1435,6 +1543,20 @@ const handleAsyncBoundary = (
 				errRoot.node,
 				`A lazy child in the ${wording.catchArm} that does not read the catch parameter \`${catchParam ?? 'e'}\``,
 				`Render a text member of it, for example \`{${catchParam ?? 'e'}.message}\` — the parameter itself is an \`Error\`, which a text position does not take (ADR 0046 s6).`,
+			),
+		)
+		return
+	}
+	// One catch read per arm: the err branch writes a single text target, so
+	// a direct read on the root beside a nested message element would land
+	// the root's text in the nested element and drop the nested read.
+	if (directErrText !== null && errMsgEl !== null) {
+		diagnostics.push(
+			diagnostic.unsupported(
+				source,
+				errMsgEl.node,
+				`A ${wording.catchArm} that reads the catch parameter \`${catchParam ?? 'e'}\` both on its root and in a nested element`,
+				`Keep one read of \`${catchParam ?? 'e'}\` per arm — either directly in the root, for example \`{${catchParam ?? 'e'}.message}\`, or in one child element of the root.`,
 			),
 		)
 		return
@@ -1451,6 +1573,29 @@ const handleAsyncBoundary = (
 		keyAttrs: [],
 		effects: [],
 	})
+	const okArm = arm('ok')
+	if (viaHtmlThunk) {
+		// The ok root's client constructs are the ok arm's effects (LT-449):
+		// the `truc:html` watch is the value channel, and a reactive
+		// style/class thunk rides beside it — both mounted inside
+		// `bindArm`'s ok branch, dying with the arm. No descendants: the
+		// deep-construct refusal above already kept the root the only
+		// construct-bearing element.
+		const rootName = uniqueName(usedNames, sanitizeVarName(okRoot.tag))
+		okArm.root = { name: rootName, tag: okRoot.tag }
+		fx.armSelectors.set(rootName, resolveSelector(fx, okRoot).selector)
+		emitConstructEffects(fx, okRoot, rootName, okArm.effects, badNames)
+	}
+	// The nested message element (LT-449) writes through an arm-scoped
+	// `first` local; the depth-0 channel keeps writing the root.
+	const errArm = arm('err')
+	if (errMsgEl !== null) {
+		errArm.locals.push({
+			name: uniqueName(usedNames, 'errMessage'),
+			selector: resolveSelector(fx, errMsgEl).selector,
+			message: `the ${wording.catchArm}'s message element`,
+		})
+	}
 	;(scope?.sink ?? fx.effects).push({
 		kind: 'arms',
 		arms: {
@@ -1461,12 +1606,14 @@ const handleAsyncBoundary = (
 			sourceStart: undefined,
 			elementParam: uniqueName(usedNames, 'armElement'),
 			keyParam: uniqueName(usedNames, 'armKey'),
-			arms: [arm('ok'), arm('nil'), arm('err')],
+			arms: [okArm, arm('nil'), errArm],
 			boundary: {
 				signal,
 				errText,
 				okStart: startOf(lazyChildOf(okRoot)?.expr),
-				errStart: startOf(lazyChildOf(errRoot)?.expr),
+				errStart:
+					startOf(lazyChildOf(errMsgEl ?? errRoot)?.expr) ??
+					startOf(lazyChildOf(errRoot)?.expr),
 			},
 		},
 	})

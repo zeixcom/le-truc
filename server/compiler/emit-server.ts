@@ -17,6 +17,7 @@
  * - `@for` over server data renders once per item, hoisted consts included
  */
 
+import { htmlThunkSignalName, lazyCatchMessageEl } from './analysis/effects'
 import type { AstNode } from './ast-node'
 import { freeIdentifiers, hostPropOf } from './ast-utils'
 import { CodeBuilder, HtmlWriter, jsData, jsString } from './codegen'
@@ -1102,9 +1103,11 @@ const emitAsyncBoundary = (
 			c.reactivity === 'reactive' &&
 			c.expr.type === 'Identifier',
 	)
+	// The driver's name, child channel or the `truc:html` thunk channel
+	// (LT-449) — the analysis admitted exactly one, so mirror its choice.
 	const signalName = signalChild
 		? String((signalChild.expr as AstNode).name)
-		: ''
+		: (htmlThunkSignalName(okRoot) ?? '')
 	const errScope = new Set(scope)
 	if (node.catchParam) errScope.add(node.catchParam)
 	// An arm root, with its recognized lazy child (the guarded signal; the
@@ -1179,10 +1182,18 @@ const emitAsyncBoundary = (
 	const keyed = (key: string): AttributeIR[] => [
 		{ kind: 'static', name: 'data-key', value: key },
 	]
-	const errChild = errRoot.children.find(
-		(c): c is TemplateNode & { kind: 'expr' } =>
-			c.kind === 'expr' && c.reactivity === 'reactive',
-	)
+	const errChild =
+		errRoot.children.find(
+			(c): c is TemplateNode & { kind: 'expr' } =>
+				c.kind === 'expr' && c.reactivity === 'reactive',
+		) ??
+		// The nested message element's lazy child (LT-449) — the live err
+		// arm emits it through the general element emission, which
+		// evaluates `error.message` with the catch parameter in scope.
+		lazyCatchMessageEl(errRoot, node.catchParam)?.children.find(
+			(c): c is TemplateNode & { kind: 'expr' } =>
+				c.kind === 'expr' && c.reactivity === 'reactive',
+		)
 	ctx.out.open(`if (${stateVar} === 'ok') {`)
 	emitArmRoot(okRoot, scope, `${signalName}.get()`, keyed('ok'))
 	ctx.out.between(`} else if (${stateVar} === 'err') {`)

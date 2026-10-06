@@ -1,3 +1,37 @@
+// The docs site's own sanitizer (ADR 0010): the compiled `truc:html` path
+// fails closed — unconfigured, it renders fetched markup escaped. DOMPurify
+// keeps the rich content (markup) and strips scripts and event handlers,
+// which is the compiled surface's contract; the demo's `allow-scripts` stays
+// inert until the script-loading design (LT-448) rules. ES imports hoist, so
+// this runs after the component clients below register — the configured
+// default is read per update, never captured at bind time, so that ordering
+// is safe.
+//
+// Two policy options the partials' contract needs, both inside DOMPurify —
+// never split and re-concatenate around it, which voids its guarantee:
+// - `FORCE_BODY`: a partial's leading `<style>` would otherwise be hoisted
+//   into `<head>` by the body parse and dropped with it.
+// - `CUSTOM_ELEMENT_HANDLING`: the default allowlist has no custom elements
+//   and would unwrap every corpus tag a partial carries. Any valid custom
+//   element name passes — an undefined tag stays inert, so the demo
+//   partial's `shake-hands` renders without behavior until LT-448. The
+//   attribute check excludes `on*`: DOMPurify applies no separate handler
+//   filter to attributes admitted here, so `onfocus` plus `autofocus` on a
+//   custom element would run script on insertion.
+import { configureHtmlSanitizer } from '@zeix/le-truc'
+import DOMPurify from 'dompurify'
+
+configureHtmlSanitizer(html =>
+	DOMPurify.sanitize(html, {
+		FORCE_BODY: true,
+		CUSTOM_ELEMENT_HANDLING: {
+			tagNameCheck: /^[a-z][a-z0-9]*(-[a-z0-9]+)+$/,
+			attributeNameCheck: /^(?!on)[a-z][a-z0-9-]*$/,
+			allowCustomizedBuiltInElements: false,
+		},
+	}),
+)
+
 import '../server/generated/components/basic-blogmeta.client.ts'
 // Site cutover (LT-092): every migrated component mounts its COMPILED client
 // from server/generated/components (gitignored build output — scripts/build-corpus.ts

@@ -96,6 +96,14 @@ export type ClassifiedDiagnostic = {
 	message: RegExp
 	/** Why this diagnostic cannot affect the serialized markup. */
 	reason: string
+	/**
+	 * The notice fires only in the docs build's page simulation — its realm
+	 * parses occurrences whose definitions registered on earlier pages, a
+	 * parse order the corpus realm never produces. The corpus baseline
+	 * cannot witness the match, so its used-check skips the entry; the
+	 * build:docs gate exercises it on every build instead (LT-449).
+	 */
+	docsOnly?: true
 }
 
 /* === Suppression === */

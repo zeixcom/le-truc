@@ -9,21 +9,25 @@ import { expect, test } from '@playwright/test'
  *
  * Key Features Tested:
  * - ✅ Basic content loading and rendering
- * - ✅ Loading state display and hiding
+ * - ✅ Loading state display (the live pending arm; per-arm cloning — LT-449)
  * - ✅ Error handling for various failure scenarios
  * - ✅ Content replacement and DOM injection
  * - ✅ Recursive loading prevention
  * - ✅ URL validation and security checks
  * - ✅ Dynamic src attribute changes with stale dimming during re-fetch
- * - ✅ Graceful handling of missing DOM elements
- * - ✅ CSS and JavaScript execution in loaded content
- * - ✅ Nested custom component initialization
+ * - ✅ Arm adoption ordering for the scroll beside-watch (LT-449's probe)
+ * - ✅ Graceful handling of empty content
+ * - ✅ CSS in loaded content (scripts are stripped by the compiled
+ *   `truc:html` sanitizer — the script-execution legs moved to the
+ *   LT-448 follow-up)
+ * - ✅ Inert custom-element markup in loaded content (shake-hands)
  *
  * Architecture Notes:
- * - Uses `asURL` parser with validation and security checks
+ * - Uses `asURL`-style src parsing with validation and security checks
  * - Implements `fetchWithCache` for HTTP caching support
- * - Uses `dangerouslyBindInnerHTML` for content injection
- * - Manages loading/error states via reactive computed properties
+ * - The compiled async boundary (`<truc:try>`) clones arms from the
+ *   server-baked templates; when ok, no callout exists in the DOM
+ * - Manages loading/error states through the boundary's arm routing
  * - Protects against recursive loading scenarios
  */
 
@@ -48,10 +52,12 @@ test.describe('module-lazyload component', () => {
 			// Wait for content to load successfully
 			await expect(content).toBeVisible({ timeout: 1000 })
 
-			// After loading, should hide loading and show content
-			await expect(loading).toBeHidden()
-			await expect(error).toBeHidden()
-			await expect(callout).toBeHidden()
+			// The compiled boundary clones its arms (LT-449): when ok, the
+			// callout arms do not exist in the DOM at all — no hidden
+			// leftovers (re-ruled expectation, ITERATION ruling 10).
+			await expect(loading).toHaveCount(0)
+			await expect(error).toHaveCount(0)
+			await expect(callout).toHaveCount(0)
 
 			// Verify content was loaded correctly
 			await expect(content).toContainText('Simple Text Content')
@@ -340,6 +346,56 @@ test.describe('module-lazyload component', () => {
 			await expect(error).toBeVisible({ timeout: 1000 })
 			await expect(content).toBeHidden()
 		})
+
+		test('scrolls to a heading of the freshly adopted arm on a later src change', async ({
+			page,
+		}) => {
+			// LT-449's ordering probe: the beside-watch's ok fire and the
+			// boundary's arm adoption are both driven by the same task
+			// settlement — the scroll's `query` into `.content` must run
+			// AFTER reconcile has adopted the ok arm and its html watch has
+			// written the partial, or the heading is not there yet.
+			const loader = page.locator('#dynamic-src-test')
+			const content = loader.locator('.content')
+
+			await loader.evaluate(node => {
+				;(node as any).src = '/test/module-lazyload/mocks/simple-text.html'
+			})
+			await expect(content).toContainText('Simple Text Content', {
+				timeout: 5000,
+			})
+
+			// Record every scrollIntoView with the queried heading's
+			// presence at call time.
+			await page.evaluate(() => {
+				const calls: { hadHeading: boolean }[] = []
+				;(window as any).__scrollCalls = calls
+				const original = Element.prototype.scrollIntoView
+				Element.prototype.scrollIntoView = function (this: Element) {
+					const heading = this.closest('.content')?.querySelector(
+						'h1, h2, h3, h4, h5, h6',
+					)
+					calls.push({ hadHeading: heading !== null })
+					return undefined
+				}
+				void original
+			})
+
+			await loader.evaluate(node => {
+				;(node as any).src = '/test/module-lazyload/mocks/with-styles.html'
+			})
+			await expect(content).toContainText('Styled Content', {
+				timeout: 5000,
+			})
+
+			// The scroll fired, and at every fire the freshly written
+			// content already carried its heading.
+			const calls = await page.evaluate(
+				() => (window as any).__scrollCalls as { hadHeading: boolean }[],
+			)
+			expect(calls.length).toBeGreaterThanOrEqual(1)
+			for (const call of calls) expect(call.hadHeading).toBe(true)
+		})
 	})
 
 	test.describe('Component Properties and State', () => {
@@ -360,199 +416,64 @@ test.describe('module-lazyload component', () => {
 	})
 
 	test.describe('DOM Structure and Accessibility', () => {
-		test('maintains proper ARIA attributes for loading states', async ({
+		test('authors the loading and error arms with status/alert roles', async ({
 			page,
 		}) => {
 			const loader = page.locator('module-lazyload').first()
-			const loading = loader.locator('.loading')
-			const error = loader.locator('.error')
 
-			// Loading element should have proper role
-			await expect(loading).toHaveAttribute('role', 'status')
-
-			// Error element should have proper role and aria-live
-			await expect(error).toHaveAttribute('role', 'alert')
-			await expect(error).toHaveAttribute('aria-live', 'assertive')
+			// The arms ship as inert `<template>`s beside the live winner (the
+			// pending arm renders live only until the first load settles), so
+			// the roles are read off the templates' content.
+			const roles = await loader.evaluate(el => {
+				const template = (key: string): HTMLTemplateElement | null =>
+					el.querySelector(`template[data-key="${key}"]`)
+				const read = (key: string, selector: string): string | null =>
+					template(key)
+						?.content.querySelector(selector)
+						?.getAttribute('role') ?? null
+				return {
+					loading: read('nil', 'p.loading'),
+					error: read('err', 'p.error'),
+					errorLive:
+						template('err')
+							?.content.querySelector('p.error')
+							?.getAttribute('aria-live') ?? null,
+				}
+			})
+			expect(roles.loading).toBe('status')
+			expect(roles.error).toBe('alert')
+			expect(roles.errorLive).toBe('assertive')
 		})
 
-		test('shows broken state when required DOM elements are missing', async ({
+		test('removes the callout arms entirely once content loads', async ({
 			page,
 		}) => {
-			// When the card-callout element is missing, the component gets stuck in loading state
-			// This is the expected failure mode when required DOM structure is incomplete
+			const loader = page.locator('#recursive-test')
 
-			const loader = page.locator('#missing-elements-test')
-			const content = loader.locator('.content')
-			const loading = loader.locator('.loading')
-			const error = loader.locator('.error')
-
-			// Wait for component to initialize
-			await page.waitForTimeout(50)
-
-			// When card-callout is missing, the component should be stuck in loading state
-			await expect(loading).toBeVisible()
-			await expect(content).toBeHidden()
-			await expect(error).toBeHidden()
-
-			// This stuck state indicates the component cannot function properly without required elements
-			// The loading state persists because the show/hide logic depends on card-callout
-		})
-
-		test('preserves existing content structure during loading', async ({
-			page,
-		}) => {
-			const loader = page.locator('module-lazyload').first()
-			const callout = loader.locator('card-callout')
-
-			// Wait for content to load successfully
-			const content = loader.locator('.content')
-			await expect(content).toBeVisible({ timeout: 1000 })
-
-			// After successful loading, callout should be hidden but still present in DOM
-			await expect(callout).toBeHidden()
-			const calloutCount = await loader.locator('card-callout').count()
-			expect(calloutCount).toBe(1)
+			// After the outer load succeeds, the ok arm replaced the callout:
+			// no callout exists in the DOM at all (LT-449's per-arm shape;
+			// re-ruled expectation, ITERATION ruling 10 — the twin kept a
+			// hidden callout beside the content).
+			const content = loader.locator('> .content')
+			await expect(content).toBeVisible({ timeout: 5000 })
+			await expect(loader.locator('> card-callout')).toHaveCount(0)
+			// The three arm templates stay inert beside the winner — the
+			// client's source for every later clone.
+			await expect(loader.locator('> template[data-arms]')).toHaveCount(3)
 		})
 	})
 
 	test.describe('Content Integration', () => {
-		test('executes JavaScript in loaded content when allow-scripts is present', async ({
-			page,
-		}) => {
-			const loader = page.locator('#original-snippet-test')
-			const content = loader.locator('.content')
-
-			// Verify the component has the allow-scripts attribute
-			await expect(loader).toHaveAttribute('allow-scripts')
-
-			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 1000 })
-
-			// Verify shake-hands component is present and functional
-			const shakeHands = content.locator('shake-hands')
-			await expect(shakeHands).toBeVisible()
-
-			const button = shakeHands.locator('button')
-			const counter = shakeHands.locator('.count')
-
-			// Initial count should be 42
-			await expect(counter).toHaveText('42')
-
-			// Click should increment counter (proves script executed)
-			await button.click()
-			await expect(counter).toHaveText('43')
-
-			// Multiple clicks should continue incrementing
-			await button.click()
-			await button.click()
-			await expect(counter).toHaveText('45')
-		})
-
-		test('respects allow-scripts attribute for script execution control', async ({
-			page,
-		}) => {
-			// Create test module-lazyload without allow-scripts
-			await page.evaluate(() => {
-				const testContainer = document.createElement('div')
-				testContainer.innerHTML = `
-					<module-lazyload id="no-scripts-test" src="./test/module-lazyload/mocks/snippet.html">
-						<card-callout>
-							<p class="loading" role="status">Loading...</p>
-							<p class="error" role="alert" aria-live="assertive" hidden></p>
-						</card-callout>
-						<div class="content" hidden></div>
-					</module-lazyload>
-				`
-				document.body.appendChild(testContainer)
-			})
-
-			const loader = page.locator('#no-scripts-test')
-			const content = loader.locator('.content')
-
-			// Verify no allow-scripts attribute is present
-			await expect(loader).not.toHaveAttribute('allow-scripts')
-
-			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 1000 })
-
-			// Verify content loads successfully (the main requirement)
-			await expect(content).toContainText('Lazy Loaded')
-
-			// The key verification: component uses hasAttribute('allow-scripts') to control script execution
-			// Since we can observe that both with and without the attribute work (due to custom element reuse),
-			// we mainly verify that the attribute is correctly checked
-			const hasAllowScripts = await loader.evaluate(el =>
-				el.hasAttribute('allow-scripts'),
-			)
-			expect(hasAllowScripts).toBe(false)
-		})
-
-		test('preserves script type attributes when recreating scripts', async ({
-			page,
-		}) => {
-			// Create test module-lazyload with allow-scripts to test script type preservation
-			await page.evaluate(() => {
-				const testContainer = document.createElement('div')
-				testContainer.innerHTML = `
-					<module-lazyload id="module-script-test" src="./test/module-lazyload/mocks/module-with-type.html" allow-scripts>
-						<card-callout>
-							<p class="loading" role="status">Loading module script test...</p>
-							<p class="error" role="alert" aria-live="assertive" hidden></p>
-						</card-callout>
-						<div class="content" hidden></div>
-					</module-lazyload>
-				`
-				document.body.appendChild(testContainer)
-			})
-
-			const loader = page.locator('#module-script-test')
-			const content = loader.locator('.content')
-
-			// Verify allow-scripts attribute is present
-			await expect(loader).toHaveAttribute('allow-scripts')
-
-			// Wait for content to load
-			await expect(content).toBeVisible({ timeout: 1000 })
-
-			// Verify that the module script executed (which requires type="module" to work)
-			const moduleOutput = content.locator('#module-test-output')
-			await expect(moduleOutput).toHaveText(
-				'Module script executed successfully!',
-			)
-			await expect(moduleOutput).toHaveAttribute('data-module-executed', 'true')
-
-			// Verify module script globals were set
-			const moduleTestResult = await page.evaluate(
-				() => (window as any).moduleTestResult,
-			)
-			expect(moduleTestResult).toBeTruthy()
-			expect(moduleTestResult.message).toBe('ES6 modules work!')
-
-			// Verify regular script also executed
-			const regularScriptExecuted = await page.evaluate(
-				() => (window as any).regularScriptExecuted,
-			)
-			expect(regularScriptExecuted).toBe(true)
-
-			// Most importantly: verify that the script tags in the content have the correct type attributes
-			const scriptTypes = await content.evaluate(el => {
-				const scripts = el.querySelectorAll('script')
-				return Array.from(scripts).map(script => ({
-					type: script.getAttribute('type'),
-					hasContent: !!script.textContent?.trim(),
-				}))
-			})
-
-			// Should have both module and regular script types preserved
-			expect(scriptTypes.length).toBeGreaterThan(0)
-			const moduleScript = scriptTypes.find(s => s.type === 'module')
-			const regularScript = scriptTypes.find(s => s.type === 'text/javascript')
-
-			expect(moduleScript).toBeTruthy()
-			expect(moduleScript?.hasContent).toBe(true)
-			expect(regularScript).toBeTruthy()
-			expect(regularScript?.hasContent).toBe(true)
-		})
+		// The compiled surface strips scripts from fetched content (the
+		// `truc:html` sanitizer, fail-closed). The four script-execution
+		// legs the twin's `allow-scripts` behavior had — 'executes JavaScript
+		// in loaded content when allow-scripts is present', 'respects
+		// allow-scripts attribute for script execution control', 'preserves
+		// script type attributes when recreating scripts', and 'loads snippet
+		// content independently in multiple instances' — are re-scoped to the
+		// script-loading follow-up (LT-448's implementation task, LT-449's
+		// entry names them). `mocks/module-with-type.html` stays as its test
+		// input; `shake-hands` renders inert until that design rules.
 
 		test('loads snippet content into light DOM', async ({ page }) => {
 			const loader = page.locator('#original-snippet-test')
@@ -565,72 +486,20 @@ test.describe('module-lazyload component', () => {
 			const hasShadowRoot = await loader.evaluate(el => !!el.shadowRoot)
 			expect(hasShadowRoot).toBe(false)
 
-			// Verify shake-hands component is present in light DOM .content
-			await expect(content.locator('shake-hands')).toBeVisible()
-
-			// Verify card-callout is hidden after successful load
-			const callout = loader.locator('card-callout')
-			await expect(callout).toBeHidden()
+			// shake-hands survives sanitization as an INERT element: markup
+			// present, defining script stripped — the counter must NOT move
+			// (the interim contract until LT-448's design rules).
+			const shakeHands = content.locator('shake-hands')
+			await expect(shakeHands).toBeVisible()
+			await expect(shakeHands.locator('.count')).toHaveText('42')
+			await shakeHands.locator('button').click()
+			await expect(shakeHands.locator('.count')).toHaveText('42')
 
 			// Styles from snippet.html are scoped to shake-hands, not body
 			const bodyBgColor = await page.evaluate(
 				() => getComputedStyle(document.body).backgroundColor,
 			)
 			expect(bodyBgColor).not.toContain('crimson')
-		})
-
-		test('loads snippet content independently in multiple instances', async ({
-			page,
-		}) => {
-			// Create a second instance for comparison
-			await page.evaluate(() => {
-				const testContainer = document.createElement('div')
-				testContainer.innerHTML = `
-					<module-lazyload id="second-snippet-test" src="./test/module-lazyload/mocks/snippet.html" allow-scripts>
-						<card-callout>
-							<p class="loading" role="status">Loading...</p>
-							<p class="error" role="alert" aria-live="assertive" hidden></p>
-						</card-callout>
-						<div class="content" hidden></div>
-					</module-lazyload>
-				`
-				document.body.appendChild(testContainer)
-			})
-
-			const firstLoader = page.locator('#original-snippet-test')
-			const secondLoader = page.locator('#second-snippet-test')
-
-			// Wait for both to load
-			await expect(firstLoader.locator('.content')).toBeVisible({
-				timeout: 5000,
-			})
-			await expect(secondLoader.locator('.content')).toBeVisible({
-				timeout: 5000,
-			})
-
-			// Neither instance uses shadow DOM
-			const firstHasShadowRoot = await firstLoader.evaluate(
-				el => !!el.shadowRoot,
-			)
-			const secondHasShadowRoot = await secondLoader.evaluate(
-				el => !!el.shadowRoot,
-			)
-			expect(firstHasShadowRoot).toBe(false)
-			expect(secondHasShadowRoot).toBe(false)
-
-			// Both should have functional scripts and independent counters
-			const firstButton = firstLoader.locator('shake-hands button')
-			const secondButton = secondLoader.locator('shake-hands button')
-
-			await firstButton.click()
-			await expect(firstLoader.locator('shake-hands .count')).toHaveText('43')
-
-			await secondButton.click()
-			await expect(secondLoader.locator('shake-hands .count')).toHaveText('43')
-
-			// Both shake-hands components are visible
-			await expect(firstLoader.locator('shake-hands')).toBeVisible()
-			await expect(secondLoader.locator('shake-hands')).toBeVisible()
 		})
 
 		test('properly isolates loaded content styles', async ({ page }) => {
@@ -652,6 +521,43 @@ test.describe('module-lazyload component', () => {
 
 			// External elements shouldn't have the styled content's background
 			expect(externalBg).not.toContain('linear-gradient')
+		})
+
+		test('sanitizes a style tag that smuggles an event handler', async ({
+			page,
+		}) => {
+			// LT-449 review: two vectors. A policy that splits `<style>` out
+			// around the sanitizer and re-concatenates lets the first parse into
+			// a live `<style onload>`; a custom-element attribute check that
+			// admits `on*` keeps the second's `onfocus`, which `autofocus` fires
+			// on insertion. Served inline: the payload is malformed by design.
+			await page.route('**/mocks/style-injection.html', route =>
+				route.fulfill({
+					contentType: 'text/html',
+					body: '<style a="</style>" onload=window.__lazyloadInjected=true <b>Injection probe</b></style><x-probe onfocus="window.__lazyloadInjected=true" autofocus tabindex="0"></x-probe><p>After the probe</p>',
+				}),
+			)
+			const loader = page.locator('#dynamic-src-test')
+			const content = loader.locator('.content')
+			await loader.evaluate(node => {
+				;(node as any).src = '/test/module-lazyload/mocks/style-injection.html'
+			})
+			// Wait on the ok arm, not the marker text: under a bypassed policy the
+			// marker is swallowed into the smuggled style's raw text, and the
+			// handler assertion below is the one that should report it.
+			await expect(content).toHaveCount(1, { timeout: 1000 })
+			const handlerAttrs = await content.evaluate(el =>
+				[...el.querySelectorAll('*')].flatMap(child =>
+					[...child.attributes]
+						.map(attr => attr.name)
+						.filter(name => name.startsWith('on')),
+				),
+			)
+			expect(handlerAttrs).toEqual([])
+			await expect(content).toContainText('After the probe')
+			expect(
+				await page.evaluate(() => (window as any).__lazyloadInjected),
+			).toBeUndefined()
 		})
 	})
 })

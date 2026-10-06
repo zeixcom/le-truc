@@ -3,27 +3,25 @@
  * stays beside this source as the variant set's `.ts` twin (ADR 0039). Every
  * member declares its own `HTMLElementTagNameMap` entry (s4).
  *
- * The template renders what module-lazyload.html authors by hand: one
- * `card-callout` holding the loading and error paragraphs, then the hidden
- * `.content` container.
- *
- * The task's state routing stays a hand-written `watch(content, { ok, nil,
- * stale, err })`, not a `<truc:try>` boundary (owner, 2026-09-25). The
- * compiled async boundary cannot express this contract: its ok arm writes
- * escaped `textContent` where this component injects sanitized HTML
- * (`allow-scripts`), its arms are three sibling roots where loading and
- * error share one callout (`.danger` on error), and it has no ok-arm hook
- * for the scroll to the first heading on a later `src` change.
- *
- * Setup is the twin's verbatim, except that `hasLoaded` becomes a field of a
- * const record, because a `let` is outside the setup subset (LTC005).
+ * The task's state routing is the compiled async boundary (LT-449, ruling in
+ * LT-334): `<truc:try>` with per-arm callouts — loading and error are
+ * separate arms, `.danger` authored on the catch arm's own callout, so the
+ * shared-callout `hidden` toggling of the twin is gone and, when ok, no
+ * callout exists in the DOM at all. The ok arm reads its value through the
+ * reactive `truc:html` thunk (the sanitized channel, LT-025 — the compiled
+ * surface strips scripts; `allow-scripts` stays a page-authorable but inert
+ * attribute until LT-448's design lands). The in-flight dim during a
+ * re-fetch is the reactive `isPending` idiom on the ok arm root; the
+ * scroll-to-first-heading on a later `src` change stays a sanctioned
+ * beside-watch — arm-mounted effects die with the arm, and the hasLoaded
+ * guard is component-lifetime state.
  */
 
 import {
 	asString,
 	createTask,
-	dangerouslyBindInnerHTML,
 	type FactoryContext,
+	isPending,
 	query,
 	schedule,
 } from '@zeix/le-truc'
@@ -50,7 +48,7 @@ declare global {
  * Use it for lazy-loading content on demand — the `src` attribute should point to a
  * same-origin URL; cross-origin or `javascript:` URLs are rejected for security.
  * Untrusted HTML must be sanitised server-side; set `allow-scripts` only when required.
- * @attribute {boolean} [allow-scripts=false] - Permit inline scripts in the fetched content. Presence-only; read once at connect time.
+ * @attribute {boolean} [allow-scripts=false] - Permit inline scripts in the fetched content. Presence-only; read once at connect time. Inert on the compiled surface, which sanitises through `truc:html` (scripts stripped) pending the script-loading design (LT-448).
  * @demo {https://zeixcom.github.io/le-truc/examples.html#module-lazyload} Interactive preview and usage examples
  **/
 export function ModuleLazyload(
@@ -69,10 +67,8 @@ export function ModuleLazyload(
 		 */
 		'truc:pass'?: { src?: () => string }
 	},
-	{ expose, first, host, watch }: FactoryContext<ModuleLazyloadProps>,
+	{ expose, host, watch }: FactoryContext<ModuleLazyloadProps>,
 ) {
-	const contentEl = first('.content', 'Needed to display content.')
-
 	const content = createTask<string>(async (_prev, abort) => {
 		const url = host.src
 		if (!url) throw new Error('No URL provided')
@@ -86,35 +82,26 @@ export function ModuleLazyload(
 		}
 	})
 
-	const setHTML = dangerouslyBindInnerHTML(contentEl, {
-		allowScripts: host.hasAttribute('allow-scripts'),
-	}).ok
-
 	expose({ src: asString() })
 
 	// Skip the scroll-to-heading on the very first load, so the page
 	// doesn't jump on initial mount — only on subsequent src changes.
+	// The scheduled task runs after the boundary's reconcile has adopted
+	// the ok arm and its html watch has written the content (LT-449's
+	// ordering probe pins this).
 	const load = { hasLoaded: false }
-	// Distinct key from `contentEl` (used by dangerouslyBindInnerHTML above)
-	// so this scroll task doesn't clobber the pending innerHTML write.
+	// Distinct key from any element-scoped scheduled task, so the scroll
+	// cannot clobber a pending content write.
 	const scrollTask = {}
 
-	const callout = first(
-		'card-callout',
-		'Needed to display loading state and error messages.',
-	)
-	const loadingEl = first('.loading', 'Needed to display loading state.')
-	const errorEl = first('.error', 'Needed to display error messages.')
 	watch(content, {
-		ok: content => {
-			callout.hidden = true
-			loadingEl.hidden = true
-			contentEl.hidden = false
-			setHTML(content)
-
+		ok: () => {
 			if (load.hasLoaded) {
 				schedule(scrollTask, () => {
-					query(contentEl, 'h1, h2, h3, h4, h5, h6')?.scrollIntoView({
+					query(
+						host,
+						'.content h1, .content h2, .content h3, .content h4, .content h5, .content h6',
+					)?.scrollIntoView({
 						behavior: 'smooth',
 						block: 'start',
 					})
@@ -122,41 +109,34 @@ export function ModuleLazyload(
 			}
 			load.hasLoaded = true
 		},
-		nil: () => {
-			callout.hidden = false
-			loadingEl.hidden = false
-			contentEl.hidden = true
-		},
-		stale: () => {
-			contentEl.style.setProperty('opacity', 'var(--opacity-dimmed)')
-			return () => {
-				contentEl.style.removeProperty('opacity')
-			}
-		},
-		err: error => {
-			callout.hidden = false
-			callout.classList.add('danger')
-			loadingEl.hidden = true
-			errorEl.hidden = false
-			errorEl.textContent = error.message
-			contentEl.hidden = true
-			return () => {
-				callout.classList.remove('danger')
-				errorEl.hidden = true
-				errorEl.textContent = ''
-			}
-		},
 	})
 
 	return (
 		<module-lazyload src={src} allow-scripts={allowScripts}>
-			<card-callout>
-				<p class="loading" role="status">
-					{loading}
-				</p>
-				<p class="error" role="alert" aria-live="assertive" hidden></p>
-			</card-callout>
-			<div class="content" hidden></div>
+			<truc:try
+				pending={
+					<card-callout>
+						<p class="loading" role="status">
+							{loading}
+						</p>
+					</card-callout>
+				}
+				catch={error => (
+					<card-callout class="danger">
+						<p class="error" role="alert" aria-live="assertive">
+							{error.message}
+						</p>
+					</card-callout>
+				)}
+			>
+				<div
+					class="content"
+					style={() => ({
+						opacity: isPending(content) ? 'var(--opacity-dimmed)' : null,
+					})}
+					truc:html={() => content.get()}
+				></div>
+			</truc:try>
 			<style>{css`
 :host {
 	display: block;

@@ -201,23 +201,26 @@ describe('stage-1 server-simulation driver — corpus fixtures (LT-154)', () => 
 		expect(served.length).toBeLessThan(500)
 	})
 
-	test('module-lazyload: the demo broken-state instance keeps its served markup', async () => {
-		// The page occurrence the docs build simulates since LT-104 made
-		// lazyload Simulated. The instance omits its required `card-callout`
-		// on purpose, so connect logs MissingElementError and enhances
-		// nothing; the classification in `sim/classifications.ts` names it.
+	test('module-lazyload: the served instance keeps its arms through simulated connect', async () => {
+		// LT-449: the compiled component OWNS its markup (the twin's
+		// missing-required-element demo instance is retired with the
+		// scenario), so the simulated connect runs over the compiled server
+		// render: the pending arm live, the three arm templates inert beside
+		// it, and the fixed-point pass byte-identical.
 		const info = compiled.find(entry => entry.tag === 'module-lazyload')
 		if (!info) throw new Error('module-lazyload is not in the corpus')
 		const page = await Bun.file(
 			'examples/module/lazyload/module-lazyload.html',
 		).text()
 		const instance = page.match(
-			/<module-lazyload\s+id="missing-elements-test"[\s\S]*?<\/module-lazyload>/,
+			/<module-lazyload[^>]*id="original-snippet-test"[\s\S]*?<\/module-lazyload>/,
 		)?.[0]
 		if (!instance) throw new Error('the demo instance is gone')
 		const html = await simulateConnect(realm, info, instance)
-		expect(html).toContain('id="missing-elements-test"')
-		expect(html).toContain('<div class="content" hidden="">')
+		expect(html).toContain('id="original-snippet-test"')
+		expect(html).toContain('data-key="nil"')
+		expect(html).toContain('<template data-arms="0" data-key="ok">')
+		expect(html).toContain('<template data-arms="0" data-key="err">')
 	})
 
 	test("module-coloreditor's teardown stays with it when a canvas-free component renders next (LT-335)", async () => {
@@ -237,7 +240,7 @@ describe('stage-1 server-simulation driver — corpus fixtures (LT-154)', () => 
 		const instance = (
 			await Bun.file('examples/module/lazyload/module-lazyload.html').text()
 		).match(
-			/<module-lazyload\s+id="missing-elements-test"[\s\S]*?<\/module-lazyload>/,
+			/<module-lazyload[^>]*id="original-snippet-test"[\s\S]*?<\/module-lazyload>/,
 		)?.[0]
 		if (!instance) throw new Error('the demo instance is gone')
 		await simulateConnect(realm, editor, await serverMarkupOf(editor))
@@ -281,9 +284,13 @@ describe('build-report baseline (LT-163) — the wave-4 regression signal', () =
 	test('every classification still matches a standing entry', () => {
 		// A classification that admits nothing is a dead allowlist entry: the
 		// diagnostic it classified was fixed, so retire the classification
-		// with it (recorded, not silenced — build-report.ts).
+		// with it (recorded, not silenced — build-report.ts). Entries marked
+		// `docsOnly` are exempt: the notice they admit fires only in the
+		// docs build's page simulation, which the corpus realm never
+		// produces — the build:docs gate exercises them on every build.
 		const report = reportDiagnostics(realm.diagnostics, CLASSIFIED_DIAGNOSTICS)
 		for (const classification of CLASSIFIED_DIAGNOSTICS) {
+			if (classification.docsOnly) continue
 			const used = report.classified.some(
 				entry => entry.classification === classification,
 			)
