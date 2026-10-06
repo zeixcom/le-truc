@@ -52,6 +52,7 @@ Maintained by the Architect (`.agents/skills/architect/references/adr.md`) — u
 | [0045](0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md) | The Structural-Uniqueness Proof Runs on a Materialized Probe — css-select + parse5 Replace the Hand Cascades | ✅ Accepted | M25, M28 |
 | [0046](0046-reactive-list-items-as-mount-scopes.md) | Reactive-List Items as Mount Scopes — Signal Items, a Keyed `map`, Recursive Emission | ✅ Accepted | M5, M11, M17, M18 |
 | [0047](0047-harvest-through-a-key-alias-witnessed-by-the-render.md) | Harvest Through a Key Alias, Witnessed by the Render | ✅ Accepted | M17, M18, M19, M22, M27 |
+| [0048](0048-the-children-contract-parent-owned-content-child-declared-roles.md) | The Children Contract — Parent-Owned Content, Child-Declared Roles | ✅ Accepted | M17, M18 |
 
 ---
 

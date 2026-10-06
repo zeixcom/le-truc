@@ -268,3 +268,80 @@ Full entry text: `git log -p -- DONE.md`.
   `:not(<tag> *)` exclusion is accepted; its only miss is an own element inside a same-tag
   ancestor of the host, which no composition produces.
 - **Scrollarea's wall time at demo scale is noise** (LT-103).
+
+- [x] LT-462: Children contract — parent-owned children, child-declared roles and content model (design; ADR 0048). — done ✓
+  **Area:** design
+  **Needs:** LT-465
+  **Area:** design
+  **Filed (Architect, 2026-10-06; owner rulings 2026-10-06):** composing `<ModuleScrollarea>` around
+  `module-codeblock`'s `<pre><code>` fails LTC026 — the structural verifier excludes everything
+  under a composed child (`:not(<child-tag> *)`, LT-316) — and ADR 0033 s7 leaves content a parent
+  places inside a composed child outside the parent's style scope.
+  **Owner rulings:** (a) content a parent passes as `children` is owned by the parent. (b) A child
+  may act on its children through its contract (first raised for `BasicPluralize`, since retired
+  in LT-467; `<select>`/`<option>` is the standing analogue).
+  (c) `FormCheckbox` takes its label as `children` and refuses interactive content in it. (d) The
+  CSS boundary consequence is decided by a spike first (LT-465).
+  **Model to record in ADR 0048:**
+  1. **Parent owns the content** — structure, text, its own bindings and `first()` references reach
+     the children region; the verifier excludes only the child's own template.
+  2. **The child acts only through declared roles** — its `children` type names the roles it
+     addresses (sketch: `children: Children<{ tab: 'button', panel: 'section' }>`, roles matched by
+     class), as `<select>` acts on `<option>`. A child `first()`/`all()` into children that targets
+     no declared role is a reach-in (new LTC, tier 1).
+  3. **One writer per property** — a parent binding a property the child's contract writes on a role
+     element is a conflict (new LTC, tier 1, decidable from the compose registry).
+  4. **Content model** — a child may declare its children non-interactive; the compiler checks the
+     compose site's literal children (`a[href]`, `button`, `input`, `select`, `textarea`, `label`,
+     `details`, `iframe`, `[tabindex]`, media with `controls`) and composed children whose template
+     contains one, transitively through the registry (new LTC, tier 1). TypeScript cannot carry it
+     (JSX element types are opaque); page-authored HTML is unchecked.
+  5. **Styles** — per LT-465's recommendation.
+  **ADR edits riding with 0048** (none of these is published on `main`, so all are in-place
+  amendments): ADR 0024 s10 (children ownership; cross-reference), ADR 0033 s7 (the
+  "template-authored content in a composed child" difference, per LT-465), ADR 0046 (point 1's
+  verifier change inside list items), HOST_PROFILE § data account bullet 3 and § element references.
+  **Output:** ADR 0048, then compiler tasks per numbered point with channel, tier and LTC codes,
+  plus the two composition sites split out of LT-463 (owner, planning 2026-10-06):
+  `module-codeblock`'s `<module-scrollarea>` → `<ModuleScrollarea>`, and `module-todo`'s
+  `<form-checkbox>` → `<FormCheckbox>` with its label as children (point 4's content model; after
+  LT-464 gives form-checkbox its `.tsx` spelling).
+  **Changed:** ruled 2026-10-06 (owner design session) into ADR 0048. ADR 0024 s10, ADR 0033 s7
+  and ADR 0046 s1 were amended in place, and CONTEXT.md gained **Children Region** and **Role**.
+  The implementation is track C: LT-472 to LT-479 (ITERATION ruling 10).
+
+- [x] LT-465: Spike — style scope for parent-owned children inside a composed child. — reviewed ✓
+  **Area:** compiler
+  **Area:** compiler (spike — no production change; output is a report)
+  **Filed (Architect, 2026-10-06, owner ruling (d) in LT-462):** under parent-owned children the
+  parent's rules should reach the content it passes into a composed child, and the child's rules
+  should not (beyond declared role elements' own boxes). ADR 0033 s3 emits
+  `@scope (parent) to (<boundary> > *)`, which cuts off everything below the child host —
+  children included, wherever the child's template inserts them (`<pre><code>{children}</code></pre>`
+  puts them two levels deep). A `to` limit cannot re-include a subtree it excluded.
+  **Probe these shapes, both emissions (native `@scope` and lowered `:where()`), self-nesting
+  included (ADR 0033 s7's `A > B > A′`):**
+  (a) **A second scope root at the insertion point:** the server marks the element enclosing a
+  `{children}` insertion (sketch `data-children`), and the parent's sheet emits once more as
+  `@scope ([data-children]) to (<boundary> > *)`, guarded to the parent's own instances — cost:
+  doubled rules, the marker attribute in served HTML, the instance guard.
+  (b) **A `display: contents` wrapper element** around inserted children, as the scope root of (a)
+  without marking a template element — cost: a non-semantic element in the DOM, child selectors
+  (`:host > p`) that now miss.
+  (c) **Status quo plus `:global`** — children stay outside the scope; record what ownership then
+  means for styles only.
+  For each: which rules match, specificity parity between emissions, served-byte cost on the
+  corpus's composing components, and the child-side half (the child's own `to` limit must now stop
+  at the insertion point). Also confirm the structural verifier change (LT-462 point 1) composes
+  with the chosen marker.
+  **Output:** a recommendation with fixtures under `server/tests/` (kept, skipped if the chosen
+  shape is not adopted) and a short report in `NOTES.md` for the Architect, who writes ADR 0048
+  and the ADR 0033 s7 amendment from it.
+
+  **Changed:** Spike report recommending shape (a). The server marks the element enclosing `{children}` with `data-children="<owner-tag>"`. The owner adds a region re-include: a second `@scope` block in native emission, a guard clause in lowered. The child adds the pseudo-boundary `[data-children]:not([data-children="T"])`. Shapes (b) and (c) were measured and rejected. Report: `spike/children-scope/FINDING.md`, summarized in NOTES.md.
+  **How:** `server/tests/compiler/children-scope.ts` is a prototype that post-processes `emitScopedSheet` output; its fixtures are in `children-scope.test.ts`. The browser matrix covers both emissions and all three shapes, including self-nesting, in Chromium and WebKit (`spike/children-scope/*.probe.ts`). `measure.ts` measures byte cost over the corpus. No production code changed.
+  **Check:** `bun spike/children-scope/generate.ts && node node_modules/.bin/playwright test --config spike/children-scope/playwright.config.ts` reproduces `results-*.json`. Gates: typecheck green. test:server green: 3389 pass after `build:docs`; the serve tests need a built `docs/`. Doubts for the Architect:
+  - The native self-nesting difference (region rules resolve against any enclosing T).
+  - Forwarded `{children}` and declared-role styling were reasoned through but not probed.
+  - The marker name is unratified.
+  **Review:** Approved: a spike with no production change, ruled into ADR 0048. The finding's lowered self-nesting "unstyled" row is the spike-time state; ADR 0048 s6 replaces it with the re-include (LT-473). The prototype and its test are deleted when LT-473 ports them.

@@ -64,6 +64,14 @@ _Avoid_: prop (that is a reactive **Component** property), input, attribute
 A **Server Arg** the compiler supplies instead of the caller. Two exist: `children` (a composed **Component**'s children) and `i18n` (the locale record, [ADR 0030](adr/0030-internationalization-as-build-time-server-data.md)). A **Component** receives one only if it declares it.
 _Avoid_: injected arg, ambient arg, context (a **Reserved Parameter** is not the context protocol)
 
+**Children Region**:
+The content a parent passes as `children` to a composed **Component**, as rendered inside it. The parent owns it ([ADR 0048](adr/0048-the-children-contract-parent-owned-content-child-declared-roles.md)): it is part of the parent's template, and the parent styles, addresses and binds it. The child's element that encloses `{children}` carries the region marker, `data-children="<owner-tag>"`. That element is the child's; its descendants form the region.
+_Avoid_: slot, slotted content (a shadow-root construct), projected content, light children (that names every child node)
+
+**Role**:
+A class-named element in a **Children Region** that the child declares in its `children` type (`Children<{ tab: 'button' }>`), and the only kind of element in the region the child may address or style. A child styles a Role's own box at zero specificity, so the parent's rules win any tie.
+_Avoid_: part (CSS `::part`), slot name, child element (too broad)
+
 **Authored Surface**:
 Which of the two isomorphic file formats a **Component** is authored in: `.tsx` (the default) or `.tsrx` (retained where statement-context control flow reads better) ([ADR 0032](adr/0032-adopt-tsx-as-the-authored-component-surface.md)). Both compile through the same **Machinery** to the same artifacts.
 _Avoid_: front end (that names the compiler half), format, dialect

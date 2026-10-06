@@ -47,6 +47,15 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
    ADR 0048's implementation tasks join this chain if they are ruled before track K closes.
    Otherwise they are banded P6 and open the next iteration beside P1. The session only delays
    them; it never holds this iteration open.
+10. **LT-462 ruled into ADR 0048 (owner, 2026-10-06), before track K closed.** Its tasks join as
+    track C. Three owner rulings shape them:
+    - **Self-nesting gates too little, never too much.** The lowered guard always re-includes a
+      nested own-tag instance (LT-473).
+    - **A child styles its declared role boxes**, at zero specificity (LT-475).
+    - **The content model is `Children`'s second type argument** (LT-477).
+
+    Track C serializes after track E (LT-472 needs LT-461), because the region marker changes
+    compose-site lowering (ruling 3). LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0, unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -60,15 +69,17 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
   LT-461.
-- **S — children-contract spike** — feeds the LT-462 session (ruling 7). LT-465.
+- **S — children-contract spike** — fed the LT-462 session (ruling 10). LT-465.
 - **T — module-todo** — ruling 5. LT-466 → LT-467.
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469.
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
 - **K — composition** — after tracks E and T (ruling 4). LT-463.
+- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
+  LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282.
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
-  LT-471 (D-32, any time) ∥ LT-462 (after LT-465's report).
+  LT-471 (D-32, any time).
 
 **Deliberately not here.** P1 waits for this round: LT-254 now also needs LT-471. The
 CSS-departures cluster (LT-405, LT-407, LT-408 behind the LT-409 session) and the rest of P2b
@@ -93,7 +104,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-472.** Next free diagnostic code: LTC083 (LTC082 is reserved for LT-136
+**Next free task ID: LT-480.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -229,74 +240,6 @@ LTC056 is LT-358's).
   **Verification:** test:server unit legs (host, arm and list-item compose sites; forwarding; each
   LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
   converted list remove button.
-
-### S — children-contract spike
-
-- [ ] LT-462: Children contract — parent-owned children, child-declared roles and content model (design; ADR 0048).
-  **Area:** design
-  **Needs:** LT-465
-  **Area:** design
-  **Filed (Architect, 2026-10-06; owner rulings 2026-10-06):** composing `<ModuleScrollarea>` around
-  `module-codeblock`'s `<pre><code>` fails LTC026 — the structural verifier excludes everything
-  under a composed child (`:not(<child-tag> *)`, LT-316) — and ADR 0033 s7 leaves content a parent
-  places inside a composed child outside the parent's style scope.
-  **Owner rulings:** (a) content a parent passes as `children` is owned by the parent. (b) A child
-  may act on its children through its contract (first raised for `BasicPluralize`, since retired
-  in LT-467; `<select>`/`<option>` is the standing analogue).
-  (c) `FormCheckbox` takes its label as `children` and refuses interactive content in it. (d) The
-  CSS boundary consequence is decided by a spike first (LT-465).
-  **Model to record in ADR 0048:**
-  1. **Parent owns the content** — structure, text, its own bindings and `first()` references reach
-     the children region; the verifier excludes only the child's own template.
-  2. **The child acts only through declared roles** — its `children` type names the roles it
-     addresses (sketch: `children: Children<{ tab: 'button', panel: 'section' }>`, roles matched by
-     class), as `<select>` acts on `<option>`. A child `first()`/`all()` into children that targets
-     no declared role is a reach-in (new LTC, tier 1).
-  3. **One writer per property** — a parent binding a property the child's contract writes on a role
-     element is a conflict (new LTC, tier 1, decidable from the compose registry).
-  4. **Content model** — a child may declare its children non-interactive; the compiler checks the
-     compose site's literal children (`a[href]`, `button`, `input`, `select`, `textarea`, `label`,
-     `details`, `iframe`, `[tabindex]`, media with `controls`) and composed children whose template
-     contains one, transitively through the registry (new LTC, tier 1). TypeScript cannot carry it
-     (JSX element types are opaque); page-authored HTML is unchecked.
-  5. **Styles** — per LT-465's recommendation.
-  **ADR edits riding with 0048** (none of these is published on `main`, so all are in-place
-  amendments): ADR 0024 s10 (children ownership; cross-reference), ADR 0033 s7 (the
-  "template-authored content in a composed child" difference, per LT-465), ADR 0046 (point 1's
-  verifier change inside list items), HOST_PROFILE § data account bullet 3 and § element references.
-  **Output:** ADR 0048, then compiler tasks per numbered point with channel, tier and LTC codes,
-  plus the two composition sites split out of LT-463 (owner, planning 2026-10-06):
-  `module-codeblock`'s `<module-scrollarea>` → `<ModuleScrollarea>`, and `module-todo`'s
-  `<form-checkbox>` → `<FormCheckbox>` with its label as children (point 4's content model; after
-  LT-464 gives form-checkbox its `.tsx` spelling).
-
-- [ ] LT-465: Spike — style scope for parent-owned children inside a composed child.
-  **Area:** compiler
-  **Area:** compiler (spike — no production change; output is a report)
-  **Filed (Architect, 2026-10-06, owner ruling (d) in LT-462):** under parent-owned children the
-  parent's rules should reach the content it passes into a composed child, and the child's rules
-  should not (beyond declared role elements' own boxes). ADR 0033 s3 emits
-  `@scope (parent) to (<boundary> > *)`, which cuts off everything below the child host —
-  children included, wherever the child's template inserts them (`<pre><code>{children}</code></pre>`
-  puts them two levels deep). A `to` limit cannot re-include a subtree it excluded.
-  **Probe these shapes, both emissions (native `@scope` and lowered `:where()`), self-nesting
-  included (ADR 0033 s7's `A > B > A′`):**
-  (a) **A second scope root at the insertion point:** the server marks the element enclosing a
-  `{children}` insertion (sketch `data-children`), and the parent's sheet emits once more as
-  `@scope ([data-children]) to (<boundary> > *)`, guarded to the parent's own instances — cost:
-  doubled rules, the marker attribute in served HTML, the instance guard.
-  (b) **A `display: contents` wrapper element** around inserted children, as the scope root of (a)
-  without marking a template element — cost: a non-semantic element in the DOM, child selectors
-  (`:host > p`) that now miss.
-  (c) **Status quo plus `:global`** — children stay outside the scope; record what ownership then
-  means for styles only.
-  For each: which rules match, specificity parity between emissions, served-byte cost on the
-  corpus's composing components, and the child-side half (the child's own `to` limit must now stop
-  at the insertion point). Also confirm the structural verifier change (LT-462 point 1) composes
-  with the chosen marker.
-  **Output:** a recommendation with fixtures under `server/tests/` (kept, skipped if the chosen
-  shape is not adopted) and a short report in `NOTES.md` for the Architect, who writes ADR 0048
-  and the ADR 0033 s7 amendment from it.
 
 ### T — module-todo
 
@@ -522,6 +465,198 @@ LTC056 is LT-358's).
   stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
   **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
 
+### C — children contract
+
+- [ ] LT-472: Children Region — the server's region marker and the verifier's re-include (ADR 0048 s1).
+  **Area:** compiler
+  **Needs:** LT-461, LT-465
+  **Gates:** check:corpus, build:docs, check:links
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s1):** a parent owns the content it
+  passes as `children`. Today the structural verifier excludes everything under a composed child
+  (`:not(<child-tag> *)`), so a parent's `first()` into its own children fails LTC026.
+  **Do:**
+  1. **The region marker.** When the server renders a compiled compose site that passes children,
+     and the child's template has a `{children}` insertion, write `data-children="<parent-tag>"`
+     on the child's element that encloses the insertion. That element may be the child's root.
+     The marker names the content's **owner**. When a child passes its own `children` straight
+     through (`<D>{children}</D>`), the original owner's tag is written, not the forwarder's.
+     Content that a forwarder wraps first (`<D><div>{children}</div></D>`) nests: D's region is
+     owned by the forwarder, and the `div`'s region is owned by the original owner.
+     An instance with no compiled owner (page-rendered) gets no marker. Extracted arm and list
+     templates are server-rendered, so their clones carry the marker; pin that with a fixture.
+  2. **The verifier.** Count the Children Region as the parent's markup when proving uniqueness,
+     and exclude only the child's own template. The emitted runtime exclusion becomes
+     `:not(:is(<child> *):not(:is([data-children="<tag>"] *):not(:is([data-children="<tag>"] <child> *))))`.
+     That is the same algebra as LT-473's lowered guard, so write one helper that both use.
+     Constructs in the children content emit into the enclosing Mount Scope's mount (ADR 0046 s1,
+     as amended).
+  3. **Docs.** HOST_PROFILE § data account bullet 3 (ownership) and § element references (the
+     exclusion). Add `data-children` to VOCABULARY_LEDGER beside `data-key`, `data-arms` and
+     `data-list`.
+  **Channel/tier:** no new diagnostic. LTC026 stops firing for a parent reference into its own
+  region. That changes LTC026's reach, so the handoff is `pending-review`.
+  **Check:** a fixture composes a child whose template is `<pre><code>{children}</code></pre>`,
+  on both surfaces, with a parent `first('code.x')`-style reference into the passed content. Also
+  pin a forwarding fixture, an arm-held compose site and a list-item compose site.
+
+- [ ] LT-473: Scoped emission follows ownership — region re-include, child-side stop, self-nesting re-include (ADR 0048 s5/s6).
+  **Area:** compiler
+  **Needs:** LT-472
+  **Gates:** check:corpus, build:docs, check:links, test:variants
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s5/s6):** move the LT-465 prototype
+  into `server/compiler/css-scope.ts` as production emission, inside `rewriteComplexSelector` and
+  `emitScopedSheet`, not as post-processing.
+  **Do:**
+  1. **Child side.** A component whose template has a `{children}` insertion adds the
+     pseudo-boundary `[data-children]:not([data-children="<tag>"])` to its scope boundaries, in
+     both emissions.
+  2. **Owner side.** A component whose template composes a child with children re-includes its
+     own region.
+     - Native: a second `@scope ([data-children="<tag>"]) to (<same limits>)` block. Its rules
+       take the lowered lead with a `:where(:scope *)` subject anchor, placed before any
+       pseudo-element. Host-subject rules and hoisted rules are left out.
+     - Lowered: the guard gains the re-include clause. There is no second copy.
+  3. **Self-nesting (owner ruling: gate too little, never too much).** Every lowered guard
+     re-includes a nested own-tag instance and its subtree:
+     `:is(T B > *, T B > * *):not(T B T, T B T *)` per boundary B. Always emit it, not only where
+     the compiler sees nesting. Combine it with item 2's clause through the one helper from
+     LT-472.
+  4. **Fixtures.**
+     - Port `server/tests/compiler/children-scope.test.ts` into `css-scope.test.ts` against the
+       production emitter, then delete the prototype and its test.
+     - Extend `examples/test/scoping/css-probe` with a compose site that passes children,
+       covering the LT-465 matrix cells: `kid`, `btnint`, `childint`, `code`, `own2`, `kid2`.
+     - Flip the existing lowered self-nesting assertions in `css-probe.spec.ts` (lines ~289–295)
+       from "unstyled" to "styled".
+  5. **Docs.** HOST_PROFILE § Styles, the s7 differences list, per ADR 0033 s7 as amended:
+     self-nesting over-matches in both emissions, and children passed to a composed child are
+     the parent's.
+  **Variant sets:** the region flags derive from the template, so LTC051's boundary comparison
+  must include them.
+  **Check:** the lowered and native emissions of every corpus component that inserts `{children}`
+  change only by the pseudo-boundary. Record the byte delta in the handoff against LT-465's
+  table.
+
+- [ ] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped.
+  **Area:** examples
+  **Needs:** LT-473
+  **Gates:** check:corpus, build:docs
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, split from LT-463; ADR 0048):**
+  1. **The compose site.** Replace the raw `<module-scrollarea orientation="horizontal">` with
+     `<ModuleScrollarea orientation="horizontal">`, passing the `<pre><code>{children}</code></pre>`
+     as children. `first('code', …)` now verifies into the parent's own region (LT-472).
+  2. **The styles.** Move the `:global { module-codeblock pre { … } module-codeblock code { … } }`
+     rules into the scoped sheet as bare `pre`/`code` rules, and drop the `:global` block and its
+     comment.
+  **Check:** `bun run test:component module-codeblock` is unchanged, and the computed styles of
+  `pre`/`code` are unchanged. Update `module-codeblock.md` if it describes the raw tag.
+
+- [ ] LT-474: Declared roles — the `Children<Roles, Model>` type and the reach-in check (ADR 0048 s2; LTC083).
+  **Area:** compiler
+  **Needs:** LT-472
+  **Gates:** check:corpus, check:contract
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s2):**
+  1. **The type.** `Children<Roles extends Record<string, keyof HTMLElementTagNameMap> = {},
+     Model extends 'any' | 'non-interactive' = 'any'>` is a phantom-branded `string`. It stays
+     assignable to and from the rendered markup string, so `children = ''` defaults and existing
+     `children?: string` sources keep compiling. Export it type-only beside `FactoryContext`
+     (`types/src/component.d.ts`, re-exported from the package entry), with zero runtime bytes.
+     The compiler reads the roles and the model from the declared parameter type, on both
+     surfaces.
+  2. **Role typing.** A child's `first('.<role>')`/`all('.<role>')` types as the declared tag's
+     element.
+  3. **LTC083, the reach-in.**
+     - Channel: compiler. Tier: Prevented (ADR 0028).
+     - Fires when a child's `first()`/`all()` selector matches nothing in the child's own
+       template, its component inserts `{children}`, and its subject compound names no declared
+       role class.
+     - Such a selector can only resolve inside the content, so it reaches past the contract.
+     - The fix-it names the role declaration.
+     - Write the copy to `../writer/references/error-messages.md`.
+  **Corpus survey first:** list every component that addresses its children today. For each,
+  either declare roles or record it in `NOTES.md` (LT-463's rule for surprises). Do not widen
+  LTC083's condition to pass a site.
+
+- [ ] LT-475: Role styling — a child styles its declared role boxes at zero specificity (ADR 0048 s5).
+  **Area:** compiler
+  **Needs:** LT-473, LT-474
+  **Gates:** check:corpus, build:docs, check:links
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, LT-462 session; owner ruling: style roles, `:where()`'d):**
+  1. **Which rules qualify.** A child rule qualifies when its subject compound contains a
+     declared role class and its other compounds lie in the child's own template or are `:host`.
+  2. **What it reaches.** The rule reaches role elements in the child's own Children Region and
+     stops at a nested foreign region (`[data-children]` inside the region).
+  3. **Specificity.** The whole subject compound is wrapped in `:where()`, so any parent rule with
+     specificity wins, in both emissions.
+  4. **Descending below a role** (`.tab .icon`) is ADR 0033 s6's boundary-descent face. Extend
+     LTC071's check to it; do not add a new code.
+  **Accepted residue to document in HOST_PROFILE § Styles:** a role class inside a raw custom
+  element nested in the region still matches, because CSS cannot name "any custom element".
+  **Check:** a browser fixture in `css-probe` shows four things:
+  - a role box is styled by the child;
+  - a parent rule on the same box wins at equal or higher specificity;
+  - the role's descendants are not styled by the child;
+  - a page-rendered instance (no marker) styles its page-authored roles.
+
+- [ ] LT-476: One writer per property — parent bindings on a child-written role property conflict (ADR 0048 s3; LTC084).
+  **Area:** compiler
+  **Needs:** LT-474
+  **Gates:** check:corpus, check:contract
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s3):**
+  - **Registry.** The compose registry records, per child, the role properties its client writes:
+    the role-targeted `watch` bindings (`bindProperty`, `bindAttribute`, `bindText`, `bindClass`,
+    `bindVisible`, `bindStyle`, `bindAria`). `on()` return updates write host props, so they are
+    out of scope.
+  - **Check.** A parent binding on an element of its passed children that carries that role's
+    class and binds the same property, attribute, class token or style property is LTC084.
+  - **Channel/tier:** compiler, Prevented (ADR 0028).
+  - **Where it reports:** at the parent's binding. The message names both writers.
+  - **Copy:** to `../writer/references/error-messages.md`.
+  **Check:** both surfaces. Pin a passing fixture where the parent binds a different property on
+  the same role.
+
+- [ ] LT-477: Content model — `Children<Roles, 'non-interactive'>` refuses interactive content at the compose site (ADR 0048 s4; LTC085).
+  **Area:** compiler
+  **Needs:** LT-474
+  **Gates:** check:corpus, check:contract
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, LT-462 session; owner ruling (c), second type argument):**
+  1. **Interactive content** means: `a[href]`, `button`, `input` (except `type="hidden"`),
+     `select`, `textarea`, `label`, `details`, `iframe`, any `[tabindex]`, and `audio`/`video`
+     with `controls`.
+  2. **Registry.** The compose registry gains `interactive: boolean` per component, set when its
+     template contains such an element, transitively through its own composed children.
+  3. **LTC085.** A compose site of a child that declares `'non-interactive'` is an error when its
+     literal children contain interactive content or compose an interactive component.
+     - Channel/tier: compiler, Prevented (ADR 0028).
+     - The message names the offending element or component and the child's declaration.
+  4. **Documentation.** Document in HOST_PROFILE that page-authored HTML is unchecked and that
+     TypeScript cannot carry the check.
+  **Copy:** to `../writer/references/error-messages.md`.
+
+- [ ] LT-479: module-todo composes `<FormCheckbox>` with its label as non-interactive children.
+  **Area:** examples
+  **Needs:** LT-463, LT-464, LT-477
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, split from LT-463; owner ruling (c) in LT-462):**
+  1. **form-checkbox.** Takes its label as `children: Children<{}, 'non-interactive'>`, inserted
+     where its template renders the label text. Change it in every variant-set member, and keep
+     the CSS byte-identical (ADR 0039).
+  2. **module-todo.** Replace its raw `<form-checkbox>` markup with `<FormCheckbox>`, passing the
+     label as children.
+  LT-466 has already moved the in-place editor out of the label, so the children are
+  non-interactive and LTC085 passes. A remaining interactive site is a `NOTES.md` entry, not a
+  workaround.
+  **Sequence:** module-todo's fourth edit, after LT-466 → LT-467 → LT-463 (ruling 5).
+  **Check:** `test:component form-checkbox module-todo` is unchanged.
+
 ### P — compiler cleanup
 
 - [ ] LT-093: Make LTC004 honest for credited-but-unportable signal initializers, then thread initializer free names into client placement (LT-036's wall).
@@ -654,41 +789,3 @@ LTC056 is LT-358's).
   an in-place ADR 0034 s8 amendment if question 3 goes that way, and Appendix B refreshed (stale
   since 2026-09-29). Then re-scope LT-254 and LT-376 against the ruling.
   **Channel/tier:** none — design.
-
-- [ ] LT-462: Children contract — parent-owned children, child-declared roles and content model (design; ADR 0048).
-  **Area:** design
-  **Needs:** LT-465
-  **Area:** design
-  **Filed (Architect, 2026-10-06; owner rulings 2026-10-06):** composing `<ModuleScrollarea>` around
-  `module-codeblock`'s `<pre><code>` fails LTC026 — the structural verifier excludes everything
-  under a composed child (`:not(<child-tag> *)`, LT-316) — and ADR 0033 s7 leaves content a parent
-  places inside a composed child outside the parent's style scope.
-  **Owner rulings:** (a) content a parent passes as `children` is owned by the parent. (b) A child
-  may act on its children through its contract (first raised for `BasicPluralize`, since retired
-  in LT-467; `<select>`/`<option>` is the standing analogue).
-  (c) `FormCheckbox` takes its label as `children` and refuses interactive content in it. (d) The
-  CSS boundary consequence is decided by a spike first (LT-465).
-  **Model to record in ADR 0048:**
-  1. **Parent owns the content** — structure, text, its own bindings and `first()` references reach
-     the children region; the verifier excludes only the child's own template.
-  2. **The child acts only through declared roles** — its `children` type names the roles it
-     addresses (sketch: `children: Children<{ tab: 'button', panel: 'section' }>`, roles matched by
-     class), as `<select>` acts on `<option>`. A child `first()`/`all()` into children that targets
-     no declared role is a reach-in (new LTC, tier 1).
-  3. **One writer per property** — a parent binding a property the child's contract writes on a role
-     element is a conflict (new LTC, tier 1, decidable from the compose registry).
-  4. **Content model** — a child may declare its children non-interactive; the compiler checks the
-     compose site's literal children (`a[href]`, `button`, `input`, `select`, `textarea`, `label`,
-     `details`, `iframe`, `[tabindex]`, media with `controls`) and composed children whose template
-     contains one, transitively through the registry (new LTC, tier 1). TypeScript cannot carry it
-     (JSX element types are opaque); page-authored HTML is unchecked.
-  5. **Styles** — per LT-465's recommendation.
-  **ADR edits riding with 0048** (none of these is published on `main`, so all are in-place
-  amendments): ADR 0024 s10 (children ownership; cross-reference), ADR 0033 s7 (the
-  "template-authored content in a composed child" difference, per LT-465), ADR 0046 (point 1's
-  verifier change inside list items), HOST_PROFILE § data account bullet 3 and § element references.
-  **Output:** ADR 0048, then compiler tasks per numbered point with channel, tier and LTC codes,
-  plus the two composition sites split out of LT-463 (owner, planning 2026-10-06):
-  `module-codeblock`'s `<module-scrollarea>` → `<ModuleScrollarea>`, and `module-todo`'s
-  `<form-checkbox>` → `<FormCheckbox>` with its label as children (point 4's content model; after
-  LT-464 gives form-checkbox its `.tsx` spelling).
