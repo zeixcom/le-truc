@@ -1,7 +1,8 @@
 /**
  * React twin of the Le Truc `module-todo` composite (LT-266 size bet) —
  * the same component split (ModuleTodo composing FormTextbox, BasicButton,
- * BasicPluralize, FormCheckbox, FormInplaceEdit, FormRadiogroup), the same
+ * FormCheckbox, FormInplaceEdit, FormRadiogroup; the remaining count is its
+ * own plural-selected line, as in the Le Truc twin since LT-467), the same
  * DOM shape, and the same behaviors: add, remove, complete, in-place edit,
  * filter, clear-completed, drag-and-drop and keyboard reordering, and live
  * region announcements.
@@ -13,7 +14,6 @@
 import { useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent, PointerEvent as ReactPointerEvent } from 'react'
 import { BasicButton } from './components/basic-button'
-import { BasicPluralize } from './components/basic-pluralize'
 import { FormCheckbox } from './components/form-checkbox'
 import { FormInplaceEdit } from './components/form-inplace-edit'
 import { FormRadiogroup } from './components/form-radiogroup'
@@ -372,12 +372,11 @@ export function ModuleTodo({ initial }: ModuleTodoProps) {
 				)}
 			</ol>
 			<footer>
-				<BasicPluralize
-					count={activeCount}
-					none="Well done, all done!"
-					one="task"
-					other="tasks"
-				/>
+				<p className="remaining">
+					{activeCount === 0
+						? 'Well done, all done!'
+						: `${activeCount} ${new Intl.PluralRules('en').select(activeCount) === 'one' ? 'task' : 'tasks'} remaining`}
+				</p>
 				<FormRadiogroup
 					legend="Filter"
 					value={filter}

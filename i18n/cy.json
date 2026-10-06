@@ -3,9 +3,6 @@
 	"basic-blogmeta.minRead": "munud o ddarllen",
 	"basic-blogmeta.unknownDate": "dyddiad anhysbys",
 	"basic-blogmeta.updatedOn": "diweddarwyd ar",
-	"basic-pluralize.done": "Wedi cwblhau pob tasg!",
-	"basic-pluralize.remaining": "ar ôl",
-	"basic-pluralize.tasks": "{type, select, ordinal {{count, selectordinal, zero {tasg} one {tasg} two {dasg} few {tasg} many {tasg} other {tasgiau}}} other {{count, plural, zero {tasg} one {tasg} two {dasg} few {tasg} many {tasg} other {tasgiau}}}}",
 	"form-colorgraph.drag": "",
 	"form-colorgraph.outOfGamut": "",
 	"form-combobox.clearInput": "",
@@ -17,5 +14,12 @@
 	"form-tokenbox.added": "",
 	"form-tokenbox.duplicate": "",
 	"form-tokenbox.remove": "",
-	"form-tokenbox.removed": ""
+	"form-tokenbox.removed": "",
+	"module-todo.active": "",
+	"module-todo.addTodo": "",
+	"module-todo.all": "",
+	"module-todo.clearCompleted": "",
+	"module-todo.completed": "",
+	"module-todo.filter": "",
+	"module-todo.remaining": "{count, plural, =0 {Wedi cwblhau pob tasg!} zero {# tasg ar ôl} one {# tasg ar ôl} two {# dasg ar ôl} few {# tasg ar ôl} many {# tasg ar ôl} other {# tasgiau ar ôl}}"
 }

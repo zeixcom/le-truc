@@ -3,9 +3,6 @@
 	"basic-blogmeta.minRead": "دقائق قراءة",
 	"basic-blogmeta.unknownDate": "تاريخ غير معروف",
 	"basic-blogmeta.updatedOn": "حُدّث في",
-	"basic-pluralize.done": "أحسنت، اكتمل كل شيء!",
-	"basic-pluralize.remaining": "متبقية",
-	"basic-pluralize.tasks": "{type, select, ordinal {{count, selectordinal, other {مهمة}}} other {{count, plural, zero {مهام} one {مهمة} two {مهمتان} few {مهام} many {مهمة} other {مهمة}}}}",
 	"form-colorgraph.drag": "",
 	"form-colorgraph.outOfGamut": "",
 	"form-combobox.clearInput": "",
@@ -17,5 +14,12 @@
 	"form-tokenbox.added": "",
 	"form-tokenbox.duplicate": "",
 	"form-tokenbox.remove": "",
-	"form-tokenbox.removed": ""
+	"form-tokenbox.removed": "",
+	"module-todo.active": "",
+	"module-todo.addTodo": "",
+	"module-todo.all": "",
+	"module-todo.clearCompleted": "",
+	"module-todo.completed": "",
+	"module-todo.filter": "",
+	"module-todo.remaining": "{count, plural, =0 {أحسنت، اكتمل كل شيء!} zero {# مهام متبقية} one {# مهمة متبقية} two {# مهمتان متبقيتان} few {# مهام متبقية} many {# مهمة متبقية} other {# مهمة متبقية}}"
 }

@@ -311,8 +311,8 @@ describe('the translation census', () => {
 	test('rides the census channel with missing, stale, and orphaned records', () => {
 		const census = translationCensus(
 			[
-				{ key: 'basic-pluralize.remaining', locale: 'de', status: 'missing' },
-				{ key: 'basic-pluralize.task', locale: 'de', status: 'stale' },
+				{ key: 'module-todo.remaining', locale: 'de', status: 'missing' },
+				{ key: 'module-todo.addTodo', locale: 'de', status: 'stale' },
 				{
 					key: 'basic-deleted-component.gone',
 					locale: 'cy',
@@ -443,11 +443,12 @@ describe('the generated i18n module', () => {
 		// The page locale is 'en' — the source locale, which has no override
 		// file by construction — so every key resolves to its inline
 		// source-locale string (ADR 0030 sub-design 5's fallback).
-		const record = i18nModule.i18nRecord('basic-pluralize')
+		const record = i18nModule.i18nRecord('module-todo')
 		expect(record.lang).toBe('en')
-		expect(record.t.tasks({ count: 1, type: 'cardinal' })).toBe('task')
-		expect(record.t.tasks({ count: 2, type: 'cardinal' })).toBe('tasks')
-		expect(record.t.remaining).toBe('remaining')
+		expect(record.t.remaining({ count: 0 })).toBe('Well done, all done!')
+		expect(record.t.remaining({ count: 1 })).toBe('1 task remaining')
+		expect(record.t.remaining({ count: 2 })).toBe('2 tasks remaining')
+		expect(record.t.addTodo).toBe('Add Todo')
 		expect(record.timeZone).toBe('UTC')
 		expect(record.dir).toBe('ltr')
 	})
@@ -458,29 +459,33 @@ describe('the generated i18n module', () => {
 	})
 
 	test('`dir` derives from the lang override', () => {
-		expect(i18nModule.i18nRecord('basic-pluralize', 'ar').dir).toBe('rtl')
-		expect(i18nModule.i18nRecord('basic-pluralize', 'de').dir).toBe('ltr')
-		expect(i18nModule.i18nRecord('basic-pluralize', 'ar').lang).toBe('ar')
+		expect(i18nModule.i18nRecord('module-todo', 'ar').dir).toBe('rtl')
+		expect(i18nModule.i18nRecord('module-todo', 'de').dir).toBe('ltr')
+		expect(i18nModule.i18nRecord('module-todo', 'ar').lang).toBe('ar')
 	})
 
 	test('the committed catalogs resolve through the generated module (LT-192 pin)', () => {
 		// The end-to-end path the render fixtures bypass: catalog json →
 		// OVERRIDES embedded in the generated module → i18nRecord. Dropping
 		// the override pipeline (or the de.json catalog) fails here.
-		const de = i18nModule.i18nRecord('basic-pluralize', 'de')
-		expect(de.t.tasks({ count: 1, type: 'cardinal' })).toBe('Aufgabe')
-		expect(de.t.tasks({ count: 3, type: 'cardinal' })).toBe('Aufgaben')
+		const de = i18nModule.i18nRecord('module-todo', 'de')
+		expect(de.t.remaining({ count: 0 })).toBe('Alles erledigt!')
+		expect(de.t.remaining({ count: 1 })).toBe('1 Aufgabe verbleibend')
+		expect(de.t.remaining({ count: 3 })).toBe('3 Aufgaben verbleibend')
 		// LT-252: the plural arms live inside each locale's ONE pattern, and
 		// the record formats under that locale's own rules — Welsh's dual
-		// mutation and Arabic's dual come from the catalog value itself.
-		const cy = i18nModule.i18nRecord('basic-pluralize', 'cy')
-		expect(cy.t.tasks({ count: 2, type: 'cardinal' })).toBe('dasg')
-		expect(cy.t.tasks({ count: 4, type: 'cardinal' })).toBe('tasgiau')
-		const ar = i18nModule.i18nRecord('basic-pluralize', 'ar')
-		expect(ar.t.tasks({ count: 2, type: 'cardinal' })).toBe('مهمتان')
-		const zh = i18nModule.i18nRecord('basic-pluralize', 'zh')
-		expect(zh.t.tasks({ count: 1, type: 'cardinal' })).toBe('个任务')
-		expect(zh.t.tasks({ count: 1, type: 'ordinal' })).toBe('个任务')
+		// mutation, Arabic's dual and Polish's few/many come from the catalog
+		// value itself (module-todo's `remaining` since LT-467).
+		const cy = i18nModule.i18nRecord('module-todo', 'cy')
+		expect(cy.t.remaining({ count: 2 })).toBe('2 dasg ar ôl')
+		expect(cy.t.remaining({ count: 4 })).toBe('4 tasgiau ar ôl')
+		const ar = i18nModule.i18nRecord('module-todo', 'ar')
+		expect(ar.t.remaining({ count: 2 })).toBe('2 مهمتان متبقيتان')
+		const pl = i18nModule.i18nRecord('module-todo', 'pl')
+		expect(pl.t.remaining({ count: 2 })).toBe('Pozostały 2 zadania')
+		expect(pl.t.remaining({ count: 5 })).toBe('Pozostało 5 zadań')
+		const zh = i18nModule.i18nRecord('module-todo', 'zh')
+		expect(zh.t.remaining({ count: 1 })).toBe('剩余 1 个任务')
 	})
 
 	test("the corpus's accessibility strings resolve at de (LT-195 fixture)", () => {
@@ -658,7 +663,7 @@ describe('orphaned keys over the real corpus (LT-196)', () => {
 		const de = overrides.get('de')
 		if (!de) throw new Error('the committed de catalog is missing')
 		de['basic-deleted-component.gone'] = 'weg'
-		de['basic-pluralize.typo-key'] = 'Tippfehler'
+		de['module-todo.typo-key'] = 'Tippfehler'
 		const { gaps } = await collectI18n(Object.values(registry), {
 			locales,
 			overrides,
@@ -670,7 +675,7 @@ describe('orphaned keys over the real corpus (LT-196)', () => {
 				locale: 'de',
 				status: 'orphaned',
 			},
-			{ key: 'basic-pluralize.typo-key', locale: 'de', status: 'orphaned' },
+			{ key: 'module-todo.typo-key', locale: 'de', status: 'orphaned' },
 		])
 	})
 })
@@ -962,12 +967,12 @@ describe('non-string catalog values are malformed (LT-249)', () => {
 		for (const locale of locales)
 			overrides.set(locale, {
 				...overrides.get(locale),
-				'basic-pluralize': { 'stray.few': 'wenige' },
+				'module-todo': { 'stray.few': 'wenige' },
 			})
 		const planted = await collect()
 		expect(
 			nonString(planted.gaps).map(gap => `${gap.key} ${gap.locale}`),
-		).toEqual(locales.map(locale => `basic-pluralize ${locale}`))
+		).toEqual(locales.map(locale => `module-todo ${locale}`))
 		// Everything else the census reports is unchanged by the plant.
 		const rest = (gaps: { status: string; detail?: string }[]) =>
 			gaps.filter(gap => !nonString([gap]).length)

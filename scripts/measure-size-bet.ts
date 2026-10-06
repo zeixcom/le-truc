@@ -13,12 +13,13 @@
  * server→client boundary).
  *
  * Component split, identical on both sides:
- *   module-todo (composite) → form-textbox, basic-button, basic-pluralize,
- *                             form-checkbox, form-inplace-edit, form-radiogroup
+ *   module-todo (composite) → form-textbox, basic-button, form-checkbox,
+ *                             form-inplace-edit, form-radiogroup
+ * (basic-pluralize retired in LT-467: module-todo words its own count.)
  *
  * Sources (both real, in-repo):
  *   Le Truc — examples/module/todo/module-todo.ts (the component a page
- *   ships today) + the six composed children's compiled corpus clients;
+ *   ships today) + the five composed children's compiled corpus clients;
  *   React — spike/size-bet/react/ (same split, same DOM, same behaviors).
  *
  * Everything is bundled like a consumer ships it: minified, production
@@ -73,7 +74,6 @@ const leTrucComponents: Array<[string, string]> = [
 	['module-todo (composite, hand-authored)', 'examples/module/todo/module-todo.ts'],
 	['form-textbox', `${GENERATED}/form-textbox.client.ts`],
 	['basic-button', `${GENERATED}/basic-button.client.ts`],
-	['basic-pluralize', `${GENERATED}/basic-pluralize.client.ts`],
 	['form-checkbox', `${GENERATED}/form-checkbox.client.ts`],
 	['form-inplace-edit', `${GENERATED}/form-inplace-edit.client.ts`],
 	['form-radiogroup', `${GENERATED}/form-radiogroup.client.ts`],
@@ -83,7 +83,6 @@ const reactComponents: Array<[string, string]> = [
 	['module-todo (composite)', 'spike/size-bet/react/module-todo.tsx'],
 	['form-textbox', 'spike/size-bet/react/components/form-textbox.tsx'],
 	['basic-button', 'spike/size-bet/react/components/basic-button.tsx'],
-	['basic-pluralize', 'spike/size-bet/react/components/basic-pluralize.tsx'],
 	['form-checkbox', 'spike/size-bet/react/components/form-checkbox.tsx'],
 	['form-inplace-edit', 'spike/size-bet/react/components/form-inplace-edit.tsx'],
 	['form-radiogroup', 'spike/size-bet/react/components/form-radiogroup.tsx'],
@@ -111,12 +110,12 @@ const add = async (
 console.log('⏳ Building Le Truc side (production bundles)…')
 await add('Le Truc', 'runtime floor (minimal component entry)', 'test/fixtures/minimal-entry.ts')
 for (const [name, path] of leTrucComponents) await add('Le Truc', name, path)
-await add('Le Truc', 'PAGE: module-todo + 6 children, one bundle', 'spike/size-bet/le-truc/page.ts')
+await add('Le Truc', 'PAGE: module-todo + 5 children, one bundle', 'spike/size-bet/le-truc/page.ts')
 
 console.log('⏳ Building React side (production bundles)…')
 await add('React', 'runtime floor (hydrateRoot only)', 'spike/size-bet/react/runtime.ts')
 for (const [name, path] of reactComponents) await add('React', name, path)
-await add('React', 'PAGE: module-todo + 6 children, one bundle', 'spike/size-bet/react/client.tsx')
+await add('React', 'PAGE: module-todo + 5 children, one bundle', 'spike/size-bet/react/client.tsx')
 
 // The JSON state payload the React page must embed for hydration. Le Truc
 // ships none — the DOM is the state (ADR 0003). The render runs as a

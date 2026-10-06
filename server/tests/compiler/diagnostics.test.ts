@@ -2215,8 +2215,9 @@ describe('semantically-loaded attribute with no server default (CHECKLIST §5, L
 		// `count` is Parser-exposed but never seeded onto <c-el> as a server
 		// attribute — LT-085's derived-fold widening can't substitute it (no
 		// root expression to splice in), so this stays genuinely unfoldable,
-		// unlike the identical-shaped `host.count !== 0` comparison in
-		// basic-pluralize.tsrx (which DOES render `count` on its root).
+		// unlike the identical-shaped `host.count !== 0` comparison in the
+		// `c-plural` fixture (fixtures/plural/, the retired basic-pluralize),
+		// which DOES render `count` on its root.
 		// ADR 0029 s5: unfoldable ≠ author error — the site routes Simulated
 		// (the realm reads `host.count` for real) and the channel stays quiet.
 		const source = `export function C({ count }: { count: number })

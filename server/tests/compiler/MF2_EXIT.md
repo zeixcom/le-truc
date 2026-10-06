@@ -32,8 +32,10 @@ The converter's raw output is not always valid, serializable MF2. The exit
 applies two normalizations, both in `mf2-exit.ts`:
 
 - **`dedupeInputs`**: in MF1, one argument can drive selectors of different
-  types in different arms. basic-pluralize's `tasks` does this: `count` is a
-  `selectordinal` under `type=ordinal` and a `plural` otherwise. The
+  types in different arms. The `c-plural` test fixture's `tasks` does this
+  (`fixtures/plural/`, the retired basic-pluralize's pattern, LT-467):
+  `count` is a `selectordinal` under `type=ordinal` and a `plural`
+  otherwise. The
   converter emits `.input {$count}` twice, which MF2 rejects as a
   `duplicate-declaration`. Each duplicate becomes
   `.local $count__N = {$count …}`. A repeated argument with a plural

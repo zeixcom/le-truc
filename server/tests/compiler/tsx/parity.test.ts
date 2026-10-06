@@ -256,9 +256,9 @@ describe('variant sets — front-end parity (§4.3, ADR 0039 s1)', () => {
 		expect(FIXTURES.map(fx => fx.tag)).toEqual(
 			expect.arrayContaining([
 				'basic-counter',
-				'basic-pluralize',
 				'form-combobox',
 				'form-listbox',
+				'module-todo',
 			]),
 		)
 	})

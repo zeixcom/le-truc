@@ -304,7 +304,7 @@ describe('renderer-supplied args', () => {
 	})
 })
 
-/* === Integration: the real corpus, the LT-191 fixture at its home === */
+/* === Integration: the real corpus, the LT-191 fixture === */
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const corpusMarkup = (rel: string) => Bun.file(path.join(ROOT, rel))
@@ -319,35 +319,36 @@ describe('the real corpus (integration)', () => {
 
 	test('the LT-191 fixture: the <div lang="cy"> wrapper instance server-renders', async () => {
 		await compiled
-		const markup = await corpusMarkup(
-			'examples/basic/pluralize/basic-pluralize.html',
-		).text()
+		// The retired basic-pluralize page carried this fixture (LT-467): a
+		// wrapper-inherited instance beside a baseless one, now module-todo.
+		const markup =
+			'<div lang="cy"><module-todo></module-todo></div><module-todo></module-todo>'
 		const result = await renderPageOccurrences(markup, {
 			generatedDir: generated.path,
 			pageLocale: null,
 		})
-		// Seven locale-explicit instances render; the five baseless en
-		// instances stay authored in this single-copy tree.
-		const locales = result.rendered.map(r => r.locale)
-		expect(locales).toContain('cy')
-		expect(locales).toContain('de')
-		expect(
-			result.skipped.every(s => s.reason === 'no-resolvable-locale'),
-		).toBeTrue()
+		// The wrapped instance renders at cy; the baseless en instance stays
+		// authored in this single-copy tree.
+		expect(result.rendered.map(r => r.locale)).toEqual(['cy'])
+		expect(result.skipped).toEqual([
+			{ tag: 'module-todo', reason: 'no-resolvable-locale' },
+		])
 
 		// The ancestor-inheritance instance materializes its walked locale
-		// onto the served root — the completion signal LT-191's fixture had
-		// no home for — and the count=2 Welsh render shows the `two` arm of
-		// the committed cy pattern (dasg) in the one plural span (LT-252),
-		// with the pattern riding the root `i18n` attribute.
-		const at = result.html.indexOf('welsh-ancestor-test')
-		expect(at).toBeGreaterThan(-1)
-		const start = result.html.lastIndexOf('<basic-pluralize', at)
-		const instance = result.html.slice(start, at + 500)
-		expect(instance).toStartWith('<basic-pluralize count="2" lang="cy" i18n="')
-		expect(instance).toContain('<span class="tasks">dasg</span>')
-		expect(instance).not.toMatch(/class="(zero|one|two|few|many|other)"/)
-		expect(instance).toContain('Wedi cwblhau pob tasg!')
+		// onto the served root, the `=0` arm of the committed cy pattern folds
+		// into the count line, and the pattern — every Welsh category, the
+		// `two` arm's mutation included — rides the root `i18n` attribute
+		// for the client to re-evaluate (LT-252).
+		const start = result.html.indexOf('<module-todo')
+		const instance = result.html.slice(
+			start,
+			result.html.indexOf('</module-todo>', start),
+		)
+		expect(instance).toStartWith('<module-todo lang="cy" i18n="')
+		expect(instance).toContain('dasg ar ôl')
+		expect(instance).toContain(
+			'<p class="remaining">Wedi cwblhau pob tasg!</p>',
+		)
 	})
 
 	test('LT-290: no argsFromAttrs helper names a render-scope stub', async () => {

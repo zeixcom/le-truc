@@ -321,17 +321,6 @@ declare namespace JSX {
 	type BasicCounterAttrs = CommonLightDom & {
 		start?: Reactive<number>
 	}
-	type BasicPluralizeAttrs = CommonLightDom & {
-		/** Optional because the pass is the other channel: module-todo authors
-		 * the raw tag and passes `count` (LT-111). */
-		count?: Reactive<number>
-		/** Config-only (built-in IDL property — never an exposed prop). */
-		lang?: string
-		ordinal?: Reactive<boolean>
-		/** A `.tsrx` leaf authored raw (module-todo's count): it declares a
-		 * pass surface for its `count` prop. */
-		'truc:pass'?: { count?: PassEntry }
-	}
 	type BasicNumberAttrs = CommonLightDom & {
 		value?: Reactive<number>
 		options?: string
@@ -524,7 +513,6 @@ declare namespace JSX {
 		'basic-counter': BasicCounterAttrs
 		'card-callout': CardCalloutAttrs
 		'context-media': ContextMediaAttrs
-		'basic-pluralize': BasicPluralizeAttrs
 		'basic-number': BasicNumberAttrs
 		'module-calctable': ModuleCalctableAttrs
 		'form-combobox': FormComboboxAttrs

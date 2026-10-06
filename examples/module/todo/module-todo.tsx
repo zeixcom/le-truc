@@ -47,9 +47,25 @@ declare global {
 	}
 }
 
+// The remaining-count line is the component's own ICU message (LT-467): the
+// `=0` arm replaces the former none/some toggle — no markup varies, so no arm
+// set. `activeCount` is client-reactive, so the pattern's parsed AST rides
+// the root `i18n` attribute off the source locale and the client re-evaluates
+// it on change (ADR 0030 s9). Declaring the record makes every other template
+// label a key too (LTC047); those fold server-side.
+export const i18n = {
+	addTodo: 'Add Todo',
+	filter: 'Filter',
+	all: 'All',
+	active: 'Active',
+	completed: 'Completed',
+	clearCompleted: 'Clear Completed',
+	remaining:
+		'{count, plural, =0 {Well done, all done!} one {# task remaining} other {# tasks remaining}}',
+} as const
+
 export function ModuleTodo(
-	// biome-ignore lint/correctness/noEmptyPattern: the component takes no server args, and the compiler's params contract requires an (empty) destructured object pattern.
-	{}: {},
+	{ i18n: { t } }: { i18n: I18n<typeof i18n> },
 	{ host, first, internals, on, watch }: FactoryContext<Record<never, never>>,
 ) {
 	const container = first(
@@ -125,7 +141,7 @@ export function ModuleTodo(
 					truc:pass={{ disabled: () => !textbox.length }}
 				>
 					<button type="submit" class="constructive" disabled>
-						<span class="label">Add Todo</span>
+						<span class="label">{t.addTodo}</span>
 					</button>
 				</basic-button>
 			</form>
@@ -190,17 +206,12 @@ export function ModuleTodo(
 				))}
 			</ol>
 			<footer>
-				<basic-pluralize truc:pass={{ count: () => activeCount.get() }}>
-					<p class="none">Well done, all done!</p>
-					<p class="some">
-						<span class="count"></span>
-						<span class="tasks"></span>
-						remaining
-					</p>
-				</basic-pluralize>
+				<p class="remaining">
+					{() => t.remaining({ count: activeCount.get() })}
+				</p>
 				<form-radiogroup value="all" class="split-button">
 					<fieldset>
-						<legend class="visually-hidden">Filter</legend>
+						<legend class="visually-hidden">{t.filter}</legend>
 						<label data-value="all" class="selected">
 							<input
 								type="radio"
@@ -209,7 +220,7 @@ export function ModuleTodo(
 								checked
 								tabindex={0}
 							/>
-							<span>All</span>
+							<span>{t.all}</span>
 						</label>
 						<label data-value="active">
 							<input
@@ -218,7 +229,7 @@ export function ModuleTodo(
 								value="active"
 								tabindex={-1}
 							/>
-							<span>Active</span>
+							<span>{t.active}</span>
 						</label>
 						<label data-value="completed">
 							<input
@@ -227,7 +238,7 @@ export function ModuleTodo(
 								value="completed"
 								tabindex={-1}
 							/>
-							<span>Completed</span>
+							<span>{t.completed}</span>
 						</label>
 					</fieldset>
 				</form-radiogroup>
@@ -240,7 +251,7 @@ export function ModuleTodo(
 					}}
 				>
 					<button type="button" class="tertiary destructive">
-						<span class="label">Clear Completed</span>
+						<span class="label">{t.clearCompleted}</span>
 						<span class="badge"></span>
 					</button>
 				</basic-button>
@@ -367,9 +378,11 @@ export function ModuleTodo(
 					gap: var(--space-m);
 					margin: 0;
 
-					& basic-pluralize {
+					& .remaining {
 						grid-area: count;
 						justify-self: start;
+						font-size: var(--font-size-s);
+						margin: 0;
 					}
 
 					.split-button {
@@ -395,15 +408,6 @@ export function ModuleTodo(
 						grid-template-columns: 1fr 1fr 1fr;
 						grid-template-areas: "count filter clear";
 					}
-				}
-			}
-
-			/* The <p> states are rendered inside the raw <basic-pluralize>, past
-			   the scope boundary (ADR 0033 s3): a page-level rule (s6a). */
-			:global {
-				module-todo basic-pluralize p {
-					font-size: var(--font-size-s);
-					margin: 0;
 				}
 			}`}</style>
 		</module-todo>

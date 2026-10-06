@@ -3,9 +3,6 @@
 	"basic-blogmeta.minRead": "min lasīšanai",
 	"basic-blogmeta.unknownDate": "nezināms datums",
 	"basic-blogmeta.updatedOn": "atjaunināts",
-	"basic-pluralize.done": "Viss pabeigts!",
-	"basic-pluralize.remaining": "atlicis",
-	"basic-pluralize.tasks": "{type, select, ordinal {{count, selectordinal, other {uzdevumu}}} other {{count, plural, zero {uzdevumu} one {uzdevums} other {uzdevumu}}}}",
 	"form-colorgraph.drag": "",
 	"form-colorgraph.outOfGamut": "",
 	"form-combobox.clearInput": "",
@@ -17,5 +14,12 @@
 	"form-tokenbox.added": "",
 	"form-tokenbox.duplicate": "",
 	"form-tokenbox.remove": "",
-	"form-tokenbox.removed": ""
+	"form-tokenbox.removed": "",
+	"module-todo.active": "",
+	"module-todo.addTodo": "",
+	"module-todo.all": "",
+	"module-todo.clearCompleted": "",
+	"module-todo.completed": "",
+	"module-todo.filter": "",
+	"module-todo.remaining": "{count, plural, =0 {Viss pabeigts!} zero {Atlikuši # uzdevumu} one {Atlicis # uzdevums} other {Atlikuši # uzdevumu}}"
 }
