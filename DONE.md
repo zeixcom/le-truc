@@ -1512,6 +1512,33 @@ Full entry text: `git log -p -- DONE.md`.
   **Changed:** `module-cem-list` is a compiled variant set — `module-cem-list.tsx` (served) beside a `module-cem-list.tsrx` twin; the hand-written `.ts` stays as the set's `.ts` twin (ruling 5). Both members take `children = ''` and wrap the page-authored `{% cem-list %}` output; `module-cem-list.html` is unchanged. `examples/main.css` imports the generated stylesheet; host profile gains `ModuleCemListAttrs`; tier map +`module-cem-list: folded` (census 33 Folded / 8 Simulated). Setup is one filter State, `on(first('form-textbox'), 'input', …)` and ONE `watch` whose source reads the filter and `all('card-collapsible')` inline; the sheet is `:host`-led with no `:global` (no custom element in the template, so no scope boundary — ADR 0033 s7).
   **Review:** Approved (Architect, 2026-10-06). Ruling on the doubt: reading `all()` in the watch source rather than the handler is accepted — it is the pin's "one watch that re-reads the cards per run", and it also filters cards added after connect. Each run builds a fresh element memo and observer (`all()` does not memoize per selector) and the superseded one disconnects unwatched; `module-catalog` sets the precedent. Gates re-run green on the branch (typecheck, check:corpus, test:server 3328/0). Owner-run legs: `test:variants` and the live demo filter.
 
+- [x] LT-447: A host-declared `deriveList` consumed only inside a reactive-list body compiles to a server `ReferenceError` with no diagnostic — emit the declaration or refuse the shape. — reviewed ✓
+  **Area:** compiler
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from LT-109's review):** a host-level `deriveList` whose only
+  consumer is a reactive-list body's `byKey()` item const reportedly compiled with no diagnostic
+  while the generated server module omitted the declaration — `ReferenceError` at every render,
+  caught only by the sim realm during `build:docs`; the client module supposedly holed the same
+  way. Design questions: support the shape and emit the declaration, or refuse it (LTC079).
+  **Changed:** resolved by evidence, no compiler change (792b0656): the shape is supported and
+  the declaration already rides BOTH generated modules on both surfaces, in every tier, through
+  the direct front end and the registry-aware corpus runner. Regression pins: five tests in
+  `server/tests/compiler/item-setup.test.ts` (both-surface parity, declaration in server+client
+  modules, per-item render, realm connect + clone) and three in `server/tests/compiler/emit-tier.test.ts`
+  (the declaration survives folded/simulated/static emission).
+  **Review:** Approved (Architect, 2026-10-06). **Ruling:** a host-level `createList`/`deriveList`
+  read through a reactive-list body's item setup is a supported shape — ADR 0046 s5 admits
+  signals in item setup and the harness implements `deriveList(source, itemFn)` with `byKey` —
+  and the declaration riding both modules is the compiler's standing behavior, now pinned. The
+  design question dissolves; no refusal, LTC079 released unused. The filed failure is not
+  reproducible from any committed state: the faithful draft compiles and renders correctly at
+  HEAD and at LT-109's own merge dd329ca2 (temp worktree), pointing at a stale generated module
+  in that session's build:docs run. Reviewer nit on the branch (8524ab9a): `VOCABULARY_LEDGER.md`
+  un-reserves LTC079. Residual, as designed (LT-165 step 5): a Simulated-tier host signal whose
+  initializer reads a ref or client-only primitive is excluded from the retention pool outright;
+  an item const reading it emits a dangling reference that surfaces as TS2304 under
+  `check:corpus` — loud, never a silent runtime error.
+
 - [x] LT-449: Migrate `module-lazyload`'s async boundary to `<truc:try>` — per-arm callouts, `truc:html` ok arm, beside-watch scroll. — reviewed ✓
   **Area:** examples
   **Needs:** LT-375, LT-374, LT-186, LT-426, LT-427, LT-428, LT-429

@@ -509,6 +509,37 @@ records the actual net delta.
   **Context:** [ADR 0045](adr/0045-structural-uniqueness-proof-runs-on-a-materialized-probe.md) Decision 5 stages this deliberately apart from the engine promotion (LT-379): once the probe is the engine, an authored `first('nav a.active')` — descendant combinators, `:not()`, attribute operators, all shapes `parseSimpleSelector` returns "cannot verify" for — can be structurally verified by querying the SAME materialized probe, and then used as the addressed contract verbatim (LT-316's authored-first rule) instead of falling back to synthesis. **Authoring-visible change:** selectors that previously fell back to synthesis become the addressed contract, and a verified-but-unmatched authored selector fires LTC026 where a silent miss (and synthesis fallback) happened before — the census and warning baseline change BY DESIGN, so this task enters an iteration only by iteration planning, with the owner's sign-off on the behavior. Scope the first landing to descendant combinators, `:not()` and attribute operators; child/sibling combinators (`>`, `+`, `~`) cannot cross the probe's exclusivity wrappers (ADR 0045 Consequences) — keep them "cannot verify" unless a follow-up first extends the wrapper model. Gate: LT-379 landed.
   **Channel/tier:** no new runtime check; verification widening strengthens tier 1 (Prevented). LTC026's existing wording stands unless it must distinguish verified-miss from unverifiable — if it does, the copy follows `writer` → error-messages.
   **Verification:** new pins (authored selector used verbatim when verified; LTC026 on verified-miss; synthesis fallback unchanged for child/sibling and unparseable); goldens change ONLY where a corpus component's authored selector newly verifies — assert none today, or enumerate the delta in the handoff; full gates.
+
+- [ ] LT-460: A compose site in an async-boundary arm — lower it as arm root, keep the arm binding in its children.
+  **Area:** compiler
+  **Gates:** check:corpus, test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, from a composition probe for LT-463; owner: both are bugs):**
+  two oversights in how arms lower, found converting `module-lazyload.tsx`'s raw `<card-callout>`
+  arms to `<CardCallout>`.
+  (1) **Arm root refused (LTC011).** Arm content in attribute position (`pending={…}`,
+  `catch={e => …}`; `.tsrx` `@pending`/`@catch`/`@if` bodies likewise) is lowered through the
+  plain-element funnel (`lower-shared.ts`, the `/^[A-Z]/` check), which refuses every PascalCase
+  tag. Compose support was wired into element child lists only (ADR 0024 sub-design 10); the arm
+  root path was never routed through it. The message is also stale: it still names "`.map()`
+  output", which LT-424 made legal. Fix: an arm root that is a compose site lowers as a compose
+  site; `data-key` (and the arm marker attributes) splice onto the child's rendered root through
+  the same path as `class`/`id`/`data-*` (`composeHostAttrs`). The refusal survives only for
+  positions that genuinely have no lowering, with a message naming them.
+  (2) **Arm binding dropped in compose-site children — a silent miscompile.** With a wrapper root,
+  `catch={error => <div><CardCallout kind="danger"><p>{error.message}</p></CardCallout></div>}`
+  compiles with no diagnostic, and the generated server module reads `error` outside the catch
+  callback: `check:corpus` fails with TS2552 "Cannot find name 'error'". The boundary itself still
+  catches at runtime; what is swallowed is the compile error — a source that compiles must emit a
+  typechecking module. The children of a compose site must be rendered inside every binding scope
+  that encloses the site (catch parameter, arm, list item key/item, server-data loop variable).
+  Audit the other enclosing-scope kinds for the same drop while there.
+  **Channel/tier:** compiler only. (1) narrows LTC011's refused set; (2) removes a miscompile. No
+  new LTC code, no runtime check.
+  **Verification:** test:server unit legs — an arm-root compose site renders the winning arm with
+  `data-key` on the child root and reconciles on flip; compose-site children reading the catch
+  parameter render the message server-side and rebind on the client; one leg per enclosing-scope
+  kind for (2). check:corpus.
 ## P3 — Gate-wave residue (independent of P1/P2; parallelizable)
 
 **Moved to TODO.md 2026-10-02:** LT-186 (the corpus port needs it for LT-109/LT-111).
@@ -955,6 +986,129 @@ to `TODO.md`.
   **Channel/tier:** none — docs.
   **Check:** every behavioral claim in both files traces to the 1.6.1 source; the stamp names 1.6.x
   and the version verified.
+
+- [ ] LT-461: Handler args — a parent passes an event handler that the child places on its own element (design).
+  **Area:** design
+  **Area:** design
+  **Filed (Architect, 2026-10-06, blocks part of LT-463; owner direction: a handler is an arg the
+  child places on its owned elements):** today `onClick` on `<BasicButton>` is classified as a server
+  arg, forwarded into `renderBasicButton({ …, onClick })`, and dropped — no listener exists anywhere.
+  On `.tsx` the excess property is a tsc error only in `check:corpus`; in a reactive-list item it is
+  LTC075, the wrong diagnosis for client-only code. List-item buttons (`module-list`, `module-todo`)
+  have no workaround.
+  **Shape to ratify:**
+  - The child declares a function-typed arg (`onPress?: (e: MouseEvent) => void`) and places it on
+    an owned element as an event attribute (`<button onClick={onPress}>`). The child's element, the
+    child's binding — no parent reach-in.
+  - The server never renders or serializes it (a function has no HTML form; `setAttribute` rejects
+    `on*` anyway). It is a **client arg**: the compiler records it in the child's compose contract.
+  - The child's client binds `on(button, 'click', e => host.<arg>?.(e))`, reading a client-only
+    property at event time — a plain instance field, not a Slot: a handler needs no reactivity, and
+    an unbranded function in `expose()` would be wrapped as a `MemoCallback` (AGENTS.md, branding).
+  - The parent's client assigns the function at the compose site's mount, in the enclosing Mount
+    Scope — host, arm (`bindArm`) or list item (`bindItem`) — so item/key reads are legal; LTC075
+    exempts client args. Page-authored instances simply have none and stay usable through bubbling.
+  **Decide:** the naming rule (any function-typed arg vs. an `on`-prefixed convention — the
+  latter collides visually with native `onclick` IDL props, the former needs type information the
+  compiler reads without a checker); whether a compose-site `onClick` on a child that declares no
+  such arg becomes a host listener or a refusal (recommend refusal, new LTC, tier 1, naming the
+  child's declared handler args); `.tsrx` parity. Then write the compiler task with channel/tier,
+  and the `BasicButton` contract change (`onPress` or equivalent, plus `type` and `ariaLabel`).
+
+- [ ] LT-462: Children contract — parent-owned children, child-declared content model and roles (design; ADR).
+  **Area:** design
+  **Area:** design
+  **Filed (Architect, 2026-10-06; owner rulings 2026-10-06 recorded below):** composing
+  `<ModuleScrollarea>` around `module-codeblock`'s `<pre><code>` fails LTC026: the structural
+  verifier excludes everything under a composed child (`:not(<child-tag> *)`, LT-316), and ADR 0033
+  s7 leaves "template-authored content inside a composed child" outside the parent's style scope.
+  **Owner rulings:** (a) content a parent passes as `children` is owned by the parent, not the
+  child. (b) A component may still act on its children: `<BasicPluralize>` takes its `.none`/`.some`
+  markup as children yet toggles them and writes the count from its own `count` prop. (c)
+  `<FormCheckbox>` takes its label as `children` (rich content) and should refuse interactive
+  content in it.
+  **Proposed model — the children contract, declared by the child:**
+  1. **Parent owns the content.** Structure, text, its own bindings and `first()` references reach
+     the children region; the verifier excludes only the child's own template. Platform analogue:
+     light-DOM content assigned to a slot belongs to the light-DOM author.
+  2. **The child acts only through declared roles.** The child's `children` type names the roles
+     it addresses and the effects it applies (sketch: `children: Children<{ none: 'p', some: 'p',
+     count: 'span' }>` — roles matched by class), the way `<select>` acts on `<option>` and
+     `<details>` on `<summary>`. The child's `first()`/`all()` into children may target declared
+     roles only; anything else is a reach-in (new LTC, tier 1).
+  3. **One writer per property.** A parent binding a property the child's contract writes on a
+     role element (`hidden` on `.some`) is a conflict (new LTC, tier 1, statically decidable
+     from the compose registry).
+  4. **Content model.** The child may declare its children non-interactive (sketch:
+     `Children<…, { interactive: false }>`); the compiler checks the compose site's literal
+     children — `a[href]`, `button`, `input`, `select`, `textarea`, `label`, `details`, `iframe`,
+     `[tabindex]`, media with `controls` — and composed children whose template contains one,
+     transitively through the registry (new LTC, tier 1). TypeScript cannot carry this: JSX
+     element types are opaque. Page-authored HTML is unchecked (no compiler; HTML's own content
+     model applies).
+  5. **Styles.** Parent rules reach its children content; ADR 0033 s7's exclusion is reversed for
+     that region, which changes the `@scope … to (boundary)` lowering (the limit must become the
+     child's own template nodes, not the child host). The child's rules reach only declared role
+     elements' own boxes (the `::slotted()` analogue). This part is the costliest and needs a
+     lowering probe before the ADR is written.
+  **Consequences to carry:** `module-todo` places a `FormInplaceEdit` inside the checkbox label —
+  interactive content in a `<label>`, already an a11y defect (clicking edit toggles the checkbox);
+  under (c) it must move beside the checkbox. `basic-button`'s label harvest (`span.label`) stays
+  child-owned: it renders from the `label` arg, not from children.
+  **Output:** an ADR (children ownership; amends ADR 0033 s7 and HOST_PROFILE § data account
+  bullet 3), then compiler tasks per numbered point with channel/tier and LTC codes, and the
+  corpus tasks (LT-463, LT-464).
+
+- [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
+  **Area:** examples
+  **Needs:** LT-460, LT-461, LT-462, LT-464
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
+  child component's markup by hand (`<basic-button><button>…</button></basic-button>`) instead of
+  composing it (`<BasicButton … />`), duplicating markup the child owns. Composition is allowed
+  to be raw, but the corpus should model ownership: the child's template renders its markup, the
+  parent passes args, `class` discriminators and `truc:pass`. Convert each site below in every
+  variant-set member (`.tsx` and `.tsrx` twin together; CSS must stay byte-identical, ADR 0039);
+  the `.ts` twins are hand-written runtime sources and stay as they are.
+  **Sites:**
+  - `module-lazyload` — pending/catch callouts → `<CardCallout>` / `<CardCallout kind="danger">`
+    (needs LT-460).
+  - `module-dialog`, `module-splitview` — `<module-scrollarea>` → `<ModuleScrollarea>`; no parent
+    reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
+    documented reason stands).
+  - `module-codeblock` — `<module-scrollarea>` → `<ModuleScrollarea>` per LT-462's ruling.
+  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers move to
+    `on(first('basic-button.toggle'), 'click', …)` today, or the compose-site form if LT-461 lands it.
+  - `module-list`, `module-todo` — submit buttons → `<BasicButton>`; `BasicButton` gains a
+    `type?: 'button' | 'submit'` arg (default `'button'`) rendered on its native button. List-item
+    remove buttons per LT-461's ruling (they also need an `ariaLabel?` arg on `BasicButton`, rendered
+    as the button's `aria-label`). `module-todo`'s clear-completed → `<BasicButton>` with its
+    existing `truc:pass`.
+  - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
+    `class="split-button"`.
+  - `module-todo` — `<basic-pluralize>` → `<BasicPluralize>` with its `none`/`some` markup as
+    children, and `<form-checkbox>` → `<FormCheckbox>` with its label as children — both per
+    LT-462's children contract. The `FormInplaceEdit` moves out of the label to beside the checkbox
+    (interactive content in a label; LT-462 point 4); the checkbox keeps an accessible name.
+  `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
+  in prose.
+  **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
+  or changes the rendered DOM or a spec's expectation beyond the composed root's attributes,
+  stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
+  **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
+
+- [ ] LT-464: form-checkbox gains a .tsx spelling.
+  **Area:** examples
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, owner request):** `form-checkbox` exists only as
+  `form-checkbox.tsrx`. Add `form-checkbox.tsx` beside it as a variant-set member (ADR 0039): same
+  canonical tag, its own `declare global` `HTMLElementTagNameMap` entry (s4), byte-identical CSS,
+  typed second parameter `FormFactoryContext<FormCheckboxProps>` (LT-209). Keep the current
+  `label: string` arg — the switch to `children` waits for LT-462's children contract and lands in
+  LT-463. The `.tsx` member becomes the served surface; the `.tsrx` twin stays.
+  **Verification:** check:corpus, test:variants, `form-checkbox.spec.ts`.
 ## P7 — Backlog (not scheduled)
 
 **Moved to TODO.md 2026-10-02:** LT-393.

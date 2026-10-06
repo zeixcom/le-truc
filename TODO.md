@@ -150,7 +150,7 @@ so ruling it while LT-424–LT-426 land keeps the migrations off the critical pa
   (ruling 11). ~~LT-374, LT-186, LT-427, LT-428, LT-422 → LT-423 → LT-425~~ (reviewed ✓) →
   ~~LT-424~~ (reviewed ✓) → ~~LT-355~~ (reviewed ✓) → ~~LT-426~~ (reviewed ✓) → ~~LT-429~~ (reviewed ✓) → ~~LT-111~~ (reviewed ✓, integrated 2026-10-05) → ~~LT-109~~ (reviewed ✓) → ~~LT-449~~ (reviewed ✓) → **next, critical path (compiler list emission, one at a time):** ~~LT-454~~ (reviewed ✓) → ~~LT-453~~ (reviewed ✓) → ~~LT-110~~ (done ✓) → LT-446 (section-menu, design — the sweep's last folder). **Beside it (example folders only, pickable now):** ~~LT-445~~ (reviewed ✓), ~~LT-390~~ (done ✓).
 - **B — correctness** — the last iteration's silent miscompiles and drops. ~~LT-378~~,
-  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). ~~LT-443~~ (reviewed ✓). ~~LT-452~~ (done ✓). ~~LT-451~~ (reviewed ✓). **Next:** LT-447, once its design question 1 is ruled (support the shape or refuse it as LTC079 — a supported-shape decision, so the owner's). It touches list-item setup emission (`extractItemSetup`), so it runs after LT-453, not beside LT-454. LT-455 (a nested list in a server branch of an item; filed from LT-454's review) touches the same nested-list emission as LT-453, so it needs LT-453.
+  ~~LT-391~~ landed. ~~LT-392, LT-356, LT-353, LT-417, LT-430, LT-431, LT-432~~ (reviewed ✓). ~~LT-412~~ (reviewed ✓). ~~LT-439~~ (reviewed ✓). ~~LT-440~~ (reviewed ✓). ~~LT-442~~ (reviewed ✓). ~~LT-444~~ (reviewed ✓). ~~LT-443~~ (reviewed ✓). ~~LT-452~~ (done ✓). ~~LT-451~~ (reviewed ✓). ~~LT-447~~ (reviewed ✓ — the shape is supported and the declaration already rides both modules; the filed failure was a stale generated module, ruling on the task file; no LTC079). **Next:** LT-455 (a nested list in a server branch of an item; filed from LT-454's review) touches the same nested-list emission as LT-453, so it needs LT-453.
 - **D — CSS departures** — re-scoped (or struck) by LT-409 first. LT-405, LT-407, LT-408 (each
   needs LT-409).
 - **Parallel slot** — independent work. ~~LT-420, LT-418, LT-419, LT-421, LT-305, LT-277,
@@ -175,7 +175,7 @@ last iteration's reviews remains open (LT-378, LT-387, LT-355, LT-391). `check:c
 `bun run build:docs` and `check:links` pass. The net line count of `server/compiler/` is
 recorded against the 30.4k opening measurement.
 
-**Next free task ID: LT-460.** Next free diagnostic code: LTC081 (LTC080 is LT-453's; LTC079 is reserved for LT-447's refusal option; LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
+**Next free task ID: LT-465.** Next free diagnostic code: LTC081 (LTC080 is LT-453's; LTC079 is LT-447's, unused — its shape is supported, not refused; LTC078 is LT-444's, used; LTC077 is LT-443's; LTC076 is LT-429's, used; LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's, used; LTC071 is LT-399's; LTC070 is LT-304's; LTC066–LTC069 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are LT-274's; LTC061 is LT-383's; LTC056 is LT-358's; LTC057/LTC058 are LT-257's; LTC059 is LT-374's; LTC060 is LT-375's).
 
 ---
 
@@ -291,33 +291,6 @@ recorded against the 30.4k opening measurement.
   ---
 
 ### B — correctness
-
-- [ ] LT-447: A host-declared `deriveList` consumed only inside a reactive-list body compiles to a server `ReferenceError` with no diagnostic — emit the declaration or refuse the shape.
-  **Area:** compiler
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, from LT-109's review):** a contributor hit this live during the
-  `module-calctable` migration. Source shape: `const rowPrices = deriveList(items, item => …)`
-  declared at host level, whose ONLY consumer is an item-scope const inside the reactive-list
-  body (`const price = rowPrices.byKey(k)` in the `map` callback / `@for` body). The compiler
-  accepted the source on both surfaces with no diagnostic; the generated SERVER module emitted
-  the item const but omitted the `deriveList` declaration entirely — every render throws
-  `ReferenceError: rowPrices is not defined`. The sim realm caught it during `build:docs`
-  (before the fix, `module-calctable`'s build-docs connect reported exactly this); neither
-  `check:corpus` nor `tsc` sees it, because the generated module fails at RUNTIME, not
-  typecheck. The client module has the same hole (the declaration is emitted neither there).
-  **Design questions:** (1) Is a host-level `deriveList` whose only read is a list body's
-  `byKey` a supported shape? ADR 0046 s5 admits signal declarations in item setup, and
-  `deriveList` is a loop source (LT-425) — but the item-const route here reads it as a SIGNAL
-  MAP, not a loop source, and the both-phase classification (`extractItemSetup`) emits the item
-  const while the declaration walker never follows the dependency. (2) If supported: the
-  declaration must ride both modules whenever a list-body position reads it (the same
-  import-placement rule LT-426 applies to item setup). (3) If not: an LTC refusal (next free
-  code LTC079), tier 1 Prevented, statically decidable, naming the supported alternative (the
-  per-item `createMemo` over the item's own fields, which is what LT-109 shipped). The
-  evidence lives on `task/LT-109`'s pre-restructure state and in LT-109's handoff; the
-  equivalence-audit/sim snapshots on that branch carried the failing render.
-  **Channel/tier:** compiler; decided by the task per question (3). Parity cases on both
-  surfaces regardless.
 
 - [ ] LT-455: A reactive list in a server-known branch of a list item compiles clean, then throws in every item mount when the branch is not taken — query its container optionally and guard the nested `reconcile`.
   **Area:** compiler
