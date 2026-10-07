@@ -1318,3 +1318,37 @@ else moves up only by owner direction.
   **Then:** optionally hoist `module-ticker`'s tick and add-rows bodies back to named consts.
   **Verification:** test:server with a unit leg (handler-only const absent from the server
   module; a const also read in a rendered thunk still present); check:corpus.
+
+- [ ] LT-489: BasicButton's modifier shape — how a parent asks for `tertiary destructive small` — then convert module-todo's remove button to a handler arg.
+  **Area:** design
+  **Needs:** LT-461
+  **Gates:** check:corpus, test:server, test:variants
+  **Area:** design
+  **Needs:** LT-461
+  **Filed (Architect, 2026-10-07, from LT-461's review):** module-todo's remove button composes
+  `<basic-button class="remove">` with the classes `tertiary destructive small` (pinned in the
+  sim-driver snapshot). LT-461 gave BasicButton `onClick`, but a parent cannot express that
+  class triple through the current props: `variant` is one enum (`secondary` | `primary` |
+  `constructive` | `destructive`) and `size` another, and `tertiary` is not a `variant` value —
+  the remove button gets its classes today because module-todo's template hard-codes them into
+  the child's inner button through the class-ownership channel, not through any prop. Until a
+  shape exists, module-todo's remove click stays on a hand-written `first('basic-button.remove
+  button')` query instead of LT-461's handler arg.
+  **Ruling needed (owner):** one of —
+  1. `variant` widens to accept an array (`variant?: X | X[]`), with `tertiary` joining the
+     vocabulary; `class={`${variant.join(' ')} ${size}`}`.
+  2. Boolean modifier props (`destructive?: boolean`, `small?: boolean`, …), composing with
+     `variant`; the combinatorics live in BasicButton alone.
+  3. Leave the class-ownership channel as the documented answer for modifier combinations and
+     drop the conversion idea.
+  Recommendation: 2 — the modifiers are orthogonal (color × weight × size), the enum would
+  otherwise grow `tertiary-destructive`-style cross products, and the props render as ordinary
+  server args. Whichever wins, the CLAUDE-facing copy is HOST_PROFILE § Handler args' note that
+  a parent needing classes on the child's INNER button uses the ownership rule.
+  **Change (after the ruling):** BasicButton carries the ruled props; module-todo's remove
+  button passes `onClick={e => …}` (or the equivalent) as a handler arg and drops its
+  hand-written remove-button query; the sim-driver snapshot and any other pin re-write
+  mechanically.
+  **Check:** `bun run test:variants module-todo` green on all three surfaces; `test:server`
+  and `check:corpus` green.
+  **Channel/tier:** none — example-corpus API shape; no runtime check.
