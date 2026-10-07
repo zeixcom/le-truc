@@ -841,3 +841,54 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** Approved. The catch-arm mechanism clause the contributor added ("The catch arm
   folds once per render…") stays: it gives the message its three-part form.
+
+- [x] LT-490: Setup extraction drops a const read only inside a handler-arg body — walk handler args as client dependencies. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-461
+  **Gates:** test:server, check:corpus, test:variants
+  **Area:** compiler
+  **Needs:** LT-461
+  **Filed (Architect, 2026-10-07, from LT-463's review):** a setup `const` read only by the body
+  of a handler arg on a compose site (`<BasicButton onClick={() => … ALPHA …} />`, LT-461) is
+  dropped from the generated client, and the generated module fails tsc with TS2304. The emitted
+  `on(…)` lands inside the factory, where the const would be in scope, so this is a missed edge in
+  the client-needed walk, not a design stance: setup extraction walks native `onX` attribute
+  bodies but not handler-arg bodies. LT-463 worked around it by moving module-ticker's `ALPHA`
+  into the add-rows handler (both members of the variant set).
+  **Change:** the client-needed fixpoint (the walk LT-093 also extends) counts free names in a
+  compose site's handler-arg bodies as client reads, exactly as it does for a native `onX`
+  attribute. Pin it with a server-suite test: a setup const read only by a handler arg survives
+  into the generated client and the generated module typechecks. Then restore module-ticker's
+  `ALPHA` to a setup const in the `.tsx` and `.tsrx` members and drop the workaround comment.
+  **Check:** `test:server` green with the new pin; `check:corpus` green; `bun run test:component
+  module-ticker` green on all surfaces.
+  **Channel/tier:** none — a miscompile fix; no new check.
+
+  **Changed:** `computeClientNeededNames` (`server/compiler/imports.ts`, via `clientExprNodes`) now counts a non-forwarded compose-site handler arg's body as a client read, like a native `onX` attribute; module-ticker's `ALPHA` is a setup const again in the `.tsx` and `.tsrx` members, workaround comment dropped.
+  **How:** the compose branch of `clientExprNodes` pushes `attr.handler` for `kind: 'handler'` with `forward === null` (a forwarded arg emits nothing). New pin in `server/tests/compiler/handler-args.test.ts`: a setup const read only by a handler arg survives into the generated client, and an in-memory tsc program over that module reports no TS2304 (red without the fix). A plain import read only by a handler arg now lands client-side too, by the same walk.
+  **Check:** handler-args 18/18; typecheck, check:contract, check:corpus green; biome clean on touched paths; generated `module-ticker.client.ts` and the `.tsrx` variant client declare `ALPHA`. `test:server` is 3491 pass / 16 fail — the identical 16 fail at base 91dd207a (client golden, sim-driver, equivalence audit, variant parity snapshots for module-list/ticker/todo/dialog, and the variant-set typecheck; the golden registry lacks basic-button after LT-463's compose conversion). Not filed as far as I can see — needs a task; module-ticker's parity snapshot will also pick up this change when regenerated. Unrunnable in the sandbox (browser launch timeout): `test:component module-ticker`, `test:variants`.
+
+  **Review:** Approved. The `clientExprNodes` edge matches the native `onX` treatment, and a forwarded arg correctly contributes nothing. The pin is red without the fix and checks real tsc diagnostics, not a string match. The widening to plain imports read only by a handler arg is the same walk and correct. Re-run in the worktree: handler-args 18/18, typecheck, check:corpus, and the generated ticker client declares `ALPHA`. `test:component module-ticker` passes 8/8 outside the sandbox. The contributor's question: the 16 `test:server` failures at base are LT-463's, not this branch's. LT-463's gates never named `test:server`, and its review didn't run it. They have three causes: a real TS2322 (JSX children against `children?: string`), the golden harness's compose registry lacking basic-button, and by-design snapshot drift. Filed as LT-495 (ruling 13), which also regenerates the ticker parity snapshot this branch moves.
+
+- [x] LT-491: section-menu's "closes when a menu link is clicked" fails on Chromium and WebKit. — done, pending review ⏳
+  **Area:** examples
+  **Needs:** LT-469
+  **Gates:** test:variants
+  **Area:** examples
+  **Needs:** LT-469
+  **Filed (Architect, 2026-10-07, from LT-463's review):** `section-menu.spec.ts` › "closes when a
+  menu link is clicked" fails on Chromium and WebKit on all three surfaces at v3 `e94928f6`
+  (LT-463's base, proven by a clean-tree run). Firefox passes. After the link click the menu keeps
+  its `open` class. LT-469 compiled section-menu and integrated green, so either a later
+  integration regressed it or the failure is environment-sensitive. Find out which first:
+  bisect from LT-469's merge.
+  **Change:** fix the cause. If the regression is in the compiled client or the compiler, fix it
+  there and pin it. If the spec races navigation (the link click navigates or scrolls before the
+  assertion), make the spec assert the designed behavior deterministically. Do not weaken the
+  assertion. Record which case it was on the entry.
+  **Check:** `bun run test:variants section-menu` green on all browsers and surfaces.
+  **Channel/tier:** none — a test or behavior fix; no new check.
+
+  **Changed:** fixed the section-menu test fixture; nothing regressed. The test layout (`docs-src/layouts/test.html:6`) sets `<base href="/">`, so the fixture's `href="#page-one"` resolved to `/#page-one`. Clicking it left the page for `/`, which 404s (the failure trace shows a "Not Found" page and "element(s) not found"). Firefox passed only because its navigation committed after the class assertion had already passed. Nothing changed since LT-469's merge `11a31e4f` in section-menu, the runtime, scrollarea or the test server, and the hand-written `.ts` surface fails too.
+  **How:** the fixture links now carry the page path (`/test/section-menu#page-…`), so the click stays a same-document fragment navigation. The spec now asserts `toHaveURL(/\/test\/section-menu#page-one$/)` before the unchanged `not.toHaveClass(/open/)`, so a navigation away fails with a clear message. The assertion is not weakened.
+  **Check:** `bun run test:variants section-menu`, all browsers and surfaces. It was UNRUNNABLE in this session: browsers time out in `beforeEach` inside the sandbox, and running outside it was refused. `check:corpus` green and `biome check` clean on the two paths. Doubt: other fixtures that use bare `#fragment` links under the same `<base>` may race the same way.

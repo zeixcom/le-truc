@@ -67,6 +67,11 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     LT-489 (BasicButton modifiers), LT-492 → LT-493 (`truc:html` in composed children, then
     splitview) and LT-494 (FormRadiogroup's `.split-button` presentation, then module-todo).
     The exit criterion counts LT-463's sites as composed or ruled into one of them.
+13. **A task that changes compiled corpus output gates `test:server` (Architect, 2026-10-07).**
+    LT-463 changed generated modules, the server-render snapshots and the authored `.tsx`
+    typing, but its gates named only `check:corpus` and `test:variants`. Sixteen server tests
+    went red unseen. LT-495 repairs them. From now on an `examples` task that edits a compiled
+    source lists `test:server` and `typecheck` among its gates, and the review runs them.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0, unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -93,8 +98,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done
   (2026-10-07). LT-491 (ruling 12) fixes its link-click close failure and is pickable now.
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
-- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463. Done
-  (2026-10-07).
+- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463 → LT-495.
+  LT-463 is done (2026-10-07). LT-495 repairs its `test:server` fallout (ruling 13) after LT-490.
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
@@ -127,7 +132,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-495.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-496.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -139,72 +144,83 @@ LTC056 is LT-358's).
 
 <!-- entries -->
 
-### E — compose enablers
+### K — composition
 
-- [ ] LT-490: Setup extraction drops a const read only inside a handler-arg body — walk handler args as client dependencies.
+- [ ] LT-495: Repair LT-463's `test:server` fallout — JSX children against a `string` children prop, the golden compose registry, and the composition snapshots.
   **Area:** compiler
-  **Needs:** LT-461
-  **Gates:** test:server, check:corpus, test:variants
+  **Needs:** LT-463, LT-490
+  **Gates:** test:server, typecheck, check:corpus
   **Area:** compiler
-  **Needs:** LT-461
-  **Filed (Architect, 2026-10-07, from LT-463's review):** a setup `const` read only by the body
-  of a handler arg on a compose site (`<BasicButton onClick={() => … ALPHA …} />`, LT-461) is
-  dropped from the generated client, and the generated module fails tsc with TS2304. The emitted
-  `on(…)` lands inside the factory, where the const would be in scope, so this is a missed edge in
-  the client-needed walk, not a design stance: setup extraction walks native `onX` attribute
-  bodies but not handler-arg bodies. LT-463 worked around it by moving module-ticker's `ALPHA`
-  into the add-rows handler (both members of the variant set).
-  **Change:** the client-needed fixpoint (the walk LT-093 also extends) counts free names in a
-  compose site's handler-arg bodies as client reads, exactly as it does for a native `onX`
-  attribute. Pin it with a server-suite test: a setup const read only by a handler arg survives
-  into the generated client and the generated module typechecks. Then restore module-ticker's
-  `ALPHA` to a setup const in the `.tsx` and `.tsrx` members and drop the workaround comment.
-  **Check:** `test:server` green with the new pin; `check:corpus` green; `bun run test:component
-  module-ticker` green on all surfaces.
-  **Channel/tier:** none — a miscompile fix; no new check.
+  **Needs:** LT-463, LT-490
+  **Filed (Architect, 2026-10-07, from LT-490's review):** `test:server` has failed 16 tests on v3
+  since LT-463 integrated (`c090d4e7`). LT-463's gates did not name `test:server`, and the review
+  did not run it. There are three causes, and each is ruled below.
+  **1. A real type error: JSX children against a `string` `children` prop.**
+  - The variant-set typecheck fails with TS2322 ("Type 'Element' is not assignable to type
+    'string'") at module-dialog.tsx:138 and module-lazyload.tsx:122/129.
+  - ModuleScrollarea and CardCallout declare `children?: string`, the server-side truth: the
+    compiler lowers compose-site children to a markup string. But tsc checks the JSX children
+    against that declared type.
+  - **Ruling:** the host profile translates. In `host-profile.d.ts`, `LibraryManagedAttributes`
+    maps a string-assignable `children` to the JSX-children type: `JSX.Element | string`, singly
+    or as an array, which is what the compose lowering accepts. Do this beside the `i18n` omission
+    and keep the discriminated-union distribution. This also covers LT-474's branded `Children<…>`
+    string (ADR 0048 s2), because the brand stays string-assignable.
+  - **Rejected:** retyping each child's `children` as `JSX.Element`. That would lie about the
+    server arg and break the `children = ''` defaults.
+  - Pin it in the `.tsx` typecheck fixtures: a compose site with element children against
+    `children?: string` typechecks, and a function child still fails.
+  **2. A golden-harness gap.** `client.golden` and `server.golden` build a compose registry from
+  form-textbox alone. module-list now composes `<BasicButton>`, so it fails to compile there
+  ("corpus components must compile"). Add basic-button to both harnesses' compile-first set.
+  Don't stub it.
+  **3. Snapshots.** Regenerate them: the sim-driver fixtures (module-list, ticker, todo, dialog),
+  the equivalence audit (list, ticker, todo), the client golden (module-list) and the variant
+  parity (list, ticker, todo). Read each diff before accepting it. It must show only
+  the composition change from LT-463 (BasicButton's `secondary medium`/`constructive medium` inner
+  classes, the empty badge span, the composed-root attributes) and, for the ticker, LT-490's
+  `ALPHA`. Any other difference stops the task: write it in `NOTES.md`.
+  **Check:** `test:server` 0 failures; `typecheck` and `check:corpus` green.
+  **Channel/tier:** TypeScript — a host-profile typing fix that makes a correct compose site
+  typecheck. No new check.
 
-- [ ] LT-490: Setup extraction drops a const read only inside a handler-arg body — walk handler args as client dependencies.
+- [ ] LT-495: Repair LT-463's `test:server` fallout — JSX children against a `string` children prop, the golden compose registry, and the composition snapshots.
   **Area:** compiler
-  **Needs:** LT-461
-  **Gates:** test:server, check:corpus, test:variants
+  **Needs:** LT-463, LT-490
+  **Gates:** test:server, typecheck, check:corpus
   **Area:** compiler
-  **Needs:** LT-461
-  **Filed (Architect, 2026-10-07, from LT-463's review):** a setup `const` read only by the body
-  of a handler arg on a compose site (`<BasicButton onClick={() => … ALPHA …} />`, LT-461) is
-  dropped from the generated client, and the generated module fails tsc with TS2304. The emitted
-  `on(…)` lands inside the factory, where the const would be in scope, so this is a missed edge in
-  the client-needed walk, not a design stance: setup extraction walks native `onX` attribute
-  bodies but not handler-arg bodies. LT-463 worked around it by moving module-ticker's `ALPHA`
-  into the add-rows handler (both members of the variant set).
-  **Change:** the client-needed fixpoint (the walk LT-093 also extends) counts free names in a
-  compose site's handler-arg bodies as client reads, exactly as it does for a native `onX`
-  attribute. Pin it with a server-suite test: a setup const read only by a handler arg survives
-  into the generated client and the generated module typechecks. Then restore module-ticker's
-  `ALPHA` to a setup const in the `.tsx` and `.tsrx` members and drop the workaround comment.
-  **Check:** `test:server` green with the new pin; `check:corpus` green; `bun run test:component
-  module-ticker` green on all surfaces.
-  **Channel/tier:** none — a miscompile fix; no new check.
-
-### M — section-menu
-
-- [ ] LT-491: section-menu's "closes when a menu link is clicked" fails on Chromium and WebKit.
-  **Area:** examples
-  **Needs:** LT-469
-  **Gates:** test:variants
-  **Area:** examples
-  **Needs:** LT-469
-  **Filed (Architect, 2026-10-07, from LT-463's review):** `section-menu.spec.ts` › "closes when a
-  menu link is clicked" fails on Chromium and WebKit on all three surfaces at v3 `e94928f6`
-  (LT-463's base, proven by a clean-tree run). Firefox passes. After the link click the menu keeps
-  its `open` class. LT-469 compiled section-menu and integrated green, so either a later
-  integration regressed it or the failure is environment-sensitive. Find out which first:
-  bisect from LT-469's merge.
-  **Change:** fix the cause. If the regression is in the compiled client or the compiler, fix it
-  there and pin it. If the spec races navigation (the link click navigates or scrolls before the
-  assertion), make the spec assert the designed behavior deterministically. Do not weaken the
-  assertion. Record which case it was on the entry.
-  **Check:** `bun run test:variants section-menu` green on all browsers and surfaces.
-  **Channel/tier:** none — a test or behavior fix; no new check.
+  **Needs:** LT-463, LT-490
+  **Filed (Architect, 2026-10-07, from LT-490's review):** `test:server` has failed 16 tests on v3
+  since LT-463 integrated (`c090d4e7`). LT-463's gates did not name `test:server`, and the review
+  did not run it. There are three causes, and each is ruled below.
+  **1. A real type error: JSX children against a `string` `children` prop.**
+  - The variant-set typecheck fails with TS2322 ("Type 'Element' is not assignable to type
+    'string'") at module-dialog.tsx:138 and module-lazyload.tsx:122/129.
+  - ModuleScrollarea and CardCallout declare `children?: string`, the server-side truth: the
+    compiler lowers compose-site children to a markup string. But tsc checks the JSX children
+    against that declared type.
+  - **Ruling:** the host profile translates. In `host-profile.d.ts`, `LibraryManagedAttributes`
+    maps a string-assignable `children` to the JSX-children type: `JSX.Element | string`, singly
+    or as an array, which is what the compose lowering accepts. Do this beside the `i18n` omission
+    and keep the discriminated-union distribution. This also covers LT-474's branded `Children<…>`
+    string (ADR 0048 s2), because the brand stays string-assignable.
+  - **Rejected:** retyping each child's `children` as `JSX.Element`. That would lie about the
+    server arg and break the `children = ''` defaults.
+  - Pin it in the `.tsx` typecheck fixtures: a compose site with element children against
+    `children?: string` typechecks, and a function child still fails.
+  **2. A golden-harness gap.** `client.golden` and `server.golden` build a compose registry from
+  form-textbox alone. module-list now composes `<BasicButton>`, so it fails to compile there
+  ("corpus components must compile"). Add basic-button to both harnesses' compile-first set.
+  Don't stub it.
+  **3. Snapshots.** Regenerate them: the sim-driver fixtures (module-list, ticker, todo, dialog),
+  the equivalence audit (list, ticker, todo), the client golden (module-list) and the variant
+  parity (list, ticker, todo). Read each diff before accepting it. It must show only
+  the composition change from LT-463 (BasicButton's `secondary medium`/`constructive medium` inner
+  classes, the empty badge span, the composed-root attributes) and, for the ticker, LT-490's
+  `ALPHA`. Any other difference stops the task: write it in `NOTES.md`.
+  **Check:** `test:server` 0 failures; `typecheck` and `check:corpus` green.
+  **Channel/tier:** TypeScript — a host-profile typing fix that makes a correct compose site
+  typecheck. No new check.
 
 ### C — children contract
 

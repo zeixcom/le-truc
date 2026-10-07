@@ -990,7 +990,7 @@ of them touches the compose machinery.
 - [ ] LT-493: module-splitview composes `<ModuleScrollarea>` for its panes.
   **Area:** examples
   **Needs:** LT-492
-  **Gates:** check:corpus, test:variants
+  **Gates:** check:corpus, test:variants, test:server, typecheck
   **Area:** examples
   **Needs:** LT-492
   **Filed (Architect, 2026-10-07, from LT-463's review):** module-splitview's panes are LT-463's
@@ -1007,7 +1007,7 @@ of them touches the compose machinery.
 - [ ] LT-494: FormRadiogroup's `.split-button` variant hides its own legend and radios; module-todo composes `<FormRadiogroup>`.
   **Area:** examples
   **Needs:** LT-463
-  **Gates:** check:corpus, test:variants
+  **Gates:** check:corpus, test:variants, test:server, typecheck
   **Area:** examples
   **Needs:** LT-463
   **Filed (Architect, 2026-10-07, from LT-463's review; owner ruling 2026-10-07):** module-todo's
