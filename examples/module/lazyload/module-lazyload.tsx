@@ -7,14 +7,16 @@
  * LT-334): `<truc:try>` with per-arm callouts — loading and error are
  * separate arms, `.danger` authored on the catch arm's own callout, so the
  * shared-callout `hidden` toggling of the twin is gone and, when ok, no
- * callout exists in the DOM at all. The ok arm reads its value through the
- * reactive `truc:html` thunk (the sanitized channel, LT-025 — the compiled
- * surface strips scripts; `allow-scripts` stays a page-authorable but inert
- * attribute until LT-448's design lands). The in-flight dim during a
- * re-fetch is the reactive `isPending` idiom on the ok arm root; the
- * scroll-to-first-heading on a later `src` change stays a sanctioned
- * beside-watch — arm-mounted effects die with the arm, and the hasLoaded
- * guard is component-lifetime state.
+ * callout exists in the DOM at all. Both callouts are composed `CardCallout`
+ * instances (LT-463) — the arm roots are compose sites (LT-460), whose
+ * rendered roots carry the arms' `data-key`. The ok arm reads its value
+ * through the reactive `truc:html` thunk (the sanitized channel, LT-025 —
+ * the compiled surface strips scripts; `allow-scripts` stays a
+ * page-authorable but inert attribute until LT-448's design lands). The
+ * in-flight dim during a re-fetch is the reactive `isPending` idiom on the
+ * ok arm root; the scroll-to-first-heading on a later `src` change stays a
+ * sanctioned beside-watch — arm-mounted effects die with the arm, and the
+ * hasLoaded guard is component-lifetime state.
  */
 
 import {
@@ -31,6 +33,7 @@ import {
 	isRecursiveURL,
 	isValidURL,
 } from '../../_common/fetchWithCache'
+import { CardCallout } from '../../card/callout/card-callout.tsrx'
 
 export type ModuleLazyloadProps = {
 	/** URL of the HTML partial to fetch and render. Read from the `src` attribute at connect time. */
@@ -115,18 +118,18 @@ export function ModuleLazyload(
 		<module-lazyload src={src} allow-scripts={allowScripts}>
 			<truc:try
 				pending={
-					<card-callout>
+					<CardCallout>
 						<p class="loading" role="status">
 							{loading}
 						</p>
-					</card-callout>
+					</CardCallout>
 				}
 				catch={error => (
-					<card-callout class="danger">
+					<CardCallout kind="danger">
 						<p class="error" role="alert" aria-live="assertive">
 							{error.message}
 						</p>
-					</card-callout>
+					</CardCallout>
 				)}
 			>
 				<div

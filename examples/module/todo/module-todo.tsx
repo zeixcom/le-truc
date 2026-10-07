@@ -23,6 +23,13 @@
  * shared client-only helper (`examples/_common/reorder.ts`, LT-427) called
  * from setup — the statement stays out of the server module. `nextTodoId()`
  * replaces the twin's module-level `idCounter`.
+ *
+ * The submit button is a composed `BasicButton` (LT-463) with the existing
+ * `disabled` pass and `t.addTodo` as the label arg. The remove and
+ * clear-completed buttons and the filter radiogroup stay raw: the
+ * `tertiary destructive` modifier combos have no prop shape yet (LT-489)
+ * and the composed radiogroup render cannot carry the page-level
+ * `visually-hidden` presentation on its legend and radios.
  */
 import {
 	bindState,
@@ -38,6 +45,7 @@ import {
 	setupReorder,
 	type TodoItem,
 } from '../../_common/reorder.ts'
+import { BasicButton } from '../../basic/button/basic-button.tsrx'
 import { FormInplaceEdit } from '../../form/inplace-edit/form-inplace-edit.tsrx'
 import { FormTextbox } from '../../form/textbox/form-textbox.tsrx'
 
@@ -136,14 +144,14 @@ export function ModuleTodo(
 		<module-todo>
 			<form action="#" onSubmit={submitNewTodo}>
 				<FormTextbox name="add-todo" label="What needs to be done?" clearable />
-				<basic-button
+				<BasicButton
 					class="submit"
+					type="submit"
+					variant="constructive"
+					disabled
+					label={t.addTodo}
 					truc:pass={{ disabled: () => !textbox.length }}
-				>
-					<button type="submit" class="constructive" disabled>
-						<span class="label">{t.addTodo}</span>
-					</button>
-				</basic-button>
+				/>
 			</form>
 			<span role="status" class="visually-hidden"></span>
 			<ol data-container>
@@ -192,6 +200,9 @@ export function ModuleTodo(
 								},
 							}}
 						/>
+						{/* Raw, not composed (LT-463): the `tertiary destructive small`
+						    class triple is not expressible through BasicButton's props —
+						    the modifier shape is ruled in LT-489. */}
 						<basic-button class="remove">
 							<button
 								type="button"
@@ -209,6 +220,9 @@ export function ModuleTodo(
 				<p class="remaining">
 					{() => t.remaining({ count: activeCount.get() })}
 				</p>
+				{/* Raw, not composed (LT-463): the composed render cannot carry the
+				    page-level `visually-hidden` presentation on the legend and the
+				    radios — a child-contract decision, not a compose arg. */}
 				<form-radiogroup value="all" class="split-button">
 					<fieldset>
 						<legend class="visually-hidden">{t.filter}</legend>
@@ -242,6 +256,9 @@ export function ModuleTodo(
 						</label>
 					</fieldset>
 				</form-radiogroup>
+				{/* Raw, not composed (LT-463): the `tertiary destructive` class pair
+				    is not expressible through BasicButton's props — the modifier
+				    shape is ruled in LT-489. */}
 				<basic-button
 					class="clear-completed"
 					truc:pass={{

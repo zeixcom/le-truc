@@ -10,7 +10,8 @@
  * child's own button, and addressing that button through `first()` would
  * reach into markup the child owns (HOST_PROFILE § data account, bullet 3).
  * A page may still author the opener inside a `basic-button`; the selector
- * matches either way. `children` is the dialog's content markup.
+ * matches either way. `children` is the dialog's content markup; the
+ * scrollable content area composes `ModuleScrollarea` (LT-463).
  *
  * Setup is the twin's verbatim: every `dialog.`/`document.` call runs inside
  * `on()` handlers or the `open` watcher, never at setup time.
@@ -18,6 +19,7 @@
 
 import type { FactoryContext } from '@zeix/le-truc'
 import { css } from '@zeix/le-truc-compiler/macros'
+import { ModuleScrollarea } from '../scrollarea/module-scrollarea.tsx'
 
 export type ModuleDialogProps = {
 	/** Whether the dialog is currently open. */
@@ -132,11 +134,11 @@ export function ModuleDialog(
 						×
 					</button>
 				</header>
-				<module-scrollarea orientation="vertical">
+				<ModuleScrollarea orientation="vertical">
 					<form method="dialog">
 						<div class="content">{children}</div>
 					</form>
-				</module-scrollarea>
+				</ModuleScrollarea>
 			</dialog>
 
 			<style>{css`

@@ -18,6 +18,7 @@
  * - ZERO imports: createList auto-imported from '@zeix/le-truc' (v2 bridge)
  */
 import { createList } from '@zeix/le-truc'
+import { BasicButton } from '../../basic/button/basic-button.tsrx'
 import { FormTextbox } from '../../form/textbox/form-textbox.tsrx'
 
 declare global {
@@ -46,17 +47,21 @@ export function ModuleList({}: {})
 				}}
 			>
 				<FormTextbox name="new-item" label="New item" clearable />
-				<basic-button
+				<BasicButton
 					class="submit"
+					type="submit"
+					variant="constructive"
+					label="Add"
 					truc:pass={{ disabled: () => !textbox.length }}
-				>
-					<button type="submit" class="constructive">Add</button>
-				</basic-button>
+				/>
 			</form>
 			<ul data-container>
 				@for (const item of items; key k) {
 					<li>
 						<span>{item}</span>
+						{/* Raw, not composed (LT-463): the `tertiary destructive small`
+						    class triple is not expressible through BasicButton's props —
+						    the modifier shape is ruled in LT-489. */}
 						<basic-button class="remove">
 							<button
 								type="button"
