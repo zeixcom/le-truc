@@ -755,6 +755,98 @@ export function BasicParent({ title }: { title: string })
 		)
 	})
 
+	describe('a raw element of the child tag counts against the compose site (LT-496)', () => {
+		const parentWith = (
+			site: string,
+			raws: string,
+		) => `import { BasicChild } from '../child/basic-child.tsrx'
+
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+			<basic-parent>
+				${raws}
+				${site}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const compileParent = (parent: string) =>
+			compileComponent(
+				parent,
+				'examples/parent/basic-parent.tsrx',
+				new Set(['basic-child']),
+				undefined,
+				composeRegistryOf(
+					compileChild('examples/child/basic-child.tsrx').entry,
+				),
+			)
+
+		test('a compose site after a raw same-tag element emits the discriminated selector', () => {
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<BasicChild class="submit" label={title} truc:pass={{ value: () => 'x' }} />`,
+					'<basic-child class="clear"></basic-child>',
+				),
+			)
+			if (!component)
+				throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+			expect(component.clientCode).toContain("first('basic-child.submit'")
+			expect(component.clientCode).not.toContain("first('basic-child'")
+		})
+
+		test('a raw same-tag element in an arm counts too', () => {
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<BasicChild class="submit" label={title} truc:pass={{ value: () => 'x' }} />`,
+					'@if (title) { <basic-child class="clear"></basic-child> }',
+				),
+			)
+			if (!component)
+				throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+			expect(component.clientCode).toContain("first('basic-child.submit'")
+		})
+
+		test('a class the raw element shares is no discriminator — the site is refused (LTC007)', () => {
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<BasicChild class="btn" label={title} truc:pass={{ value: () => 'x' }} />`,
+					'<basic-child class="btn"></basic-child>',
+				),
+			)
+			expect(component).toBeNull()
+			const refused = diagnostics.filter(d => d.code === 'LTC007')
+			expect(refused).toHaveLength(1)
+			expect(refused[0]?.message).toContain(
+				'Give the site a class no other <basic-child> carries.',
+			)
+		})
+
+		test('an indistinguishable pair is refused (LTC007)', () => {
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<BasicChild label={title} truc:pass={{ value: () => 'x' }} />`,
+					'<basic-child></basic-child>',
+				),
+			)
+			expect(component).toBeNull()
+			expect(diagnostics.filter(d => d.code === 'LTC007')).toHaveLength(1)
+		})
+
+		test('a compose site with no raw same-tag element keeps the bare tag', () => {
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<BasicChild class="submit" label={title} truc:pass={{ value: () => 'x' }} />`,
+					'<div class="clear"></div>',
+				),
+			)
+			if (!component)
+				throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+			expect(component.clientCode).toContain("first('basic-child'")
+		})
+	})
+
 	test('compose-site class/id are materialized on the child root in the rendered HTML (LT-090)', async () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'

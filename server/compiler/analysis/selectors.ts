@@ -231,6 +231,17 @@ export const countForSelector = (
 ): number => probeCount(node, selector)
 
 /**
+ * `countForSelector` over the region probe: every raw element the
+ * template can render, a compose site's content included — the elements
+ * of a tag a host-level `first()` can reach (LT-496). Compose sites still
+ * contribute zero; `countComposeBySource` counts those.
+ */
+export const countRenderedForSelector = (
+	node: TemplateNode,
+	selector: string,
+): number => probeCountWithRegions(node, selector)
+
+/**
  * Structural match count for composed elements over the whole template,
  * grouped by their resolved `.tsrx` source path — the proxy for "this
  * composed target is the sole possible instance" used by `pass={{ }}`
@@ -328,16 +339,22 @@ export const composeStaticAttrs = (node: ComposeNode): Map<string, string> => {
  * `discriminatorCandidates`'s own priority order for raw elements. `class`
  * matches by token membership (a multi-class `class="a b"` site can be
  * discriminated by either token); `id`/`data-*` match by exact value. `null`
- * if no candidate is unique to `node`. The caller's one fallback is
+ * if no candidate is unique to `node`. `matchesRaw` rejects a clause a raw
+ * element of the child's tag also matches (LT-496): the query is the tag
+ * plus the clause, and a raw element it matches would take the site's
+ * place. The caller's one fallback is
  * `composeSharedPassClause` (LT-319), a query shared by sites with
  * identical `truc:pass` objects — never anything looser.
  */
 export const composeDiscriminatorClause = (
 	node: ComposeNode,
 	siblings: readonly ComposeNode[],
+	matchesRaw: (clause: string) => boolean = () => false,
 ): string | null =>
 	composeClauseCandidates(node).find(
-		candidate => composeClauseMatches(siblings, candidate).length === 1,
+		candidate =>
+			composeClauseMatches(siblings, candidate).length === 1 &&
+			!matchesRaw(candidate.clause),
 	)?.clause ?? null
 
 /**
