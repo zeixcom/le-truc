@@ -75,7 +75,7 @@
 - **Reworded `attachInternals()` degradation warning** (dev mode): it now states the component runs without internals — form association, custom states, and host ARIA reflection unavailable — and names the mitigation: author the ARIA attributes in your markup instead.
 - **`ElementFromSelector` ignores pseudo-class arguments**: the comma and spaces inside `:not(…)`/`:is(…)` no longer read as a selector list or combinator, so `first('button:not(x *)')` infers `HTMLButtonElement` instead of `Element`.
 - **`@zeix/cause-effect` is `^1.6.1`**, up from `^1.5.2`: `MutableList` and `DerivedList` gain `map()`/`forEach()` over item signals and keys, and per-item `deriveList` results compare deeply. `match()` fires `stale` through a Slot backed by a `Task`.
-- **`cause-effect` skill describes CE 1.6.x**: `SKILL.md` and `references/collections.md` cover the list `map()`/`forEach()` methods and deep-equal per-item `deriveList` results.
+- **`cause-effect` skill describes CE 1.6.x**: `SKILL.md` and `references/collections.md` cover the list `map()`/`forEach()` methods and deep-equal per-item `deriveList` results. The `stale` routing in both skills covers a list or store derived from an async computation.
 
 ### Removed
 

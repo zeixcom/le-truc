@@ -107,7 +107,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
-- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486.
+- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. LT-437 is done
+  (2026-10-07).
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
 

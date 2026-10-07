@@ -302,6 +302,31 @@ Full entry text: `git log -p -- DONE.md`.
   sandbox: `test:variants form-combobox` (tsrx 60, tsx 60) and `test:variants module-lazyload`
   (ts 40, tsx 40), all green.
 
+- [x] LT-437: Refresh the `cause-effect` skill for 1.6 — version stamp, list `map`/`forEach`, derived-list `stale` (LT-412 review follow-up). — done ✓
+  **Area:** docs
+  **Needs:** LT-412
+  **Narrowed (Architect, planning 2026-10-06):** b63fbfed restamped `skills/cause-effect/` to
+  1.6.x and covered list `map`/`forEach` and the derived-list `stale` case. What is left: the
+  `stale` bullet in `skills/le-truc/references/runtime.md` ("never fires for a cell or memo", no
+  derived-list case) and the matching last bullet of `AGENTS.md` ("only fires for `Task` signals").
+  Bring both in line with `skills/cause-effect/SKILL.md`'s `stale` bullet, which is verified
+  against 1.6.1. The original context follows.
+  **Context:** `skills/cause-effect/SKILL.md:6` still says it describes 1.5.x (verified against
+  1.5.2). LT-412 corrected the `stale` routing for 1.6.1, but the rest of the skill was never
+  checked against 1.6: 1.6.0 added `map((item, key) => R)` and `forEach` to both list kinds (the
+  `.tsx` keyed map, ADR 0046 s4, relies on them), and in 1.6.1 a list or store derived from an async
+  computation can reach `stale`. `skills/le-truc/references/runtime.md`'s `stale` bullet still says
+  "never fires for a cell or memo" and omits the derived-list case. Verify each claim against the
+  installed `node_modules/@zeix/cause-effect/src/`, add only what a Solid/Preact user would get
+  wrong (the skill's own rule), and restamp the version.
+  **Channel/tier:** none — docs.
+  **Check:** every behavioral claim in both files traces to the 1.6.1 source; the stamp names 1.6.x
+  and the version verified.
+
+  **Changed:** `skills/le-truc/references/runtime.md` and `AGENTS.md` `stale` bullets name the derived-list/store case (verified against 1.6.1 `collection.ts`/`store.ts`), aligned with `skills/cause-effect/SKILL.md`; CHANGELOG skill line extended.
+
+  **Checked (Architect, 2026-10-07):** the new claim traces to 1.6.1. A derived list (`collection.ts:985`) and a derived store (`store.ts:696`) register their internal Task through `registerAsyncSource`, and `isPending()` resolves through that map (`graph.ts:932`). The three wordings agree: AGENTS.md, `skills/le-truc/references/runtime.md` and `skills/cause-effect/SKILL.md:45`.
+
 - [x] LT-460: A compose site in an async-boundary arm — lower it as arm root, keep the arm binding in its children. — reviewed ✓
   **Area:** compiler
   **Gates:** check:corpus, test:server

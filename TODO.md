@@ -107,7 +107,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
-- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486.
+- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. LT-437 is done
+  (2026-10-07).
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
 
@@ -413,27 +414,6 @@ LTC056 is LT-358's).
 
 
 ### Q — docs and build cleanup
-
-- [ ] LT-437: Refresh the `cause-effect` skill for 1.6 — version stamp, list `map`/`forEach`, derived-list `stale` (LT-412 review follow-up).
-  **Area:** docs
-  **Needs:** LT-412
-  **Narrowed (Architect, planning 2026-10-06):** b63fbfed restamped `skills/cause-effect/` to
-  1.6.x and covered list `map`/`forEach` and the derived-list `stale` case. What is left: the
-  `stale` bullet in `skills/le-truc/references/runtime.md` ("never fires for a cell or memo", no
-  derived-list case) and the matching last bullet of `AGENTS.md` ("only fires for `Task` signals").
-  Bring both in line with `skills/cause-effect/SKILL.md`'s `stale` bullet, which is verified
-  against 1.6.1. The original context follows.
-  **Context:** `skills/cause-effect/SKILL.md:6` still says it describes 1.5.x (verified against
-  1.5.2). LT-412 corrected the `stale` routing for 1.6.1, but the rest of the skill was never
-  checked against 1.6: 1.6.0 added `map((item, key) => R)` and `forEach` to both list kinds (the
-  `.tsx` keyed map, ADR 0046 s4, relies on them), and in 1.6.1 a list or store derived from an async
-  computation can reach `stale`. `skills/le-truc/references/runtime.md`'s `stale` bullet still says
-  "never fires for a cell or memo" and omits the derived-list case. Verify each claim against the
-  installed `node_modules/@zeix/cause-effect/src/`, add only what a Solid/Preact user would get
-  wrong (the skill's own rule), and restamp the version.
-  **Channel/tier:** none — docs.
-  **Check:** every behavioral claim in both files traces to the 1.6.1 source; the stamp names 1.6.x
-  and the version verified.
 
 - [ ] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review).
   **Area:** server
