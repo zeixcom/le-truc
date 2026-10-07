@@ -675,13 +675,19 @@ const clientExprNodes = (root: TemplateNode): AstNode[] => {
 		// referenced ONLY inside a compose `pass` thunk (`truc:pass={{ value:
 		// () => toDisplay(...) }}`) needs the exact same client-need tracing
 		// raw-element `pass` gets below, or it silently never gets emitted.
+		// A compose-site handler arg (LT-461) lowers to a parent-side `on()`
+		// in the factory, exactly like a native `onX` event attribute
+		// (LT-490); a forwarded one emits nothing.
 		else if (node.kind === 'compose')
-			for (const attr of node.attrs)
+			for (const attr of node.attrs) {
 				if (attr.kind === 'pass')
 					for (const entry of attr.entries) {
 						out.push(entry.thunk)
 						if (entry.setThunk) out.push(entry.setThunk)
 					}
+				else if (attr.kind === 'handler' && attr.forward === null)
+					out.push(attr.handler)
+			}
 	})
 	for (const attr of collectAttrs(root)) {
 		if (attr.kind === 'reactive') out.push(attr.thunk)
@@ -750,8 +756,9 @@ type SetupLikeComponent = Pick<
 /**
  * Every name required in the CLIENT module: free names of every always-
  * client-emitted position (reactive/style-map/class-map/event attribute
- * thunks, lazy `&{}` children, `client-stmt` side effects, `clientSetup`
- * statements, signal declarations — signals are always harvested
+ * thunks, lazy `&{}` children, `client-stmt` side effects, compose-site
+ * `pass` thunks and handler args, `clientSetup` statements, signal
+ * declarations — signals are always harvested
  * client-side), `expose()` (also always both), plus a fixpoint over
  * `plainSetup`: a plain const pulled in by any of those (or by another
  * plain const already pulled in) contributes its own free names too. A

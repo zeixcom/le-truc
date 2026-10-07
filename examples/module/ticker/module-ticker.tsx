@@ -67,6 +67,7 @@ export function ModuleTicker(
 	{ expose, first, host, watch }: FactoryContext<ModuleTickerProps>,
 ) {
 	const BLOCK_SIZE = 100
+	const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 	const priceFormat = new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
@@ -139,11 +140,7 @@ export function ModuleTicker(
 					label="➕ Add 100 rows"
 					onClick={() => {
 						// One block of fresh symbols from the bijective 3-char base-26
-						// counter (AAA…ZZZ), skipping symbols already listed. The
-						// alphabet is handler-local: a setup const a handler arg
-						// alone reads is dropped from the generated client (gap
-						// recorded in NOTES.md, LT-463).
-						const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+						// counter (AAA…ZZZ), skipping symbols already listed.
 						const used = new Set(tickers.keys())
 						const added: TickerItem[] = []
 						for (let n = 0; added.length < BLOCK_SIZE && n < 17_576; n++) {
