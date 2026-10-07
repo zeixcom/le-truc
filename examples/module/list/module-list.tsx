@@ -7,10 +7,14 @@
  *
  * Lives beside its `.tsrx` twin as a variant set (ADR 0039) and is the
  * served surface. Every member declares its own `HTMLElementTagNameMap`
- * entry (s4).
+ * entry (s4). The submit button is a composed `BasicButton` (LT-463) with
+ * the existing `disabled` pass; the remove buttons stay raw — the
+ * `tertiary destructive small` class triple is not expressible through
+ * BasicButton's props (LT-489).
  */
 import { createList } from '@zeix/le-truc'
 import { css } from '@zeix/le-truc-compiler/macros'
+import { BasicButton } from '../../basic/button/basic-button.tsrx'
 import { FormTextbox } from '../../form/textbox/form-textbox.tsrx'
 
 declare global {
@@ -40,19 +44,21 @@ export function ModuleList({}: {}) {
 				}}
 			>
 				<FormTextbox name="new-item" label="New item" clearable />
-				<basic-button
+				<BasicButton
 					class="submit"
+					type="submit"
+					variant="constructive"
+					label="Add"
 					truc:pass={{ disabled: () => !textbox.length }}
-				>
-					<button type="submit" class="constructive">
-						Add
-					</button>
-				</basic-button>
+				/>
 			</form>
 			<ul data-container>
 				{items.map((item, k) => (
 					<li>
 						<span>{() => item.get()}</span>
+						{/* Raw, not composed (LT-463): the `tertiary destructive small`
+						    class triple is not expressible through BasicButton's props —
+						    the modifier shape is ruled in LT-489. */}
 						<basic-button class="remove">
 							<button
 								type="button"

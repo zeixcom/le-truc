@@ -23,6 +23,11 @@
  * formatting runs in per-item `createMemo`s (LT-426), since a list-body
  * thunk cannot read the setup-level `Intl.NumberFormat` consts (LTC005).
  * `Math.random()` runs only in handlers, so no rendered site depends on it.
+ *
+ * The controls are composed `BasicButton`s (LT-463): the handlers are
+ * `onClick` handler args (LT-461), and the toggle's live label is its
+ * existing `truc:pass`. The child's own template renders the buttons'
+ * markup from the args.
  */
 import {
 	asNumber,
@@ -35,6 +40,7 @@ import {
 	type FactoryContext,
 } from '@zeix/le-truc'
 import { css } from '@zeix/le-truc-compiler/macros'
+import { BasicButton } from '../../basic/button/basic-button.tsrx'
 
 export type TickerItem = {
 	symbol: string
@@ -61,7 +67,6 @@ export function ModuleTicker(
 	{ expose, first, host, watch }: FactoryContext<ModuleTickerProps>,
 ) {
 	const BLOCK_SIZE = 100
-	const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 	const priceFormat = new Intl.NumberFormat('en-US', {
 		minimumFractionDigits: 2,
 		maximumFractionDigits: 2,
@@ -119,47 +124,40 @@ export function ModuleTicker(
 	return (
 		<module-ticker fraction={String(fraction)}>
 			<div class="controls">
-				<basic-button
+				<BasicButton
 					class="toggle"
+					label="⏸️ Pause"
 					truc:pass={{
 						label: () => (host.running ? '⏸️ Pause' : '▶️ Resume'),
 					}}
-				>
-					<button
-						type="button"
-						class="toggle"
-						onClick={() => {
-							host.running = !host.running
-						}}
-					>
-						<span class="label">⏸️ Pause</span>
-					</button>
-				</basic-button>
-				<basic-button class="add-rows">
-					<button
-						type="button"
-						class="add-rows"
-						onClick={() => {
-							// One block of fresh symbols from the bijective 3-char base-26
-							// counter (AAA…ZZZ), skipping symbols already listed.
-							const used = new Set(tickers.keys())
-							const added: TickerItem[] = []
-							for (let n = 0; added.length < BLOCK_SIZE && n < 17_576; n++) {
-								const symbol =
-									(ALPHA[Math.floor(n / 676) % 26] ?? 'A') +
-									(ALPHA[Math.floor(n / 26) % 26] ?? 'A') +
-									(ALPHA[n % 26] ?? 'A')
-								if (used.has(symbol)) continue
-								const price =
-									Math.round((10 + Math.random() * 1000) * 100) / 100
-								added.push({ symbol, open: price, price, volume: 0 })
-							}
-							tickers.splice(tickers.length, 0, ...added)
-						}}
-					>
-						<span class="label">➕ Add 100 rows</span>
-					</button>
-				</basic-button>
+					onClick={() => {
+						host.running = !host.running
+					}}
+				/>
+				<BasicButton
+					class="add-rows"
+					label="➕ Add 100 rows"
+					onClick={() => {
+						// One block of fresh symbols from the bijective 3-char base-26
+						// counter (AAA…ZZZ), skipping symbols already listed. The
+						// alphabet is handler-local: a setup const a handler arg
+						// alone reads is dropped from the generated client (gap
+						// recorded in NOTES.md, LT-463).
+						const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
+						const used = new Set(tickers.keys())
+						const added: TickerItem[] = []
+						for (let n = 0; added.length < BLOCK_SIZE && n < 17_576; n++) {
+							const symbol =
+								(ALPHA[Math.floor(n / 676) % 26] ?? 'A') +
+								(ALPHA[Math.floor(n / 26) % 26] ?? 'A') +
+								(ALPHA[n % 26] ?? 'A')
+							if (used.has(symbol)) continue
+							const price = Math.round((10 + Math.random() * 1000) * 100) / 100
+							added.push({ symbol, open: price, price, volume: 0 })
+						}
+						tickers.splice(tickers.length, 0, ...added)
+					}}
+				/>
 			</div>
 			<table>
 				<thead data-unreconciled>
