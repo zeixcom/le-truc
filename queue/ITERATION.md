@@ -61,6 +61,12 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     generated-module API is under semver (`argsFromAttrs` excluded). The reshape is LT-480,
     banded P1. It opens the next iteration ahead of LT-254 and stays out of this chain, because
     P1 waits for this round.
+12. **LT-463's residues (owner, 2026-10-07).** LT-490 (a handler-arg body's setup const is
+    dropped from the client) joins track E, and LT-491 (section-menu's link-click close) joins
+    track M. The conversions LT-463 left raw are banded P6 and stay out of this chain. They are
+    LT-489 (BasicButton modifiers), LT-492 → LT-493 (`truc:html` in composed children, then
+    splitview) and LT-494 (FormRadiogroup's `.split-button` presentation, then module-todo).
+    The exit criterion counts LT-463's sites as composed or ruled into one of them.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0, unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -73,8 +79,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-481 → LT-482 → LT-488 → LT-461. LT-460 through LT-488 are integrated (2026-10-07); LT-461
-  is next.
+  LT-481 → LT-482 → LT-488 → LT-461 → LT-490. LT-460 through LT-461 are integrated (2026-10-07);
+  LT-490 is next (ruling 12).
 
   LT-481 and LT-482 joined from the reviews of LT-470 and LT-481: the arm-root pass planning,
   and the server-only `try` as a server-rendered branch. LT-488 rewords LT-470's remedy for a
@@ -84,9 +90,11 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **G — layout graph** — the variant sets `main.ts` still registers through their `.ts` twins,
   so `test:variants` has never measured their compiled clients (found in LT-467's rework). It
   runs before LT-463, which converts them; LT-463 needs it. LT-485. Pickable now.
-- **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done (2026-10-07).
+- **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done
+  (2026-10-07). LT-491 (ruling 12) fixes its link-click close failure and is pickable now.
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
-- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463.
+- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463. Done
+  (2026-10-07).
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
@@ -102,7 +110,8 @@ census by design, and LT-246, which needs a settled census. The fetched-partials
 
 **Exit criterion.** Every chain task except the two design sessions is reviewed and
 integrated. LT-462 has ruled into ADR 0048, or its open state is recorded here (ruling 7). The
-compiled corpus composes every site LT-463 names, and every example folder is served compiled,
+compiled corpus composes every site LT-463 names, except the sites ruled into LT-489, LT-493 and
+LT-494 (ruling 12), and every example folder is served compiled,
 section-menu included, and `examples/main.ts` registers no variant set through its `.ts` twin
 (LT-485). No compose-lowering miscompile LT-460, LT-470, LT-481 or LT-482 names remains. The tier
 census and the warning baseline are unchanged from the opening measurement below, except where
@@ -118,7 +127,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-489.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-495.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

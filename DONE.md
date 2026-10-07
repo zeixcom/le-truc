@@ -425,6 +425,50 @@ Full entry text: `git log -p -- DONE.md`.
   and ADR 0046 s1 were amended in place, and CONTEXT.md gained **Children Region** and **Role**.
   The implementation is track C: LT-472 to LT-479 (ITERATION ruling 10).
 
+- [x] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus. — reviewed ✓
+  **Area:** examples
+  **Needs:** LT-460, LT-461, LT-466, LT-467, LT-485
+  **Gates:** check:corpus, test:variants
+  **Area:** examples
+  **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
+  child component's markup by hand (`<basic-button><button>…</button></basic-button>`) instead of
+  composing it (`<BasicButton … />`), duplicating markup the child owns. Composition is allowed
+  to be raw, but the corpus should model ownership: the child's template renders its markup, the
+  parent passes args, `class` discriminators and `truc:pass`. Convert each site below in every
+  variant-set member (`.tsx` and `.tsrx` twin together; CSS must stay byte-identical, ADR 0039);
+  the `.ts` twins are hand-written runtime sources and stay as they are.
+  **Sites:**
+  - `module-lazyload` — pending/catch callouts → `<CardCallout>` / `<CardCallout kind="danger">`
+    (needs LT-460).
+  - `module-dialog`, `module-splitview` — `<module-scrollarea>` → `<ModuleScrollarea>`; no parent
+    reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
+    documented reason stands).
+  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers become
+    `onClick` args (LT-461).
+  - `module-list`, `module-todo` — submit buttons and list-item remove buttons → `<BasicButton>`
+    with `type`, `ariaLabel` and `onClick` args (LT-461). `module-todo`'s clear-completed → `<BasicButton>` with its
+    existing `truc:pass`.
+  - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
+    `class="split-button"`.
+  `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
+  in prose.
+  **Split (owner, planning 2026-10-06):** the two sites that need the children contract —
+  `module-codeblock`'s `<module-scrollarea>` and `module-todo`'s `<form-checkbox>` with its label as
+  children — moved to LT-462's implementation tasks. Leave both raw here. `module-todo` is touched
+  after LT-466 and LT-467 land, so the three edits to it run in sequence.
+  **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
+  or changes the rendered DOM or a spec's expectation beyond the composed root's attributes,
+  stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
+  **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
+
+  **Changed:** Converted the listed corpus sites from hand-authored child markup to composition: module-lazyload's pending/catch callouts are composed `<CardCallout>` / `<CardCallout kind="danger">` arm roots (the LT-460 shape); module-dialog's content pane composes `<ModuleScrollarea>`; module-ticker's toggle and add-rows controls and module-list's and module-todo's submit buttons are composed `<BasicButton>`s with `type`/`variant`/`label`/`onClick` args (LT-461), keeping their existing `truc:pass` entries. Every site was converted in both variant-set members (`.tsx` + `.tsrx`); the `.ts` twins are untouched and no CSS changed (variant assertion held).
+
+  **How:** Compose-site children splice into the child's rendered DOM (LT-018): the dialog's `<form>`/`.content` and the lazyload arms' `<p>` elements travel as the child's `children` arg, and each composed arm root carries the arm's `data-key`. The toggle keeps its reactive label via its existing pass and passes `label="⏸️ Pause"` as the server-render seed; module-todo's submit passes `t.addTodo` as the label arg (server-resolved per render locale) beside the static `disabled` seed and its `disabled` pass. Sites whose conversion hit the task's surprise rule stay raw with in-source comments pointing at the ruling they need: module-list's and module-todo's remove buttons and module-todo's clear-completed (`tertiary destructive [small]` is not expressible through BasicButton's props — LT-489), module-todo's filter radiogroup (the composed render cannot carry the page-level `visually-hidden` presentation on the legend and radios, and LTC071 forbids the parent styling the child's internals), and module-splitview entirely — `<div truc:html={start}/>` inside composed `<ModuleScrollarea>` children is LTC011-refused ("`html` attribute in a composed element's content is not supported yet"), so a markup-valued string arg has no composed-children channel; the conversion was reverted from this commit. One compiler gap surfaced and was worked around authored-side: a setup const read only by a handler-arg body is dropped from the generated client (setup-extraction does not walk handler-arg bodies; TS2304 on the authored file) — module-ticker's `ALPHA` moved into the add-rows handler, gap recorded in NOTES.md for a compiler follow-up.
+
+  **Check:** `check:corpus` green (exit 0, 41 components; the census and tier notes are unchanged from before). `test:variants`: 535 passed, 2 failed — both pre-existing section-menu failures ("closes when a menu link is clicked", Chromium + WebKit, all three surfaces), proven identical on a clean tree via `git stash` (LT-469 residue, not this branch). Touched components' Playwright specs all green: `test:component module-lazyload` 40, `module-dialog` 43, `module-ticker` 8, `module-todo` 60 (module-list has no spec; module-splitview's sources were reverted so its artifacts are unchanged). Biome clean on every changed `.tsx` path (biome does not format `.tsrx`). For the review pass to rule on or file: (1) a composed-children `truc:html` channel or a markup-valued prop for ModuleScrollarea (splitview); (2) the FormRadiogroup presentation contract (visually-hidden on legend/radios); (3) the handler-arg / setup-extraction gap as an LT-461 follow-up compiler task — with LT-489 already covering the modifier-combo shape.
+
+  **Review:** Approved. Every converted site renders the old markup. Ticker's two `onClick` handler args bind to distinct host-class selectors (`basic-button.toggle button`, `basic-button.add-rows button`). BasicButton's `secondary medium`/`constructive medium` inner classes are style-neutral (`secondary` is the default look, and `medium` has no rule). The empty badge span hides through `.badge:empty`. The lazyload arm roots keep `data-key` in the server output. Dialog and lazyload have no `.tsrx` twin, so the `.tsx`-only edits are complete. Reviewer nits: module-dialog's header no longer lists the ModuleScrollarea composition as a "difference" from the page (it isn't one), and module-lazyload's header is reflowed. Re-run: check:corpus green; `test:component module-dialog` 43/43 and `module-lazyload` 40/40, outside the sandbox (in the sandbox every Playwright spec times out in `beforeEach`, untouched basic-button included). Residues ruled with the owner (2026-10-07): (1) splitview — lift LTC011 for `truc:html` in composed children (ADR 0048 s1), filed LT-492 → LT-493; a markup-valued prop is rejected. (2) The radiogroup — the child's `.split-button` variant hides its own legend and radios, filed LT-494. (3) The handler-arg setup-extraction miscompile, filed LT-490. The remove and clear-completed buttons remain LT-489's. The section-menu failure at base is filed as LT-491.
+
 - [x] LT-464: form-checkbox gains a .tsx spelling. — reviewed ✓
   **Area:** examples
   **Gates:** check:corpus, test:variants

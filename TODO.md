@@ -61,6 +61,12 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     generated-module API is under semver (`argsFromAttrs` excluded). The reshape is LT-480,
     banded P1. It opens the next iteration ahead of LT-254 and stays out of this chain, because
     P1 waits for this round.
+12. **LT-463's residues (owner, 2026-10-07).** LT-490 (a handler-arg body's setup const is
+    dropped from the client) joins track E, and LT-491 (section-menu's link-click close) joins
+    track M. The conversions LT-463 left raw are banded P6 and stay out of this chain. They are
+    LT-489 (BasicButton modifiers), LT-492 → LT-493 (`truc:html` in composed children, then
+    splitview) and LT-494 (FormRadiogroup's `.split-button` presentation, then module-todo).
+    The exit criterion counts LT-463's sites as composed or ruled into one of them.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0, unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -73,8 +79,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-481 → LT-482 → LT-488 → LT-461. LT-460 through LT-488 are integrated (2026-10-07); LT-461
-  is next.
+  LT-481 → LT-482 → LT-488 → LT-461 → LT-490. LT-460 through LT-461 are integrated (2026-10-07);
+  LT-490 is next (ruling 12).
 
   LT-481 and LT-482 joined from the reviews of LT-470 and LT-481: the arm-root pass planning,
   and the server-only `try` as a server-rendered branch. LT-488 rewords LT-470's remedy for a
@@ -84,9 +90,11 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **G — layout graph** — the variant sets `main.ts` still registers through their `.ts` twins,
   so `test:variants` has never measured their compiled clients (found in LT-467's rework). It
   runs before LT-463, which converts them; LT-463 needs it. LT-485. Pickable now.
-- **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done (2026-10-07).
+- **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done
+  (2026-10-07). LT-491 (ruling 12) fixes its link-click close failure and is pickable now.
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
-- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463.
+- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463. Done
+  (2026-10-07).
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
@@ -102,7 +110,8 @@ census by design, and LT-246, which needs a settled census. The fetched-partials
 
 **Exit criterion.** Every chain task except the two design sessions is reviewed and
 integrated. LT-462 has ruled into ADR 0048, or its open state is recorded here (ruling 7). The
-compiled corpus composes every site LT-463 names, and every example folder is served compiled,
+compiled corpus composes every site LT-463 names, except the sites ruled into LT-489, LT-493 and
+LT-494 (ruling 12), and every example folder is served compiled,
 section-menu included, and `examples/main.ts` registers no variant set through its `.ts` twin
 (LT-485). No compose-lowering miscompile LT-460, LT-470, LT-481 or LT-482 names remains. The tier
 census and the warning baseline are unchanged from the opening measurement below, except where
@@ -118,7 +127,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-489.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-495.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -130,117 +139,72 @@ LTC056 is LT-358's).
 
 <!-- entries -->
 
-### G — layout graph
+### E — compose enablers
 
-- [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
-  **Area:** examples
-  **Needs:** LT-460, LT-461, LT-466, LT-467, LT-485
-  **Gates:** check:corpus, test:variants
-  **Area:** examples
-  **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
-  child component's markup by hand (`<basic-button><button>…</button></basic-button>`) instead of
-  composing it (`<BasicButton … />`), duplicating markup the child owns. Composition is allowed
-  to be raw, but the corpus should model ownership: the child's template renders its markup, the
-  parent passes args, `class` discriminators and `truc:pass`. Convert each site below in every
-  variant-set member (`.tsx` and `.tsrx` twin together; CSS must stay byte-identical, ADR 0039);
-  the `.ts` twins are hand-written runtime sources and stay as they are.
-  **Sites:**
-  - `module-lazyload` — pending/catch callouts → `<CardCallout>` / `<CardCallout kind="danger">`
-    (needs LT-460).
-  - `module-dialog`, `module-splitview` — `<module-scrollarea>` → `<ModuleScrollarea>`; no parent
-    reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
-    documented reason stands).
-  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers become
-    `onClick` args (LT-461).
-  - `module-list`, `module-todo` — submit buttons and list-item remove buttons → `<BasicButton>`
-    with `type`, `ariaLabel` and `onClick` args (LT-461). `module-todo`'s clear-completed → `<BasicButton>` with its
-    existing `truc:pass`.
-  - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
-    `class="split-button"`.
-  `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
-  in prose.
-  **Split (owner, planning 2026-10-06):** the two sites that need the children contract —
-  `module-codeblock`'s `<module-scrollarea>` and `module-todo`'s `<form-checkbox>` with its label as
-  children — moved to LT-462's implementation tasks. Leave both raw here. `module-todo` is touched
-  after LT-466 and LT-467 land, so the three edits to it run in sequence.
-  **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
-  or changes the rendered DOM or a spec's expectation beyond the composed root's attributes,
-  stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
-  **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
+- [ ] LT-490: Setup extraction drops a const read only inside a handler-arg body — walk handler args as client dependencies.
+  **Area:** compiler
+  **Needs:** LT-461
+  **Gates:** test:server, check:corpus, test:variants
+  **Area:** compiler
+  **Needs:** LT-461
+  **Filed (Architect, 2026-10-07, from LT-463's review):** a setup `const` read only by the body
+  of a handler arg on a compose site (`<BasicButton onClick={() => … ALPHA …} />`, LT-461) is
+  dropped from the generated client, and the generated module fails tsc with TS2304. The emitted
+  `on(…)` lands inside the factory, where the const would be in scope, so this is a missed edge in
+  the client-needed walk, not a design stance: setup extraction walks native `onX` attribute
+  bodies but not handler-arg bodies. LT-463 worked around it by moving module-ticker's `ALPHA`
+  into the add-rows handler (both members of the variant set).
+  **Change:** the client-needed fixpoint (the walk LT-093 also extends) counts free names in a
+  compose site's handler-arg bodies as client reads, exactly as it does for a native `onX`
+  attribute. Pin it with a server-suite test: a setup const read only by a handler arg survives
+  into the generated client and the generated module typechecks. Then restore module-ticker's
+  `ALPHA` to a setup const in the `.tsx` and `.tsrx` members and drop the workaround comment.
+  **Check:** `test:server` green with the new pin; `check:corpus` green; `bun run test:component
+  module-ticker` green on all surfaces.
+  **Channel/tier:** none — a miscompile fix; no new check.
 
-- [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
-  **Area:** examples
-  **Needs:** LT-460, LT-461, LT-466, LT-467, LT-485
-  **Gates:** check:corpus, test:variants
-  **Area:** examples
-  **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
-  child component's markup by hand (`<basic-button><button>…</button></basic-button>`) instead of
-  composing it (`<BasicButton … />`), duplicating markup the child owns. Composition is allowed
-  to be raw, but the corpus should model ownership: the child's template renders its markup, the
-  parent passes args, `class` discriminators and `truc:pass`. Convert each site below in every
-  variant-set member (`.tsx` and `.tsrx` twin together; CSS must stay byte-identical, ADR 0039);
-  the `.ts` twins are hand-written runtime sources and stay as they are.
-  **Sites:**
-  - `module-lazyload` — pending/catch callouts → `<CardCallout>` / `<CardCallout kind="danger">`
-    (needs LT-460).
-  - `module-dialog`, `module-splitview` — `<module-scrollarea>` → `<ModuleScrollarea>`; no parent
-    reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
-    documented reason stands).
-  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers become
-    `onClick` args (LT-461).
-  - `module-list`, `module-todo` — submit buttons and list-item remove buttons → `<BasicButton>`
-    with `type`, `ariaLabel` and `onClick` args (LT-461). `module-todo`'s clear-completed → `<BasicButton>` with its
-    existing `truc:pass`.
-  - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
-    `class="split-button"`.
-  `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
-  in prose.
-  **Split (owner, planning 2026-10-06):** the two sites that need the children contract —
-  `module-codeblock`'s `<module-scrollarea>` and `module-todo`'s `<form-checkbox>` with its label as
-  children — moved to LT-462's implementation tasks. Leave both raw here. `module-todo` is touched
-  after LT-466 and LT-467 land, so the three edits to it run in sequence.
-  **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
-  or changes the rendered DOM or a spec's expectation beyond the composed root's attributes,
-  stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
-  **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
+- [ ] LT-490: Setup extraction drops a const read only inside a handler-arg body — walk handler args as client dependencies.
+  **Area:** compiler
+  **Needs:** LT-461
+  **Gates:** test:server, check:corpus, test:variants
+  **Area:** compiler
+  **Needs:** LT-461
+  **Filed (Architect, 2026-10-07, from LT-463's review):** a setup `const` read only by the body
+  of a handler arg on a compose site (`<BasicButton onClick={() => … ALPHA …} />`, LT-461) is
+  dropped from the generated client, and the generated module fails tsc with TS2304. The emitted
+  `on(…)` lands inside the factory, where the const would be in scope, so this is a missed edge in
+  the client-needed walk, not a design stance: setup extraction walks native `onX` attribute
+  bodies but not handler-arg bodies. LT-463 worked around it by moving module-ticker's `ALPHA`
+  into the add-rows handler (both members of the variant set).
+  **Change:** the client-needed fixpoint (the walk LT-093 also extends) counts free names in a
+  compose site's handler-arg bodies as client reads, exactly as it does for a native `onX`
+  attribute. Pin it with a server-suite test: a setup const read only by a handler arg survives
+  into the generated client and the generated module typechecks. Then restore module-ticker's
+  `ALPHA` to a setup const in the `.tsx` and `.tsrx` members and drop the workaround comment.
+  **Check:** `test:server` green with the new pin; `check:corpus` green; `bun run test:component
+  module-ticker` green on all surfaces.
+  **Channel/tier:** none — a miscompile fix; no new check.
 
-### K — composition
+### M — section-menu
 
-- [ ] LT-463: Compose sub-components instead of raw custom-element markup in the compiled corpus.
+- [ ] LT-491: section-menu's "closes when a menu link is clicked" fails on Chromium and WebKit.
   **Area:** examples
-  **Needs:** LT-460, LT-461, LT-466, LT-467, LT-485
-  **Gates:** check:corpus, test:variants
+  **Needs:** LT-469
+  **Gates:** test:variants
   **Area:** examples
-  **Filed (Architect, 2026-10-06, owner request):** several `.tsx`/`.tsrx` sources author a
-  child component's markup by hand (`<basic-button><button>…</button></basic-button>`) instead of
-  composing it (`<BasicButton … />`), duplicating markup the child owns. Composition is allowed
-  to be raw, but the corpus should model ownership: the child's template renders its markup, the
-  parent passes args, `class` discriminators and `truc:pass`. Convert each site below in every
-  variant-set member (`.tsx` and `.tsrx` twin together; CSS must stay byte-identical, ADR 0039);
-  the `.ts` twins are hand-written runtime sources and stay as they are.
-  **Sites:**
-  - `module-lazyload` — pending/catch callouts → `<CardCallout>` / `<CardCallout kind="danger">`
-    (needs LT-460).
-  - `module-dialog`, `module-splitview` — `<module-scrollarea>` → `<ModuleScrollarea>`; no parent
-    reference into the children, so unblocked. The dialog opener stays a raw `<button>` (its
-    documented reason stands).
-  - `module-ticker` — toggle and add-rows → `<BasicButton>`; handlers become
-    `onClick` args (LT-461).
-  - `module-list`, `module-todo` — submit buttons and list-item remove buttons → `<BasicButton>`
-    with `type`, `ariaLabel` and `onClick` args (LT-461). `module-todo`'s clear-completed → `<BasicButton>` with its
-    existing `truc:pass`.
-  - `module-todo` — `<form-radiogroup>` → `<FormRadiogroup name legend options value>` with
-    `class="split-button"`.
-  `module-catalog`, `module-cem-list`, `form-inplace-edit` and `card-mediaqueries` mention a tag only
-  in prose.
-  **Split (owner, planning 2026-10-06):** the two sites that need the children contract —
-  `module-codeblock`'s `<module-scrollarea>` and `module-todo`'s `<form-checkbox>` with its label as
-  children — moved to LT-462's implementation tasks. Leave both raw here. `module-todo` is touched
-  after LT-466 and LT-467 land, so the three edits to it run in sequence.
-  **Rule for surprises:** a site whose conversion needs a child-contract change not listed here,
-  or changes the rendered DOM or a spec's expectation beyond the composed root's attributes,
-  stays raw and goes into `NOTES.md` for a ruling — do not extend a child's contract ad hoc.
-  **Verification:** check:corpus, test:variants, and the touched components' Playwright specs.
+  **Needs:** LT-469
+  **Filed (Architect, 2026-10-07, from LT-463's review):** `section-menu.spec.ts` › "closes when a
+  menu link is clicked" fails on Chromium and WebKit on all three surfaces at v3 `e94928f6`
+  (LT-463's base, proven by a clean-tree run). Firefox passes. After the link click the menu keeps
+  its `open` class. LT-469 compiled section-menu and integrated green, so either a later
+  integration regressed it or the failure is environment-sensitive. Find out which first:
+  bisect from LT-469's merge.
+  **Change:** fix the cause. If the regression is in the compiled client or the compiler, fix it
+  there and pin it. If the spec races navigation (the link click navigates or scrolls before the
+  assertion), make the spec assert the designed behavior deterministically. Do not weaken the
+  assertion. Record which case it was on the entry.
+  **Check:** `bun run test:variants section-menu` green on all browsers and surfaces.
+  **Channel/tier:** none — a test or behavior fix; no new check.
 
 ### C — children contract
 
