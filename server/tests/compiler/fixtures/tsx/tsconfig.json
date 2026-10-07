@@ -36,5 +36,6 @@
 		"discriminated-compose.tsx",
 		"harvest-bad-parser.tsx",
 		"harvest-bad-scalar.tsx",
+		"string-children-bad.tsx",
 	],
 }

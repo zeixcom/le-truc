@@ -89,38 +89,31 @@ export function C({ price }: { price: Price })
 			</c-scalar-attr>
 	}`
 
-// module-list composes FormTextbox (ADR 0024 sub-design 10, LT-020) — the
-// compose registry must be built before it compiles, keyed by form-textbox's
-// own repo-relative source path (mirroring server/effects/compile.ts).
-const formTextboxResult = compileComponent(
-	read('examples/form/textbox/form-textbox.tsrx'),
+// module-list composes FormTextbox (ADR 0024 sub-design 10, LT-020) and
+// BasicButton (LT-463) — the compose registry must be built from both before
+// it compiles, keyed by each child's own repo-relative source path (mirroring
+// server/effects/compile.ts).
+const COMPOSE_FIRST = [
 	'examples/form/textbox/form-textbox.tsrx',
-	registry,
-	childImports,
+	'examples/basic/button/basic-button.tsrx',
+] as const
+const composeFirst = new Map<string, ReturnType<typeof compileComponent>>(
+	COMPOSE_FIRST.map(rel => [
+		rel,
+		compileComponent(read(rel), rel, registry, childImports),
+	]),
 )
 const composeRegistry = new Map(
-	formTextboxResult.component
-		? [
-				[
-					'examples/form/textbox/form-textbox.tsrx',
-					formTextboxResult.component.entry,
-				],
-			]
-		: [],
+	[...composeFirst].flatMap(([rel, result]) =>
+		result.component ? [[rel, result.component.entry] as const] : [],
+	),
 )
 
 const compiled = SOURCES.map(rel => ({
 	rel,
 	result:
-		rel === 'examples/form/textbox/form-textbox.tsrx'
-			? formTextboxResult
-			: compileComponent(
-					read(rel),
-					rel,
-					registry,
-					childImports,
-					composeRegistry,
-				),
+		composeFirst.get(rel) ??
+		compileComponent(read(rel), rel, registry, childImports, composeRegistry),
 }))
 
 describe('client golden — generated modules match snapshots', () => {

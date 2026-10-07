@@ -130,6 +130,16 @@ describe('the .tsx host profile typecheck (LT-208, LT-209)', () => {
 		expect(output).toContain(
 			"Argument of type 'Parser<string>' is not assignable to parameter of type 'FieldParser<number>'",
 		)
+		// Compose-site children against a string `children` arg (LT-495):
+		// elements and text translate (`string-children-compose.tsx` is
+		// clean), but a function child and a missing required `children`
+		// still fail.
+		expect(output).toContain(
+			"string-children-bad.tsx(19,28): error TS2322: Type '() => JSX.Element' is not assignable to type 'ComposeChildren | undefined'",
+		)
+		expect(output).toContain(
+			"string-children-bad.tsx(20,4): error TS2322: Type '{}' is not assignable to type 'LibraryManagedAttributes<",
+		)
 		expect(status).not.toBe(0)
 	})
 
