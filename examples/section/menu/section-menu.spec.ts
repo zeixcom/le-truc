@@ -125,6 +125,10 @@ test.describe('section-menu component', () => {
 
 			await page.locator('section-menu a', { hasText: 'Page One' }).click()
 
+			// The click must stay a same-document fragment navigation — the
+			// test layout's <base href="/"> once turned it into a navigation
+			// away to a 404 (LT-491).
+			await expect(page).toHaveURL(/\/test\/section-menu#page-one$/)
 			await expect(menu).not.toHaveClass(/open/)
 			await expect(toggle).toHaveAttribute('aria-expanded', 'false')
 		})
