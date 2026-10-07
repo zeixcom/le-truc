@@ -81,7 +81,8 @@ export type {
 /** The registry entry's per-prop kind vocabulary (`entry.exposedProps`). */
 export type { ExposeKind } from './ir'
 export type { CompiledComponent, CompileFileResult } from './pipeline'
-export type { RegistryEntry } from './registry'
+/** The registry entry's per-handler-arg placement (`entry.handlerArgs`). */
+export type { HandlerPlacement, RegistryEntry } from './registry'
 export type { SourceSpan } from './spans'
 
 /* === The emit-path facts a consumer threads through === */
