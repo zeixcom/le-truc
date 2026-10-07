@@ -122,8 +122,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-503 move compiled CSS to
   authored `@scope` (ruling 14). LT-478 styles its passed content under that contract.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
-- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. LT-437 is done
-  (2026-10-07).
+- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. Done
+  (2026-10-07). LT-282 closed on a false premise (ruling 9): TypeDoc regenerates `_media`.
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
 

@@ -322,7 +322,7 @@ Full entry text: `git log -p -- DONE.md`.
   sandbox: `test:variants form-combobox` (tsrx 60, tsx 60) and `test:variants module-lazyload`
   (ts 40, tsx 40), all green.
 
-- [x] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review). — done ✓
+- [x] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review). — reviewed ✓
   **Area:** server
   **Context:** `_media/*.md` inside the gitignored TypeDoc output dir are hand-copied mirrors
   of repo docs (`REQUIREMENTS.md`, ADRs). No build generates or refreshes them, so they go
@@ -340,7 +340,7 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Closed (Architect, 2026-10-07; owner ruling):** premise wrong — everything inside `docs-src/api/` is TypeDoc output or files TypeDoc copies (relatively linked local files land in `_media` on each run), so the mirrors are not hand-kept. No mirror to generate or delete; no change.
 
-- [x] LT-437: Refresh the `cause-effect` skill for 1.6 — version stamp, list `map`/`forEach`, derived-list `stale` (LT-412 review follow-up). — done ✓
+- [x] LT-437: Refresh the `cause-effect` skill for 1.6 — version stamp, list `map`/`forEach`, derived-list `stale` (LT-412 review follow-up). — reviewed ✓
   **Area:** docs
   **Needs:** LT-412
   **Narrowed (Architect, planning 2026-10-06):** b63fbfed restamped `skills/cause-effect/` to
@@ -939,7 +939,7 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** Approved. Accepted: the not-runnable deviation for module-calctable and module-cem-list — the entry's Check line wrongly assumed specs, but the refusal is real, the graph-bundle registration smoke is a fair substitute, and spec-less module folders are the corpus norm (5 of 19); no follow-up filed. Accepted: `module-ticker.client.ts` placed in the generated block's sorted position rather than at the twin's old out-of-order spot at the end. Reviewer re-ran the gates on the branch tip in the worktree: `check:corpus` exit 0, `test:server` 3510 pass / 0 fail, `test:variants module-ticker` green on all three surfaces, both refusals reproduced, biome clean on the two touched files. The branch tip sat on v3's HEAD; the integrate is a fast-forward.
 
-- [x] LT-486: Prose still cites the retired basic-pluralize — repoint each reference (writer). — done ✓
+- [x] LT-486: Prose still cites the retired basic-pluralize — repoint each reference (writer). — reviewed ✓
   **Area:** docs
   **Needs:** LT-467
   **Gates:** build:docs, check:links
@@ -969,6 +969,7 @@ Full entry text: `git log -p -- DONE.md`.
   green.
 
   **Changed:** repointed the live `basic-pluralize` citations — `AGENTS.md`, `LE_TRUC_COMPILER.md` to the `c-plural` fixture; `HOST_PROFILE.md` and `i18n/README.md` keys to `module-todo.remaining`; locale-precedence names `basic-number` alone; `TESTS.md` and the size-bet `FINDING.md` (a run of record) mark the retirement in place.
+  **Review:** Approved (2026-10-07). The check holds: the remaining `basic-pluralize` mentions outside adr/queue/CHANGELOG/tests all name the retirement deliberately.
 
 - [x] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy. — reviewed ✓
   **Area:** compiler
