@@ -269,6 +269,10 @@ export const attributeReactivity = (
 		case 'static':
 		case 'reactive':
 			return attr.kind
+		// A handler-arg placement (LT-461) renders nothing and binds nothing
+		// in the component itself — the composing parent addresses it.
+		case 'handler-arg':
+			return 'static'
 		case 'server':
 			return attr.bindsProp != null ? 'reactive' : 'server'
 		case 'class-map':

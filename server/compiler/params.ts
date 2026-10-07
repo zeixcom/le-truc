@@ -8,7 +8,13 @@
  */
 
 import type { AstNode } from './ast-node'
-import { asArray, collectBoundNames, identifierName, isNode } from './ast-utils'
+import {
+	asArray,
+	collectBoundNames,
+	identifierName,
+	isHandlerArgName,
+	isNode,
+} from './ast-utils'
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import { ambientRecordViolations } from './fold-inputs'
@@ -80,6 +86,7 @@ export const extractParams = (
 	// LT-258 (ADR 0034 s4): the reserved `i18n` record yields only the
 	// declared page-ambient members.
 	ctx.diagnostics.push(...ambientRecordViolations(ctx.source, paramsNode))
+	ctx.handlerArgs = readHandlerArgs(ctx, paramsNode)
 
 	// The factory-context parameter (LT-209): the author's opt IN to precise
 	// context typing. Names shadow the profile ambients at function scope;
@@ -150,4 +157,130 @@ const contextAnnotationName = (
 		}
 	}
 	return { annotationName: null, annotation: null }
+}
+
+/**
+ * The handler args of the args pattern (LT-461), binding name → arg name:
+ * every top-level arg named `on` plus a capital letter. Its type is read
+ * syntactically from the parameter annotation — an inline type literal, a
+ * same-file alias or interface, an intersection of those — with no checker;
+ * one that is not a function type (optionally `| undefined`), or that
+ * cannot be read, is LTC081 and declares no handler arg.
+ */
+const readHandlerArgs = (
+	ctx: ExtractContext,
+	paramsNode: AstNode,
+): Map<string, string> => {
+	const handlers = new Map<string, string>()
+	for (const prop of asArray(paramsNode.properties)) {
+		if (prop.type !== 'Property' || prop.computed) continue
+		const arg = identifierName(prop.key)
+		if (!arg || !isHandlerArgName(arg)) continue
+		const value = isNode(prop.value) ? prop.value : null
+		const binding = identifierName(
+			value?.type === 'AssignmentPattern' ? value.left : value,
+		)
+		if (!binding) continue
+		const type = argTypeOf(ctx, paramsNode.typeAnnotation, arg)
+		if (type === null || !isFunctionType(ctx, type)) {
+			ctx.diagnostics.push(
+				diagnostic.unaddressableHandlerArg(ctx.source, prop, arg, {
+					kind: 'not-function',
+				}),
+			)
+			continue
+		}
+		handlers.set(binding, arg)
+	}
+	return handlers
+}
+
+/** The written type with its `TSTypeAnnotation` wrapper peeled. */
+const unwrapType = (node: unknown): AstNode | null => {
+	if (!isNode(node)) return null
+	return node.type === 'TSTypeAnnotation' && isNode(node.typeAnnotation)
+		? (node.typeAnnotation as AstNode)
+		: node
+}
+
+/** The declared type of `arg` in the args annotation, or null. */
+const argTypeOf = (
+	ctx: ExtractContext,
+	annotation: unknown,
+	arg: string,
+	depth = 0,
+): AstNode | null => {
+	const type = unwrapType(annotation)
+	if (!type || depth > 8) return null
+	const membersOf = (members: unknown): AstNode | null => {
+		for (const member of asArray(members))
+			if (
+				member.type === 'TSPropertySignature' &&
+				identifierName(member.key) === arg
+			)
+				return unwrapType(member.typeAnnotation)
+		return null
+	}
+	switch (type.type) {
+		case 'TSTypeLiteral':
+			return membersOf(type.members)
+		case 'TSIntersectionType':
+			for (const part of asArray(type.types)) {
+				const found = argTypeOf(ctx, part, arg, depth + 1)
+				if (found) return found
+			}
+			return null
+		case 'TSTypeReference': {
+			const name = identifierName(type.typeName)
+			const decl = name ? ctx.moduleTypes.get(name) : undefined
+			if (!decl) return null
+			if (decl.type === 'TSInterfaceDeclaration' && isNode(decl.body))
+				return membersOf(decl.body.body)
+			if (decl.type === 'TSTypeAliasDeclaration')
+				return argTypeOf(ctx, decl.typeAnnotation, arg, depth + 1)
+			return null
+		}
+		default:
+			return null
+	}
+}
+
+/**
+ * Is `type` a function type: a function type literal, a union of one with
+ * `undefined`/`null`, or a same-file alias of either?
+ */
+const isFunctionType = (
+	ctx: ExtractContext,
+	type: AstNode,
+	depth = 0,
+): boolean => {
+	if (depth > 8) return false
+	switch (type.type) {
+		case 'TSFunctionType':
+			return true
+		case 'TSUnionType': {
+			const members = asArray(type.types)
+			const fns = members.filter(m => isFunctionType(ctx, m, depth + 1))
+			return (
+				fns.length > 0 &&
+				members.every(
+					m =>
+						fns.includes(m) ||
+						m.type === 'TSUndefinedKeyword' ||
+						m.type === 'TSNullKeyword',
+				)
+			)
+		}
+		case 'TSTypeReference': {
+			const name = identifierName(type.typeName)
+			const decl = name ? ctx.moduleTypes.get(name) : undefined
+			const aliased =
+				decl?.type === 'TSTypeAliasDeclaration'
+					? unwrapType(decl.typeAnnotation)
+					: null
+			return aliased !== null && isFunctionType(ctx, aliased, depth + 1)
+		}
+		default:
+			return false
+	}
 }

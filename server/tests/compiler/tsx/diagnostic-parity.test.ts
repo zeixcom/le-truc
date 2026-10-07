@@ -103,6 +103,11 @@ const SURFACE_VOCABULARY: readonly VocabularyEntry[] = [
 	term('ifBranch', 'one conditional branch'),
 	term('caseLabel', 'a switch arm test (LTC062)'),
 	term('reactiveConditional', 'a condition over a signal (ADR 0037)'),
+	framed(
+		'reactiveConditional',
+		r => `an arm of ${r.charAt(0).toLowerCase()}${r.slice(1)}`,
+		'an arm of a condition over a signal (LTC081)',
+	),
 	term('asyncBoundary', 'an async boundary as an arm set (LTC063, LT-432)'),
 	term('tryBody', 'the boundary body'),
 	term('pendingArm', 'the pending arm'),
@@ -1509,6 +1514,56 @@ const FAMILIES: Case[] = [
 			}).replace(':host {', 'other-el span {'),
 		},
 		pins: ['`<other-el>`', '`:global { … }`'],
+	},
+	// LTC081 (LT-461): a handler arg the composing parent cannot address.
+	{
+		name: 'LTC081 a handler arg with no function type',
+		code: 'LTC081',
+		spec: {
+			params: '{ onClick }: { onClick?: string }',
+			body: '<p>x</p>',
+		},
+		pins: ['Handler arg `onClick` has no function type'],
+	},
+	{
+		name: 'LTC081 a handler arg read outside an event attribute',
+		code: 'LTC081',
+		spec: {
+			params: '{ onClick }: { onClick?: () => void }',
+			body: '<button onClick={() => onClick?.()}>x</button>',
+		},
+		pins: ['is read outside an event attribute'],
+	},
+	{
+		name: 'LTC081 a handler arg placed in a reactive arm',
+		code: 'LTC081',
+		spec: {
+			pre: imports('createCell'),
+			params: '{ onClick }: { onClick?: () => void }',
+			setup: cell('open', 'false'),
+			body: '@if (open.get()) { <button onClick={onClick}>x</button> }',
+			tsx: '{open.get() ? <button onClick={onClick}>x</button> : null}',
+		},
+		pins: ["recreates the arm's elements on every flip"],
+	},
+	{
+		name: 'LTC081 a handler arg placed in a reactive-list item',
+		code: 'LTC081',
+		spec: list(
+			...same('<li><button onClick={onClick}>x</button></li>'),
+			'{ onClick }: { onClick?: () => void }',
+		),
+		pins: ["recreates the item's elements on every reconcile"],
+	},
+	{
+		name: 'LTC081 a handler arg placed in a server-data loop body',
+		code: 'LTC081',
+		spec: {
+			params: '{ rows, onClick }: { rows: string[]; onClick?: () => void }',
+			body: '<ul>@for (const row of rows) { <li><button onClick={onClick}>{row}</button></li> }</ul>',
+			tsx: '<ul>{rows.map(row => <li><button onClick={onClick}>{row}</button></li>)}</ul>',
+		},
+		pins: ['once for each item'],
 	},
 ]
 

@@ -61,6 +61,7 @@ import {
 	walkTemplate,
 } from '../walk'
 import type { ComposeRefs } from './compose-refs'
+import { joinSelector, resolveHandlerPlacements } from './handler-args'
 import { lazyWatchSource, returnsNumber } from './harvest'
 import { planEachLoop } from './loops'
 import { renderOnlyBindings, uniqueName } from './naming'
@@ -223,6 +224,12 @@ type EffectsContext = {
 	// the same set `emit-server.ts` folds with, or this check warns about an
 	// attribute that does render (or silences one that doesn't).
 	foldScope: ReturnType<typeof foldableRenderScope>
+	/**
+	 * The compose sites whose handler args a scope's walk planned or refused
+	 * (LT-461): any other site carrying one is refused at the end of the
+	 * pass, so no handler drops silently.
+	 */
+	handledComposes: Set<ComposeNode>
 }
 
 /** The component-scoped selector adapters, parameterized on the pass context. */
@@ -282,8 +289,10 @@ export const reportServerOnlyNames = (
 	>,
 	node: AstNode,
 	subject: string,
-	bad: string[] = ctx.badFreeNames(node),
+	allBad: string[] = ctx.badFreeNames(node),
 ): void => {
+	// A handler arg read is LTC081's (LT-461), not a second error here.
+	const bad = allBad.filter(name => !ctx.component.handlerArgs?.has(name))
 	if (bad.length === 0) return
 	const { component } = ctx
 	// Split by binding class — each has its own fix. A name the server
@@ -1852,6 +1861,208 @@ const passObjectKey = (node: ComposeNode): string =>
 		.sort()
 		.join('\u0001')
 
+/** A compose site's handler args that bind here (LT-461): not forwards. */
+const ownHandlersOf = (node: ComposeNode) =>
+	node.attrs.filter(
+		(a): a is Extract<(typeof node.attrs)[number], { kind: 'handler' }> =>
+			a.kind === 'handler' && a.forward === null,
+	)
+
+/**
+ * A compose site's handler args (LT-461): one `on()` per placement the
+ * child's registry entry publishes for the arg, resolved across forwards,
+ * against the site's selector joined with the placement's. `prefix` is the
+ * site's selector in the scope that queries it (`''` when the scope root is
+ * the site itself, an arm root); `bind` mints the query in that scope —
+ * non-throwing for a placement the child renders in a server-rendered
+ * branch. The handler runs in the parent: its reads answer to the scope's
+ * client names, and its `{ prop: value }` return updates the parent's host,
+ * as for any handler the parent authors. A forward (`<Inner onClick=
+ * {onClick} />`) binds nothing here — it is the child's half of the record.
+ * Registry-discovery tolerance (LT-015): no `composeRegistry`, no plan.
+ */
+const planComposeHandlers = (
+	fx: EffectsContext,
+	node: ComposeNode,
+	prefix: string,
+	bind: (selector: string, optional: boolean, base: string) => string,
+	sink: TopEffectPlan[],
+	badNames: (node: AstNode) => string[],
+): void => {
+	if (fx.composeRefs.mode === 'skipped') return
+	fx.handledComposes.add(node)
+	const { registry } = fx.composeRefs
+	const entry = registry.get(node.source)
+	if (!entry) return
+	for (const attr of ownHandlersOf(node)) {
+		const placements = resolveHandlerPlacements(entry, attr.name, registry)
+		if (placements.length === 0) continue
+		fx.collectAmbient(attr.handler)
+		reportServerOnlyNames(
+			fx,
+			attr.handler,
+			`Handler arg \`${attr.name}\``,
+			badNames(attr.handler),
+		)
+		for (const placement of placements) {
+			const selector = joinSelector(prefix, placement.selector)
+			const last = selector.match(/([a-z][a-z0-9-]*)[^\s>]*$/)?.[1]
+			sink.push({
+				kind: 'on',
+				query: bind(
+					selector,
+					placement.optional,
+					sanitizeVarName(last ?? entry.tag),
+				),
+				event: placement.event,
+				handlerText: attr.handlerText,
+				sourceStart: attr.handler.start,
+				sourceEnd: attr.handler.end,
+			})
+		}
+	}
+}
+
+/**
+ * A compose site's selector among `siblings` — the child's tag, plus a
+ * discriminator when the scope composes the child more than once — or
+ * null when no static class/id/data-* tells the site apart.
+ */
+const composeSiteSelector = (
+	childTag: string,
+	node: ComposeNode,
+	siblings: readonly ComposeNode[],
+): string | null => {
+	if (siblings.length === 1) return childTag
+	const clause = composeDiscriminatorClause(node, siblings)
+	return clause === null ? null : `${childTag}${clause}`
+}
+
+/**
+ * The backstop for handler args (LT-461): a compose site whose handler no
+ * scope's walk planned — inside a server-rendered branch of an arm, or a
+ * server-data loop in an item — is refused rather than dropped. Skipped once an error is on record: the
+ * walk that would have planned the site may have stopped at it.
+ */
+const reportUnplannedHandlers = (fx: EffectsContext): void => {
+	if (fx.composeRefs.mode === 'skipped') return
+	if (fx.diagnostics.some(d => d.severity === 'error')) return
+	const { registry } = fx.composeRefs
+	walkTemplate(
+		fx.component.root,
+		node => {
+			if (node.kind !== 'compose' || fx.handledComposes.has(node)) return
+			const entry = registry.get(node.source)
+			const bound = ownHandlersOf(node).filter(
+				attr =>
+					entry !== undefined &&
+					resolveHandlerPlacements(entry, attr.name, registry).length > 0,
+			)
+			if (bound.length === 0) return
+			fx.diagnostics.push(
+				diagnostic.unsupported(
+					fx.source,
+					node.node,
+					`A handler arg on <${node.component}> where no mount binds it`,
+					'The host, an arm and a list item bind the handler args of the composed children they always render — move the composed child out of the nested branch or loop, or make the condition reactive so the child renders as an arm root.',
+				),
+			)
+		},
+		{ intoCompose: false },
+	)
+}
+
+/**
+ * Host-scope handler args (LT-461): every compose site the host's own walk
+ * reaches — through elements and server-rendered branches, whose sites the
+ * render may leave out (a non-throwing query) — binds its handlers through
+ * factory queries. Arms and reactive-list items bind theirs in their own
+ * mounts; a server-data loop body has no mount to bind per item in, so a
+ * handler there is refused, and composed content is LTC011's.
+ */
+const planHostComposeHandlers = (fx: EffectsContext): void => {
+	if (fx.composeRefs.mode === 'skipped') return
+	const { component, source, diagnostics, addQuery } = fx
+	const wording = wordingOf(component)
+	const visit = (node: TemplateNode, inBranch: boolean): void => {
+		if (node.kind === 'element') {
+			const loop = node !== component.root ? loopFor(fx, node) : null
+			if (loop?.kind === 'reconcile') return
+			if (loop?.kind === 'each') {
+				walkTemplate(
+					node,
+					inner => {
+						if (inner.kind !== 'compose' || ownHandlersOf(inner).length === 0)
+							return
+						fx.handledComposes.add(inner)
+						diagnostics.push(
+							diagnostic.unsupported(
+								source,
+								inner.node,
+								`A handler arg on <${inner.component}> in a server-data ${wording.loop} body`,
+								"`each()` binds the loop's items through their own elements, and the parent binds one listener for each placement — move the composed child out of the loop, or render the items from a reactive list.",
+							),
+						)
+					},
+					{ intoCompose: false },
+				)
+				return
+			}
+			for (const child of node.children) visit(child, inBranch)
+			return
+		}
+		if (node.kind === 'compose') {
+			if (ownHandlersOf(node).length === 0) return
+			const childTag =
+				fx.composeRefs.mode === 'resolved'
+					? (fx.composeRefs.registry.get(node.source)?.tag ?? null)
+					: null
+			if (!childTag) return
+			const prefix = composeSiteSelector(
+				childTag,
+				node,
+				composeNodesBySource(fx, node.source),
+			)
+			if (prefix === null) {
+				fx.handledComposes.add(node)
+				// One error per site: `emitComposeEffects` may have explained it
+				// already, for a `first()` or `truc:pass` on the same site.
+				if (
+					!diagnostics.some(
+						d => d.code === 'LTC007' && d.range.start === node.node.start,
+					)
+				)
+					diagnostics.push(
+						diagnostic.unaddressableElement(
+							source,
+							node.node,
+							`Multiple <${node.component}> sites compose the same child, and no static class/id/data-* attribute tells this one apart — a handler arg needs a unique target. Give each site a distinct class.`,
+						),
+					)
+				return
+			}
+			planComposeHandlers(
+				fx,
+				node,
+				prefix,
+				(selector, optional, base) =>
+					addQuery(base, selector, inBranch || optional ? 'maybe' : 'one'),
+				fx.effects,
+				fx.badFreeNames,
+			)
+			return
+		}
+		if (node.kind === 'conditional') {
+			if (node.mode === 'reactive') return
+			for (const child of childNodes(node)) visit(child, true)
+			return
+		}
+		if (node.kind === 'try' && node.pendingChildren === null)
+			for (const child of childNodes(node)) visit(child, true)
+	}
+	visit(component.root, false)
+}
+
 /**
  * A `first()` reference and/or `pass={{ }}` on a composed element (ADR
  * 0024 sub-design 10). The query's selector is always the compiler's own:
@@ -2003,6 +2214,25 @@ const planArmRootComposePass = (
 				"The arm is adopted or cloned afresh on every flip, so a reference taken at connect goes stale — pass the child its props with `truc:pass` instead: its entries plan in the arm's mount.",
 			),
 		)
+	// Handler args (LT-461): the arm root IS the child's element, so each
+	// placement's own selector queries from it through the arm's `first`.
+	planComposeHandlers(
+		fx,
+		node,
+		'',
+		(selector, optional, base) => {
+			const local = uniqueName(fx.usedNames, base)
+			plan.locals.push({
+				name: local,
+				selector,
+				message: `${fx.component.tag}: ${selector} missing`,
+				...(optional ? { optional: true } : {}),
+			})
+			return local
+		},
+		plan.effects,
+		badNames,
+	)
 	const passAttrs = node.attrs.filter(
 		(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
 			a.kind === 'pass',
@@ -2016,6 +2246,58 @@ const planArmRootComposePass = (
 		fx.childTags.add(childTag)
 	plan.root = { name: rootName, tag: childTag }
 	emitPassEntries(fx, entries, rootName, plan.effects, badNames)
+}
+
+/**
+ * A compose site inside an arm, below its root (LT-461): its handler args
+ * bind in the arm's mount through arm locals, the site addressed within
+ * the arm root. A `first()` or `truc:pass` on such a site is refused by the
+ * arm-shape check (`unmountableInArm`); a handler is the per-arm channel.
+ */
+const planArmComposeHandlers = (
+	fx: EffectsContext,
+	node: ComposeNode,
+	armRoot: ElementNode,
+	plan: ArmPlan,
+	badNames: (node: AstNode) => string[],
+): void => {
+	if (fx.composeRefs.mode === 'skipped' || ownHandlersOf(node).length === 0)
+		return
+	const childTag = fx.composeRefs.registry.get(node.source)?.tag ?? null
+	if (!childTag) return
+	const prefix = composeSiteSelector(
+		childTag,
+		node,
+		composeNodesBySourceIn(armRoot, node.source),
+	)
+	if (prefix === null) {
+		fx.handledComposes.add(node)
+		fx.diagnostics.push(
+			diagnostic.unaddressableElement(
+				fx.source,
+				node.node,
+				`Multiple <${node.component}> sites in one arm compose the same child, and no static class/id/data-* attribute tells this one apart — give each site a distinct class.`,
+			),
+		)
+		return
+	}
+	planComposeHandlers(
+		fx,
+		node,
+		prefix,
+		(selector, optional, base) => {
+			const local = uniqueName(fx.usedNames, base)
+			plan.locals.push({
+				name: local,
+				selector,
+				message: `${fx.component.tag}: ${selector} missing`,
+				...(optional ? { optional: true } : {}),
+			})
+			return local
+		},
+		plan.effects,
+		badNames,
+	)
 }
 
 /**
@@ -2725,6 +3007,10 @@ const handleReactiveConditional = (
 		const visitDescendants = (el: ElementNode): void => {
 			for (const child of el.children) {
 				if (planNested(fx, armScope, child)) continue
+				if (child.kind === 'compose') {
+					planArmComposeHandlers(fx, child, root as ElementNode, plan, badNames)
+					continue
+				}
 				if (child.kind === 'conditional' && child.mode === 'server') {
 					collectBranchKeyAttrs(fx, armScope, child)
 					continue
@@ -2938,9 +3224,10 @@ const planReconcileItem = (
 				(a): a is Extract<(typeof node.attrs)[number], { kind: 'pass' }> =>
 					a.kind === 'pass',
 			)
-			if (passAttrs.length === 0) return
+			const handlers = ownHandlersOf(node)
+			if (passAttrs.length === 0 && handlers.length === 0) return
 			if (fx.composeRefs.mode === 'skipped') return
-			if (inBranch) {
+			if (inBranch && passAttrs.length > 0) {
 				diagnostics.push(
 					diagnostic.unsupported(
 						source,
@@ -2979,8 +3266,30 @@ const planReconcileItem = (
 				}
 				discriminator = clause
 			}
-			const name = uniqueName(usedNames, sanitizeVarName(childTag))
 			const selector = `${childTag}${discriminator}`
+			// Handler args (LT-461): one item-scoped local per placement, under
+			// the item's own `first`. A site in a server-rendered branch of the
+			// item, or a placement in one of the child's, may be absent from
+			// the clone: its local does not throw, and `on()` skips it.
+			planComposeHandlers(
+				fx,
+				node,
+				selector,
+				(placement, optional, base) => {
+					const local = uniqueName(usedNames, base)
+					item.locals.push({
+						name: local,
+						selector: placement,
+						message: `${component.tag}: ${placement} missing`,
+						...(inBranch || optional ? { optional: true } : {}),
+					})
+					return local
+				},
+				item.effects,
+				badNames,
+			)
+			if (passAttrs.length === 0) return
+			const name = uniqueName(usedNames, sanitizeVarName(childTag))
 			item.locals.push({
 				name,
 				selector,
@@ -3251,9 +3560,12 @@ export const runEffects = (
 		derivableHostProps: foldableHostProps(component),
 		derivableRefGuards: foldableRefGuards(component),
 		foldScope: foldableRenderScope(component),
+		handledComposes: new Set(),
 	}
 	validateArmSetPlacement(fx)
 	emitTopEffects(fx, component.root)
+	planHostComposeHandlers(fx)
+	reportUnplannedHandlers(fx)
 	validateComposeIds(fx)
 	return effects
 }

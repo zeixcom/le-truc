@@ -26,6 +26,11 @@
  * - `button` is REQUIRED — it is the component's whole reason to
  *   exist, and a missing one throws with the authored reason.
  *
+ * `onClick` is a handler arg (LT-461): placed on the native button, it
+ * renders nothing here — a composing parent's `onClick` lowers to an
+ * `on()` against `basic-button button` in the parent's own client. A
+ * page-authored instance carries no handler.
+ *
  * `variant`/`size` drive the button's own classes. Per the ownership
  * rule, classes on INNER elements belong to this component and reach
  * it through server args; a parent styling one INSTANCE puts its
@@ -62,6 +67,9 @@ export function BasicButton(
 		disabled = false,
 		variant = 'secondary',
 		size = 'medium',
+		type = 'button',
+		ariaLabel,
+		onClick,
 	}: {
 		label: string
 		badge?: string
@@ -73,6 +81,12 @@ export function BasicButton(
 			| 'constructive'
 			| 'destructive'
 		size?: 'small' | 'medium' | 'large'
+		/** The native button's `type`. */
+		type?: 'button' | 'submit'
+		/** Accessible name, for a button whose label is a symbol. */
+		ariaLabel?: string
+		/** Click handler, bound by the composing parent on the native button. */
+		onClick?: (e: MouseEvent) => void
 	},
 )
 	@{
@@ -87,7 +101,13 @@ export function BasicButton(
 		})
 
 		<basic-button>
-			<button type="button" class={`${variant} ${size}`} {disabled}>
+			<button
+				{type}
+				class={`${variant} ${size}`}
+				{disabled}
+				aria-label={ariaLabel}
+				{onClick}
+			>
 				<span class="label">{label}</span>
 				<span class="badge">{badge}</span>
 			</button>

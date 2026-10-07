@@ -112,6 +112,7 @@ export type DiagnosticCode =
 	| 'LTC077' // a scalar-seeded signal whose harvest read is a raw DOM string — a direct text/attribute site, the substituted read of a seed that is the arg itself, or a membership value read — and whose seed type the compiler cannot read (any annotation that is not the bare `string`/`number`/`boolean` keyword) with no `harvest()` marker declaring its parser: the inferred-type fallback would connect e.g. `2.5` as `'2.5'` (ADR 0046 s7, LT-443) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC078' // a `<style>` block whose content is not a stylesheet spelling — on `.tsx` anything but the `css` marker's tagged template, a bare template literal or nothing (another tag, a shadowed or unimported `css`, a `${}` substitution, any other expression or text); on `.tsrx` an expression child in place of the CSS body. The sheet would read as empty and ship no CSS (ADR 0034 s1, LT-444) — tier 1 Prevented, statically decidable, no runtime half. Lands out of numeric order: `LTC076` is LT-429's, `LTC077` LT-443's — both reserved before this rule picked
 	| 'LTC080' // a key alias that does not meet ADR 0047 s1 — a host-level list seeded from server args, never rendered by its own `map`, is harvested through `const t = list.byKey(k)` in a reactive list's item setup only when the aliasing list keys each item by itself, the read is that alias statement over the loop key, the list has one alias scope, and every field renders at a site in it (LT-453) — tier 1 Prevented, statically decidable; the render witness is the dynamic half, a server-render error with no client counterpart
+	| 'LTC081' // a handler arg (an `on[A-Z]…` arg, LT-461) the parent cannot address: its declared type is not a function type; or it is read anywhere but as an event attribute on a raw element or forwarded to a composed child's handler arg; or it is placed inside one of the component's reactive arms or list items, whose elements are recreated on a flip or a reconcile — tier 1 Prevented, statically decidable, no runtime half
 
 /**
  * A range in the file the author wrote (ADR 0044 s1–s2): `start` and `end`
@@ -890,6 +891,54 @@ export const diagnostic = {
 			`<${component}> in a reactive-list ${wording.loop} body reads ${reads.map(n => `\`${n}\``).join(' and ')} in ${site}. The server renders the child once, into the \`<template>\` that every item clones, so no per-item value exists there — pass the value through \`truc:pass\`, or give the child only server-known values.`,
 			rangeOf(source, at),
 		),
+
+	/**
+	 * A handler arg the parent cannot address (LT-461). An arg whose name is
+	 * `on` plus a capital letter is a handler arg: the child places it as an
+	 * event attribute on an element it owns, and the parent's compose site
+	 * lowers to an `on()` against that element in the parent's client. The
+	 * arg never carries a value inside the child — neither half of the child
+	 * emits it — so every other use is refused:
+	 *
+	 * - `not-function`: its declared type, read syntactically from the
+	 *   parameter annotation (a same-file alias or interface included), is
+	 *   not a function type, or cannot be read;
+	 * - `read`: it is read anywhere but as an event attribute on a raw
+	 *   element, or forwarded to a composed child's handler arg;
+	 * - `in-scope`: it is placed inside one of the child's reactive arms or
+	 *   list items (`where` names which), whose elements the client
+	 *   recreates — the parent's connect-time query would go stale.
+	 * - `in-loop`: it is placed inside a server-data loop body, which renders
+	 *   the element once per item where the parent binds one listener per
+	 *   placement.
+	 *
+	 * Channel: compiler (shared front end, both surfaces). ADR 0028 tier 1
+	 * (Prevented): statically decidable, no runtime half.
+	 */
+	unaddressableHandlerArg: (
+		source: string,
+		at: Site,
+		arg: string,
+		condition:
+			| { kind: 'not-function' }
+			| { kind: 'read' }
+			| { kind: 'in-scope'; where: string; scope: 'arm' | 'item' }
+			| { kind: 'in-loop'; loop: string },
+	) => {
+		const message = (() => {
+			switch (condition.kind) {
+				case 'not-function':
+					return `Handler arg \`${arg}\` has no function type in the parameter annotation. An arg named \`on\` plus a capital letter is a handler arg, which the parent binds as an event listener — declare it with a function type, for example \`${arg}?: (e: Event) => void\`, or rename the arg.`
+				case 'read':
+					return `Handler arg \`${arg}\` is read outside an event attribute. The parent binds a handler arg as a listener on the element that carries it, so the arg has no value inside the component — place it as an event attribute on a native element, \`<button onClick={${arg}}>\`, or forward it to a composed child's handler arg.`
+				case 'in-scope':
+					return `Handler arg \`${arg}\` is placed inside ${condition.where}. The client recreates the ${condition.scope}'s elements on every ${condition.scope === 'arm' ? 'flip' : 'reconcile'}, so the listener the parent binds at connect would stay on a removed element — place the arg on an element outside the ${condition.scope}.`
+				case 'in-loop':
+					return `Handler arg \`${arg}\` is placed inside a server-data ${condition.loop} body. The parent binds one listener for each placement, and the loop renders the element once for each item — place the arg on an element outside the loop.`
+			}
+		})()
+		return error('LTC081', message, rangeOf(source, at))
+	},
 
 	/**
 	 * The partial-readiness invariant (ADR 0034 sub-design 4, LT-258): a

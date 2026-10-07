@@ -192,6 +192,12 @@ shape is supported, not refused (2026-10-06 review). It is `LTC`, not
 `TSRX`: Pass 3 (`analysis/list-harvest.ts`) raises it, on both surfaces. Its
 dynamic half is the server runtime's `HarvestWitnessError`, which has no
 code.
+`LTC081` (a handler arg the composing parent cannot address: no function
+type in the parameter annotation, a read outside an event attribute or a
+forward, or a placement inside a reactive arm, a reactive-list item or a
+server-data loop body; LT-461) takes the next number. It is `LTC`, not
+`TSRX`: the shared front end (`params.ts`, `validate-lowered.ts`) raises it
+on both surfaces, and it has no runtime half.
 
 ## 5. Kept, with the surface named correctly
 

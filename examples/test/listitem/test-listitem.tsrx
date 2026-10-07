@@ -10,6 +10,9 @@
  * - key-derived `id`/`for` over the key binding (set once at clone),
  * - `truc:pass={{ checked: { get, set } }}` into a composed child, whose
  *   server markup is baked into the extracted `<template>`.
+ * - a handler arg on a composed child (LT-461): `<BasicButton onClick>`
+ *   lowers to an `on()` on the child's native button in the item's mount,
+ *   reading the key — the remove button.
  *
  * The page serves two server-rendered tasks (adopted at connect, wiring
  * applied in place) and the Add button exercises the clone path. The `.tsx`
@@ -17,6 +20,7 @@
  * keyed `map` (LT-425), its button logging instead of removing.
  */
 import { createList, createStore, type MutableStore } from '@zeix/le-truc'
+import { BasicButton } from '../../basic/button/basic-button.tsrx'
 import { FormCheckbox } from '../../form/checkbox/form-checkbox.tsrx'
 
 export type TestListItemTask = {
@@ -61,9 +65,7 @@ export function TestListitem({}: {})
 								},
 							}}
 						/>
-						<button type="button" onClick={() => items.remove(k)}>
-							Remove
-						</button>
+						<BasicButton label="Remove" onClick={() => items.remove(k)} />
 					</li>
 				}
 			</ul>

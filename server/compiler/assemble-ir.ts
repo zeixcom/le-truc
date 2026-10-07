@@ -354,6 +354,7 @@ export const assembleComponentIR = (
 		paramNames: [...paramNames],
 		moduleBindings: decls.moduleBindings,
 		messageTBindings: [...messageBindingsOf(paramsNode).tNames],
+		handlerArgs: ctx.handlerArgs,
 		messageRecordBindings: [...messageBindingsOf(paramsNode).recordNames],
 		paramProps: paramPropsOf(ctx, paramsNode),
 		i18nMessages: decls.i18nMessages,
