@@ -74,10 +74,18 @@ import '../server/generated/components/form-radiogroup.client.ts'
 import '../server/generated/components/form-spinbutton.client.ts'
 import '../server/generated/components/form-textbox.client.ts'
 import '../server/generated/components/form-tokenbox.client.ts'
-import './module/calctable/module-calctable.ts'
+// module-calctable serves its compiled client (the variant set's
+// selected surface). Until LT-485 this graph imported the hand-written
+// twin, which then held the tag on every page and in every
+// `test:variants` surface bundle, so the compiled spellings were never
+// the ones exercised. module-cem-list and module-ticker cut over in the
+// same task.
+import '../server/generated/components/module-calctable.client.ts'
 import '../server/generated/components/module-carousel.client.ts'
 import '../server/generated/components/module-catalog.client.ts'
-import './module/cem-list/module-cem-list.ts'
+// module-cem-list serves its compiled client — cut over with
+// module-calctable in LT-485.
+import '../server/generated/components/module-cem-list.client.ts'
 import '../server/generated/components/module-codeblock.client.ts'
 import '../server/generated/components/module-coloreditor.client.ts'
 import '../server/generated/components/module-colorinfo.client.ts'
@@ -89,6 +97,9 @@ import '../server/generated/components/module-pagination.client.ts'
 import '../server/generated/components/module-scrollarea.client.ts'
 import '../server/generated/components/module-splitview.client.ts'
 import '../server/generated/components/module-tabgroup.client.ts'
+// module-ticker serves its compiled client — cut over with
+// module-calctable in LT-485.
+import '../server/generated/components/module-ticker.client.ts'
 // module-todo serves its compiled client (the variant set's selected
 // surface, LT-111). Until LT-467 this graph imported the hand-written twin,
 // which then held the tag on every page and in every `test:variants` surface
@@ -102,7 +113,6 @@ import '../server/generated/components/module-todo.client.ts'
 import '../server/generated/components/section-menu.client.ts'
 import '../server/generated/components/test-listitem-tsx.client.ts'
 import '../server/generated/components/test-listitem.client.ts'
-import './module/ticker/module-ticker.ts'
 import './test/audit/test-audit.ts'
 import './test/aria/test-aria.ts'
 import './test/context/test-context.ts'

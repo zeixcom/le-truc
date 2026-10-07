@@ -15,15 +15,12 @@ const ROOT = path.resolve(import.meta.dir, '../..')
 const MAIN = path.join(ROOT, 'examples/main.ts')
 
 /**
- * Twins still imported by the graph, pending their own fix (LT-467 NOTES
- * entry). The inverted assertion fails once one is switched, so the set
- * cannot go stale.
+ * Empty since LT-485 switched the last three twins (module-calctable,
+ * module-cem-list, module-ticker) to their compiled clients. The inverted
+ * assertion below is the standing guard: any twin import added to the
+ * graph fails this test until the set names it.
  */
-const KNOWN_TWIN_IMPORTS = new Set([
-	'module-calctable',
-	'module-cem-list',
-	'module-ticker',
-])
+const KNOWN_TWIN_IMPORTS = new Set<string>()
 
 /** The tags of the variant-set twins `main.ts` imports directly. */
 const importedTwins = (): string[] =>
@@ -38,7 +35,7 @@ const importedTwins = (): string[] =>
 		.sort()
 
 describe('the examples layout graph', () => {
-	test('imports no variant-set twin beyond the known gaps', () => {
+	test('imports no variant-set twin', () => {
 		expect(importedTwins()).toEqual([...KNOWN_TWIN_IMPORTS].sort())
 	})
 
