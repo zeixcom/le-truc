@@ -847,6 +847,118 @@ export function BasicParent({ title }: { title: string })
 		})
 	})
 
+	describe('the remaining raw-same-tag blind spots (LT-498)', () => {
+		const parentWith = (
+			body: string,
+			imports = '',
+		) => `import { BasicChild } from '../child/basic-child.tsrx'
+${imports}
+export function BasicParent({ title }: { title: string })
+	@{
+		expose({})
+			<basic-parent>
+				${body}
+				<style>:host {
+	  display: block;
+	}</style>
+			</basic-parent>
+	}`
+		const childEntry = () =>
+			compileChild('examples/child/basic-child.tsrx').entry
+		const compileParent = (parent: string, ...extra: RegistryEntry[]) =>
+			compileComponent(
+				parent,
+				'examples/parent/basic-parent.tsrx',
+				new Set(['basic-child']),
+				undefined,
+				composeRegistryOf(childEntry(), ...extra),
+			)
+
+		test('a sibling whose own clause a raw element takes joins the shared pass', () => {
+			const pass = `truc:pass={{ value: () => 'x' }}`
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<basic-child class="a"></basic-child>
+				<BasicChild class="btn a" label={title} ${pass} />
+				<BasicChild class="btn" label={title} ${pass} />`,
+				),
+			)
+			if (!component)
+				throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+			expect(component.clientCode).toContain("all('basic-child.btn'")
+			expect(component.clientCode).not.toContain("first('basic-child.a'")
+		})
+
+		// A child whose own template renders <basic-child>: raw, and through
+		// a composed grandchild.
+		const cardWith = (inner: string, imports = '') =>
+			compileChild(
+				'examples/card/basic-card.tsrx',
+				`${imports}export function BasicCard({ label }: { label: string })
+	@{
+		<basic-card>
+			${inner}
+			<style>:host {
+	  display: block;
+	}</style>
+		</basic-card>
+	}`,
+			).entry
+
+		test('a composed child that renders the tag is excluded, not refused', () => {
+			const card = cardWith('<basic-child>{label}</basic-child>')
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<BasicCard label={title} />
+				<BasicChild label={title} truc:pass={{ value: () => 'x' }} />`,
+					"import { BasicCard } from '../card/basic-card.tsrx'",
+				),
+				card,
+			)
+			if (!component)
+				throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+			expect(component.clientCode).toContain(
+				"first('basic-child:not(basic-card *)'",
+			)
+		})
+
+		test('the tag rendered through a composed grandchild is excluded too', () => {
+			const card = cardWith(
+				'<BasicChild label={label} />',
+				"import { BasicChild } from '../child/basic-child.tsrx'\n",
+			)
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<BasicCard label={title} />
+				<BasicChild label={title} truc:pass={{ value: () => 'x' }} />`,
+					"import { BasicCard } from '../card/basic-card.tsrx'",
+				),
+				card,
+			)
+			if (!component)
+				throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+			expect(component.clientCode).toContain(
+				"first('basic-child:not(basic-card *)'",
+			)
+		})
+
+		test('a clause the composed child’s element cannot carry needs no exclusion', () => {
+			const card = cardWith('<basic-child class="inner">{label}</basic-child>')
+			const { component, diagnostics } = compileParent(
+				parentWith(
+					`<BasicCard label={title} />
+				<BasicChild class="outer" label={title} truc:pass={{ value: () => 'x' }} />
+				<BasicChild class="other" label={title} truc:pass={{ value: () => 'y' }} />`,
+					"import { BasicCard } from '../card/basic-card.tsrx'",
+				),
+				card,
+			)
+			if (!component)
+				throw new Error(`must compile: ${JSON.stringify(diagnostics)}`)
+			expect(component.clientCode).toContain("first('basic-child.outer'")
+		})
+	})
+
 	test('compose-site class/id are materialized on the child root in the rendered HTML (LT-090)', async () => {
 		const childComponent = compileChild('examples/child/basic-child.tsrx')
 		const parent = `import { BasicChild } from '../child/basic-child.tsrx'

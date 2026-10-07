@@ -80,12 +80,11 @@ import type {
 import {
 	allComposeNodes,
 	type ComposeNode,
-	composeDiscriminatorClause,
 	composeNodesBySource as composeNodesBySourceIn,
-	composeSharedPassClause,
+	composeSiteAddress,
+	composeSiteRefusal,
 	composeStaticAttrs,
 	countComposeBySource as countComposeBySourceIn,
-	countRenderedForSelector,
 	type ElementNode,
 	type ExprNode,
 	type IfNode,
@@ -1925,18 +1924,33 @@ const planComposeHandlers = (
 }
 
 /**
- * A compose site's selector among `siblings` — the child's tag, plus a
- * discriminator when the scope composes the child more than once — or
- * null when no static class/id/data-* tells the site apart.
+ * A compose site's selector within `scope` — the child's tag plus the
+ * clause `composeSiteAddress` proves (LT-498) — or the LTC007 refusal's
+ * message, worded for `need` and the scope word (`template`, `arm`, the
+ * list's item word).
  */
 const composeSiteSelector = (
+	fx: EffectsContext,
+	scope: TemplateNode,
 	childTag: string,
 	node: ComposeNode,
-	siblings: readonly ComposeNode[],
-): string | null => {
-	if (siblings.length === 1) return childTag
-	const clause = composeDiscriminatorClause(node, siblings)
-	return clause === null ? null : `${childTag}${clause}`
+	need: string,
+	scopeWord = 'template',
+): { selector: string } | { refusal: string } => {
+	const address = composeSiteAddress(scope, node, childTag, {
+		composed: fx.component.composedShapes,
+	})
+	return address.kind === 'unique'
+		? { selector: `${childTag}${address.clause}` }
+		: {
+				refusal: composeSiteRefusal(
+					node,
+					childTag,
+					composeNodesBySourceIn(scope, node.source),
+					need,
+					scopeWord,
+				),
+			}
 }
 
 /**
@@ -2019,12 +2033,14 @@ const planHostComposeHandlers = (fx: EffectsContext): void => {
 					? (fx.composeRefs.registry.get(node.source)?.tag ?? null)
 					: null
 			if (!childTag) return
-			const prefix = composeSiteSelector(
+			const site = composeSiteSelector(
+				fx,
+				component.root,
 				childTag,
 				node,
-				composeNodesBySource(fx, node.source),
+				'a handler arg needs a unique target',
 			)
-			if (prefix === null) {
+			if ('refusal' in site) {
 				fx.handledComposes.add(node)
 				// One error per site: `emitComposeEffects` may have explained it
 				// already, for a `first()` or `truc:pass` on the same site.
@@ -2034,18 +2050,14 @@ const planHostComposeHandlers = (fx: EffectsContext): void => {
 					)
 				)
 					diagnostics.push(
-						diagnostic.unaddressableElement(
-							source,
-							node.node,
-							`Multiple <${node.component}> sites compose the same child, and no static class/id/data-* attribute tells this one apart — a handler arg needs a unique target. Give each site a distinct class.`,
-						),
+						diagnostic.unaddressableElement(source, node.node, site.refusal),
 					)
 				return
 			}
 			planComposeHandlers(
 				fx,
 				node,
-				prefix,
+				site.selector,
 				(selector, optional, base) =>
 					addQuery(base, selector, inBranch || optional ? 'maybe' : 'one'),
 				fx.effects,
@@ -2112,54 +2124,55 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 		)
 		return
 	}
-	// LT-496: a raw element of the child's tag — in a list item, an arm or
-	// a compose site's content — matches the host-level query as well, so
-	// it counts against the site's uniqueness like a second compose site.
-	const matchesRaw = (clause: string) =>
-		countRenderedForSelector(fx.component.root, `${childTag}${clause}`) > 0
-	let discriminator = ''
-	if (countComposeBySource(fx, node.source) !== 1 || matchesRaw('')) {
-		const siblings = composeNodesBySource(fx, node.source)
-		const clause = composeDiscriminatorClause(node, siblings, matchesRaw)
-		if (!clause) {
-			// LT-319: sites that share a clause and carry textually identical
-			// `truc:pass` objects lower to ONE `pass(all(selector), …)`,
-			// emitted at the group's first site; the other members add
-			// nothing. An author `first()` is never part of this: a selector
-			// matching several sites is already LTC027.
-			const shared = refAttr ? null : composeSharedPassClause(node, siblings)
-			if (
-				shared &&
-				!matchesRaw(shared.clause) &&
-				new Set(shared.members.map(passObjectKey)).size === 1
-			) {
-				if (shared.members[0] !== node) return
-				const query = addQuery(
-					`${sanitizeVarName(childTag)}s`,
-					`${childTag}${shared.clause}`,
-					'many',
-				)
-				const entries = passAttrs.flatMap(a => a.entries)
-				checkPassEntries(fx, entries, childTag, node.node)
-				emitPassEntries(fx, entries, query)
-				return
-			}
-			diagnostics.push(
-				diagnostic.unaddressableElement(
-					source,
-					node.node,
-					siblings.length === 1
-						? `<${node.component}> renders <${childTag}>, which other elements in this template also render, and no static class/id/data-* attribute tells this site apart — first() and truc:pass need a unique target. Give the site a class no other <${childTag}> carries.`
-						: `Multiple <${node.component}> sites compose the same child, and no static class/id/data-* attribute tells this one apart — first() and truc:pass need a unique target. Give each site a distinct class. Sites that share a class can share one query only if every one of them carries a textually identical \`truc:pass\` object.`,
+	// LT-496/LT-498: a raw element of the child's tag — in a list item, an
+	// arm or a compose site's content — matches the host-level query as
+	// well, and so does one another composed child renders: the first
+	// counts against the site's uniqueness, the second is excluded.
+	const address = composeSiteAddress(fx.component.root, node, childTag, {
+		composed: fx.component.composedShapes,
+		lone: countComposeBySource(fx, node.source) === 1,
+		shared: !refAttr,
+	})
+	// LT-319: sites that share a clause and carry textually identical
+	// `truc:pass` objects lower to ONE `pass(all(selector), …)`, emitted at
+	// the group's first site; the other members add nothing. An author
+	// `first()` is never part of this: a selector matching several sites is
+	// already LTC027.
+	if (
+		address.kind === 'shared' &&
+		new Set(address.members.map(passObjectKey)).size === 1
+	) {
+		if (address.members[0] !== node) return
+		const query = addQuery(
+			`${sanitizeVarName(childTag)}s`,
+			`${childTag}${address.clause}`,
+			'many',
+		)
+		const entries = passAttrs.flatMap(a => a.entries)
+		checkPassEntries(fx, entries, childTag, node.node)
+		emitPassEntries(fx, entries, query)
+		return
+	}
+	if (address.kind !== 'unique') {
+		diagnostics.push(
+			diagnostic.unaddressableElement(
+				source,
+				node.node,
+				composeSiteRefusal(
+					node,
+					childTag,
+					composeNodesBySource(fx, node.source),
+					'first() and truc:pass need a unique target',
+					'template',
+					'Give each site a distinct class. Sites that share a class can share one query only if every one of them carries a textually identical `truc:pass` object.',
 				),
-			)
-			return
-		}
-		discriminator = clause
+			),
+		)
+		return
 	}
 	const query = addQuery(
 		refAttr?.name ?? sanitizeVarName(childTag),
-		`${childTag}${discriminator}`,
+		`${childTag}${address.clause}`,
 		'one',
 	)
 	if (passAttrs.length > 0) {
@@ -2277,26 +2290,25 @@ const planArmComposeHandlers = (
 		return
 	const childTag = fx.composeRefs.registry.get(node.source)?.tag ?? null
 	if (!childTag) return
-	const prefix = composeSiteSelector(
+	const site = composeSiteSelector(
+		fx,
+		armRoot,
 		childTag,
 		node,
-		composeNodesBySourceIn(armRoot, node.source),
+		'a handler arg needs a unique target',
+		'arm',
 	)
-	if (prefix === null) {
+	if ('refusal' in site) {
 		fx.handledComposes.add(node)
 		fx.diagnostics.push(
-			diagnostic.unaddressableElement(
-				fx.source,
-				node.node,
-				`Multiple <${node.component}> sites in one arm compose the same child, and no static class/id/data-* attribute tells this one apart — give each site a distinct class.`,
-			),
+			diagnostic.unaddressableElement(fx.source, node.node, site.refusal),
 		)
 		return
 	}
 	planComposeHandlers(
 		fx,
 		node,
-		prefix,
+		site.selector,
 		(selector, optional, base) => {
 			const local = uniqueName(fx.usedNames, base)
 			plan.locals.push({
@@ -3262,23 +3274,21 @@ const planReconcileItem = (
 				)
 				return
 			}
-			const siblings = composeNodesBySourceIn(output, node.source)
-			let discriminator = ''
-			if (siblings.length !== 1) {
-				const clause = composeDiscriminatorClause(node, siblings)
-				if (!clause) {
-					diagnostics.push(
-						diagnostic.unaddressableElement(
-							source,
-							node.node,
-							`Multiple <${node.component}> sites in one ${wording.loop} item compose the same child, and no static class/id/data-* attribute tells this one apart — give each site a distinct class.`,
-						),
-					)
-					return
-				}
-				discriminator = clause
+			const site = composeSiteSelector(
+				fx,
+				output,
+				childTag,
+				node,
+				'truc:pass and handler args need a unique target',
+				`${wording.loop} item`,
+			)
+			if ('refusal' in site) {
+				diagnostics.push(
+					diagnostic.unaddressableElement(source, node.node, site.refusal),
+				)
+				return
 			}
-			const selector = `${childTag}${discriminator}`
+			const { selector } = site
 			// Handler args (LT-461): one item-scoped local per placement, under
 			// the item's own `first`. A site in a server-rendered branch of the
 			// item, or a placement in one of the child's, may be absent from

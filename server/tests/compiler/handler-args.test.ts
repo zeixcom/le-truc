@@ -462,3 +462,181 @@ export function BasicParent({}: {})
 		)
 	})
 })
+
+describe('a raw element of the child tag counts against every compose-site query (LT-498)', () => {
+	const registry = registryOf(entryOf(CHILD_TSX, CHILD_PATH))
+	const RAW = '<basic-child class="raw"></basic-child>'
+
+	test('host: the site takes its class', () => {
+		const parent = compileParent(
+			parentTsx(
+				`${RAW}<BasicChild class="site" label="a" onPress={() => console.log(1)} />`,
+			),
+			registry,
+		)
+		expect(parent.clientCode).toContain("first('basic-child.site button'")
+		expect(parent.clientCode).not.toContain("first('basic-child button'")
+	})
+
+	test('host: a site with no class is refused (LTC007)', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			parentTsx(
+				`${RAW}<BasicChild label="a" onPress={() => console.log(1)} />`,
+			),
+			'examples/parent/basic-parent.tsx',
+			new Set(),
+			undefined,
+			registry,
+		)
+		expect(component).toBeNull()
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC007'])
+		expect(diagnostics[0]?.message).toContain(
+			'Give the site a class no other <basic-child> carries.',
+		)
+	})
+
+	test('arm: the site below the arm root takes its class', () => {
+		const parent = compileParent(
+			parentTsx(
+				`{host.open ? <section>${RAW}<BasicChild class="site" label="b" onPress={() => ({ open: false })} /></section> : <p>closed</p>}`,
+				'',
+				'',
+				', { host }: FactoryContext<{ open: boolean }>',
+			),
+			registry,
+		)
+		expect(parent.clientCode).toContain("first('basic-child.site button'")
+		expect(parent.clientCode).not.toContain("first('basic-child button'")
+	})
+
+	test('arm: a site with no class is refused (LTC007)', () => {
+		const { diagnostics } = compileComponentTsx(
+			parentTsx(
+				`{host.open ? <section>${RAW}<BasicChild label="b" onPress={() => ({ open: false })} /></section> : <p>closed</p>}`,
+				'',
+				'',
+				', { host }: FactoryContext<{ open: boolean }>',
+			),
+			'examples/parent/basic-parent.tsx',
+			new Set(),
+			undefined,
+			registry,
+		)
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC007'])
+		expect(diagnostics[0]?.message).toContain('in this arm also render')
+	})
+
+	test('item: the site takes its class', () => {
+		const result = compileComponentTsx(
+			parentTsx(
+				`<ul>{items.map((item, k) => <li>${RAW}<BasicChild class="site" label="x" onPress={() => items.remove(k)} /></li>)}</ul>`,
+				'const items = createList<string>([], { keyConfig: item => item })',
+				"import { createList } from '@zeix/le-truc'",
+			),
+			'examples/parent/basic-parent.tsx',
+			new Set(),
+			undefined,
+			registry,
+		)
+		expect(result.diagnostics).toEqual([])
+		const code = result.component?.clientCode ?? ''
+		expect(code).toContain("first('basic-child.site button'")
+		expect(code).not.toContain("first('basic-child button'")
+	})
+
+	test('item: a site with no class is refused (LTC007)', () => {
+		const { diagnostics } = compileComponentTsx(
+			parentTsx(
+				`<ul>{items.map((item, k) => <li>${RAW}<BasicChild label="x" onPress={() => items.remove(k)} /></li>)}</ul>`,
+				'const items = createList<string>([], { keyConfig: item => item })',
+				"import { createList } from '@zeix/le-truc'",
+			),
+			'examples/parent/basic-parent.tsx',
+			new Set(),
+			undefined,
+			registry,
+		)
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC007'])
+		expect(diagnostics[0]?.message).toContain(
+			'Give the site a class no other <basic-child> carries.',
+		)
+	})
+
+	const middle = (
+		body: string,
+	) => `import { BasicChild } from '../child/basic-child.tsx'
+export function BasicMiddle({ onClick }: { onClick?: (e: MouseEvent) => void }) {
+	return (
+		<basic-middle>
+			${body}
+			<style>{\`:host { display: block; }\`}</style>
+		</basic-middle>
+	)
+}`
+
+	test('forward: the recorded clause skips past the raw element', () => {
+		// Recorded without a registry, as the discovery pass records it.
+		const entry = entryOf(
+			middle(`${RAW}<BasicChild class="site" label="m" onPress={onClick} />`),
+			'examples/middle/basic-middle.tsx',
+		)
+		expect(entry.handlerArgs).toEqual({
+			onClick: [
+				{ via: CHILD_PATH, clause: '.site', arg: 'onPress', optional: false },
+			],
+		})
+	})
+
+	test('forward: with the tag unknown, any raw custom element refuses a lone site with no class (LTC007)', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			middle('<other-el></other-el><BasicChild label="m" onPress={onClick} />'),
+			'examples/middle/basic-middle.tsx',
+			new Set(),
+		)
+		expect(component).toBeNull()
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC007'])
+		expect(diagnostics[0]?.message).toContain(
+			'Give the site a class no raw custom element here carries.',
+		)
+	})
+
+	test('forward: once the tag is known, a composed child rendering it refuses the site (LTC007)', () => {
+		const card = entryOf(
+			`export function BasicCard({}: {}) {
+	return (
+		<basic-card>
+			<basic-child>c</basic-child>
+			<style>{\`:host { display: block; }\`}</style>
+		</basic-card>
+	)
+}`,
+			'examples/card/basic-card.tsx',
+		)
+		const source = middle(
+			'<BasicCard /><BasicChild label="m" onPress={onClick} />',
+		).replace(
+			'import { BasicChild }',
+			"import { BasicCard } from '../card/basic-card.tsx'\nimport { BasicChild }",
+		)
+		// The discovery pass records the bare tag: it cannot see the card.
+		expect(
+			entryOf(source, 'examples/middle/basic-middle.tsx').handlerArgs,
+		).toEqual({
+			onClick: [
+				{ via: CHILD_PATH, clause: '', arg: 'onPress', optional: false },
+			],
+		})
+		const { component, diagnostics } = compileComponentTsx(
+			source,
+			'examples/middle/basic-middle.tsx',
+			new Set(),
+			undefined,
+			registryOf(entryOf(CHILD_TSX, CHILD_PATH), card),
+		)
+		expect(component).toBeNull()
+		expect(diagnostics.map(d => d.code)).toEqual(['LTC007'])
+		expect(diagnostics[0]?.message).toContain(
+			'the handler arg it forwards needs a unique target',
+		)
+	})
+})

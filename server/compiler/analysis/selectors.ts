@@ -339,22 +339,22 @@ export const composeStaticAttrs = (node: ComposeNode): Map<string, string> => {
  * `discriminatorCandidates`'s own priority order for raw elements. `class`
  * matches by token membership (a multi-class `class="a b"` site can be
  * discriminated by either token); `id`/`data-*` match by exact value. `null`
- * if no candidate is unique to `node`. `matchesRaw` rejects a clause a raw
- * element of the child's tag also matches (LT-496): the query is the tag
- * plus the clause, and a raw element it matches would take the site's
- * place. The caller's one fallback is
+ * if no candidate is unique to `node`. `rejects` rules out a clause that
+ * another element of the child's tag also matches (LT-496,
+ * `composeSiteAddress`): the query is the tag plus the clause, and that
+ * element would take the site's place. The caller's one fallback is
  * `composeSharedPassClause` (LT-319), a query shared by sites with
  * identical `truc:pass` objects — never anything looser.
  */
 export const composeDiscriminatorClause = (
 	node: ComposeNode,
 	siblings: readonly ComposeNode[],
-	matchesRaw: (clause: string) => boolean = () => false,
+	rejects: (clause: string) => boolean = () => false,
 ): string | null =>
 	composeClauseCandidates(node).find(
 		candidate =>
 			composeClauseMatches(siblings, candidate).length === 1 &&
-			!matchesRaw(candidate.clause),
+			!rejects(candidate.clause),
 	)?.clause ?? null
 
 /**
@@ -370,6 +370,7 @@ export const composeDiscriminatorClause = (
 export const composeSharedPassClause = (
 	node: ComposeNode,
 	siblings: readonly ComposeNode[],
+	rejects: (clause: string) => boolean = () => false,
 ): { clause: string; members: ComposeNode[] } | null => {
 	for (const candidate of composeClauseCandidates(node)) {
 		const members = composeClauseMatches(siblings, candidate)
@@ -378,12 +379,149 @@ export const composeSharedPassClause = (
 				sib =>
 					sib.attrs.some(a => a.kind === 'pass') &&
 					!refOf(sib) &&
-					composeDiscriminatorClause(sib, siblings) === null,
+					composeDiscriminatorClause(sib, siblings, rejects) === null,
 			)
 		)
 			return { clause: candidate.clause, members }
 	}
 	return null
+}
+
+/**
+ * How a compose site is addressed from `scope` — the host root for a
+ * host-level query, the item root for an item's, the arm root for an arm's
+ * (LT-498: the one decision every compose-site query makes).
+ *
+ * `clause` is what follows the child's tag in the selector: the site's
+ * discriminator, or `''` when the site is the scope's only one of its
+ * source, then any exclusion. Two kinds of element besides the site can
+ * match the tag plus a clause, and both rule a clause out:
+ * - a raw element of the child's tag the scope renders, in a list item, an
+ *   arm or a compose site's content (LT-496). With `childTag` null — the
+ *   registry-discovery pass, which knows no composed child's tag — every
+ *   raw custom element counts, whatever its tag;
+ * - an element another composed child renders inside its own template.
+ *   With `composed` known, the clause carries a `:not(<other-child> *)`
+ *   exclusion for each child that could render one, the way raw `first()`
+ *   refs do (LT-316), so a site unique in the served DOM is not refused; a
+ *   child of unknown markup leaves no sound exclusion.
+ *
+ * `lone` decides when the bare tag is a candidate at all: by default the
+ * scope composes the source once; the host's `first()`/`truc:pass` query
+ * passes the exclusivity-aware count. `shared` asks for LT-319's fallback
+ * — sites that share a clause and carry identical `truc:pass` objects —
+ * when no clause of the site's own is unique; the caller still compares
+ * the objects. A refusal carries the same-source sites, for its wording:
+ * a lone site clashed with another element of the child's tag.
+ */
+export type ComposeSiteAddress =
+	| { kind: 'unique'; clause: string }
+	| { kind: 'shared'; clause: string; members: ComposeNode[] }
+	| { kind: 'refused'; siblings: ComposeNode[] }
+
+export const composeSiteAddress = (
+	scope: TemplateNode,
+	node: ComposeNode,
+	childTag: string | null,
+	options: {
+		composed?: ReadonlyMap<string, ComposedMarkup> | undefined
+		lone?: boolean
+		shared?: boolean
+	} = {},
+): ComposeSiteAddress => {
+	const siblings = composeNodesBySource(scope, node.source)
+	const tags =
+		childTag !== null
+			? [childTag]
+			: rawElementTags(scope).filter(tag => tag.includes('-'))
+	const matchesRaw = (clause: string) =>
+		tags.some(tag => countRenderedForSelector(scope, `${tag}${clause}`) > 0)
+	const exclusion = (clause: string): string | null => {
+		if (!options.composed || childTag === null) return ''
+		const base = `${childTag}${clause}`
+		const resolved = composedEmitter(
+			scope,
+			node,
+			options.composed,
+			node.source,
+		)(base)
+		return resolved === null ? null : resolved.emit.slice(base.length)
+	}
+	const addressed = (clause: string): string | null => {
+		if (matchesRaw(clause)) return null
+		const suffix = exclusion(clause)
+		return suffix === null ? null : `${clause}${suffix}`
+	}
+	const lone = options.lone ?? siblings.length === 1
+	if (lone) {
+		const bare = addressed('')
+		if (bare !== null) return { kind: 'unique', clause: bare }
+	}
+	for (const candidate of composeClauseCandidates(node)) {
+		if (composeClauseMatches(siblings, candidate).length !== 1) continue
+		const clause = addressed(candidate.clause)
+		if (clause !== null) return { kind: 'unique', clause }
+	}
+	const fallback = options.shared
+		? composeSharedPassClause(
+				node,
+				siblings,
+				clause => addressed(clause) === null,
+			)
+		: null
+	const sharedClause = fallback ? addressed(fallback.clause) : null
+	if (fallback && sharedClause !== null)
+		return { kind: 'shared', clause: sharedClause, members: fallback.members }
+	return { kind: 'refused', siblings }
+}
+
+/**
+ * Could an element another composed child renders under `scope` match the
+ * site's selector, `childTag` plus `clause`? The check for a clause chosen
+ * without the child's tag — a forwarded handler arg's, recorded in the
+ * registry-discovery pass — once the tag is known (LT-498).
+ */
+export const composedChildMayMatch = (
+	scope: TemplateNode,
+	node: ComposeNode,
+	childTag: string,
+	clause: string,
+	composed: ReadonlyMap<string, ComposedMarkup>,
+): boolean =>
+	composedEmitter(scope, node, composed, node.source)(`${childTag}${clause}`)
+		?.clean !== true
+
+/**
+ * The LTC007 wording for a refused compose site (LT-496, LT-498): a lone
+ * site clashed with another element of the child's tag, several sites
+ * share every clause. `need` names what needs the target; `scope` is
+ * `template`, `arm` or the list's item word; `tail` overrides the
+ * several-sites fix. With `childTag` null (the registry-discovery pass) the
+ * clash is with any raw custom element.
+ */
+export const composeSiteRefusal = (
+	node: ComposeNode,
+	childTag: string | null,
+	siblings: readonly ComposeNode[],
+	need: string,
+	scope = 'template',
+	tail = 'Give each site a distinct class.',
+): string => {
+	const where = scope === 'template' ? '' : `in one ${scope} `
+	if (siblings.length > 1)
+		return `Multiple <${node.component}> sites ${where}compose the same child, and no static class/id/data-* attribute tells this one apart — ${need}. ${tail}`
+	if (childTag === null)
+		return `<${node.component}>'s tag is not known when its handler args are recorded, so any raw custom element in this ${scope} could share it, and no static class/id/data-* attribute tells this site apart — ${need}. Give the site a class no raw custom element here carries.`
+	return `<${node.component}> renders <${childTag}>, which other elements in this ${scope} also render, and no static class/id/data-* attribute tells this site apart — ${need}. Give the site a class no other <${childTag}> carries.`
+}
+
+/** Every raw element tag `scope` renders below its root, compose-site content included. */
+const rawElementTags = (scope: TemplateNode): string[] => {
+	const tags = new Set<string>()
+	walkTemplate(scope, node => {
+		if (node !== scope && node.kind === 'element') tags.add(node.tag)
+	})
+	return [...tags]
 }
 
 type ClauseCandidate = { name: string; value: string; clause: string }
@@ -540,8 +678,7 @@ const selectorCandidates = (
 	element: ElementNode,
 	composed: ReadonlyMap<string, ComposedMarkup> | undefined,
 ): Candidates => {
-	const region = enclosingComposeOf(tree, element)
-	const count = region
+	const count = enclosingComposeOf(tree, element)
 		? (selector: string) => probeCountWithRegions(tree, selector)
 		: (selector: string) => countForSelector(tree, selector)
 	const bases = [
@@ -559,53 +696,7 @@ const selectorCandidates = (
 				: synthesized,
 		}
 	}
-	const sites = allComposeNodes(tree)
-	const children = sites.map(
-		node =>
-			composed.get(node.source) ?? {
-				tag: null,
-				shapes: [],
-				region: null,
-				owner: '',
-			},
-	)
-	const owner = region ? composed.get(region.source) : undefined
-	/** The emitted form of `base`, or null when an unknown child may match. */
-	const emitFor = (base: string): { clean: boolean; emit: string } | null => {
-		if (owner && !regionSafe(base, region as ComposeNode)) return null
-		const clashing = children.filter(
-			child =>
-				child.tag === null ||
-				child.shapes.some(shape => mayMatchShape(shape, base)),
-		)
-		if (clashing.length === 0) return { clean: true, emit: base }
-		if (clashing.some(child => child.tag === null)) return null
-		const tags = [...new Set(clashing.map(child => child.tag as string))]
-		if (!owner)
-			return {
-				clean: false,
-				emit: `${base}:not(${tags.map(tag => `${tag} *`).join(', ')})`,
-			}
-		return {
-			clean: false,
-			emit: `${base}${excludeUnlessOwned(owner.owner, '', prefix => tags.map(tag => `${prefix}${tag} *`))}`,
-		}
-	}
-	/**
-	 * An element inside a Children Region is reached through the re-include
-	 * clause, which admits everything in every region this component owns:
-	 * the content it passes (counted by the region probe) and whatever a
-	 * child renders there besides it. `base` is safe only when no such
-	 * markup could match it, and only when the element's own compose site
-	 * marks the region at all.
-	 */
-	const regionSafe = (base: string, site: ComposeNode): boolean =>
-		sites.every((node, index) => {
-			if (node.children.length === 0) return true
-			const markup = children[index] as ComposedMarkup
-			if (markup.region === null) return node !== site
-			return !markup.region.some(shape => mayMatchShape(shape, base))
-		})
+	const emitFor = composedEmitter(tree, element, composed)
 	const clean: Array<{ base: string; emit: string }> = []
 	const excluded: Array<{ base: string; emit: string }> = []
 	for (const base of bases) {
@@ -628,12 +719,78 @@ const selectorCandidates = (
 }
 
 /**
+ * The emitted form of a candidate `base` addressing `target` under `tree`,
+ * given what each composed child renders (`selectorCandidates`' guard):
+ * `base` itself when no composed child's markup could match it, else `base`
+ * with a `:not(<child-tag> *)` exclusion per child that could — region-
+ * aware when `target` sits in a compose site's content — and null when a
+ * child of unknown markup could match, or the region re-include would admit
+ * a match. `skipSource` leaves out the compose sites of one source: a
+ * compose site's own child is the element addressed, not a clash (LT-498).
+ */
+const composedEmitter = (
+	tree: TemplateNode,
+	target: TemplateNode,
+	composed: ReadonlyMap<string, ComposedMarkup>,
+	skipSource?: string,
+): ((base: string) => { clean: boolean; emit: string } | null) => {
+	const region = enclosingComposeOf(tree, target)
+	const sites = allComposeNodes(tree)
+	const children = sites.map(
+		node =>
+			composed.get(node.source) ?? {
+				tag: null,
+				shapes: [],
+				region: null,
+				owner: '',
+			},
+	)
+	const owner = region ? composed.get(region.source) : undefined
+	/**
+	 * An element inside a Children Region is reached through the re-include
+	 * clause, which admits everything in every region this component owns:
+	 * the content it passes (counted by the region probe) and whatever a
+	 * child renders there besides it. `base` is safe only when no such
+	 * markup could match it, and only when the element's own compose site
+	 * marks the region at all.
+	 */
+	const regionSafe = (base: string, site: ComposeNode): boolean =>
+		sites.every((node, index) => {
+			if (node.children.length === 0) return true
+			const markup = children[index] as ComposedMarkup
+			if (markup.region === null) return node !== site
+			return !markup.region.some(shape => mayMatchShape(shape, base))
+		})
+	return (base: string): { clean: boolean; emit: string } | null => {
+		if (owner && !regionSafe(base, region as ComposeNode)) return null
+		const clashing = children.filter(
+			(child, index) =>
+				sites[index]?.source !== skipSource &&
+				(child.tag === null ||
+					child.shapes.some(shape => mayMatchShape(shape, base))),
+		)
+		if (clashing.length === 0) return { clean: true, emit: base }
+		if (clashing.some(child => child.tag === null)) return null
+		const tags = [...new Set(clashing.map(child => child.tag as string))]
+		if (!owner)
+			return {
+				clean: false,
+				emit: `${base}:not(${tags.map(tag => `${tag} *`).join(', ')})`,
+			}
+		return {
+			clean: false,
+			emit: `${base}${excludeUnlessOwned(owner.owner, '', prefix => tags.map(tag => `${prefix}${tag} *`))}`,
+		}
+	}
+}
+
+/**
  * The compose site whose content holds `element` under `tree`, or null —
  * the element then sits in that child's Children Region (ADR 0048 s1).
  */
 const enclosingComposeOf = (
 	tree: TemplateNode,
-	element: ElementNode,
+	element: TemplateNode,
 ): ComposeNode | null => {
 	let found: ComposeNode | null = null
 	walkTemplate(tree, node => {

@@ -20,8 +20,10 @@ import type { HandlerPlacement, RegistryEntry } from '../registry'
 import { childNodes } from '../walk'
 import {
 	allComposeNodes,
-	composeDiscriminatorClause,
+	composedChildMayMatch,
 	composeNodesBySource,
+	composeSiteAddress,
+	composeSiteRefusal,
 	resolveScopedSelector,
 } from './selectors'
 
@@ -102,21 +104,57 @@ export const handlerPlacementsOf = (
 					: [],
 			)
 			if (forwards.length === 0) return
-			const siblings = composeNodesBySource(component.root, node.source)
-			const clause =
-				siblings.length === 1 ? '' : composeDiscriminatorClause(node, siblings)
-			if (clause === null) {
+			// The clause is chosen without the child's tag (LT-498): the entry a
+			// parent reads is the registry-discovery pass's, which knows none,
+			// so any raw custom element counts against it — the same choice in
+			// both passes. Once the tag is known, a clause that another composed
+			// child's markup could match is refused: the record has no room
+			// for an exclusion the discovery pass could not have written.
+			const address = composeSiteAddress(component.root, node, null)
+			const childTag = component.composedShapes?.get(node.source)?.tag ?? null
+			const need = 'the handler arg it forwards needs a unique target'
+			if (address.kind !== 'unique') {
 				diagnostics.push(
 					diagnostic.unaddressableElement(
 						component.source,
 						node.node,
-						`Multiple <${node.component}> sites compose the same child, and no static class/id/data-* attribute tells this one apart — the handler arg it forwards needs a unique target. Give each site a distinct class.`,
+						composeSiteRefusal(
+							node,
+							null,
+							composeNodesBySource(component.root, node.source),
+							need,
+						),
+					),
+				)
+				return
+			}
+			if (
+				childTag !== null &&
+				component.composedShapes &&
+				composedChildMayMatch(
+					component.root,
+					node,
+					childTag,
+					address.clause,
+					component.composedShapes,
+				)
+			) {
+				diagnostics.push(
+					diagnostic.unaddressableElement(
+						component.source,
+						node.node,
+						composeSiteRefusal(node, childTag, [node], need),
 					),
 				)
 				return
 			}
 			for (const { arg, forward } of forwards)
-				add(forward, { via: node.source, clause, arg, optional })
+				add(forward, {
+					via: node.source,
+					clause: address.clause,
+					arg,
+					optional,
+				})
 			return
 		}
 		if (node.kind === 'conditional') {
