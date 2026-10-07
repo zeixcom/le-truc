@@ -25,6 +25,12 @@ import {
 } from './analysis/effects'
 import type { AstNode } from './ast-node'
 import { freeIdentifiers, hostPropOf } from './ast-utils'
+import {
+	CHILDREN_MARKER,
+	type ChildrenInsertions,
+	childrenInsertionsOf,
+	isChildrenInsertion,
+} from './children-region'
 import { CodeBuilder, HtmlWriter, jsData, jsString } from './codegen'
 import { isVoidElement } from './core'
 import {
@@ -185,6 +191,15 @@ type EmitContext = {
 	/** Unique suffix counters for @try arm / composed-children buffers. */
 	armCounter: number
 	childrenCounter: number
+	/**
+	 * The Children Region (ADR 0048 s1): the render function's owner
+	 * parameter — the tag of the compiled component whose content fills this
+	 * one's `{children}`, absent for a page-rendered instance — and the
+	 * elements that carry it as the region marker. Null when the template
+	 * forwards or marks no insertion.
+	 */
+	childrenOwner: string | null
+	childrenInsertions: ChildrenInsertions
 	/**
 	 * Set when a compose site supplies a child's reserved `i18n` record
 	 * (ADR 0030 sub-design 2): pulls the `i18nRecord` import into the module.
@@ -1076,6 +1091,10 @@ const emitElement = (
 				break
 		}
 	}
+	if (ctx.childrenOwner && ctx.childrenInsertions.holders.has(element)) {
+		ctx.used.add('attr')
+		html.expr(attrCall(CHILDREN_MARKER, ctx.childrenOwner))
+	}
 	if (classExpr || staticClass !== null) {
 		html.static(' class="')
 		if (staticClass) html.text(staticClass)
@@ -1193,7 +1212,17 @@ const emitCompose = (
 			a.kind === 'arg' && isComposeHostAttr(a.name),
 	)
 	const extra = opts.extraHostAttrs ?? []
-	const renderCall = `render${entry.name}({ ${args.join(', ')} })`
+	// The region owner (ADR 0048 s1): this component's tag when it writes
+	// the content, its own owner when the content is its `{children}`
+	// passed straight through. Only a child that inserts `children` takes
+	// one, and only content gives it a region to mark.
+	const owner =
+		entry.childrenRegion && node.children.length > 0
+			? ctx.childrenOwner && ctx.childrenInsertions.forwards.has(node)
+				? ctx.childrenOwner
+				: jsString(ctx.component.tag, 'double')
+			: null
+	const renderCall = `render${entry.name}({ ${args.join(', ')} }${owner ? `, ${owner}` : ''})`
 	if (hostAttrs.length > 0 || extra.length > 0) {
 		ctx.used.add('composeHostAttrs')
 		const attrsArg = [
@@ -1517,11 +1546,7 @@ const emit = (
 		// children into an HTML string — trusted, compiler-generated markup,
 		// not user input, so it renders UNESCAPED here (analogous to the
 		// MANAGED_TEXT_PROPS/host-prop-mirror special-casing above).
-		if (
-			node.reactivity === 'server' &&
-			node.expr.type === 'Identifier' &&
-			node.exprText === 'children'
-		) {
+		if (isChildrenInsertion(node)) {
 			push(ctx, 'String(children)')
 			return
 		}
@@ -1699,6 +1724,11 @@ export const emitServerModule = (
 		return local
 	}
 	const htmlBuffer = mint('__html')
+	const childrenInsertions = childrenInsertionsOf(component.root)
+	const childrenOwner =
+		childrenInsertions.holders.size > 0 || childrenInsertions.forwards.size > 0
+			? mint('__owner')
+			: null
 	const ctx: EmitContext = {
 		component,
 		composeRegistry: options.composeRegistry,
@@ -1713,6 +1743,8 @@ export const emitServerModule = (
 		emptyCounter: 0,
 		armCounter: 0,
 		childrenCounter: 0,
+		childrenOwner,
+		childrenInsertions,
 		usedI18nRecord: false,
 		foldScope: foldableRenderScope(component),
 		inArmTemplate: false,
@@ -1826,6 +1858,12 @@ export const emitServerModule = (
 				`${ctx.h('clientMessages')}(${tBinding}, ${keysText}, ${jsData(source)})`,
 			),
 		)
+	}
+	// The root encloses a `{children}` insertion directly: it is the
+	// region's marked element (ADR 0048 s1).
+	if (childrenOwner && childrenInsertions.holders.has(component.root)) {
+		used.add('attr')
+		rootHtml.expr(attrCall(CHILDREN_MARKER, childrenOwner))
 	}
 	rootHtml.static('>')
 	const rootMarkup = `${rootHtml}`
@@ -2239,13 +2277,17 @@ export const emitServerModule = (
 		2,
 	).split('\n')
 	const paramFirst = paramLines[0]?.replace(/^\t\t/, '') ?? ''
+	// The Children Region's owner rides as a second, optional parameter
+	// (ADR 0048 s1): a compiled compose site passes it, a page render does
+	// not, so a page-rendered instance carries no marker.
+	const ownerParam = childrenOwner ? `, ${childrenOwner}?: string` : ''
 	if (paramLines.length === 1) {
 		body.open(
-			`export function render${component.name}(${paramFirst}): string {`,
+			`export function render${component.name}(${ownerParam && !paramFirst ? '_args: {} = {}' : paramFirst}${ownerParam}): string {`,
 		)
 	} else {
 		body.line(`export function render${component.name}(${paramFirst}`)
-		body.append(paramLines.slice(1)).open('): string {')
+		body.append(paramLines.slice(1)).open(`${ownerParam}): string {`)
 	}
 	// The client-only ambients computed above: a method-producer body
 	// inside expose() (`defineMethod(() => { host.value = ''; input.value

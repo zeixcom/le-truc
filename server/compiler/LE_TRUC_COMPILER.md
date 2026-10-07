@@ -1387,11 +1387,19 @@ member.
   template, but the runtime query also descends into composed children's
   markup, so in the registry-aware pass each candidate is also checked
   against the `renderedShapes` every composed child records on its registry
-  entry (closed over the compose graph; a raw `children`/`truc:html` site is
-  unknown markup). A candidate a child could match is emitted as
+  entry (closed over the compose graph; a `{children}` insertion (shape
+  `children`) and a `truc:html` site (`any`) are unknown markup). A
+  candidate a child could match is emitted as
   `base:not(<child-tag> *)`; clean candidates win first (LT-096 — a bare
   `button` had bound module-codeblock's overlay, and form-combobox's clear
-  button, onto a composed child's `<button>`).
+  button, onto a composed child's `<button>`). An element in content the
+  component passes as `children` sits in the child's Children Region (ADR
+  0048 s1, LT-472): it counts over the region probe (every compose site's
+  content serialized in place), its exclusion re-includes the component's
+  own regions (`excludeUnlessOwned` in `children-region.ts`, shared with the
+  lowered style guard), and a candidate is dropped when what a child renders
+  inside its region besides the content — the entry's `childrenRegion`,
+  closed over forwards and grandchildren — could match it.
 - **The template proves what a component RENDERS, never what it will FIND**
   (ADR 0024 s11): `first()` cardinality is the weaker of author claim and
   site proof — one literal is optional (non-throwing, guarded effects), two

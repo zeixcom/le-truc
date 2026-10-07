@@ -23,6 +23,12 @@
  */
 
 import * as cssWhat from 'css-what'
+import {
+	type ChildrenRegion,
+	childrenRegionOf,
+	excludeUnlessOwned,
+	isChildrenInsertion,
+} from '../children-region'
 import type {
 	ComponentIR,
 	ComposedMarkup,
@@ -36,6 +42,7 @@ import {
 	elseOf,
 	type IfNode,
 	isIf,
+	someNode,
 	thenOf,
 	walkTemplate,
 } from '../walk'
@@ -43,6 +50,7 @@ import {
 	probeComposeNodes,
 	probeCount,
 	probeCountCompose,
+	probeCountWithRegions,
 	probeExists,
 } from './probe'
 
@@ -495,12 +503,30 @@ const branchMayMatchShape = (
  * root tag's descendants; it would also exclude an element of this
  * component that sat inside a same-tag ANCESTOR of the host, which no
  * composition produces.
+ *
+ * An element in content this component passes to a composed child sits in
+ * that child's Children Region (ADR 0048 s1). Its candidates are counted
+ * over the region probe, which adds every compose site's content, and the
+ * exclusion re-includes this component's own regions
+ * (`excludeUnlessOwned`): `:not(:is(C *):not(:is(R *):not(:is(R C *))))`
+ * with `R` the region marker. A candidate that the child's own markup in
+ * the region could match is dropped.
  */
+type Candidates = {
+	/** The structural count every candidate's `base` must prove itself in. */
+	count: (selector: string) => number
+	list: Array<{ base: string; emit: string }>
+}
+
 const selectorCandidates = (
 	tree: TemplateNode,
 	element: ElementNode,
 	composed: ReadonlyMap<string, ComposedMarkup> | undefined,
-): Array<{ base: string; emit: string }> => {
+): Candidates => {
+	const region = enclosingComposeOf(tree, element)
+	const count = region
+		? (selector: string) => probeCountWithRegions(tree, selector)
+		: (selector: string) => countForSelector(tree, selector)
 	const bases = [
 		buildSelector(element, 'role'),
 		buildSelector(element, 'bare'),
@@ -509,15 +535,27 @@ const selectorCandidates = (
 	const authored = authoredSelectorOf(element)
 	if (!composed) {
 		const synthesized = bases.map(base => ({ base, emit: base }))
-		return authored
-			? [{ base: authored, emit: authored }, ...synthesized]
-			: synthesized
+		return {
+			count,
+			list: authored
+				? [{ base: authored, emit: authored }, ...synthesized]
+				: synthesized,
+		}
 	}
-	const children = allComposeNodes(tree).map(
-		node => composed.get(node.source) ?? { tag: null, shapes: [] },
+	const sites = allComposeNodes(tree)
+	const children = sites.map(
+		node =>
+			composed.get(node.source) ?? {
+				tag: null,
+				shapes: [],
+				region: null,
+				owner: '',
+			},
 	)
+	const owner = region ? composed.get(region.source) : undefined
 	/** The emitted form of `base`, or null when an unknown child may match. */
 	const emitFor = (base: string): { clean: boolean; emit: string } | null => {
+		if (owner && !regionSafe(base, region as ComposeNode)) return null
 		const clashing = children.filter(
 			child =>
 				child.tag === null ||
@@ -525,9 +563,32 @@ const selectorCandidates = (
 		)
 		if (clashing.length === 0) return { clean: true, emit: base }
 		if (clashing.some(child => child.tag === null)) return null
-		const tags = [...new Set(clashing.map(child => `${child.tag} *`))]
-		return { clean: false, emit: `${base}:not(${tags.join(', ')})` }
+		const tags = [...new Set(clashing.map(child => child.tag as string))]
+		if (!owner)
+			return {
+				clean: false,
+				emit: `${base}:not(${tags.map(tag => `${tag} *`).join(', ')})`,
+			}
+		return {
+			clean: false,
+			emit: `${base}${excludeUnlessOwned(owner.owner, '', prefix => tags.map(tag => `${prefix}${tag} *`))}`,
+		}
 	}
+	/**
+	 * An element inside a Children Region is reached through the re-include
+	 * clause, which admits everything in every region this component owns:
+	 * the content it passes (counted by the region probe) and whatever a
+	 * child renders there besides it. `base` is safe only when no such
+	 * markup could match it, and only when the element's own compose site
+	 * marks the region at all.
+	 */
+	const regionSafe = (base: string, site: ComposeNode): boolean =>
+		sites.every((node, index) => {
+			if (node.children.length === 0) return true
+			const markup = children[index] as ComposedMarkup
+			if (markup.region === null) return node !== site
+			return !markup.region.some(shape => mayMatchShape(shape, base))
+		})
 	const clean: Array<{ base: string; emit: string }> = []
 	const excluded: Array<{ base: string; emit: string }> = []
 	for (const base of bases) {
@@ -539,11 +600,31 @@ const selectorCandidates = (
 	// the contract, and the exclusion only narrows it to this component's
 	// own markup.
 	const own = authored ? emitFor(authored) : null
-	return [
-		...(authored && own ? [{ base: authored, emit: own.emit }] : []),
-		...clean,
-		...excluded,
-	]
+	return {
+		count,
+		list: [
+			...(authored && own ? [{ base: authored, emit: own.emit }] : []),
+			...clean,
+			...excluded,
+		],
+	}
+}
+
+/**
+ * The compose site whose content holds `element` under `tree`, or null —
+ * the element then sits in that child's Children Region (ADR 0048 s1).
+ */
+const enclosingComposeOf = (
+	tree: TemplateNode,
+	element: ElementNode,
+): ComposeNode | null => {
+	let found: ComposeNode | null = null
+	walkTemplate(tree, node => {
+		if (found || node.kind !== 'compose') return
+		if (node.children.some(child => someNode(child, n => n === element)))
+			found = node
+	})
+	return found
 }
 
 /**
@@ -568,12 +649,11 @@ export const resolveSelectorIn = (
 	element: ElementNode,
 	composed?: ReadonlyMap<string, ComposedMarkup>,
 ): { selector: string; unique: boolean } => {
-	const candidates = selectorCandidates(tree, element, composed)
-	for (const { base, emit } of candidates) {
-		if (countForSelector(tree, base) === 1)
-			return { selector: emit, unique: true }
+	const { count, list } = selectorCandidates(tree, element, composed)
+	for (const { base, emit } of list) {
+		if (count(base) === 1) return { selector: emit, unique: true }
 	}
-	return { selector: candidates[0]?.emit ?? element.tag, unique: false }
+	return { selector: list[0]?.emit ?? element.tag, unique: false }
 }
 
 /**
@@ -691,13 +771,13 @@ export const resolveExclusiveSelectorIn = (
 	clash: readonly TemplateNode[],
 	composed?: ReadonlyMap<string, ComposedMarkup>,
 ): { selector: string; unique: boolean } => {
-	const candidates = selectorCandidates(tree, element, composed)
-	for (const { base, emit } of candidates) {
-		if (countForSelector(tree, base) !== 1) continue
+	const { count, list } = selectorCandidates(tree, element, composed)
+	for (const { base, emit } of list) {
+		if (count(base) !== 1) continue
 		if (matchesUnder(clash, base)) continue
 		return { selector: emit, unique: true }
 	}
-	return { selector: candidates[0]?.emit ?? element.tag, unique: false }
+	return { selector: list[0]?.emit ?? element.tag, unique: false }
 }
 
 /** The `@for` loop whose output element is `node`, if any. */
@@ -767,43 +847,63 @@ export const selectorFor = (
 }
 
 /**
+ * The shapes one template node contributes to its component's registry
+ * record: an element its own shape (plus `any` when `truc:html` fills it),
+ * a compose site a reference, a `{children}` insertion `children`.
+ */
+const shapesOfNode = (node: TemplateNode): RenderedShape[] => {
+	if (node.kind === 'compose') return [{ kind: 'compose', source: node.source }]
+	if (isChildrenInsertion(node)) return [{ kind: 'children' }]
+	if (node.kind !== 'element') return []
+	const attrs: Record<string, string | null> = {}
+	const dynamic = new Set<string>()
+	let any = false
+	for (const attr of node.attrs) {
+		if (attr.kind === 'static') attrs[attr.name] = attr.value
+		else if (attr.kind === 'server' || attr.kind === 'reactive')
+			dynamic.add(attr.name)
+		else if (attr.kind === 'class-map') dynamic.add('class')
+		else if (attr.kind === 'style-map') dynamic.add('style')
+		else if (attr.kind === 'html') any = true
+	}
+	return [
+		{ kind: 'element', tag: node.tag, attrs, dynamic: [...dynamic] },
+		...(any ? [{ kind: 'any' } as const] : []),
+	]
+}
+
+/**
  * Every element `component`'s template can render, for its registry entry
  * (LT-096). Composed children stay references (`compose`), resolved by the
  * parent through the registry; compose-site children are the parent's own
- * elements rendered inside the child, so they are collected too. A raw
- * `children` site or a `truc:html` element renders markup the template
- * cannot know (`any`).
+ * elements rendered inside the child, so they are collected too. A
+ * `truc:html` element renders markup the template cannot know (`any`); a
+ * `{children}` insertion renders its owner's content (`children`).
  */
 export const renderedShapesOf = (component: ComponentIR): RenderedShape[] => {
 	const shapes: RenderedShape[] = []
 	let any = false
+	let children = false
 	walkTemplate(component.root, node => {
-		if (node.kind === 'compose') {
-			shapes.push({ kind: 'compose', source: node.source })
-			return
+		for (const shape of shapesOfNode(node)) {
+			if (shape.kind === 'any') any = true
+			else if (shape.kind === 'children') children = true
+			else shapes.push(shape)
 		}
-		if (node.kind === 'expr' && node.exprText === 'children') any = true
-		if (node.kind !== 'element') return
-		const attrs: Record<string, string | null> = {}
-		const dynamic = new Set<string>()
-		for (const attr of node.attrs) {
-			if (attr.kind === 'static') attrs[attr.name] = attr.value
-			else if (attr.kind === 'server' || attr.kind === 'reactive')
-				dynamic.add(attr.name)
-			else if (attr.kind === 'class-map') dynamic.add('class')
-			else if (attr.kind === 'style-map') dynamic.add('style')
-			else if (attr.kind === 'html') any = true
-		}
-		shapes.push({
-			kind: 'element',
-			tag: node.tag,
-			attrs,
-			dynamic: [...dynamic],
-		})
 	})
 	if (any) shapes.push({ kind: 'any' })
+	if (children) shapes.push({ kind: 'children' })
 	return shapes
 }
+
+/**
+ * The registry record of what `component` renders inside its Children
+ * Region besides the content (ADR 0048 s1), or `undefined` when it inserts
+ * no `children`.
+ */
+export const childrenRegionOfComponent = (
+	component: ComponentIR,
+): ChildrenRegion | undefined => childrenRegionOf(component.root, shapesOfNode)
 
 /**
  * Each compose source under `root`, mapped to its DOM tag and every shape
@@ -811,24 +911,60 @@ export const renderedShapesOf = (component: ComponentIR): RenderedShape[] => {
  * `composeRegistry` (a grandchild's markup is in the DOM too). A source with
  * no entry, or an entry without `renderedShapes`, renders unknown markup
  * (`any`).
+ *
+ * `region` closes the child's Children Region record the same way (ADR 0048
+ * s1): its own markup inside the marked element, every grandchild there in
+ * full, and the region of each child the content is forwarded to. Inside
+ * that closure a grandchild's `children` shape is dropped — the content it
+ * inserts is the child's, already recorded as the child's own shapes.
+ * `owner` is the composing component's tag (`root`'s).
  */
 export const composedShapesFor = (
-	root: TemplateNode,
+	root: TemplateNode & { kind: 'element' },
 	composeRegistry: ReadonlyMap<string, RegistryEntry>,
 ): Map<string, ComposedMarkup> => {
 	const closure = (
 		source: string,
 		seen: ReadonlySet<string>,
+		dropChildren = false,
 	): RenderedShape[] => {
 		const own = composeRegistry.get(source)?.renderedShapes
 		if (!own) return [{ kind: 'any' }]
-		return own.flatMap(shape =>
-			shape.kind !== 'compose'
-				? [shape]
-				: seen.has(shape.source)
-					? []
-					: closure(shape.source, new Set([...seen, shape.source])),
+		return expand(own, seen, dropChildren)
+	}
+	const expand = (
+		shapes: readonly RenderedShape[],
+		seen: ReadonlySet<string>,
+		dropChildren: boolean,
+	): RenderedShape[] =>
+		shapes.flatMap(shape =>
+			shape.kind === 'children' && dropChildren
+				? []
+				: shape.kind !== 'compose'
+					? [shape]
+					: seen.has(shape.source)
+						? []
+						: closure(
+								shape.source,
+								new Set([...seen, shape.source]),
+								dropChildren,
+							),
 		)
+	const regionClosure = (
+		source: string,
+		seen: ReadonlySet<string>,
+	): RenderedShape[] | null => {
+		const entry = composeRegistry.get(source)
+		const region = entry?.childrenRegion
+		if (!region || region.unmarked) return null
+		const shapes = expand(region.shapes, seen, true)
+		for (const forward of region.forwards) {
+			if (seen.has(forward)) return null
+			const inner = regionClosure(forward, new Set([...seen, forward]))
+			if (inner === null) return null
+			shapes.push(...inner)
+		}
+		return shapes
 	}
 	const result = new Map<string, ComposedMarkup>()
 	for (const node of allComposeNodes(root))
@@ -836,6 +972,8 @@ export const composedShapesFor = (
 			result.set(node.source, {
 				tag: composeRegistry.get(node.source)?.tag ?? null,
 				shapes: closure(node.source, new Set([node.source])),
+				region: regionClosure(node.source, new Set([node.source])),
+				owner: root.tag,
 			})
 	return result
 }

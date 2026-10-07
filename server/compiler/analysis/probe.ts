@@ -176,6 +176,12 @@ type Serializer = {
 	composes: Array<{ node: ComposeNode; path: string }>
 	/** Next group id; ids are unique per serialization. */
 	nextGroup: number
+	/**
+	 * Serialize each compose site's content in place: the content is the
+	 * composing component's markup, rendered into the child's Children
+	 * Region (ADR 0048 s1).
+	 */
+	regions: boolean
 }
 
 const armPath = (path: string, group: number, arm: number): string =>
@@ -228,8 +234,11 @@ const serializeNodes = (
 				break
 			}
 			case 'compose':
-				// No DOM existence until render: recorded, never emitted.
+				// No DOM existence until render: recorded, never emitted. Its
+				// content is, in the region probe, at the site's position — the
+				// child's own markup around it is the registry's to account.
 				ser.composes.push({ node, path })
+				if (ser.regions) serializeNodes(node.children, path, ser)
 				break
 			case 'conditional':
 				// One arm renders, in either mode: a reactive conditional's
@@ -252,8 +261,8 @@ const serializeNodes = (
 	}
 }
 
-const materialize = (nodes: readonly TemplateNode[]): Frag => {
-	const ser: Serializer = { out: [], composes: [], nextGroup: 0 }
+const materialize = (nodes: readonly TemplateNode[], regions = false): Frag => {
+	const ser: Serializer = { out: [], composes: [], nextGroup: 0, regions }
 	serializeNodes(nodes, '', ser)
 	return {
 		root: parseFragment(ser.out.join('')) as unknown as P5Node,
@@ -275,6 +284,17 @@ const fragOfRoot = (root: TemplateNode): Frag => {
 	if (!frag) {
 		frag = materialize([root])
 		fragByNode.set(root, frag)
+	}
+	return frag
+}
+
+const fragWithRegions = new WeakMap<TemplateNode, Frag>()
+
+const fragOfRootWithRegions = (root: TemplateNode): Frag => {
+	let frag = fragWithRegions.get(root)
+	if (!frag) {
+		frag = materialize([root], true)
+		fragWithRegions.set(root, frag)
 	}
 	return frag
 }
@@ -380,6 +400,20 @@ export const probeCount = (root: TemplateNode, selector: string): number => {
 	const query = queryOf(selector)
 	if (!query) return 0
 	return aggregate(matchedPaths(fragOfRoot(root), query))
+}
+
+/**
+ * `probeCount` over the probe that also materializes every compose site's
+ * content — the count for an element inside a Children Region, whose query
+ * re-includes the composing component's regions (ADR 0048 s1).
+ */
+export const probeCountWithRegions = (
+	root: TemplateNode,
+	selector: string,
+): number => {
+	const query = queryOf(selector)
+	if (!query) return 0
+	return aggregate(matchedPaths(fragOfRootWithRegions(root), query))
 }
 
 /** `matchesUnder` — pure existence; exclusivity can never flip it. */

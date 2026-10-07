@@ -109,13 +109,14 @@ describe('collectMatchingElements — bare tag/class/id/attribute-presence', () 
 		expect(unsupported).toBe(true)
 	})
 
-	test('composed elements are a boundary — never matched or descended into', () => {
+	test("a compose site's content is this component's markup — matched in the Children Region (ADR 0048 s1)", () => {
+		const content = el('span')
 		const compose = {
 			kind: 'compose' as const,
 			component: 'Child',
 			source: './child.tsrx',
 			attrs: [],
-			children: [el('span')],
+			children: [content],
 			node: {} as ElementNode['node'],
 		}
 		const root: ElementNode = {
@@ -125,7 +126,7 @@ describe('collectMatchingElements — bare tag/class/id/attribute-presence', () 
 			children: [compose],
 			node: {} as ElementNode['node'],
 		}
-		expect(collectMatchingElements(root, 'span').elements).toEqual([])
+		expect(collectMatchingElements(root, 'span').elements).toEqual([content])
 	})
 })
 

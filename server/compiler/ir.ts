@@ -1092,6 +1092,16 @@ export type ComposedMarkup = {
 	/** Null when the source has no registry entry — unknown markup. */
 	tag: string | null
 	shapes: readonly RenderedShape[]
+	/**
+	 * What the child renders inside the composing parent's Children Region
+	 * besides the parent's content (ADR 0048 s1), closed over the compose
+	 * graph. Null when the parent's content is not addressable there: the
+	 * child inserts no `children`, or inserts them where no marker names
+	 * the parent.
+	 */
+	region: readonly RenderedShape[] | null
+	/** The composing parent's tag: the owner its regions are marked with. */
+	owner: string
 }
 
 /**
@@ -1102,7 +1112,10 @@ export type ComposedMarkup = {
  * attributes; `dynamic` names attributes whose value is only known at render
  * time (they may match anything). `compose` stands for a composed child's
  * own shapes, resolved through the registry; `any` for markup the template
- * cannot know (a raw `children` or `truc:html` site).
+ * cannot know (a `truc:html` site); `children` for a `{children}` insertion,
+ * as unknown as `any` except where the content's owner is known — inside a
+ * composing parent's closure, where the content is the parent's own markup
+ * (ADR 0048 s1).
  */
 export type RenderedShape =
 	| {
@@ -1113,3 +1126,4 @@ export type RenderedShape =
 	  }
 	| { kind: 'compose'; source: string }
 	| { kind: 'any' }
+	| { kind: 'children' }

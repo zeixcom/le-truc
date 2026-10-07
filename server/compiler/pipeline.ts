@@ -10,7 +10,10 @@
 
 import { handlerPlacementsOf } from './analysis/handler-args'
 import { analyzeClient } from './analysis/plan'
-import { renderedShapesOf } from './analysis/selectors'
+import {
+	childrenRegionOfComponent,
+	renderedShapesOf,
+} from './analysis/selectors'
 import {
 	checkSheetBoundaries,
 	collectScopeBoundaries,
@@ -129,6 +132,7 @@ export const compileFromIR = (
 	// composing parent binds through. Before the error gate: an
 	// unaddressable placement is LTC007.
 	const handlerArgs = handlerPlacementsOf(component, diagnostics)
+	const childrenRegion = childrenRegionOfComponent(component)
 	// LT-258: the partial-readiness invariant (ADR 0034 s4) — nothing but
 	// own args and the declared ambient set may reach the fold.
 	checkFoldInputs(component, diagnostics)
@@ -239,6 +243,7 @@ export const compileFromIR = (
 				clientMessageKeys: plan.clientMessageKeys,
 				...(handlerArgs ? { handlerArgs } : {}),
 				renderedShapes: renderedShapesOf(component),
+				...(childrenRegion ? { childrenRegion } : {}),
 				composesTags: composeRegistry
 					? [
 							...new Set(

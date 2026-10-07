@@ -715,17 +715,14 @@ export const analyzeClient = (
 
 	// Pre-collect ref names — thunks may reference any ref in the template.
 	// Traversal via `walkTemplate` (LT-042): refs are declared on plain and
-	// composed elements only, and composition is a boundary.
+	// composed elements only — compose-site content included, since the
+	// content is this component's markup (ADR 0048 s1).
 	const refNames = new Set<string>()
-	walkTemplate(
-		component.root,
-		node => {
-			if (node.kind !== 'element' && node.kind !== 'compose') return
-			for (const attr of node.attrs)
-				if (attr.kind === 'ref') refNames.add(attr.name)
-		},
-		{ intoCompose: false },
-	)
+	walkTemplate(component.root, node => {
+		if (node.kind !== 'element' && node.kind !== 'compose') return
+		for (const attr of node.attrs)
+			if (attr.kind === 'ref') refNames.add(attr.name)
+	})
 
 	// A deferred compose reference (LT-127) is an author-declared element
 	// reference whether or not this pass can resolve it: the registry-

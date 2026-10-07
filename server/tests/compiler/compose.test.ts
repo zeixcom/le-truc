@@ -339,7 +339,14 @@ export function BasicParent({ title }: { title: string })
 			throw new Error(`parent must compile: ${JSON.stringify(diagnostics)}`)
 		expect(component.serverCode).toContain('const __children1: string[] = []')
 		expect(component.serverCode).toContain(
-			'renderBasicChild({ "label": title, children: __children1.join(\'\') })',
+			// The region owner rides as the second argument (ADR 0048 s1).
+			'renderBasicChild({ "label": title, children: __children1.join(\'\') }, "basic-parent")',
+		)
+		// The child's root encloses the insertion: it carries the marker,
+		// and only when a compiled owner passed its tag.
+		expect(childComponent.serverCode).toContain('__owner?: string): string {')
+		expect(childComponent.serverCode).toContain(
+			"attr('data-children', __owner)",
 		)
 	})
 
