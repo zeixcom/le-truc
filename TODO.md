@@ -121,8 +121,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 (done) → LT-501 → LT-502 →
   LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-503 move compiled CSS to
   authored `@scope` (ruling 14). LT-478 styles its passed content under that contract.
-- **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. LT-093 is
-  done; LT-136 is pickable.
+- **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. Done
+  (2026-10-07). LT-136 closed with a pinning test: LTC005 already refuses the shadowed read.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. Done
   (2026-10-07). LT-282 closed on a false premise (ruling 9): TypeDoc regenerates `_media`.
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
@@ -152,8 +152,8 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-504.** Next free diagnostic code: LTC090 (LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
-if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
+**Next free task ID: LT-504.** Next free diagnostic code: LTC090 (LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
 LT-399's; LTC066–LTC070 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are
@@ -509,55 +509,3 @@ LTC056 is LT-358's).
      leak. If it does, narrow the limit to the leaking scrollarea internals.
   **Check:** `bun run test:component module-codeblock` is unchanged, and the computed styles of
   `pre`/`code` are unchanged. Update `module-codeblock.md` if it describes the raw tag.
-
-### P — compiler cleanup
-
-- [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
-  **Area:** compiler
-  **Context:** A `@for (const x of items)` loop lowers CLIENT-side to
-  `const items = all('<selector>')` — the loop's collection name becomes a query variable that
-  SHADOWS the server arg of the same name. Setup or `expose()` code reading the arg then means
-  two different things per half: server `items.length` is the array length, client
-  `items.length` is `undefined` on a `Cell`. **Verified 2026-08-30, and it is loud:**
-  `expose({ n: () => items.length })` over a `@for (const item of items)` loop compiles with
-  ZERO compiler diagnostics but fails `check:tsrx` with `TS2339: Property 'length' does not
-  exist on type 'Cell<HTMLSpanElement[]>'`, mapped back to the right `.tsrx` line. So this is a
-  message-clarity task, not a correctness hole — same posture as LT-125. The tsc text names
-  `Cell<…>` but never says *why* the author's `string[]` arg became one, and the fix (rename the
-  loop binding, or project the value through `expose()`) is not discoverable from it. **Re-verify first (Architect, planning 2026-10-06):** the entry predates ADR 0046 (reactive
-  lists) and `.tsx` as the default surface. Before changing anything, check whether a
-  server-data `@for` still lowers its collection name to a client `all()` query that shadows the
-  arg, on either surface. If neither surface still shadows, close the task with `done` and a pinning
-  test. If one does, the diagnostic is **LTC082** (compiler, tier 1 Prevented, statically
-  decidable; no runtime half).
-  **Fix:**
-  detect the collision in the compiler — a `@for` collection name that also names a server arg,
-  where the arg is read outside the loop body — and emit a dedicated diagnostic naming both the
-  shadowing and the rename. Low priority: no corpus component hits it, and the build already
-  stops.
-
-
-- [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
-  **Area:** compiler
-  **Context:** A `@for (const x of items)` loop lowers CLIENT-side to
-  `const items = all('<selector>')` — the loop's collection name becomes a query variable that
-  SHADOWS the server arg of the same name. Setup or `expose()` code reading the arg then means
-  two different things per half: server `items.length` is the array length, client
-  `items.length` is `undefined` on a `Cell`. **Verified 2026-08-30, and it is loud:**
-  `expose({ n: () => items.length })` over a `@for (const item of items)` loop compiles with
-  ZERO compiler diagnostics but fails `check:tsrx` with `TS2339: Property 'length' does not
-  exist on type 'Cell<HTMLSpanElement[]>'`, mapped back to the right `.tsrx` line. So this is a
-  message-clarity task, not a correctness hole — same posture as LT-125. The tsc text names
-  `Cell<…>` but never says *why* the author's `string[]` arg became one, and the fix (rename the
-  loop binding, or project the value through `expose()`) is not discoverable from it. **Re-verify first (Architect, planning 2026-10-06):** the entry predates ADR 0046 (reactive
-  lists) and `.tsx` as the default surface. Before changing anything, check whether a
-  server-data `@for` still lowers its collection name to a client `all()` query that shadows the
-  arg, on either surface. If neither surface still shadows, close the task with `done` and a pinning
-  test. If one does, the diagnostic is **LTC082** (compiler, tier 1 Prevented, statically
-  decidable; no runtime half).
-  **Fix:**
-  detect the collision in the compiler — a `@for` collection name that also names a server arg,
-  where the arg is read outside the loop body — and emit a dedicated diagnostic naming both the
-  shadowing and the rename. Low priority: no corpus component hits it, and the build already
-  stops.
-

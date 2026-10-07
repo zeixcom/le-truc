@@ -322,6 +322,33 @@ Full entry text: `git log -p -- DONE.md`.
   sandbox: `test:variants form-combobox` (tsrx 60, tsx 60) and `test:variants module-lazyload`
   (ts 40, tsx 40), all green.
 
+- [x] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding). — reviewed ✓
+  **Area:** compiler
+  **Context:** A `@for (const x of items)` loop lowers CLIENT-side to
+  `const items = all('<selector>')` — the loop's collection name becomes a query variable that
+  SHADOWS the server arg of the same name. Setup or `expose()` code reading the arg then means
+  two different things per half: server `items.length` is the array length, client
+  `items.length` is `undefined` on a `Cell`. **Verified 2026-08-30, and it is loud:**
+  `expose({ n: () => items.length })` over a `@for (const item of items)` loop compiles with
+  ZERO compiler diagnostics but fails `check:tsrx` with `TS2339: Property 'length' does not
+  exist on type 'Cell<HTMLSpanElement[]>'`, mapped back to the right `.tsrx` line. So this is a
+  message-clarity task, not a correctness hole — same posture as LT-125. The tsc text names
+  `Cell<…>` but never says *why* the author's `string[]` arg became one, and the fix (rename the
+  loop binding, or project the value through `expose()`) is not discoverable from it. **Re-verify first (Architect, planning 2026-10-06):** the entry predates ADR 0046 (reactive
+  lists) and `.tsx` as the default surface. Before changing anything, check whether a
+  server-data `@for` still lowers its collection name to a client `all()` query that shadows the
+  arg, on either surface. If neither surface still shadows, close the task with `done` and a pinning
+  test. If one does, the diagnostic is **LTC082** (compiler, tier 1 Prevented, statically
+  decidable; no runtime half).
+  **Fix:**
+  detect the collision in the compiler — a `@for` collection name that also names a server arg,
+  where the arg is read outside the loop body — and emit a dedicated diagnostic naming both the
+  shadowing and the rename. Low priority: no corpus component hits it, and the build already
+  stops.
+
+  **Changed:** Re-verified on both surfaces: the loop's collection name still lowers to a client `const items = all(…)`, but a client position reading the same-named server arg is already refused before tsc (LTC005 server-only name, naming the arg; a setup `on()` reading it is refused at the statement). The tsc `TS2339` no longer occurs, so no LTC082 was added; pinned in `for-collection-shadow.test.ts`.
+  **Review:** Approved (2026-10-07), closed with a finding (ruling 9). The shadow still lowers, but LTC005 refuses the client read before tsc, naming `items` in the `expose()` case. That makes the fix discoverable, which was the goal of the entry. LTC082 is released unused.
+
 - [x] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review). — reviewed ✓
   **Area:** server
   **Context:** `_media/*.md` inside the gitignored TypeDoc output dir are hand-copied mirrors
