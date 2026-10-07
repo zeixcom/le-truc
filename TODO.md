@@ -165,7 +165,7 @@ LTC056 is LT-358's).
 
 ### C — children contract
 
-- [ ] LT-501: Authored `@scope` emission — native and lowered, the revised style errors, and the corpus cutover in one commit (ADR 0033 as revised 2026-10-07).
+- [ ] LT-501: Authored `@scope` emission — native and lowered, the revised style errors, and the corpus cutover in one commit (ADR 0033 as revised 2026-10-07). — in progress ⚙
   **Area:** compiler
   **Needs:** LT-472
   **Gates:** test:server, typecheck, check:corpus, check:contract, build:docs, check:links, test:variants
@@ -395,7 +395,7 @@ LTC056 is LT-358's).
   **Sequence:** module-todo's fourth edit, after LT-466 → LT-467 → LT-463 (ruling 5).
   **Check:** `test:component form-checkbox module-todo` is unchanged.
 
-- [ ] LT-501: Authored `@scope` emission — native and lowered, the revised style errors, and the corpus cutover in one commit (ADR 0033 as revised 2026-10-07).
+- [ ] LT-501: Authored `@scope` emission — native and lowered, the revised style errors, and the corpus cutover in one commit (ADR 0033 as revised 2026-10-07). — in progress ⚙
   **Area:** compiler
   **Needs:** LT-472
   **Gates:** test:server, typecheck, check:corpus, check:contract, build:docs, check:links, test:variants
