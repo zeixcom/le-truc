@@ -140,11 +140,27 @@ declare namespace JSX {
 	 * over a union of arg shapes, so a discriminated args type keeps its
 	 * discrimination at the compose site (module-codeblock: collapsed ⇒ `id`,
 	 * LT-343) — a plain `Omit` would flatten it to the members' common keys.
+	 *
+	 * A string-assignable `children` arg (`children?: string`, or ADR 0048's
+	 * branded `Children<…>`) is the server-side truth — the compiler lowers
+	 * compose-site children to a markup string — so the compose site accepts
+	 * what that lowering accepts instead: `ComposeChildren` (LT-495). The
+	 * arg's optionality carries over; a function child still fails.
 	 */
 	type LibraryManagedAttributes<_C, P> = (P extends unknown
-		? Omit<P, 'i18n'>
+		? ComposeArgs<Omit<P, 'i18n'>>
 		: never) &
 		ComposeSiteAttrs
+	/** JSX children the compose lowering turns into the child's markup string. */
+	type ComposeChildren = Element | string | (Element | string)[]
+	type ComposeArgs<P> = 'children' extends keyof P
+		? NonNullable<P['children']> extends string
+			? Omit<P, 'children'> &
+					({} extends Pick<P, 'children'>
+						? { children?: ComposeChildren }
+						: { children: ComposeChildren })
+			: P
+		: P
 	interface ComposeSiteAttrs {
 		class?: string
 		id?: string

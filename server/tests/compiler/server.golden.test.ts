@@ -46,23 +46,28 @@ const formTextbox = compileComponent(
 	'examples/form/textbox/form-textbox.tsrx',
 	new Set<string>([...registry, 'form-textbox']),
 )
+const basicButton = compileComponent(
+	read('examples/basic/button/basic-button.tsrx'),
+	'examples/basic/button/basic-button.tsrx',
+	new Set<string>([...registry, 'basic-button']),
+)
 const moduleList = compileComponent(
 	read('examples/module/list/module-list.tsrx'),
 	'examples/module/list/module-list.tsrx',
 	new Set<string>([...registry, 'form-textbox', 'module-list', 'basic-button']),
 	undefined,
-	// module-list composes FormTextbox (ADR 0024 sub-design 10, LT-020) —
-	// keyed by form-textbox's own repo-relative source path, mirroring
-	// server/effects/compile.ts's corpus-wide compose registry.
+	// module-list composes FormTextbox (ADR 0024 sub-design 10, LT-020) and
+	// BasicButton (LT-463) — keyed by each child's own repo-relative source
+	// path, mirroring server/effects/compile.ts's corpus-wide compose registry.
 	new Map(
-		formTextbox.component
-			? [
-					[
-						'examples/form/textbox/form-textbox.tsrx',
-						formTextbox.component.entry,
-					],
-				]
-			: [],
+		(
+			[
+				['examples/form/textbox/form-textbox.tsrx', formTextbox],
+				['examples/basic/button/basic-button.tsrx', basicButton],
+			] as const
+		).flatMap(([rel, result]) =>
+			result.component ? [[rel, result.component.entry] as const] : [],
+		),
 	),
 )
 const formCheckbox = compileComponent(
@@ -94,6 +99,7 @@ if (
 	!counter.component ||
 	!tabgroup.component ||
 	!formTextbox.component ||
+	!basicButton.component ||
 	!moduleList.component ||
 	!formCheckbox.component ||
 	!seeded.component
@@ -111,6 +117,7 @@ const ensureEmitted = (tag: string, code: string): void => {
 ensureEmitted('basic-counter', counter.component.serverCode)
 ensureEmitted('module-tabgroup', tabgroup.component.serverCode)
 ensureEmitted('form-textbox', formTextbox.component.serverCode)
+ensureEmitted('basic-button', basicButton.component.serverCode)
 ensureEmitted('module-list', moduleList.component.serverCode)
 ensureEmitted('form-checkbox', formCheckbox.component.serverCode)
 ensureEmitted('c-el', seeded.component.serverCode)
@@ -118,13 +125,14 @@ ensureEmitted('c-el', seeded.component.serverCode)
 // (`i18n: i18nRecord("form-textbox", …)`), which imports './i18n' — the
 // generated i18n module must exist beside the emitted server modules. The
 // real pipeline derives it from the corpus collection; the fixture derives
-// it from the same five compiled entries (ADR 0030 sub-design 2).
+// it from the same six compiled entries (ADR 0030 sub-design 2).
 await writeI18nModule(
 	generated.path,
 	await collectI18n([
 		counter.component.entry,
 		tabgroup.component.entry,
 		formTextbox.component.entry,
+		basicButton.component.entry,
 		moduleList.component.entry,
 		formCheckbox.component.entry,
 	]),
@@ -469,7 +477,12 @@ describe('server golden — module-list (reactive @for → template extraction)'
 				'<button type="button" aria-label="Clear input" hidden class="clear">✕</button>' +
 				'</div>' +
 				'</form-textbox>' +
-				'<basic-button class="submit"><button type="submit" class="constructive">Add</button></basic-button>' +
+				// BasicButton is composed (LT-463): basic-button.tsrx's own
+				// render output — its default `medium` size, the label span and
+				// the empty badge span.
+				'<basic-button class="submit"><button type="submit" class="constructive medium">' +
+				'<span class="label">Add</span><span class="badge"></span>' +
+				'</button></basic-button>' +
 				'</form>' +
 				// disabled={() => !textbox.length} reads a child component's live
 				// prop — omitted server-side (dependency-provable evaluation).
