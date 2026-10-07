@@ -108,20 +108,21 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 - **T — module-todo** — ruling 5. LT-466 → LT-467. Done (2026-10-07).
 - **G — layout graph** — the variant sets `main.ts` still registers through their `.ts` twins,
   so `test:variants` has never measured their compiled clients (found in LT-467's rework). It
-  runs before LT-463, which converts them; LT-463 needs it. LT-485. Pickable now.
+  runs before LT-463, which converts them; LT-463 needs it. LT-485. Done.
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done
   (2026-10-07). LT-491 (ruling 12) fixed its link-click close failure (a fixture link under the test
   layout's `<base>`). Done (2026-10-07).
-- **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
+- **F — form-checkbox `.tsx`** — example folder only. LT-464. Done.
 - **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463 → LT-495 →
   LT-496 → LT-498. LT-463 and LT-495 are done (2026-10-07; LT-495 repaired the `test:server` fallout,
   ruling 13). LT-496 (from LT-495's review) made the compose-site reference count raw
   same-tag elements. LT-498 (from LT-496's review) closes the same blind spot in the other
-  discriminator callers and in composed children's own templates.
-- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-501 → LT-502 →
+  discriminator callers and in composed children's own templates. Done (2026-10-07).
+- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 (done) → LT-501 → LT-502 →
   LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-503 move compiled CSS to
   authored `@scope` (ruling 14). LT-478 styles its passed content under that contract.
-- **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
+- **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. LT-093 is
+  done; LT-136 is pickable.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. Done
   (2026-10-07). LT-282 closed on a false premise (ruling 9): TypeDoc regenerates `_media`.
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
@@ -510,6 +511,31 @@ LTC056 is LT-358's).
   `pre`/`code` are unchanged. Update `module-codeblock.md` if it describes the raw tag.
 
 ### P — compiler cleanup
+
+- [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
+  **Area:** compiler
+  **Context:** A `@for (const x of items)` loop lowers CLIENT-side to
+  `const items = all('<selector>')` — the loop's collection name becomes a query variable that
+  SHADOWS the server arg of the same name. Setup or `expose()` code reading the arg then means
+  two different things per half: server `items.length` is the array length, client
+  `items.length` is `undefined` on a `Cell`. **Verified 2026-08-30, and it is loud:**
+  `expose({ n: () => items.length })` over a `@for (const item of items)` loop compiles with
+  ZERO compiler diagnostics but fails `check:tsrx` with `TS2339: Property 'length' does not
+  exist on type 'Cell<HTMLSpanElement[]>'`, mapped back to the right `.tsrx` line. So this is a
+  message-clarity task, not a correctness hole — same posture as LT-125. The tsc text names
+  `Cell<…>` but never says *why* the author's `string[]` arg became one, and the fix (rename the
+  loop binding, or project the value through `expose()`) is not discoverable from it. **Re-verify first (Architect, planning 2026-10-06):** the entry predates ADR 0046 (reactive
+  lists) and `.tsx` as the default surface. Before changing anything, check whether a
+  server-data `@for` still lowers its collection name to a client `all()` query that shadows the
+  arg, on either surface. If neither surface still shadows, close the task with `done` and a pinning
+  test. If one does, the diagnostic is **LTC082** (compiler, tier 1 Prevented, statically
+  decidable; no runtime half).
+  **Fix:**
+  detect the collision in the compiler — a `@for` collection name that also names a server arg,
+  where the arg is read outside the loop body — and emit a dedicated diagnostic naming both the
+  shadowing and the rename. Low priority: no corpus component hits it, and the build already
+  stops.
+
 
 - [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
   **Area:** compiler
