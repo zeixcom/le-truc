@@ -85,6 +85,7 @@ import {
 	composeSharedPassClause,
 	composeStaticAttrs,
 	countComposeBySource as countComposeBySourceIn,
+	countRenderedForSelector,
 	type ElementNode,
 	type ExprNode,
 	type IfNode,
@@ -2111,10 +2112,15 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 		)
 		return
 	}
+	// LT-496: a raw element of the child's tag — in a list item, an arm or
+	// a compose site's content — matches the host-level query as well, so
+	// it counts against the site's uniqueness like a second compose site.
+	const matchesRaw = (clause: string) =>
+		countRenderedForSelector(fx.component.root, `${childTag}${clause}`) > 0
 	let discriminator = ''
-	if (countComposeBySource(fx, node.source) !== 1) {
+	if (countComposeBySource(fx, node.source) !== 1 || matchesRaw('')) {
 		const siblings = composeNodesBySource(fx, node.source)
-		const clause = composeDiscriminatorClause(node, siblings)
+		const clause = composeDiscriminatorClause(node, siblings, matchesRaw)
 		if (!clause) {
 			// LT-319: sites that share a clause and carry textually identical
 			// `truc:pass` objects lower to ONE `pass(all(selector), …)`,
@@ -2122,7 +2128,11 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 			// nothing. An author `first()` is never part of this: a selector
 			// matching several sites is already LTC027.
 			const shared = refAttr ? null : composeSharedPassClause(node, siblings)
-			if (shared && new Set(shared.members.map(passObjectKey)).size === 1) {
+			if (
+				shared &&
+				!matchesRaw(shared.clause) &&
+				new Set(shared.members.map(passObjectKey)).size === 1
+			) {
 				if (shared.members[0] !== node) return
 				const query = addQuery(
 					`${sanitizeVarName(childTag)}s`,
@@ -2138,7 +2148,9 @@ const emitComposeEffects = (fx: EffectsContext, node: ComposeNode): void => {
 				diagnostic.unaddressableElement(
 					source,
 					node.node,
-					`Multiple <${node.component}> sites compose the same child, and no static class/id/data-* attribute tells this one apart — first() and truc:pass need a unique target. Give each site a distinct class. Sites that share a class can share one query only if every one of them carries a textually identical \`truc:pass\` object.`,
+					siblings.length === 1
+						? `<${node.component}> renders <${childTag}>, which other elements in this template also render, and no static class/id/data-* attribute tells this site apart — first() and truc:pass need a unique target. Give the site a class no other <${childTag}> carries.`
+						: `Multiple <${node.component}> sites compose the same child, and no static class/id/data-* attribute tells this one apart — first() and truc:pass need a unique target. Give each site a distinct class. Sites that share a class can share one query only if every one of them carries a textually identical \`truc:pass\` object.`,
 				),
 			)
 			return

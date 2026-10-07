@@ -587,7 +587,7 @@ export default defineComponent(
 		const container = first('ul', 'module-list: ul missing')
 		const form = first('form', 'module-list: form missing')
 		const textbox = first('form-textbox', 'the new-item textbox')
-		const basicButton = first('basic-button', 'module-list: basic-button missing')
+		const basicButton = first('basic-button.submit', 'module-list: basic-button.submit missing')
 		const items = createList<string>([], {
 			keyConfig: 'item',
 		})
@@ -878,7 +878,7 @@ export default defineComponent(
 		const container = first('ol', 'Add a container element for items.')
 		const form = first('form', 'module-todo: form missing')
 		const textbox = first('form-textbox', 'Add <form-textbox> component to enter a new todo item.')
-		const basicButton = first('basic-button', 'module-todo: basic-button missing')
+		const basicButton = first('basic-button.submit', 'module-todo: basic-button.submit missing')
 		const liveRegion = first('[role="status"]', 'Add a live region for status messages.')
 		const p = first('p.remaining', 'module-todo: p.remaining missing')
 		const filter = first('form-radiogroup', 'Add <form-radiogroup> component to filter todo items.')
