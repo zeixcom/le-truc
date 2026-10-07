@@ -488,7 +488,9 @@ export const validateComposedChildren = (
 				diagnostic.composedElementUnsupported(
 					ctx.source,
 					node.node,
-					`A \`${attr.kind}\` attribute in a composed element's content`,
+					attr.kind === 'handler-arg'
+						? `The handler arg \`${attr.arg}\` in a composed element's content`
+						: `A \`${attr.kind}\` attribute in a composed element's content`,
 				),
 			)
 		}

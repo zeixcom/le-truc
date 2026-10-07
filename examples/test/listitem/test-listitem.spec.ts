@@ -99,11 +99,32 @@ test.describe('test-listitem: removal through the key binding', () => {
 		await page.waitForSelector('test-listitem')
 	})
 
+	// The remove button is a composed <basic-button> whose `onClick` handler
+	// arg lowers to an `on()` on its native button in the item's mount
+	// (LT-461) — bound on the adopted items and on every clone alike.
 	test('the remove button reads the key and reconciles', async ({ page }) => {
-		await page.locator('test-listitem li[data-key="task-1"] button').click()
+		await page
+			.locator('test-listitem li[data-key="task-1"] basic-button button')
+			.click()
 		await expect(
 			page.locator('test-listitem li[data-key="task-1"]'),
 		).toHaveCount(0)
 		await expect(page.locator('test-listitem ul.tasks li')).toHaveCount(1)
+	})
+
+	test('a cloned item removes itself through its composed button', async ({
+		page,
+	}) => {
+		await page.locator('test-listitem button.add').click()
+		const items = page.locator('test-listitem ul.tasks li')
+		await expect(items).toHaveCount(3)
+		await items.nth(2).locator('basic-button button').click()
+		await expect(items).toHaveCount(2)
+		await expect(
+			page.locator('test-listitem li[data-key="task-1"]'),
+		).toHaveCount(1)
+		await expect(
+			page.locator('test-listitem li[data-key="task-2"]'),
+		).toHaveCount(1)
 	})
 })

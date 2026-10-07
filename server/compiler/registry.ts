@@ -151,7 +151,35 @@ export type RegistryEntry = {
 	 * against the narrowed client evaluator (LT-219).
 	 */
 	clientMessageKeys: string[]
+	/**
+	 * Where each handler arg lands (LT-461), by arg name: every element the
+	 * component places the arg on as an event attribute, or the composed
+	 * child it forwards the arg to. A composing parent reads this at its
+	 * compose site to bind its handler with `on()` against each placement,
+	 * through the site's selector joined with the placement's — the child's
+	 * signature is the contract, so the parent never reaches in on its own.
+	 * Optional: absent on entries that declare no handler arg.
+	 */
+	handlerArgs?: Record<string, HandlerPlacement[]>
 }
+
+/**
+ * One placement of a handler arg (LT-461), relative to the component's host
+ * element. `optional` marks a placement in a server-rendered branch, which
+ * the render may leave out: the parent's query for it must not throw.
+ *
+ * - An element placement: the event (`click` for `onClick`) and the
+ *   selector proving the element unique under the host — a `:scope >`
+ *   child path when the component composes children whose markup is
+ *   unknown at discovery time.
+ * - A forwarding placement (`<Inner onClick={onClick} />`): the composed
+ *   child's source, the compose site's discriminator clause (`''` when the
+ *   component composes that child once) and the child's own arg name. The
+ *   parent resolves it through the child's entry, recursively.
+ */
+export type HandlerPlacement =
+	| { event: string; selector: string; optional: boolean }
+	| { via: string; clause: string; arg: string; optional: boolean }
 
 export type ComponentRegistry = Record<string, RegistryEntry>
 

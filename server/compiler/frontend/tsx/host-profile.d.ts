@@ -198,11 +198,16 @@ declare namespace JSX {
 		'aria-valuenow'?: Reactive<string>
 		'aria-valuemin'?: Reactive<string>
 		'aria-valuemax'?: Reactive<string>
-		onClick?: (event: MouseEvent) => unknown
-		onInput?: (event: Event) => unknown
-		onChange?: (event: Event) => unknown
-		onKeydown?: (event: KeyboardEvent) => unknown
-		onKeyup?: (event: KeyboardEvent) => unknown
+		/*
+		 * Event attributes take `undefined` too: a component's optional
+		 * handler arg placed on its own element (`<button onClick={onClick}>`,
+		 * LT-461) is `undefined` when the parent passes none.
+		 */
+		onClick?: ((event: MouseEvent) => unknown) | undefined
+		onInput?: ((event: Event) => unknown) | undefined
+		onChange?: ((event: Event) => unknown) | undefined
+		onKeydown?: ((event: KeyboardEvent) => unknown) | undefined
+		onKeyup?: ((event: KeyboardEvent) => unknown) | undefined
 		[key: `data-${string}`]: Reactive<string>
 		/** Sanitized raw markup, rendered before any authored children (LT-137). */
 		'truc:html'?: Reactive<string>
@@ -226,7 +231,7 @@ declare namespace JSX {
 	interface form extends CommonLightDom {
 		action?: string
 		method?: 'get' | 'post' | 'dialog'
-		onSubmit?: (event: SubmitEvent) => unknown
+		onSubmit?: ((event: SubmitEvent) => unknown) | undefined
 	}
 	interface h2 extends CommonLightDom {}
 	interface h3 extends CommonLightDom {}

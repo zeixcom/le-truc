@@ -1071,6 +1071,8 @@ const emitElement = (
 				break
 			case 'event':
 			case 'ref':
+			// A handler-arg placement renders nothing (LT-461).
+			case 'handler-arg':
 				break
 		}
 	}

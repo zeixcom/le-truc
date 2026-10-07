@@ -8,7 +8,7 @@
  */
 
 import type { AstNode } from './ast-node'
-import { asArray, identifierName } from './ast-utils'
+import { asArray, forEachFreeIdentifier, identifierName } from './ast-utils'
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import { reportDuplicatedChannels } from './first-refs'
@@ -18,7 +18,7 @@ import type { ConfigIR, ForIR, TemplateNode } from './ir'
 import type { SetupExtraction } from './setup-extraction'
 import { wordingOf } from './surface'
 import { MANAGED_FORM_MEMBERS, RESERVED_PROP_NAMES } from './vocabulary'
-import { walkTemplate } from './walk'
+import { childNodes, walkTemplate } from './walk'
 
 /** Native form-control tags whose own `name` would double-submit (LT-059). */
 const NAMED_FORM_CONTROL_TAGS: ReadonlySet<string> = new Set([
@@ -102,6 +102,113 @@ const reportLoopsInBranches = (
 }
 
 /**
+ * LTC081's placement rules for handler args (LT-461). A handler arg carries
+ * no value inside the component: the composing parent binds its handler on
+ * the element that carries the arg, through a query from its own scope. So
+ * the arg may be read in two positions only — an event attribute's value
+ * on a raw element, and a composed child's handler arg it forwards to (both
+ * recorded in `ctx.handlerArgRefs` by the attribute classifiers) — and
+ * neither may sit inside a reactive arm or a reactive-list item, whose
+ * elements the client recreates on a flip or a reconcile (the parent's
+ * connect-time query would go stale), nor inside a server-data loop body,
+ * which renders it once per item where the parent binds one listener.
+ */
+const reportHandlerArgPlacements = (
+	ctx: ExtractContext,
+	root: TemplateNode,
+	componentFn: AstNode,
+	fors: ReadonlyMap<AstNode, ForIR>,
+): void => {
+	if (ctx.handlerArgs.size === 0) return
+	forEachFreeIdentifier(componentFn.body, id => {
+		const arg = ctx.handlerArgs.get(String(id.name))
+		if (arg && !ctx.handlerArgRefs.has(id))
+			ctx.diagnostics.push(
+				diagnostic.unaddressableHandlerArg(ctx.source, id, arg, {
+					kind: 'read',
+				}),
+			)
+	})
+	const wording = wordingOf(ctx)
+	const itemRoots = new Set<TemplateNode>(
+		[...fors.values()].flatMap(loop =>
+			loop.kind === 'reconcile' ? [loop.output] : [],
+		),
+	)
+	const loopRoots = new Set<TemplateNode>(
+		[...fors.values()].flatMap(loop =>
+			loop.kind === 'each' ? [loop.output] : [],
+		),
+	)
+	const inLoop = new Set<AstNode>()
+	walkTemplate(
+		root,
+		node => {
+			if (!loopRoots.has(node)) return
+			walkTemplate(node, inner => {
+				for (const { arg, at } of placementsOf(inner))
+					if (!inLoop.has(at) && inLoop.add(at))
+						ctx.diagnostics.push(
+							diagnostic.unaddressableHandlerArg(ctx.source, at, arg, {
+								kind: 'in-loop',
+								loop: wording.loop,
+							}),
+						)
+			})
+		},
+		{ intoCompose: false },
+	)
+	const lead = (phrase: string): string =>
+		phrase.charAt(0).toLowerCase() + phrase.slice(1)
+	const visit = (
+		node: TemplateNode,
+		scope: { where: string; scope: 'arm' | 'item' } | null,
+	): void => {
+		// An item root is inside its own item, its placements included.
+		let inner = itemRoots.has(node)
+			? {
+					where: `a reactive-list ${wording.loop} item`,
+					scope: 'item' as const,
+				}
+			: scope
+		if (inner)
+			for (const { arg, at } of placementsOf(node))
+				ctx.diagnostics.push(
+					diagnostic.unaddressableHandlerArg(ctx.source, at, arg, {
+						kind: 'in-scope',
+						...inner,
+					}),
+				)
+		if (node.kind === 'conditional' && node.mode === 'reactive')
+			inner = {
+				where: `an arm of ${lead(wording.reactiveConditional)}`,
+				scope: 'arm',
+			}
+		else if (node.kind === 'try' && node.pendingChildren !== null)
+			inner = { where: `an arm of a ${wording.boundary}`, scope: 'arm' }
+		for (const child of childNodes(node)) visit(child, inner)
+	}
+	visit(root, null)
+}
+
+/** The handler-arg placements a template node carries (LT-461). */
+const placementsOf = (
+	node: TemplateNode,
+): Array<{ arg: string; at: AstNode }> => {
+	if (node.kind === 'element')
+		return node.attrs.flatMap(attr =>
+			attr.kind === 'handler-arg' ? [{ arg: attr.arg, at: attr.node }] : [],
+		)
+	if (node.kind === 'compose')
+		return node.attrs.flatMap(attr =>
+			attr.kind === 'handler' && attr.forward !== null
+				? [{ arg: attr.forward, at: attr.handler }]
+				: [],
+		)
+	return []
+}
+
+/**
  * The post-lowering validation tail, shared by both front ends. Runs after
  * `resolveTemplateOutput` and `readModuleDecls` because every check below
  * needs `root`, `config`, or `expose.argNode`:
@@ -138,6 +245,8 @@ const reportLoopsInBranches = (
  * - LT-059: a form-associated component's inner native control must have
  *   no `name`.
  * - LT-301: a loop inside an `if`/`switch` branch is LTC005.
+ * - LTC081 (LT-461): a handler arg read or placed where the composing
+ *   parent cannot address it (`reportHandlerArgPlacements`).
  */
 export const validateLoweredComponent = (
 	ctx: ExtractContext,
@@ -236,4 +345,5 @@ export const validateLoweredComponent = (
 	if (config?.form) reportNamedFormControls(ctx, root)
 
 	reportLoopsInBranches(ctx, root, fors)
+	reportHandlerArgPlacements(ctx, root, componentFn, fors)
 }

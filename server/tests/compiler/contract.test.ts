@@ -36,6 +36,7 @@ const DESIGNATED_TYPES = [
 	'EmitPaths',
 	'EvaluationTier',
 	'ExposeKind',
+	'HandlerPlacement',
 	'RegistryEntry',
 	'Resolution',
 	'RoutingSignal',

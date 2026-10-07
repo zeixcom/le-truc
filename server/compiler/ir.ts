@@ -654,6 +654,22 @@ export type AttributeIR =
 	  }
 	| {
 			/**
+			 * A handler arg placed on this raw element (LT-461): `onClick=
+			 * {onPress}` where `onPress` is one of the component's own handler
+			 * args. Neither half of the component emits it — no attribute, no
+			 * listener. It records the placement the registry entry publishes
+			 * (`RegistryEntry.handlerArgs`), so a composing parent binds its
+			 * handler on this element. The event comes from the attribute name
+			 * (`onClick` → `click`), the arg from the value.
+			 */
+			kind: 'handler-arg'
+			name: string
+			event: string
+			arg: string
+			node: AstNode
+	  }
+	| {
+			/**
 			 * An element bound to a name usable as a client-side reference. On
 			 * a RAW (dashed-tag) element this is never authored as a JSX
 			 * attribute — `classifyAttribute` hard-errors a bare `ref={}`
@@ -697,6 +713,23 @@ export type ComposeAttrIR =
 	| { kind: 'ref'; name: string }
 	| { kind: 'arg'; name: string; exprText: string; node: AstNode | null }
 	| { kind: 'pass'; entries: PassEntryIR[] }
+	| {
+			/**
+			 * A handler arg at the compose site (LT-461): an attribute named
+			 * `on` plus a capital letter. Never a server arg — the parent's
+			 * client binds `handler` with `on()` on each element the child
+			 * places the arg on (its registry entry's `handlerArgs`), the
+			 * event coming from the child's placement. `forward` names the
+			 * composing component's OWN handler arg when the value is that
+			 * arg (`<Inner onClick={onClick} />`): the composing component
+			 * emits nothing and publishes the inner placement as its own.
+			 */
+			kind: 'handler'
+			name: string
+			handler: AstNode
+			handlerText: string
+			forward: string | null
+	  }
 
 /** Fields every `@for` loop carries, whichever lowering it takes. */
 type ForIRBase = {
@@ -859,6 +892,12 @@ export type ComponentIR = {
 	 * IR; omitted, every `t` read in a client position stays LTC005.
 	 */
 	messageTBindings?: string[]
+	/**
+	 * The component's handler args (LT-461), binding name → arg name. A
+	 * handler arg has no value in either half of the component; a read of
+	 * one is LTC081's, so the server-only-name report leaves it out.
+	 */
+	handlerArgs?: ReadonlyMap<string, string>
 	/**
 	 * The names the parameter pattern binds for the reserved record ITSELF
 	 * (`{ i18n }`, aliased or not) — read as `i18n.t.<key>` or

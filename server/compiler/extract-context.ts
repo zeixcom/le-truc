@@ -93,6 +93,19 @@ export type ExtractContext = {
 	 */
 	setupInits: ReadonlyMap<string, AstNode>
 	/**
+	 * The component's handler args (LT-461), binding name → arg name: every
+	 * arg named `on` plus a capital letter whose declared type is a function
+	 * type. Neither half of the component emits one; the parent's compose
+	 * site binds it.
+	 */
+	handlerArgs: ReadonlyMap<string, string>
+	/**
+	 * The identifier nodes that read a handler arg where it may be read
+	 * (LT-461): an event attribute's value on a raw element, a forwarding
+	 * compose-site handler arg. Every other read is LTC081.
+	 */
+	handlerArgRefs: Set<AstNode>
+	/**
 	 * Loop item/index/key bindings of the loops being lowered (innermost last).
 	 * They shadow same-named signals inside the loop body (LT-387).
 	 */
@@ -144,6 +157,8 @@ export const createExtractContext = (
 	claimedMarkers: new Set<AstNode>(),
 	moduleTypes: new Map<string, AstNode>(),
 	setupInits: new Map<string, AstNode>(),
+	handlerArgs: new Map<string, string>(),
+	handlerArgRefs: new Set<AstNode>(),
 	loopBound: [],
 	loopReactive: [],
 	setupScope: {

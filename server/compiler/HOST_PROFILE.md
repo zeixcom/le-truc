@@ -141,6 +141,27 @@ One more sharp edge (found in LT-113, verified live): a getter-only pass into a 
 
 When a composition needs a child-writable prop whose value the parent derives (a spinbutton that steps its own value inside a color graph, a textbox the parent pre-fills but the child edits), use `watch()` + `bindProperty()` + commit-on-change instead: the parent pushes the derived display value down with `watch(() => derived, bindProperty(child, 'value'))`, and commits the child's committed result back up from a `change`-style event, reading `child.value`. Ratified in LT-091's review after the form-colorgraph spec caught the throw (`examples/form/colorgraph/form-colorgraph.tsrx` is the reference composition). When the child lives in a reactive arm, it is cloned afresh on every entry, so the parent writes the value once on entry instead of watching it: `examples/form/inplace-edit/form-inplace-edit.tsrx` pre-fills its edit-arm textbox when edit mode starts and reads `textbox.value` back on commit. A mediated `{ get, set }` descriptor is the middle ground — the parent intercepts writes — but note it re-enters on the library's own internal writes (form reset re-commits a stale baseline through the setter), which is why the commit-on-change shape is preferred for form-associated children.
 
+## Handler args: the child declares where a parent's handler lands
+
+A parent that wants to react to a click inside a composed child passes a **handler arg** (LT-461). It is an ordinary server arg whose name is `on` plus a capital letter and whose declared type is a function type, read syntactically from the child's parameter annotation (an inline type literal, or a same-file alias or interface). It is never exposed, never stored on the host and never a reactive property. The child declares the delegation by placing the arg as an event attribute on an element it owns:
+
+```
+export function BasicButton({ type = 'button', onClick, … }: { onClick?: (e: MouseEvent) => void; … })
+	…
+	<basic-button><button {type} {onClick}>…</button></basic-button>
+```
+
+The parent's compose site `<BasicButton class="remove" onClick={e => items.remove(k)} />` lowers in the parent's client to `on(first('basic-button.remove button'), 'click', e => items.remove(k))`. The rules:
+
+- **The event comes from the placement**, not the arg name: `onPress` placed as `<button onClick={onPress}>` binds `click`. Several placements of one arg bind one `on()` each.
+- **Neither half of the child emits the arg**: no attribute, no serialization, no listener. A page-authored instance simply carries no handler. The parent's server render never forwards it.
+- **The selector is the compiler's.** It joins the compose site's tag-plus-discriminator with the placement's selector, which the child proves unique under its host and publishes on its registry entry (`handlerArgs`). The author never writes it, so it is no reach-in (the data account, bullet 3): the child's signature is the contract.
+- **The `on()` binds in the compose site's Mount Scope** — the host, an arm (`bindArm`) or a list item (`bindItem`) — so item and key reads are legal (LTC075 does not apply to handler args). The handler is the parent's: a `{ prop: value }` return updates the parent's host, as for any handler the parent authors. A site in a server-rendered branch, or a placement the child renders in one, queries without throwing.
+- **A child forwards a handler arg** by passing it to its own compose site (`<Inner onClick={onClick} />`): the parent's selector descends through both boundaries.
+- **Placements the parent cannot address are refused** in the child (LTC081): a handler arg read anywhere but as an event attribute on a native element or a forward; one placed inside a reactive arm or list item, whose elements the client recreates on a flip or reconcile; one inside a server-data loop body, which renders it once per item; and an `on[A-Z]` arg whose type is not a function type.
+
+On `.tsx`, compose-site handler args typecheck as ordinary props, so an undeclared `onX` is the usual excess-property error, and the profile's event attributes accept `undefined`, so an optional handler arg places without a guard.
+
 ## Locale and translations arrive as server data, through the reserved `i18n` parameter
 
 The client is the wrong layer to answer "what language is this page in" — by the time a component runs, the answer is already in the DOM, put there by whoever rendered the page. So locale is **build-time server data** ([ADR 0030](../../adr/0030-internationalization-as-build-time-server-data.md)), and it reaches a component the way all server data does: as a server arg.

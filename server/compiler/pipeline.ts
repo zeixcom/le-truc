@@ -8,6 +8,7 @@
  * pipeline change cannot drift between surfaces.
  */
 
+import { handlerPlacementsOf } from './analysis/handler-args'
 import { analyzeClient } from './analysis/plan'
 import { renderedShapesOf } from './analysis/selectors'
 import {
@@ -124,6 +125,10 @@ export const compileFromIR = (
 		}
 	}
 	const plan = analyzeClient(component, registry, diagnostics, composeRegistry)
+	// Where each handler arg lands (LT-461), for the registry entry a
+	// composing parent binds through. Before the error gate: an
+	// unaddressable placement is LTC007.
+	const handlerArgs = handlerPlacementsOf(component, diagnostics)
 	// LT-258: the partial-readiness invariant (ADR 0034 s4) — nothing but
 	// own args and the declared ambient set may reach the fold.
 	checkFoldInputs(component, diagnostics)
@@ -232,6 +237,7 @@ export const compileFromIR = (
 				langArgDefault: component.langArgDefault,
 				i18nMessages: component.i18nMessages,
 				clientMessageKeys: plan.clientMessageKeys,
+				...(handlerArgs ? { handlerArgs } : {}),
 				renderedShapes: renderedShapesOf(component),
 				composesTags: composeRegistry
 					? [

@@ -509,3 +509,6 @@ export const eventNameFromAttr = (name: string): string => {
 	const rest = name.slice(2)
 	return rest.charAt(0).toLowerCase() + rest.slice(1)
 }
+
+/** An arg named `on` plus a capital letter is a handler arg (LT-461). */
+export const isHandlerArgName = (name: string): boolean => /^on[A-Z]/.test(name)

@@ -12,6 +12,7 @@ import {
 	attrName,
 	eventNameFromAttr,
 	identifierName,
+	isHandlerArgName,
 	isNode,
 	text,
 } from './ast-utils'
@@ -217,6 +218,19 @@ export const classifyAttribute = (
 		// this, ADR 0024 LT-008).
 		const resolvedName =
 			isNode(raw) && raw.type === 'Identifier' ? identifierName(raw) : null
+		// A handler arg placed on this element (LT-461): the composing parent
+		// binds its own handler here, so the component emits nothing for it.
+		const handlerArg = resolvedName ? ctx.handlerArgs.get(resolvedName) : null
+		if (handlerArg && isNode(raw)) {
+			ctx.handlerArgRefs.add(raw)
+			return {
+				kind: 'handler-arg',
+				name,
+				event: eventNameFromAttr(name),
+				arg: handlerArg,
+				node: raw,
+			}
+		}
 		const resolved = resolvedName ? ctx.setupInits.get(resolvedName) : undefined
 		const expr = resolved ?? raw
 		if (!isNode(expr) || !/Function(Expression)?$/.test(expr.type))
@@ -437,6 +451,44 @@ export const classifyComposeAttribute = (
 			reason:
 				"`i18n` is a reserved parameter (ADR 0030) — the compiler supplies the locale record; callers never pass it. To set the child's locale, pass `lang` instead.",
 		}
+	// A handler arg (LT-461): never a server arg. The parent's client binds
+	// the handler on the element the child places the arg on, so the value
+	// takes an event attribute's forms — a function, or an identifier bound
+	// to one by a hoisted `const` — plus the composing component's own
+	// handler arg, which forwards the placement.
+	if (isHandlerArgName(name)) {
+		const raw =
+			isNode(value) && value.type === 'JSXExpressionContainer'
+				? value.expression
+				: value
+		const rawName =
+			isNode(raw) && raw.type === 'Identifier' ? identifierName(raw) : null
+		const forward = rawName ? ctx.handlerArgs.get(rawName) : undefined
+		if (forward && isNode(raw)) {
+			ctx.handlerArgRefs.add(raw)
+			return {
+				kind: 'handler',
+				name,
+				handler: raw,
+				handlerText: text(ctx.source, raw),
+				forward,
+			}
+		}
+		const resolved = rawName ? ctx.setupInits.get(rawName) : undefined
+		const expr = resolved ?? raw
+		if (!isNode(expr) || !/Function(Expression)?$/.test(expr.type))
+			return {
+				kind: 'invalid',
+				reason: `Handler arg ${name}={…} must be a function, or an identifier bound to one by a hoisted \`const\` — the child binds it as an event listener.`,
+			}
+		return {
+			kind: 'handler',
+			name,
+			handler: expr,
+			handlerText: text(ctx.source, expr),
+			forward: null,
+		}
+	}
 	if (!isNode(value)) return { kind: 'arg', name, exprText: 'true', node: null }
 	if (value.type === 'Literal')
 		return {

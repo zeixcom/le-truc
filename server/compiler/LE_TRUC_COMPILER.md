@@ -377,6 +377,7 @@ front-end modules, then the two front ends:
 | `analysis/selectors.ts` | Pure selector POLICY: synthesis, candidate order, union/compose addressing; the ENGINE (matching, counting, existence) runs on the materialized probe |
 | `analysis/probe.ts` | The materialized-probe selector engine (ADR 0045): template IR → HTML (each element stamped with its exclusive-arm path) → parse5 → css-select, aggregated max-over-arms |
 | `analysis/compose-refs.ts` | Registry-aware resolution of `first()` references addressing composed children |
+| `analysis/handler-args.ts` | Handler args (LT-461): the child's placements for its registry entry (`handlerPlacementsOf` — selectors proven with composed markup unknown), and the parent's resolution of a compose-site handler through that record, across forwards (`resolveHandlerPlacements`, `joinSelector`) |
 | `analysis/naming.ts` | `uniqueName`, `addQuery` (query table + name allocation) |
 | `analysis/harvest.ts` | Passes 2+3: render sites (`collectRenderSites`), harvest-plan selection and arg→DOM-site substitution (`planHarvests`) |
 | `analysis/list-harvest.ts` | Pass 3's per-field plan for a list seeded from server args (ADR 0046 s7, LT-429): each field's site in the adopted item (`data-key`, else the first text child or reactive attribute reading exactly the field) and its parser; LTC072/LTC076, LTC059 per field. The key-alias plan (ADR 0047, LT-453, `planKeyAliasHarvest`): the same field plan read from the alias scope, the container path through the enclosing list items, LTC080 |
@@ -1112,6 +1113,16 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   crosses it. The dynamic half is the render witness: the server module
   throws `HarvestWitnessError` (`runtime.ts`) when the alias scope's keys do
   not reach every key of the list, in order.
+- *Handler args* (LT-461, `HOST_PROFILE.md`'s *Handler args*): an arg
+  named `on` plus a capital letter the parent cannot address (LTC081) —
+  its declared type is not a function type the parameter annotation shows;
+  it is read anywhere but as an event attribute on a raw element or a
+  forward to a composed child's handler arg; or it is placed inside a
+  reactive arm or a reactive-list item, whose elements the client
+  recreates, or a server-data loop body, which renders it once per item. A
+  placement with no unique selector is LTC007; a compose-site handler in a
+  server-data loop body, or where no mount binds it (a server-rendered
+  branch inside an arm), is LTC005.
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and
