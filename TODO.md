@@ -99,8 +99,10 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   (2026-10-07). LT-491 (ruling 12) fixed its link-click close failure (a fixture link under the test
   layout's `<base>`). Done (2026-10-07).
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
-- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463 → LT-495.
-  LT-463 is done (2026-10-07). LT-495 repairs its `test:server` fallout (ruling 13) and is pickable now.
+- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463 → LT-495 →
+  LT-496. LT-463 and LT-495 are done (2026-10-07; LT-495 repaired the `test:server` fallout,
+  ruling 13). LT-496, from LT-495's review, makes the compose-site reference count raw
+  same-tag elements.
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
@@ -133,7 +135,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-496.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-498.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -147,116 +149,63 @@ LTC056 is LT-358's).
 
 ### K — composition
 
-- [ ] LT-495: Repair LT-463's `test:server` fallout — JSX children against a `string` children prop, the golden compose registry, and the composition snapshots.
+- [ ] LT-496: A compose site's element reference ignores raw same-tag elements — count every element of the child's tag when choosing the selector.
   **Area:** compiler
-  **Needs:** LT-463, LT-490
-  **Gates:** test:server, typecheck, check:corpus
+  **Needs:** LT-495
+  **Gates:** test:server, check:corpus, typecheck
   **Area:** compiler
-  **Needs:** LT-463, LT-490
-  **Filed (Architect, 2026-10-07, from LT-490's review):** `test:server` has failed 16 tests on v3
-  since LT-463 integrated (`c090d4e7`). LT-463's gates did not name `test:server`, and the review
-  did not run it. There are three causes, and each is ruled below.
-  **1. A real type error: JSX children against a `string` `children` prop.**
-  - The variant-set typecheck fails with TS2322 ("Type 'Element' is not assignable to type
-    'string'") at module-dialog.tsx:138 and module-lazyload.tsx:122/129.
-  - ModuleScrollarea and CardCallout declare `children?: string`, the server-side truth: the
-    compiler lowers compose-site children to a markup string. But tsc checks the JSX children
-    against that declared type.
-  - **Ruling:** the host profile translates. In `host-profile.d.ts`, `LibraryManagedAttributes`
-    maps a string-assignable `children` to the JSX-children type: `JSX.Element | string`, singly
-    or as an array, which is what the compose lowering accepts. Do this beside the `i18n` omission
-    and keep the discriminated-union distribution. This also covers LT-474's branded `Children<…>`
-    string (ADR 0048 s2), because the brand stays string-assignable.
-  - **Rejected:** retyping each child's `children` as `JSX.Element`. That would lie about the
-    server arg and break the `children = ''` defaults.
-  - Pin it in the `.tsx` typecheck fixtures: a compose site with element children against
-    `children?: string` typechecks, and a function child still fails.
-  **2. A golden-harness gap.** `client.golden` and `server.golden` build a compose registry from
-  form-textbox alone. module-list now composes `<BasicButton>`, so it fails to compile there
-  ("corpus components must compile"). Add basic-button to both harnesses' compile-first set.
-  Don't stub it.
-  **3. Snapshots.** Regenerate them: the sim-driver fixtures (module-list, ticker, todo, dialog),
-  the equivalence audit (list, ticker, todo), the client golden (module-list) and the variant
-  parity (list, ticker, todo). Read each diff before accepting it. It must show only
-  the composition change from LT-463 (BasicButton's `secondary medium`/`constructive medium` inner
-  classes, the empty badge span, the composed-root attributes) and, for the ticker, LT-490's
-  `ALPHA`. Any other difference stops the task: write it in `NOTES.md`.
-  **Check:** `test:server` 0 failures; `typecheck` and `check:corpus` green.
-  **Channel/tier:** TypeScript — a host-profile typing fix that makes a correct compose site
-  typecheck. No new check.
+  **Needs:** LT-495
+  **Filed (Architect, 2026-10-07, from LT-495's review):** in `analysis/effects.ts`, the
+  compose-site reference adds a discriminator clause only when `countComposeBySource` finds more
+  than one compose site of the same child. Raw elements of the same tag in the parent's template
+  are not counted. module-todo composes one `<BasicButton class="submit">` beside raw
+  `<basic-button class="remove">` (in list items) and `<basic-button class="clear-completed">`, so
+  the generated client queries `first('basic-button')`. That is correct today only because the
+  submit comes first in document order. Moving the form below the footer would silently bind the
+  submit's `disabled` pass to the clear-completed button. module-list has the same shape.
+  **Change:** the uniqueness count covers every element of the child's tag the parent's
+  template can render, raw or composed. That includes elements in list items and arms, since a
+  host-level `first()` matches them too. When the tag is not unique, use the site's
+  discriminator clause (`composeDiscriminatorClause`, now considering all those elements). With
+  no distinguishing static class/id/`data-*`, refuse through the existing
+  `unaddressableElement` diagnostic with the same fix-it. Leave LT-319's shared-pass grouping
+  unchanged; it still applies only to compose sites.
+  **Check:** a `test:server` pin: a compose site beside a raw same-tag element emits the
+  discriminated selector (`first('basic-button.submit')`), and an indistinguishable pair is
+  refused. Regenerate module-list's and module-todo's client snapshots; the only change should be
+  `basic-button` → `basic-button.submit`. `check:corpus` and `typecheck` green.
+  **Channel/tier:** compiler, tier 1 Prevented. No new LTC: the refusal reuses the existing
+  unaddressable-element diagnostic's code.
 
-- [ ] LT-495: Repair LT-463's `test:server` fallout — JSX children against a `string` children prop, the golden compose registry, and the composition snapshots.
+- [ ] LT-496: A compose site's element reference ignores raw same-tag elements — count every element of the child's tag when choosing the selector.
   **Area:** compiler
-  **Needs:** LT-463, LT-490
-  **Gates:** test:server, typecheck, check:corpus
+  **Needs:** LT-495
+  **Gates:** test:server, check:corpus, typecheck
   **Area:** compiler
-  **Needs:** LT-463, LT-490
-  **Filed (Architect, 2026-10-07, from LT-490's review):** `test:server` has failed 16 tests on v3
-  since LT-463 integrated (`c090d4e7`). LT-463's gates did not name `test:server`, and the review
-  did not run it. There are three causes, and each is ruled below.
-  **1. A real type error: JSX children against a `string` `children` prop.**
-  - The variant-set typecheck fails with TS2322 ("Type 'Element' is not assignable to type
-    'string'") at module-dialog.tsx:138 and module-lazyload.tsx:122/129.
-  - ModuleScrollarea and CardCallout declare `children?: string`, the server-side truth: the
-    compiler lowers compose-site children to a markup string. But tsc checks the JSX children
-    against that declared type.
-  - **Ruling:** the host profile translates. In `host-profile.d.ts`, `LibraryManagedAttributes`
-    maps a string-assignable `children` to the JSX-children type: `JSX.Element | string`, singly
-    or as an array, which is what the compose lowering accepts. Do this beside the `i18n` omission
-    and keep the discriminated-union distribution. This also covers LT-474's branded `Children<…>`
-    string (ADR 0048 s2), because the brand stays string-assignable.
-  - **Rejected:** retyping each child's `children` as `JSX.Element`. That would lie about the
-    server arg and break the `children = ''` defaults.
-  - Pin it in the `.tsx` typecheck fixtures: a compose site with element children against
-    `children?: string` typechecks, and a function child still fails.
-  **2. A golden-harness gap.** `client.golden` and `server.golden` build a compose registry from
-  form-textbox alone. module-list now composes `<BasicButton>`, so it fails to compile there
-  ("corpus components must compile"). Add basic-button to both harnesses' compile-first set.
-  Don't stub it.
-  **3. Snapshots.** Regenerate them: the sim-driver fixtures (module-list, ticker, todo, dialog),
-  the equivalence audit (list, ticker, todo), the client golden (module-list) and the variant
-  parity (list, ticker, todo). Read each diff before accepting it. It must show only
-  the composition change from LT-463 (BasicButton's `secondary medium`/`constructive medium` inner
-  classes, the empty badge span, the composed-root attributes) and, for the ticker, LT-490's
-  `ALPHA`. Any other difference stops the task: write it in `NOTES.md`.
-  **Check:** `test:server` 0 failures; `typecheck` and `check:corpus` green.
-  **Channel/tier:** TypeScript — a host-profile typing fix that makes a correct compose site
-  typecheck. No new check.
+  **Needs:** LT-495
+  **Filed (Architect, 2026-10-07, from LT-495's review):** in `analysis/effects.ts`, the
+  compose-site reference adds a discriminator clause only when `countComposeBySource` finds more
+  than one compose site of the same child. Raw elements of the same tag in the parent's template
+  are not counted. module-todo composes one `<BasicButton class="submit">` beside raw
+  `<basic-button class="remove">` (in list items) and `<basic-button class="clear-completed">`, so
+  the generated client queries `first('basic-button')`. That is correct today only because the
+  submit comes first in document order. Moving the form below the footer would silently bind the
+  submit's `disabled` pass to the clear-completed button. module-list has the same shape.
+  **Change:** the uniqueness count covers every element of the child's tag the parent's
+  template can render, raw or composed. That includes elements in list items and arms, since a
+  host-level `first()` matches them too. When the tag is not unique, use the site's
+  discriminator clause (`composeDiscriminatorClause`, now considering all those elements). With
+  no distinguishing static class/id/`data-*`, refuse through the existing
+  `unaddressableElement` diagnostic with the same fix-it. Leave LT-319's shared-pass grouping
+  unchanged; it still applies only to compose sites.
+  **Check:** a `test:server` pin: a compose site beside a raw same-tag element emits the
+  discriminated selector (`first('basic-button.submit')`), and an indistinguishable pair is
+  refused. Regenerate module-list's and module-todo's client snapshots; the only change should be
+  `basic-button` → `basic-button.submit`. `check:corpus` and `typecheck` green.
+  **Channel/tier:** compiler, tier 1 Prevented. No new LTC: the refusal reuses the existing
+  unaddressable-element diagnostic's code.
 
 ### C — children contract
-
-- [ ] LT-472: Children Region — the server's region marker and the verifier's re-include (ADR 0048 s1).
-  **Area:** compiler
-  **Needs:** LT-461, LT-465
-  **Gates:** check:corpus, build:docs, check:links
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s1):** a parent owns the content it
-  passes as `children`. Today the structural verifier excludes everything under a composed child
-  (`:not(<child-tag> *)`), so a parent's `first()` into its own children fails LTC026.
-  **Do:**
-  1. **The region marker.** When the server renders a compiled compose site that passes children,
-     and the child's template has a `{children}` insertion, write `data-children="<parent-tag>"`
-     on the child's element that encloses the insertion. That element may be the child's root.
-     The marker names the content's **owner**. When a child passes its own `children` straight
-     through (`<D>{children}</D>`), the original owner's tag is written, not the forwarder's.
-     Content that a forwarder wraps first (`<D><div>{children}</div></D>`) nests: D's region is
-     owned by the forwarder, and the `div`'s region is owned by the original owner.
-     An instance with no compiled owner (page-rendered) gets no marker. Extracted arm and list
-     templates are server-rendered, so their clones carry the marker; pin that with a fixture.
-  2. **The verifier.** Count the Children Region as the parent's markup when proving uniqueness,
-     and exclude only the child's own template. The emitted runtime exclusion becomes
-     `:not(:is(<child> *):not(:is([data-children="<tag>"] *):not(:is([data-children="<tag>"] <child> *))))`.
-     That is the same algebra as LT-473's lowered guard, so write one helper that both use.
-     Constructs in the children content emit into the enclosing Mount Scope's mount (ADR 0046 s1,
-     as amended).
-  3. **Docs.** HOST_PROFILE § data account bullet 3 (ownership) and § element references (the
-     exclusion). Add `data-children` to VOCABULARY_LEDGER beside `data-key`, `data-arms` and
-     `data-list`.
-  **Channel/tier:** no new diagnostic. LTC026 stops firing for a parent reference into its own
-  region. That changes LTC026's reach, so the handoff is `pending-review`.
-  **Check:** a fixture composes a child whose template is `<pre><code>{children}</code></pre>`,
-  on both surfaces, with a parent `first('code.x')`-style reference into the passed content. Also
-  pin a forwarding fixture, an arm-held compose site and a list-item compose site.
 
 - [ ] LT-473: Scoped emission follows ownership — region re-include, child-side stop, self-nesting re-include (ADR 0048 s5/s6).
   **Area:** compiler

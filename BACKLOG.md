@@ -1426,3 +1426,28 @@ else moves up only by owner direction.
   **Check:** `bun run test:variants module-todo` green on all three surfaces; `test:server`
   and `check:corpus` green.
   **Channel/tier:** none — example-corpus API shape; no runtime check.
+
+- [ ] LT-497: Name the cause when a parent's reference into its content is unaddressable because no region marks it.
+  **Area:** compiler
+  **Needs:** LT-472
+  **Gates:** test:server, check:corpus
+  **Area:** compiler
+  **Needs:** LT-472
+  **Filed (Architect, 2026-10-07, from LT-472's review):** in two shapes, ADR 0048 s1 gives the
+  parent's content no marked region, and a parent `first()` into it falls through to LTC007's
+  generic "matches nothing / unaddressable" message:
+  1. **Mixed-content forward:** the child forwards the content beside its own markup
+     (`<E><b/>{children}</E>`). E's region belongs to the forwarder, and no element encloses the
+     original owner's content alone.
+  2. **Declared, never inserted:** the child declares `children` but its template never inserts
+     them.
+  **Ruling:** both stay refused. Each is correct under s1: there is no region to re-include, and
+  inventing a wrapper element would change the child's DOM. Only the message changes. Keep code
+  LTC007 and add two message variants that name the cause and the fix:
+  - for 1: "`<E>` forwards this content beside its own markup, so no region marks it as yours;
+    wrap `{children}` in an element in E's template".
+  - for 2: "`<C>` never inserts its children".
+  The `childrenRegion.unmarked` flag and a missing `childrenRegion` already carry the facts.
+  Final copy goes through `../writer/references/error-messages.md`.
+  **Check:** `test:server` pins both messages, on both surfaces.
+  **Channel/tier:** compiler, tier 1 Prevented (unchanged). No new code.
