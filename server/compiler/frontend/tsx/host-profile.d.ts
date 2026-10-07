@@ -404,6 +404,9 @@ declare namespace JSX {
 		fraction?: string
 	}
 	type ModuleTodoAttrs = CommonLightDom
+	/** LT-469: behavior-only chrome — the nav content is page-authored
+	 * children, so only the common set applies. */
+	type SectionMenuAttrs = CommonLightDom
 	type ModuleLazyloadAttrs = CommonLightDom & {
 		/** Parser-backed: read once at connect; the `src` property owns it after. */
 		src?: string | undefined
@@ -542,6 +545,7 @@ declare namespace JSX {
 		'module-splitview': ModuleSplitviewAttrs
 		'module-ticker': ModuleTickerAttrs
 		'module-todo': ModuleTodoAttrs
+		'section-menu': SectionMenuAttrs
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs
 		'css-probe': CssProbeAttrs
