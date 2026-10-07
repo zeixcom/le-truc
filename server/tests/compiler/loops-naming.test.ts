@@ -61,9 +61,11 @@ describe('runLoops — Pass 1 (server-data @for → each())', () => {
 								<li data-tab onClick={() => console.log(1)}>{tab}</li>
 							}
 						</ul>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -104,9 +106,11 @@ describe('runLoops — Pass 1 (construct-free body, LT-322)', () => {
 								<li>{tab}</li>
 							}
 						</ul>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -134,9 +138,11 @@ describe('runLoops — Pass 1b (reactive-list @for → reconcile())', () => {
 								<li><span>{item}</span></li>
 							}
 						</ul>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { createList } from '@zeix/le-truc'`,

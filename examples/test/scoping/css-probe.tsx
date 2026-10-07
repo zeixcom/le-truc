@@ -1,14 +1,18 @@
 /**
- * The scoped-CSS contract probe (LT-304, ADR 0033 s1/s3): a minimal
- * composing component whose sheet exercises every contract point the
- * `css-probe.spec.ts` comparison pins — the host rule, a guarded
- * `:host::before` (the lowered self-nesting difference, s7), a bare
- * internals rule that must not reach a composed child, and a `:global`
- * page rule.
+ * The platform-CSS contract probe (LT-501, ADR 0033): a minimal composing
+ * component whose sheet exercises each authored form `css-probe.spec.ts`
+ * pins against the same sheet inline in a plain host — a prelude-less
+ * `@scope` with an authored limit, `:scope` and `:where(:scope)` host
+ * rules, a tag-led rule and an unscoped rule. Its `CssProbeChild` compose
+ * site passes children (ADR 0048): a span of its own and a custom
+ * element, which the probe's rules reach as its descendants, with no limit
+ * of its own in the way. (A composed element in content is LTC011; a raw
+ * custom element is plain content.)
  * Deliberately not styled for looks; every declaration is an assertion.
  */
 import { css } from '@zeix/le-truc-compiler/macros'
 import { BasicButton } from '../../basic/button/basic-button.tsrx'
+import { CssProbeChild } from './css-probe-child.tsx'
 
 export type CssProbeProps = {}
 
@@ -24,27 +28,47 @@ export function CssProbe({}: CssProbeProps) {
 		<css-probe>
 			<p class="label">{'Label'}</p>
 			<p class="probe-global">{'Global'}</p>
+			<p class="tag-led">{'Tag-led'}</p>
 			<BasicButton label={'Child button'} />
 			<button type="button" class="own">
 				{'Own'}
 			</button>
+			<CssProbeChild>
+				<span class="x">{'Kid'}</span>
+				<x-kid-widget>
+					<button type="button">
+						<span>{'Kid button'}</span>
+					</button>
+				</x-kid-widget>
+			</CssProbeChild>
 
 			<style>{css`
-				:host {
-					display: block;
-					border-top: 3px solid rgb(255, 0, 0);
-				}
-				:host::before {
-					content: '';
-				}
-				.label {
-					color: rgb(0, 0, 255);
-				}
-				button {
-					text-transform: uppercase;
-				}
-				:global(.probe-global) {
+				.probe-global {
 					letter-spacing: 2px;
+				}
+				css-probe .tag-led {
+					word-spacing: 5px;
+				}
+				@scope to (basic-button > *) {
+					:scope {
+						display: block;
+						border-top: 3px solid rgb(255, 0, 0);
+					}
+					:where(:scope) {
+						outline-color: rgb(255, 0, 255);
+					}
+					:scope::before {
+						content: '';
+					}
+					.label {
+						color: rgb(0, 0, 255);
+					}
+					button {
+						text-transform: uppercase;
+					}
+					.x {
+						text-decoration-line: underline;
+					}
 				}
 			`}</style>
 		</css-probe>

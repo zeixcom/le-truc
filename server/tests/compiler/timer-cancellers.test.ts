@@ -28,9 +28,11 @@ const tsrx = (cancel: string, start: string) => `export function C({}: {})
 	${watchCleanup(cancel, start)}
 		<c-el>
 			<p>ok</p>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }`
 

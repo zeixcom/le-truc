@@ -263,57 +263,59 @@ export function ModuleTicker(
 			</table>
 
 			<style>{css`
-			:host {
-				display: block;
+			@scope to (basic-button > *) {
+				:scope {
+					display: block;
 
-				> .controls {
-					display: flex;
-					justify-content: flex-end;
-					gap: var(--space-m);
-					margin-block-end: var(--space-s);
-				}
-
-				& table {
-					width: 100%;
-					border-collapse: collapse;
-					font-variant-numeric: tabular-nums;
-				}
-
-				& th,
-				& td {
-					padding-block: var(--space-xs);
-					padding-inline: var(--space-s);
-					border-block-end: 1px solid var(--color-border-soft, currentColor);
-					text-align: end;
-				}
-
-				& th[scope="col"] {
-					text-align: end;
-					font-weight: normal;
-					color: var(--color-text-soft, inherit);
-
-					&:first-child {
-						text-align: start;
+					> .controls {
+						display: flex;
+						justify-content: flex-end;
+						gap: var(--space-m);
+						margin-block-end: var(--space-s);
 					}
-				}
 
-				& th[scope="row"] {
-					text-align: start;
-					font-family: var(--font-mono, monospace);
-					font-weight: bold;
-				}
+					& table {
+						width: 100%;
+						border-collapse: collapse;
+						font-variant-numeric: tabular-nums;
+					}
 
-				/* Direction indicators on the change cell */
-				& tr[data-direction="up"] .change {
-					color: var(--color-positive, var(--color-green-60));
-				}
+					& th,
+					& td {
+						padding-block: var(--space-xs);
+						padding-inline: var(--space-s);
+						border-block-end: 1px solid var(--color-border-soft, currentColor);
+						text-align: end;
+					}
 
-				& tr[data-direction="down"] .change {
-					color: var(--color-negative, var(--color-pink-60));
-				}
+					& th[scope="col"] {
+						text-align: end;
+						font-weight: normal;
+						color: var(--color-text-soft, inherit);
 
-				& tr[data-direction="flat"] .change {
-					color: var(--color-text-soft, inherit);
+						&:first-child {
+							text-align: start;
+						}
+					}
+
+					& th[scope="row"] {
+						text-align: start;
+						font-family: var(--font-mono, monospace);
+						font-weight: bold;
+					}
+
+					/* Direction indicators on the change cell */
+					& tr[data-direction="up"] .change {
+						color: var(--color-positive, var(--color-green-60));
+					}
+
+					& tr[data-direction="down"] .change {
+						color: var(--color-negative, var(--color-pink-60));
+					}
+
+					& tr[data-direction="flat"] .change {
+						color: var(--color-text-soft, inherit);
+					}
 				}
 			}`}</style>
 		</module-ticker>

@@ -262,155 +262,157 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 			</footer>
 
 			<style>
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
-				container-type: inline-size;
-
-				&:state(filter-completed) [data-container] li:not(:has(input:checked)) {
-					display: none;
-				}
-
-				&:state(filter-active) [data-container] li:has(input:checked) {
-					display: none;
-				}
-
-				> form {
+			@scope to (form-textbox > *, basic-button > *, form-checkbox > *, form-inplace-edit > *, form-radiogroup > *) {
+				:scope {
 					display: flex;
 					flex-direction: column;
-					align-items: flex-start;
-					gap: var(--space-m);
-					justify-content: space-between;
-				}
+					gap: var(--space-l);
+					container-type: inline-size;
 
-				& ol {
-					display: flex;
-					flex-direction: column;
-					gap: var(--space-m);
-					list-style: none;
-					margin: 0;
-					padding: 0;
-
-					&:empty {
+					&:state(filter-completed) [data-container] li:not(:has(input:checked)) {
 						display: none;
 					}
 
-					& li {
+					&:state(filter-active) [data-container] li:has(input:checked) {
+						display: none;
+					}
+
+					> form {
 						display: flex;
-						align-items: center;
-						justify-content: space-between;
+						flex-direction: column;
+						align-items: flex-start;
 						gap: var(--space-m);
+						justify-content: space-between;
+					}
+
+					& ol {
+						display: flex;
+						flex-direction: column;
+						gap: var(--space-m);
+						list-style: none;
 						margin: 0;
 						padding: 0;
 
-						/* LT-466: the editor sits beside the checkbox, not inside
-						   its label — the checkbox's own flex-grow cedes the free
-						   space to the editor, and a completed item keeps the text
-						   treatment its label used to carry. */
-						& > form-checkbox {
-							flex-grow: 0;
+						&:empty {
+							display: none;
 						}
 
-						& > form-inplace-edit {
-							flex: 1;
-							min-width: 0;
-						}
+						& li {
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							gap: var(--space-m);
+							margin: 0;
+							padding: 0;
 
-						&:has(input:checked) > form-inplace-edit {
-							opacity: var(--opacity-translucent);
-							text-decoration: line-through;
-						}
+							/* LT-466: the editor sits beside the checkbox, not inside
+							   its label — the checkbox's own flex-grow cedes the free
+							   space to the editor, and a completed item keeps the text
+							   treatment its label used to carry. */
+							& > form-checkbox {
+								flex-grow: 0;
+							}
 
-						&.dragging {
-							position: fixed;
-							z-index: 100;
-							box-sizing: border-box;
-							background-color: var(--color-background);
-							opacity: var(--opacity-dimmed);
-							box-shadow: 0 var(--space-xxs) var(--space-s) var(--color-shadow);
-							padding-inline: var(--space-s);
+							& > form-inplace-edit {
+								flex: 1;
+								min-width: 0;
+							}
 
-							& button.reorder:not(:disabled) {
-								cursor: grabbing;
+							&:has(input:checked) > form-inplace-edit {
+								opacity: var(--opacity-translucent);
+								text-decoration: line-through;
+							}
+
+							&.dragging {
+								position: fixed;
+								z-index: 100;
+								box-sizing: border-box;
+								background-color: var(--color-background);
+								opacity: var(--opacity-dimmed);
+								box-shadow: 0 var(--space-xxs) var(--space-s) var(--color-shadow);
+								padding-inline: var(--space-s);
+
+								& button.reorder:not(:disabled) {
+									cursor: grabbing;
+								}
+							}
+
+							&.drop-marker {
+								border: 2px dashed var(--color-selection);
+								border-radius: var(--space-xs);
+								background-color: var(--color-selection-hover);
+								padding: 0;
 							}
 						}
-
-						&.drop-marker {
-							border: 2px dashed var(--color-selection);
-							border-radius: var(--space-xs);
-							background-color: var(--color-selection-hover);
-							padding: 0;
-						}
-					}
-				}
-
-				& button.reorder {
-					height: var(--input-height);
-					min-inline-size: var(--input-height);
-					border-radius: var(--space-xs);
-					background: none;
-					border: none;
-					padding: 0;
-
-					&:disabled {
-						opacity: var(--opacity-translucent);
 					}
 
-					&:not(:disabled) {
-						cursor: grab;
-						opacity: var(--opacity-solid);
-						color: var(--color-border);
+					& button.reorder {
+						height: var(--input-height);
+						min-inline-size: var(--input-height);
+						border-radius: var(--space-xs);
+						background: none;
+						border: none;
+						padding: 0;
 
-						&:hover {
-							background-color: var(--color-overlay-hover);
-							color: var(--color-text-soft);
+						&:disabled {
+							opacity: var(--opacity-translucent);
 						}
 
-						&:active {
-							background-color: var(--color-overlay-active);
-							color: var(--color-text-soft);
+						&:not(:disabled) {
+							cursor: grab;
+							opacity: var(--opacity-solid);
+							color: var(--color-border);
+
+							&:hover {
+								background-color: var(--color-overlay-hover);
+								color: var(--color-text-soft);
+							}
+
+							&:active {
+								background-color: var(--color-overlay-active);
+								color: var(--color-text-soft);
+							}
 						}
 					}
-				}
 
-				> footer {
-					display: grid;
-					grid-template-columns: 1fr 1fr;
-					grid-template-areas: "filter filter" "count clear";
-					align-items: center;
-					gap: var(--space-m);
-					margin: 0;
-
-					& .remaining {
-						grid-area: count;
-						justify-self: start;
-						font-size: var(--font-size-s);
+					> footer {
+						display: grid;
+						grid-template-columns: 1fr 1fr;
+						grid-template-areas: "filter filter" "count clear";
+						align-items: center;
+						gap: var(--space-m);
 						margin: 0;
-					}
 
-					.split-button {
-						grid-area: filter;
-						justify-self: center;
-					}
+						& .remaining {
+							grid-area: count;
+							justify-self: start;
+							font-size: var(--font-size-s);
+							margin: 0;
+						}
 
-					.clear-completed {
-						grid-area: clear;
-						justify-self: end;
+						.split-button {
+							grid-area: filter;
+							justify-self: center;
+						}
+
+						.clear-completed {
+							grid-area: clear;
+							justify-self: end;
+						}
 					}
 				}
-			}
 
-			@container (width > 27rem) {
-				:host {
-					& form {
-						flex-direction: row;
-						align-items: flex-end;
-					}
+				@container (width > 27rem) {
+					:scope {
+						& form {
+							flex-direction: row;
+							align-items: flex-end;
+						}
 
-					& footer {
-						grid-template-columns: 1fr 1fr 1fr;
-						grid-template-areas: "count filter clear";
+						& footer {
+							grid-template-columns: 1fr 1fr 1fr;
+							grid-template-areas: "count filter clear";
+						}
 					}
 				}
 			}</style>

@@ -75,7 +75,9 @@ export function C({ rows = [] }: { rows?: Ticker[] })
 					</section>
 				}
 			</div>
-			<style>:host { display: block; }</style>
+			<style>@scope {
+	:scope { display: block; }
+}</style>
 		</${tag}>
 	}
 `
@@ -107,7 +109,9 @@ export function C({ rows = [] }: { rows?: Ticker[] }, { expose }: FactoryContext
 					)
 				})}
 			</div>
-			<style>{css\`:host { display: block; }\`}</style>
+			<style>{css\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</${tag}>
 	)
 }
@@ -341,7 +345,9 @@ export function C({ rows = [] }: { rows?: Ticker[] })
 				}
 			</ul>
 			${extra}
-			<style>:host { display: block; }</style>
+			<style>@scope {
+	:scope { display: block; }
+}</style>
 		</c-flat>
 	}
 `
@@ -361,7 +367,9 @@ export function C({ rows = [] }: { rows?: Ticker[] }) {
 				})}
 			</ul>
 			${extra}
-			<style>{css\`:host { display: block; }\`}</style>
+			<style>{css\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</c-flat>
 	)
 }
@@ -482,7 +490,9 @@ export function C({ rows = [] }: { rows?: Ticker[] })
 						<li>{() => ticker.get().price}</li>
 					}`,
 			)}
-			<style>:host { display: block; }</style>
+			<style>@scope {
+	:scope { display: block; }
+}</style>
 		</c-flat>
 	}
 `,
@@ -501,7 +511,9 @@ export function C({ rows = [] }: { rows?: Ticker[] }) {
 						return <li>{() => ticker.get().price}</li>
 					})}`,
 			)}
-			<style>{css\`:host { display: block; }\`}</style>
+			<style>{css\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</c-flat>
 	)
 }

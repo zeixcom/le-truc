@@ -4,36 +4,38 @@ export function CardBlogpost({ children }: { children?: string })
 			{children}
 
 			<style>
-			:host {
-				display: block;
-				padding: var(--space-l);
-				border: 1px solid var(--color-border-soft);
-				border-radius: var(--space-s);
+			@scope {
+				:scope {
+					display: block;
+					padding: var(--space-l);
+					border: 1px solid var(--color-border-soft);
+					border-radius: var(--space-s);
 
-				&:has(:focus-visible) {
-					box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
-				}
+					&:has(:focus-visible) {
+						box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+					}
 
-				& h2 {
-					font-size: var(--font-size-l);
+					& h2 {
+						font-size: var(--font-size-l);
 
-					& a {
-						color: inherit;
-						text-decoration: none;
+						& a {
+							color: inherit;
+							text-decoration: none;
 
-						&:hover {
-							text-decoration: underline;
-						}
+							&:hover {
+								text-decoration: underline;
+							}
 
-						&:focus-visible {
-							box-shadow: none;
+							&:focus-visible {
+								box-shadow: none;
+							}
 						}
 					}
-				}
 
-				& p {
-					color: var(--color-text);
-					margin-bottom: 0;
+					& p {
+						color: var(--color-text);
+						margin-bottom: 0;
+					}
 				}
 			}</style>
 		</card-blogpost>

@@ -154,9 +154,11 @@ describe('createSensor: the seed is the server value', () => {
 			<c-el>
 				<p>{() => mode.get()}</p>
 				<span>{mode}</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createSensor } from '@zeix/le-truc'`
@@ -217,9 +219,11 @@ export function CEl({}: {}, { expose }: FactoryContext<CElProps>) {
 	return (
 		<c-el>
 			<p>{() => mode.get()}</p>
-			<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+			<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 		</c-el>
 	)
 }`
@@ -260,9 +264,11 @@ describe('the emitted server loop reads the item cell', () => {
 						<li><span>{item}</span></li>
 					}
 				</ul>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createList } from '@zeix/le-truc'`,

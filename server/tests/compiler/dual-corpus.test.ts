@@ -77,7 +77,9 @@ export function VarEl({ label = 'x' }: { label?: string })
 			<var-el>
 				<p class="label">{label}</p>${extra}
 				<style>{css\`
-				:host { ${cssBody} }
+				@scope {
+					:scope { ${cssBody} }
+				}
 				\`}</style>
 			</var-el>
 	)
@@ -91,7 +93,9 @@ const varTsrx = (cssBody: string, extra = ''): string =>
 			<var-el>
 				<p class="label">{label}</p>${extra}
 				<style>
-				:host { ${cssBody} }
+				@scope {
+					:scope { ${cssBody} }
+				}
 				</style>
 			</var-el>
 	}`
@@ -331,12 +335,13 @@ describe('dual corpus (ADR 0032 sub-design 6, narrowed by ADR 0039)', () => {
 		expect(message).not.toContain('stops at')
 	})
 
-	test("a boundary-only drift fails with LTC051 naming each member's boundary set (LT-403)", async () => {
-		const outDir = path.join(scratch.path, 'variant-boundary-drift')
+	test('members that render different custom elements do not drift: the emission derives no boundaries (LT-501)', async () => {
+		const outDir = path.join(scratch.path, 'variant-boundary-no-drift')
 		const settled = await settle(
 			compileCorpus(
 				// Identical sheets, but only the .tsx member renders a custom
-				// element — the scope stops at a boundary the .tsrx lacks.
+				// element. LTC051 compared the derived boundary sets before
+				// LT-501; the emission now adds none, so nothing drifts.
 				[
 					memoryFile(VAR_TSRX, varTsrx('display: block')),
 					memoryFile(VAR_TSX, varTsx('display: block', '<x-extra></x-extra>')),
@@ -344,14 +349,7 @@ describe('dual corpus (ADR 0032 sub-design 6, narrowed by ADR 0039)', () => {
 				outDir,
 			),
 		)
-		if (settled.status !== 'rejected')
-			throw new Error('the run should have failed with LTC051')
-		const message = String(settled.reason)
-		expect(message).toContain('LTC051')
-		expect(message).toContain(`${VAR_TSX} stops at <x-extra>`)
-		expect(message).toContain(`${VAR_TSRX} stops at no custom element`)
-		expect(message).toContain('render the same custom elements')
-		expect(message).not.toContain('copy the styles')
+		expect(settled.status).toBe('fulfilled')
 	})
 
 	test('a tag declared by two SAME-SURFACE sources fails naming both files (LTC048)', async () => {
@@ -504,9 +502,11 @@ export function TwinParent(
 						💐 <span>0</span>
 					</button>
 				</basic-counter>
-				<style>{css\`			:host {
-				  display: block;
-				}\`}</style>
+				<style>{css\`			@scope {
+				:scope {
+					  display: block;
+					}
+			}\`}</style>
 			</twin-parent>
 	)
 }`

@@ -107,59 +107,61 @@ export function ModuleTabgroup(
 			}
 
 			<style>
-			:host {
-				display: block;
-				margin-block-end: var(--space-l);
+			@scope {
+				:scope {
+					display: block;
+					margin-block-end: var(--space-l);
 
-				> [role="tablist"] {
-					display: flex;
-					border-bottom: 1px solid var(--color-border);
-					padding: 0;
-					margin-block-end: 0;
+					> [role="tablist"] {
+						display: flex;
+						border-bottom: 1px solid var(--color-border);
+						padding: 0;
+						margin-block-end: 0;
 
-					> [role="tab"] {
-						border: 0;
-						border-color: transparent;
-						border-width: 2px 1px 0 1px;
-						border-radius: var(--space-xs) var(--space-xs) 0 0;
-						border-style: solid;
-						font-family: var(--font-family-sans);
-						font-size: var(--font-size-s);
-						font-weight: var(--font-weight-bold);
-						padding: var(--space-s) var(--space-m);
-						color: var(--color-text-soft);
-						background-color: var(--color-secondary);
-						cursor: pointer;
-						transition: all var(--transition-short) var(--easing-inout);
+						> [role="tab"] {
+							border: 0;
+							border-color: transparent;
+							border-width: 2px 1px 0 1px;
+							border-radius: var(--space-xs) var(--space-xs) 0 0;
+							border-style: solid;
+							font-family: var(--font-family-sans);
+							font-size: var(--font-size-s);
+							font-weight: var(--font-weight-bold);
+							padding: var(--space-s) var(--space-m);
+							color: var(--color-text-soft);
+							background-color: var(--color-secondary);
+							cursor: pointer;
+							transition: all var(--transition-short) var(--easing-inout);
 
-						&:hover,
-						&:focus {
-							color: var(--color-text);
-							background-color: var(--color-secondary-hover);
-						}
+							&:hover,
+							&:focus {
+								color: var(--color-text);
+								background-color: var(--color-secondary-hover);
+							}
 
-						&:focus {
-							z-index: 1;
-						}
+							&:focus {
+								z-index: 1;
+							}
 
-						&:active {
-							color: var(--color-text);
-							background-color: var(--color-secondary-active);
-						}
+							&:active {
+								color: var(--color-text);
+								background-color: var(--color-secondary-active);
+							}
 
-						&[aria-selected="true"] {
-							color: var(--color-primary-active);
-							border-color: var(--color-primary);
-							border-width: 3px 1px 0 1px;
-							background-color: var(--color-input);
-							margin-bottom: -1px;
+							&[aria-selected="true"] {
+								color: var(--color-primary-active);
+								border-color: var(--color-primary);
+								border-width: 3px 1px 0 1px;
+								background-color: var(--color-input);
+								margin-bottom: -1px;
+							}
 						}
 					}
-				}
 
-				> [role="tabpanel"] {
-					font-size: var(--font-size-m);
-					margin-block-start: var(--space-l);
+					> [role="tabpanel"] {
+						font-size: var(--font-size-m);
+						margin-block-start: var(--space-l);
+					}
 				}
 			}</style>
 		</module-tabgroup>

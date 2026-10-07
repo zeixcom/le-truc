@@ -129,57 +129,59 @@ export function ModuleSplitview(
 			</module-scrollarea>
 
 			<style>{css`
-			:host {
-				display: grid;
-				grid-template-columns: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
-				overflow: hidden;
+			@scope to (module-scrollarea > *) {
+				:scope {
+					display: grid;
+					grid-template-columns: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
+					overflow: hidden;
 
-				& module-scrollarea {
-					min-width: 0;
-					min-height: 0;
-				}
-
-				.divider {
-					display: flex;
-					align-items: center;
-					justify-content: center;
-					padding: 0;
-					border: 0;
-					background: var(--color-border-soft);
-					cursor: col-resize;
-					touch-action: none;
-					transition: background-color var(--transition-short) var(--easing-inout);
-
-					&::after {
-						content: "";
-						display: block;
-						width: 2px;
-						height: var(--space-l);
-						border-radius: 1px;
-						background: var(--color-text);
-						opacity: var(--opacity-translucent);
+					& module-scrollarea {
+						min-width: 0;
+						min-height: 0;
 					}
 
-					&:hover {
-						background: var(--color-border);
-					}
-
-					&:focus-visible {
-						outline: 2px solid var(--color-selection);
-						outline-offset: -2px;
-					}
-				}
-
-				&[orientation="vertical"] {
-					grid-template-columns: 1fr;
-					grid-template-rows: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
-
-					& .divider {
-						cursor: row-resize;
+					.divider {
+						display: flex;
+						align-items: center;
+						justify-content: center;
+						padding: 0;
+						border: 0;
+						background: var(--color-border-soft);
+						cursor: col-resize;
+						touch-action: none;
+						transition: background-color var(--transition-short) var(--easing-inout);
 
 						&::after {
-							width: var(--space-l);
-							height: 2px;
+							content: "";
+							display: block;
+							width: 2px;
+							height: var(--space-l);
+							border-radius: 1px;
+							background: var(--color-text);
+							opacity: var(--opacity-translucent);
+						}
+
+						&:hover {
+							background: var(--color-border);
+						}
+
+						&:focus-visible {
+							outline: 2px solid var(--color-selection);
+							outline-offset: -2px;
+						}
+					}
+
+					&[orientation="vertical"] {
+						grid-template-columns: 1fr;
+						grid-template-rows: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
+
+						& .divider {
+							cursor: row-resize;
+
+							&::after {
+								width: var(--space-l);
+								height: 2px;
+							}
 						}
 					}
 				}

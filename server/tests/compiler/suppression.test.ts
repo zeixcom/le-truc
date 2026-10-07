@@ -59,9 +59,11 @@ export function C({ name }: { name: string })
 			<span class="stamp" title={() => host.label + Date.now()}>stamped</span>
 			<p class="roll">{host.label.length + Math.random()}</p>
 			<input class="field" value={() => host.label + Date.now()} />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 
 }`
@@ -78,9 +80,11 @@ export function C({ name }: { name: string })
 	const seed = createCell('seed')
 	expose({ label: asString('') })
 		<r-el>{host.label.length + Math.random()}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</r-el>
 }`
 
@@ -100,9 +104,11 @@ export function C({}: {})
 		<c-el>
 			<span>{length}</span>
 			<div title={() => length.get() + Date.now()}></div>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 
 }`
@@ -128,9 +134,11 @@ export function C({ name }: { name: string })
 			<div class="box">@if (host.label.length + Math.random() > 0.5) { <b class="heads">heads</b> } @else { <i class="tails">tails</i> }</div>
 			<section class="pick">@switch ((host.label.length + Date.now()) % 3) { @case 0: { <s class="zero">0</s> } @case 1: { <u class="one">1</u> } @default: { <q class="many">n</q> } }</section>
 			@if (host.label.length + Math.random() >= 0) { <em class="up">up</em> }
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</a-el>
 }`
 

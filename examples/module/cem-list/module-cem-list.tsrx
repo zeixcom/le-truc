@@ -48,36 +48,38 @@ export function ModuleCemList({ children = '' }: { children?: string })
 		<module-cem-list>{children}
 
 			<style>
-			:host {
-				display: block;
-
-				& form-textbox {
+			@scope {
+				:scope {
 					display: block;
-					margin: 0 0 var(--space-l);
-				}
 
-				& card-collapsible summary {
-					flex-wrap: wrap;
-
-					& .header {
-						display: flex;
-						align-items: baseline;
-						gap: var(--space-s);
-						flex: none;
+					& form-textbox {
+						display: block;
+						margin: 0 0 var(--space-l);
 					}
-				}
 
-				& .demo-link a {
-					text-decoration: none;
+					& card-collapsible summary {
+						flex-wrap: wrap;
 
-					&:hover {
-						text-decoration: underline;
+						& .header {
+							display: flex;
+							align-items: baseline;
+							gap: var(--space-s);
+							flex: none;
+						}
 					}
-				}
 
-				& module-tabgroup {
-					display: block;
-					margin: var(--space-s) 0 0;
+					& .demo-link a {
+						text-decoration: none;
+
+						&:hover {
+							text-decoration: underline;
+						}
+					}
+
+					& module-tabgroup {
+						display: block;
+						margin: var(--space-s) 0 0;
+					}
 				}
 			}</style>
 		</module-cem-list>

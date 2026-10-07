@@ -36,9 +36,11 @@ const tsrx = compileComponent(
 					<li>{item}</li>
 				}
 			</ul>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 	'c.tsrx',
@@ -96,9 +98,11 @@ describe('harness names shadowed by args are aliased (LT-302)', () => {
 		<c-el>
 			<span>{count}</span>
 			<b>{() => bindText + count.get()}</b>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }
 import { createCell } from '@zeix/le-truc'`,

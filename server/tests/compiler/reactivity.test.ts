@@ -30,9 +30,11 @@ const childOf = (body: string, setup = 'const count = createCell(0)') => {
 			${setup}
 			expose({ count: count.get })
 				<c-el><p>${body}</p>
-					<style>:host {
-	  color: red;
-	}</style>
+					<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 				</c-el>
 		}`,
 		'c.tsrx',
@@ -52,9 +54,11 @@ describe('classifyChild — the lift rule', () => {
 			@{
 				expose({})
 					<c-el title={() => ${expr}}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -177,9 +181,11 @@ describe('the recorded class and dependency closure (ADR 0040 s7, LT-373)', () =
 			@{
 				expose({ label: '' })
 					<c-el><p>{label}</p>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -204,9 +210,11 @@ describe('the recorded class and dependency closure (ADR 0040 s7, LT-373)', () =
 			@{
 				expose({ disabled: false })
 					<c-el><button disabled={disabled}>Go</button>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -293,9 +301,11 @@ describe('lazy destructuring in binding position (LT-052, retired at the 0.2 pin
 				${setup}
 				expose({})
 					<c-el>x
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',

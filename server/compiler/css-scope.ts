@@ -1,103 +1,100 @@
 /**
- * Scoped emission of shadow-root-form CSS (ADR 0033 s1–s7, LT-304).
+ * Scoped emission of authored `@scope` CSS (ADR 0033, LT-501).
  *
- * A compiled sheet is authored as shadow-root CSS — `:host` for the host
- * element, bare selectors for the internals — and the compiler gives it
- * shadow-root scoping in light DOM, rules stopping at every custom element
- * the template renders. Native `@scope` where the CSS target supports it,
- * a flat-selector lowering where not; the boundary is every custom-element
- * tag the lowered template renders, composed and raw dashed tags alike.
+ * A compiled sheet means what the same sheet would mean as an inline
+ * `<style>` in its host. Scoping is authored with native `@scope`: a
+ * prelude-less `@scope { … }` is scoped to the host, `to (…)` sets the
+ * limits, and the compiler adds none of its own. The sheet leaves the host
+ * for the component's stylesheet, so the emission restores what the inline
+ * placement gave for free:
+ *
+ * - **Native** (every CSS target supports `@scope`): the sheet ships as
+ *   authored. A prelude-less `@scope` gains the explicit root
+ *   `@scope (<tag>)`; a preluded one, the block bodies and every other rule
+ *   stay verbatim.
+ * - **Lowered** (a target without `@scope`): each component `@scope` block
+ *   unwraps into flat selectors. The root leads as `:where(<root>)`, an
+ *   explicit `:scope` becomes the root compound with its (0,1,0)
+ *   specificity, and each authored limit becomes a zero-specificity guard.
+ *   Top-level rules outside `@scope` stay verbatim.
  *
  * EMISSION STRATEGY (the LT-268 review hazard): the lightningcss 1.33
  * WRITE path — returning nodes from a visitor — crashes with
  * "failed to deserialize … Specifier" whenever a nested rule's declaration
  * holds `var()` (upstream parcel-bundler/lightningcss#1065, tracked with
  * #1081; the read-only and plain-`transform` directions are unaffected).
- * Scoped emission therefore never returns nodes: the sheet is partitioned
- * at the TEXT level over lightningcss's read-only parse, the scoped
- * remainder is flattened through a plain `transform()` (Rust→JS only, the
- * direction every plain build already exercises) so nesting never reaches
- * the surgery, and every selector rewrite is a string splice — the checks
- * read lightningcss's deserialized selector components, the emission never
+ * Emission therefore never returns nodes: the sheet is partitioned at the
+ * TEXT level over lightningcss's read-only parse, the lowered remainder is
+ * flattened through a plain `transform()` (Rust→JS only, the direction
+ * every plain build already exercises) so nesting never reaches the
+ * surgery, and every selector rewrite is a string splice — the checks read
+ * lightningcss's deserialized selector components, the emission never
  * parses selectors at all. Bumping lightningcss must re-probe the plain
  * path with `var()` in nested rules before any visitor-based emission is
  * considered.
  *
  * The flattening pass runs with the configured targets and nesting forced
- * into the lowering (`include: Features.Nesting` — ADR 0033 s4: the
- * lowered emission is flat selectors). Everything else lowers only as far
- * as the real targets demand — the default (Baseline widely available)
- * keeps every Baseline-2023 feature authored. `:where()` and complex `:not()` — the
- * lowering's own vocabulary — are Baseline 2021, within the runtime's
- * baseline, so the guard never needs lowering.
+ * into the lowering (ADR 0033 s4: the lowered emission is flat selectors).
+ * Everything else lowers only as far as the real targets demand — the
+ * default (Baseline widely available) keeps every Baseline-2023 feature
+ * authored. `:where()` and complex `:not()` — the lowering's own
+ * vocabulary — are Baseline 2021, within the runtime's baseline, so the
+ * guard never needs lowering.
  *
- * `@keyframes`/`@font-face`/`@property` and the two whole-rule `:global`
- * forms hoist out of the scope verbatim (ADR 0033 s3/s6a); the `:global`
- * wrapper itself is authored-side vocabulary and unwraps on emission.
+ * `@keyframes`/`@font-face`/`@property` and the other hoisted at-rules emit
+ * verbatim.
  */
 
 import { Features, transform } from 'lightningcss-wasm'
 import type { CssBrowser, CssTargets } from './emit-paths'
-import type { TemplateNode } from './ir'
-import type { RegistryEntry } from './registry'
-import { walkTemplate } from './walk'
 
 /* === Types === */
 
 /** How the sheet is scoped: native `@scope` or the flat-selector lowering. */
 export type ScopeMode = 'native' | 'lowered'
 
-/** The authored forms with no meaning under the shadow-root contract. */
+/** The authored forms with no meaning under the platform-CSS contract. */
 export type ContractFace =
-	/** A rule led by the component's own tag (fix-it: `:host`). */
+	/** A rule inside `@scope` led by the component's own tag (fix-it: `:scope`). */
 	| 'own-tag-led'
 	/** `::slotted()` in a light-DOM component. */
 	| 'slotted'
 	/** `:host-context()` anywhere (removed from the spec). */
 	| 'host-context'
-	/** `:host` directly qualified (`:host.x`) — matches nothing in a shadow root. */
-	| 'host-qualifier'
-	/** `:global` in a form other than the two whole-rule forms. */
+	/** `:host` anywhere — it matches nothing outside a shadow root (fix-it: `:scope`). */
+	| 'host'
+	/** `:global` anywhere — an unscoped rule is a top-level rule. */
 	| 'global'
-
-/** Why a `:global` use is not one of the two whole-rule forms (ADR 0033 s6a). */
-export type GlobalFace =
-	| 'nested'
-	| 'prefixed'
-	| 'trailing'
-	| 'leading-ancestor'
-	| 'mid-selector'
-	| 'declarations'
+	/** A selector descending past a compound one of its block's limits excludes. */
+	| 'dead-by-limit'
 
 /** One authored-form finding over the sheet (ADR 0033 s6). */
 export type ContractFinding = {
 	face: ContractFace
-	/** For the `global` face: which misuse. */
-	globalFace?: GlobalFace
 	/** The offending selector, summarized, for the message body. */
 	selector: string
+	/** For the `dead-by-limit` face: the limit that excludes the subject. */
+	limit?: string
 	/** 0-based offset within the sheet text, when known. */
 	offset?: number | undefined
 	/** Where the rule's selector list ends (exclusive), when known. */
 	end?: number | undefined
 }
 
-/**
- * A selector descending past a boundary tag (`child-tag .x`,
- * `child-tag > .x`) — its subject lies inside a composed child, which the
- * scope always excludes (ADR 0033 s6, LT-399, LTC071). Kept apart from
- * `ContractFinding`: it needs the boundary set, so the pipeline checks
- * and maps it, not the authored-form pass (LT-404).
- */
-export type BoundaryFinding = {
-	/** Every dead member of the rule's selector list, summarized. */
-	selector: string
-	/** 0-based offset within the sheet text, when known. */
+/** Why the lowering cannot express an authored `@scope` form (ADR 0033 s4). */
+export type LoweringFace =
+	/** A `@scope` inside a component `@scope`. */
+	| 'nested-scope'
+	/** A limit that names `:scope` or `&`. */
+	| 'scope-in-limit'
+
+/** One `@scope` form the lowered emission cannot express (LTC089). */
+export type LoweringFinding = {
+	face: LoweringFace
+	/** 0-based offset of the `@scope` rule within the sheet text. */
 	offset: number | undefined
-	/** Where the rule's selector list ends (exclusive), when known. */
+	/** Where the `@scope` prelude ends (exclusive), when known. */
 	end?: number | undefined
-	/** The boundary tag the first dead member descends past. */
-	boundary: string
 }
 
 /* === Deserialized lightningcss shapes (read structurally, never written) === */
@@ -107,17 +104,14 @@ type LcComponent = {
 	name?: string
 	kind?: string
 	value?: string
+	selectors?: unknown
 }
 type LcSelector = LcComponent[]
-type LcDeclarations = {
-	declarations?: unknown[]
-	importantDeclarations?: unknown[]
-}
 type LcRule = {
 	type: string
 	value?: {
 		selectors?: LcSelector[]
-		declarations?: LcDeclarations
+		scopeEnd?: LcSelector[] | null
 		rules?: LcRule[]
 		loc?: { line: number; column: number }
 	}
@@ -146,8 +140,23 @@ export const scopeModeOf = (targets: CssTargets): ScopeMode => {
 }
 
 /**
+ * The configured CSS target in prose, for a diagnostic that names it
+ * (LTC089): `chrome 118, safari 17.3`, or the absence of any named browser.
+ */
+export const describeCssTargets = (targets: CssTargets): string => {
+	const named = Object.entries(targets) as [CssBrowser, number][]
+	if (named.length === 0) return 'no named browser'
+	return named
+		.map(([browser, packed]) => {
+			const minor = (packed >> 8) & 0xff
+			return `${browser} ${packed >> 16}${minor ? `.${minor}` : ''}`
+		})
+		.join(', ')
+}
+
+/**
  * The flattening pass's transform options: the REAL targets, with nesting
- * forced on (`include`) — nesting always lowers (ADR 0033 s4: the emitted
+ * forced on (`include`) — nesting always lowers (ADR 0033 s4: the lowered
  * sheet is flat), whatever the target names, and nothing else lowers
  * beyond what the targets demand (LT-398). `light-dark()` is EXCLUDED
  * from lowering: the default's Safari 17.4 predates it, and its lowering
@@ -181,30 +190,33 @@ const RECURSABLE_AT_RULES = new Set([
 	'starting-style',
 ])
 
+/** Every component of a selector, descending into functional pseudo-classes. */
+const forEachComponent = (
+	selector: LcSelector,
+	visit: (component: LcComponent) => void,
+): void => {
+	for (const component of selector) {
+		visit(component)
+		const inner = component.selectors
+		if (!Array.isArray(inner) || inner.length === 0) continue
+		// `:is()`/`:not()`/`:has()` carry a selector LIST, `:host()` one selector.
+		if (Array.isArray(inner[0]))
+			for (const member of inner as LcSelector[])
+				forEachComponent(member, visit)
+		else forEachComponent(inner as LcSelector, visit)
+	}
+}
+
 const isGlobalPseudo = (component: LcComponent): boolean =>
 	component.type === 'pseudo-class' &&
 	(component.kind === 'custom' || component.kind === 'custom-function') &&
 	component.name === 'global'
 
-/**
- * A selector that is EXACTLY `:global` — with the whole selector in its
- * parentheses (the whole-rule form, `custom-function`) or bare (the block
- * form, `custom`). Either shape is legal at the sheet's top level.
- */
-const isWholeGlobalSelector = (selector: LcSelector): boolean =>
-	selector.length === 1 && isGlobalPseudo(selector[0] as LcComponent)
-
-/** Why a selector's `:global` sits where it sits (ADR 0033 s6a). */
-const globalFaceOf = (selector: LcSelector): GlobalFace => {
-	const index = selector.findIndex(isGlobalPseudo)
-	const last = selector.length - 1
-	if (index === 0) {
-		if (selector.length === 1) return 'prefixed' // legal shape in a mixed list
-		const next = selector[1] as LcComponent
-		return next.type === 'combinator' ? 'leading-ancestor' : 'prefixed'
-	}
-	if (index === last) return 'trailing'
-	return 'mid-selector'
+const COMBINATOR_TEXT: Record<string, string> = {
+	descendant: ' ',
+	child: ' > ',
+	'next-sibling': ' + ',
+	'later-sibling': ' ~ ',
 }
 
 /** The deserialized selector's authored text is not carried — summarize it. */
@@ -212,8 +224,9 @@ const selectorTextOf = (selector: LcSelector): string =>
 	selector
 		.map(component => {
 			if (component.type === 'combinator')
-				return component.value === 'descendant' ? ' ' : ` ${component.value} `
+				return COMBINATOR_TEXT[component.value ?? ''] ?? ` ${component.value} `
 			if (component.type === 'nesting') return '&'
+			if (component.type === 'universal') return '*'
 			if (component.type === 'type') return `${component.name ?? ''}`
 			if (component.type === 'class') return `.${component.name ?? ''}`
 			if (component.type === 'pseudo-element')
@@ -293,17 +306,108 @@ const shiftedLocToOffset = (
 	(lineStarts[loc.line] ?? 0) +
 	Math.max(0, loc.column - 1 - (strip[loc.line] ?? 0))
 
+/* --- Limits: the dead-rule check (LTC071) --- */
+
+/** A flat selector split at its combinators: compounds and the combinators between. */
+type Compounds = { compounds: LcComponent[][]; combinators: string[] }
+
+const compoundsOf = (selector: LcSelector): Compounds => {
+	const compounds: LcComponent[][] = [[]]
+	const combinators: string[] = []
+	for (const component of selector) {
+		// `::before` and kin ride in the compound they end.
+		if (
+			component.type === 'combinator' &&
+			component.value !== 'pseudo-element' &&
+			component.value !== 'slot-assignment'
+		) {
+			combinators.push(component.value ?? '')
+			compounds.push([])
+		} else compounds[compounds.length - 1]?.push(component)
+	}
+	return { compounds, combinators }
+}
+
+const sameCompound = (a: LcComponent[], b: LcComponent[]): boolean =>
+	JSON.stringify(a) === JSON.stringify(b)
+
 /**
- * `depth` counts every enclosing block (a `:global` anywhere but the sheet's
- * top level is the nested face); `styleDepth` counts only enclosing STYLE
- * rules — a rule inside a top-level `@media` is still a top-level rule for
- * the own-tag-led face (LT-398), the shape a tag-led legacy sheet has.
+ * Resolve one selector against one parent alternative into a flat
+ * selector: `&` becomes the parent, a nested selector without `&` is
+ * relative and gets an implicit `& ` lead. At the top of a `@scope` block
+ * (no parent) `&` is the scope root, `:scope`.
+ */
+const resolveAgainst = (
+	selector: LcSelector,
+	parent: LcSelector | null,
+): LcSelector => {
+	const root: LcComponent = { type: 'pseudo-class', kind: 'scope' }
+	if (!selector.some(component => component.type === 'nesting')) {
+		return parent
+			? [...parent, { type: 'combinator', value: 'descendant' }, ...selector]
+			: selector
+	}
+	return selector.flatMap(component =>
+		component.type === 'nesting' ? (parent ?? [root]) : [component],
+	)
+}
+
+/**
+ * Whether a flat selector's subject always lies inside what one limit
+ * excludes: some run of its compounds equals the limit and a descendant or
+ * child combinator follows. A limit of the form `<X> > *` also excludes
+ * everything inside `<X>`, so a run equal to `<X>` followed that way is
+ * dead too — the shape `to (<child-tag> > *)` takes.
+ */
+const deadByLimit = (selector: LcSelector, limit: LcSelector): boolean => {
+	const subject = compoundsOf(selector)
+	const excluded = compoundsOf(limit)
+	const universalTail =
+		excluded.compounds.length > 1 &&
+		excluded.combinators[excluded.combinators.length - 1] === 'child' &&
+		excluded.compounds[excluded.compounds.length - 1]?.length === 1 &&
+		excluded.compounds[excluded.compounds.length - 1]?.[0]?.type === 'universal'
+	const heads = [excluded]
+	if (universalTail)
+		heads.push({
+			compounds: excluded.compounds.slice(0, -1),
+			combinators: excluded.combinators.slice(0, -1),
+		})
+	for (const head of heads) {
+		const length = head.compounds.length
+		for (let end = length - 1; end < subject.compounds.length - 1; end++) {
+			const next = subject.combinators[end]
+			if (next !== 'descendant' && next !== 'child') continue
+			const start = end - length + 1
+			const matches =
+				head.compounds.every((compound, index) =>
+					sameCompound(subject.compounds[start + index] ?? [], compound),
+				) &&
+				head.combinators.every(
+					(combinator, index) =>
+						subject.combinators[start + index] === combinator,
+				)
+			if (matches) return true
+		}
+	}
+	return false
+}
+
+/** What a scope block hands its rules: its authored limits. */
+type ScopeBlock = { limits: LcSelector[] }
+
+/**
+ * `styleDepth` counts enclosing STYLE rules only — a rule inside a
+ * conditional group of a `@scope` is still a top-level scoped rule for the
+ * own-tag-led face. `parents` carries each enclosing rule's resolved flat
+ * alternatives for the limit check.
  */
 const checkRules = (
 	rules: readonly LcRule[],
 	tag: string,
-	depth: number,
+	scope: ScopeBlock | null,
 	styleDepth: number,
+	parents: readonly LcSelector[] | null,
 	lineStarts: readonly number[],
 	findings: ContractFinding[],
 ): void => {
@@ -312,102 +416,95 @@ const checkRules = (
 			const value = rule.value
 			const selectors = value?.selectors ?? []
 			const offset = value?.loc ? locToOffset(lineStarts, value.loc) : undefined
+			const seen = new Set<ContractFace>()
+			const report = (
+				face: ContractFace,
+				selector: LcSelector,
+				limit?: string,
+			): void => {
+				if (seen.has(face)) return
+				seen.add(face)
+				findings.push({
+					face,
+					selector: selectorTextOf(selector),
+					...(limit !== undefined ? { limit } : {}),
+					offset,
+				})
+			}
+			const resolved: LcSelector[] = []
+			const dead: string[] = []
+			let deadLimit: string | undefined
 			for (const selector of selectors) {
 				const first = selector[0] as LcComponent | undefined
 				if (
+					scope &&
 					styleDepth === 0 &&
 					first?.type === 'type' &&
 					first.name?.toLowerCase() === tag
 				)
-					findings.push({
-						face: 'own-tag-led',
-						selector: selectorTextOf(selector),
-						offset,
-					})
-				for (const [index, component] of selector.entries()) {
+					report('own-tag-led', selector)
+				forEachComponent(selector, component => {
 					if (
 						component.type === 'pseudo-element' &&
 						component.kind === 'slotted'
 					)
-						findings.push({
-							face: 'slotted',
-							selector: selectorTextOf(selector),
-							offset,
-						})
+						report('slotted', selector)
 					if (
 						component.type === 'pseudo-class' &&
 						component.kind === 'custom-function' &&
 						component.name === 'host-context'
 					)
-						findings.push({
-							face: 'host-context',
-							selector: selectorTextOf(selector),
-							offset,
-						})
-					// R3 (owner, 2026-10-02): `:host` followed directly by a
-					// qualifier — `:host.x`, `:host:hover`, `:host[attr]` —
-					// matches nothing in a shadow root; the qualifier belongs
-					// in the arguments (`:host(<qualifier>)`).
-					if (
+						report('host-context', selector)
+					else if (
 						component.type === 'pseudo-class' &&
-						component.kind === 'host' &&
-						index < selector.length - 1
-					) {
-						const next = selector[index + 1] as LcComponent
-						const qualified =
-							next.type === 'class' ||
-							next.type === 'attribute' ||
-							(next.type === 'pseudo-class' && next.kind !== 'host')
-						if (qualified)
-							findings.push({
-								face: 'host-qualifier',
-								selector: selectorTextOf(selector),
-								offset,
-							})
+						component.kind === 'host'
+					)
+						report('host', selector)
+					if (isGlobalPseudo(component)) report('global', selector)
+				})
+				if (scope) {
+					const alternatives = (parents ?? [null]).map(parent =>
+						resolveAgainst(selector, parent),
+					)
+					resolved.push(...alternatives)
+					// Dead only when dead under EVERY parent alternative.
+					for (const limit of scope.limits) {
+						if (alternatives.every(flat => deadByLimit(flat, limit))) {
+							dead.push(selectorTextOf(selector))
+							deadLimit ??= selectorTextOf(limit)
+							break
+						}
 					}
 				}
 			}
-			const hasGlobal = selectors.some(selectorsOf =>
-				selectorsOf.some(isGlobalPseudo),
-			)
-			if (hasGlobal) {
-				if (depth > 0) {
-					findings.push({
-						face: 'global',
-						globalFace: 'nested',
-						selector: selectorTextOf((selectors[0] as LcSelector) ?? []),
-						offset,
-					})
-				} else if (!selectors.every(isWholeGlobalSelector)) {
-					const offender =
-						(selectors as LcSelector[]).find(selectorsOf =>
-							selectorsOf.some(isGlobalPseudo),
-						) ?? (selectors[0] as LcSelector)
-					findings.push({
-						face: 'global',
-						globalFace: globalFaceOf(offender),
-						selector: selectorTextOf(offender),
-						offset,
-					})
-				} else {
-					const bare = (selectors[0] as LcSelector)[0]?.kind === 'custom'
-					const declarationCount =
-						(value?.declarations?.declarations?.length ?? 0) +
-						(value?.declarations?.importantDeclarations?.length ?? 0)
-					if (bare && declarationCount > 0)
-						findings.push({
-							face: 'global',
-							globalFace: 'declarations',
-							selector: ':global',
-							offset,
-						})
-				}
-			}
+			// One finding per rule, naming every dead member of its list.
+			if (deadLimit !== undefined)
+				findings.push({
+					face: 'dead-by-limit',
+					selector: dead.join(', '),
+					limit: deadLimit,
+					offset,
+				})
 			checkRules(
 				value?.rules ?? [],
 				tag,
-				depth + 1,
+				scope,
 				styleDepth + 1,
+				scope ? resolved : null,
+				lineStarts,
+				findings,
+			)
+			continue
+		}
+		if (rule.type === 'scope') {
+			// The outermost `@scope` is the component's; a nested one keeps
+			// the component's block (LTC089 flags it on lowered targets).
+			checkRules(
+				rule.value?.rules ?? [],
+				tag,
+				scope ?? { limits: rule.value?.scopeEnd ?? [] },
+				styleDepth,
+				scope ? parents : null,
 				lineStarts,
 				findings,
 			)
@@ -417,8 +514,9 @@ const checkRules = (
 			checkRules(
 				rule.value?.rules ?? [],
 				tag,
-				depth + 1,
+				scope,
 				styleDepth,
+				parents,
 				lineStarts,
 				findings,
 			)
@@ -426,13 +524,14 @@ const checkRules = (
 }
 
 /**
- * Check a parsed component stylesheet against the shadow-root authored
- * form (ADR 0033 s6, LT-304): a rule led by the component's own tag
- * (fix-it: `:host`), `::slotted()` in a light-DOM component,
- * `:host-context()` anywhere, and every `:global` form except the two
- * top-level whole-rule forms. Runs over lightningcss's read-only parse —
- * the sheet syntax is already LTC064's, so every shape here parsed clean.
- * Offsets resolve against the sheet text lightningcss parsed.
+ * Check a parsed component stylesheet against the authored `@scope` form
+ * (ADR 0033 s6): a rule inside `@scope` led by the component's own tag
+ * (fix-it: `:scope`), `:host` anywhere (fix-it: `:scope`), `::slotted()`
+ * in a light-DOM component, `:host-context()` anywhere, `:global` anywhere
+ * and a selector an authored limit always excludes. Runs over
+ * lightningcss's read-only parse — the sheet syntax is already LTC064's, so
+ * every shape here parsed clean. Offsets resolve against the sheet text
+ * lightningcss parsed.
  */
 export const checkSheetContract = (
 	sheet: unknown,
@@ -440,196 +539,81 @@ export const checkSheetContract = (
 	tag: string,
 ): ContractFinding[] => {
 	const findings: ContractFinding[] = []
-	const lineStarts = lineStartsOf(sheetText)
 	checkRules(
 		(sheet as { rules?: LcRule[] })?.rules ?? [],
 		tag.toLowerCase(),
-		0,
-		0,
-		lineStarts,
-		findings,
-	)
-	return findings.map(finding => withSelectorEnd(sheetText, finding))
-}
-
-/* === Descending past a boundary (ADR 0033 s6, LT-399) === */
-
-/**
- * One resolved alternative of a selector, as far as the boundary check
- * needs it: whether it already descended past a boundary tag (and which),
- * and whether its subject compound names one — the state a nested `&`
- * inherits.
- */
-type BoundaryState = { dead: string | null; subjectBoundary: string | null }
-
-/**
- * Resolve one selector against one parent alternative. A compound naming
- * a boundary tag followed by a descendant or child combinator has a
- * subject strictly inside that child, which the scope limit (native) and
- * the guard (lowered) always exclude. Sibling combinators stay in scope.
- * A nested selector without `&` is relative: an implicit `& ` leads it.
- */
-const resolveBoundaryState = (
-	selector: LcSelector,
-	parent: BoundaryState | null,
-	boundaries: ReadonlySet<string>,
-): BoundaryState => {
-	const components =
-		parent && !selector.some(component => component.type === 'nesting')
-			? [
-					{ type: 'nesting' } as LcComponent,
-					{ type: 'combinator', value: 'descendant' } as LcComponent,
-					...selector,
-				]
-			: selector
-	let dead: string | null = null
-	let compound: string | null = null
-	for (const component of components) {
-		if (component.type === 'nesting' && parent) {
-			dead ??= parent.dead
-			compound ??= parent.subjectBoundary
-		} else if (
-			component.type === 'type' &&
-			component.name &&
-			boundaries.has(component.name.toLowerCase())
-		)
-			compound = component.name.toLowerCase()
-		else if (component.type === 'combinator') {
-			if (component.value === 'pseudo-element') continue
-			if (
-				compound &&
-				(component.value === 'descendant' || component.value === 'child')
-			)
-				dead ??= compound
-			compound = null
-		}
-	}
-	return { dead, subjectBoundary: compound }
-}
-
-const checkBoundaryRules = (
-	rules: readonly LcRule[],
-	parents: readonly BoundaryState[] | null,
-	boundaries: ReadonlySet<string>,
-	lineStarts: readonly number[],
-	findings: BoundaryFinding[],
-): void => {
-	for (const rule of rules) {
-		if (rule.type === 'style') {
-			const value = rule.value
-			const selectors = value?.selectors ?? []
-			// The whole-rule `:global` forms ship outside the scope: no
-			// boundary applies to them or to what they hold.
-			if (
-				parents === null &&
-				selectors.length > 0 &&
-				selectors.every(isWholeGlobalSelector)
-			)
-				continue
-			const offset = value?.loc ? locToOffset(lineStarts, value.loc) : undefined
-			const states: BoundaryState[] = []
-			const dead: string[] = []
-			let deadBoundary: string | null = null
-			for (const selector of selectors) {
-				const resolved = (parents ?? [null]).map(parent =>
-					resolveBoundaryState(selector, parent, boundaries),
-				)
-				// Dead only when dead under EVERY parent alternative.
-				const boundary = resolved.every(state => state.dead !== null)
-					? (resolved[0]?.dead ?? null)
-					: null
-				if (boundary) {
-					dead.push(selectorTextOf(selector))
-					deadBoundary ??= boundary
-				}
-				states.push(...resolved)
-			}
-			// One finding per rule, naming every dead member of its list.
-			if (deadBoundary)
-				findings.push({
-					selector: dead.join(', '),
-					offset,
-					boundary: deadBoundary,
-				})
-			checkBoundaryRules(
-				value?.rules ?? [],
-				states,
-				boundaries,
-				lineStarts,
-				findings,
-			)
-			continue
-		}
-		if (RECURSABLE_AT_RULES.has(rule.type))
-			checkBoundaryRules(
-				rule.value?.rules ?? [],
-				parents,
-				boundaries,
-				lineStarts,
-				findings,
-			)
-	}
-}
-
-/**
- * Check a parsed component stylesheet for selectors that descend past a
- * boundary tag (ADR 0033 s6, LT-399): `module-lazyload h1` in a sheet
- * whose template renders `<module-lazyload>` matches nothing in either
- * emission mode — the subject is the child's content, not the
- * component's. Needs the boundary set, so it runs where the compose
- * registry is known (the pipeline), after the authored-form checks.
- * Offsets resolve against the sheet text lightningcss parsed.
- */
-export const checkSheetBoundaries = (
-	sheet: unknown,
-	sheetText: string,
-	boundaries: readonly string[],
-): BoundaryFinding[] => {
-	const findings: BoundaryFinding[] = []
-	if (boundaries.length === 0) return findings
-	checkBoundaryRules(
-		(sheet as { rules?: LcRule[] })?.rules ?? [],
 		null,
-		new Set(boundaries.map(tag => tag.toLowerCase())),
+		0,
+		null,
 		lineStartsOf(sheetText),
 		findings,
 	)
 	return findings.map(finding => withSelectorEnd(sheetText, finding))
 }
 
-/* === The boundary === */
+/* === Forms the lowering cannot express (ADR 0033 s4, LTC089) === */
+
+const hasScopeReference = (selector: LcSelector): boolean => {
+	let found = false
+	forEachComponent(selector, component => {
+		if (
+			component.type === 'nesting' ||
+			(component.type === 'pseudo-class' && component.kind === 'scope')
+		)
+			found = true
+	})
+	return found
+}
+
+const checkLoweringRules = (
+	rules: readonly LcRule[],
+	inScope: boolean,
+	lineStarts: readonly number[],
+	findings: LoweringFinding[],
+): void => {
+	for (const rule of rules) {
+		if (rule.type === 'scope') {
+			const offset = rule.value?.loc
+				? locToOffset(lineStarts, rule.value.loc)
+				: undefined
+			if (inScope) findings.push({ face: 'nested-scope', offset })
+			else if ((rule.value?.scopeEnd ?? []).some(hasScopeReference))
+				findings.push({ face: 'scope-in-limit', offset })
+			checkLoweringRules(rule.value?.rules ?? [], true, lineStarts, findings)
+			continue
+		}
+		if (rule.type === 'style' || RECURSABLE_AT_RULES.has(rule.type))
+			checkLoweringRules(rule.value?.rules ?? [], inScope, lineStarts, findings)
+	}
+}
 
 /**
- * Every custom-element tag the lowered template renders (ADR 0033 s3):
- * raw dashed tags and composed children alike, document order, deduplicated
- * keep-first. The walk stops at compose nodes — the child's internals are
- * the child's own business — and a self-nested component's own tag belongs
- * in the list like any other. Page-authored children (`{children}` holes)
- * are NOT boundaries: the component's rules style them (ADR 0033 s7).
+ * The `@scope` forms the lowered emission cannot express (ADR 0033 s4): a
+ * `@scope` inside a component `@scope`, and a limit that names `:scope`.
+ * Only a lowered target fails on them — a native target ships the same
+ * sheet verbatim, so the caller runs this check for `scopeModeOf(targets)
+ * === 'lowered'` alone.
  */
-export const collectScopeBoundaries = (
-	root: TemplateNode & { kind: 'element' },
-	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
-): string[] => {
-	const tags: string[] = []
-	const seen = new Set<string>()
-	const push = (tag: string | undefined): void => {
-		if (!tag || !tag.includes('-') || seen.has(tag)) return
-		seen.add(tag)
-		tags.push(tag)
-	}
-	walkTemplate(
-		root,
-		(node, parent) => {
-			// The scope root itself is not a boundary — only what it renders
-			// (a self-nested instance arrives as a child, parent non-null).
-			if (parent === null) return
-			if (node.kind === 'element') push(node.tag)
-			if (node.kind === 'compose') push(composeRegistry?.get(node.source)?.tag)
-		},
-		{ intoCompose: false },
+export const checkSheetLowering = (
+	sheet: unknown,
+	sheetText: string,
+): LoweringFinding[] => {
+	const findings: LoweringFinding[] = []
+	checkLoweringRules(
+		(sheet as { rules?: LcRule[] })?.rules ?? [],
+		false,
+		lineStartsOf(sheetText),
+		findings,
 	)
-	return tags
+	return findings.map(finding => {
+		if (finding.offset === undefined) return finding
+		// The range is the `@scope` prelude, up to its block.
+		const brace = sheetText.indexOf('{', finding.offset)
+		if (brace < 0) return finding
+		let end = brace
+		while (end > finding.offset && /\s/.test(sheetText[end - 1] ?? '')) end--
+		return { ...finding, end }
+	})
 }
 
 /* === Text scanning (the surgery never parses selectors) === */
@@ -730,23 +714,16 @@ const skipSpaceAndComments = (text: string, from: number): number => {
 type TextRule = { start: number; end: number; brace: number }
 
 /**
- * Every rule in a stylesheet text, depth-first, comments and strings
- * accounted for. At-rule blocks are recursed only for the recursable
- * names — `@keyframes` descriptors and keyframe selectors are never
- * component selectors. `isAtRule` distinguishes the two.
+ * The rules at ONE nesting level of a stylesheet text range, comments and
+ * strings accounted for. Blockless statements (`@layer a, b;`) are no rule
+ * and must not swallow the selector of the next one (LT-398).
  */
-const collectTextRules = (
-	text: string,
-	from: number,
-	to: number,
-	out: TextRule[],
-): void => {
+const scanRules = (text: string, from: number, to: number): TextRule[] => {
+	const out: TextRule[] = []
 	let i = skipSpaceAndComments(text, from)
 	while (i < to) {
 		if (i >= text.length || text[i] === '}') break
 		const brace = indexOfUnquoted(text, '{', i)
-		// A blockless statement (`@layer a, b;`) ends at its `;` — it is no
-		// rule, and it must not swallow the selector of the next one (LT-398).
 		const semicolon = indexOfUnquoted(text, ';', i)
 		if (
 			semicolon !== -1 &&
@@ -759,22 +736,10 @@ const collectTextRules = (
 		if (brace === -1 || brace >= to) break
 		const close = matchingBrace(text, brace)
 		if (close === -1 || close >= to) break
-		const rule: TextRule = { start: i, end: close + 1, brace }
-		out.push(rule)
-		const name = atRuleName(text, rule)
-		const recursable =
-			name !== null &&
-			[
-				'media',
-				'supports',
-				'container',
-				'layer',
-				'starting-style',
-				'scope',
-			].includes(name)
-		if (recursable) collectTextRules(text, brace + 1, close, out)
+		out.push({ start: i, end: close + 1, brace })
 		i = skipSpaceAndComments(text, close + 1)
 	}
+	return out
 }
 
 /** The at-rule name of a text rule, or null for a style rule. */
@@ -784,174 +749,14 @@ const atRuleName = (text: string, rule: TextRule): string | null => {
 	return match?.[1] ?? null
 }
 
-/* === The emission === */
-
-/**
- * Partition of the authored sheet: verbatim fragments hoisted out of the
- * scope, and the scoped remainder's text span.
- */
-type Fragment = {
-	kind: 'verbatim' | 'global-whole' | 'global-block'
-	start: number
-	end: number
-}
-
-const HOISTED_AT_RULES = new Set([
-	'keyframes',
-	'import',
-	'namespace',
-	'font-face',
-	'property',
-	'counter-style',
-	'font-palette-values',
-	'font-feature-values',
-	'page',
-	'view-transition',
-	'color-profile',
+/** Conditional groups, whose blocks hold rules the emission descends into. */
+const CONDITIONAL_AT_RULES = new Set([
+	'media',
+	'supports',
+	'container',
+	'layer',
+	'starting-style',
 ])
-
-/**
- * Top-level partition of the authored sheet, over the parsed rules' locs:
- * `@keyframes`/`@font-face`/`@property` and the two whole-rule `:global`
- * forms become fragments; everything else stays in the scoped remainder.
- * Fragment/global-block CONTENT extraction happens at emission from the
- * authored text spans.
- */
-const partitionSheet = (
-	sheet: unknown,
-	sheetText: string,
-): {
-	canonical: string
-	fragments: Fragment[]
-	scopedSpans: Array<[number, number]>
-} => {
-	const fragments: Fragment[] = []
-	const scopedSpans: Array<[number, number]> = []
-	const { text: canonical, strip } = dedentWithStrips(sheetText)
-	const rules = (sheet as { rules?: LcRule[] })?.rules ?? []
-	const lineStarts = lineStartsOf(canonical)
-	const bounds: number[] = rules.map(rule =>
-		rule.value?.loc ? shiftedLocToOffset(lineStarts, strip, rule.value.loc) : 0,
-	)
-	for (const [index, rule] of rules.entries()) {
-		const start = bounds[index] as number
-		const end = (bounds[index + 1] as number | undefined) ?? canonical.length
-		if (HOISTED_AT_RULES.has(rule.type)) {
-			fragments.push({ kind: 'verbatim', start, end })
-			continue
-		}
-		if (rule.type === 'style') {
-			const selectors = rule.value?.selectors ?? []
-			if (selectors.length > 0 && selectors.every(isWholeGlobalSelector)) {
-				const only = selectors[0] as LcSelector
-				fragments.push({
-					kind: only[0]?.kind === 'custom' ? 'global-block' : 'global-whole',
-					start,
-					end,
-				})
-				continue
-			}
-		}
-		scopedSpans.push([start, end])
-	}
-	return { canonical, fragments, scopedSpans }
-}
-
-/**
- * The emitted text of one hoisted fragment: hoisted at-rules and the
- * `:global` wrapper's unwrap (ADR 0033 s6a — the wrapper is authored-side
- * vocabulary; the rule itself ships outside the scope as written).
- */
-const fragmentText = (fragment: Fragment, sheetText: string): string => {
-	const text = sheetText.slice(fragment.start, fragment.end)
-	if (fragment.kind === 'verbatim' || fragment.kind === 'global-block') {
-		if (fragment.kind === 'global-block') {
-			const brace = indexOfUnquoted(text, '{', 0)
-			const close = matchingBrace(text, brace)
-			if (brace !== -1 && close !== -1) return text.slice(brace + 1, close)
-		}
-		return text
-	}
-	// `:global(<a>), :global(<b>) { … }` → `<a>, <b> { … }` — every list
-	// member unwraps, not just the first (LT-398).
-	const brace = indexOfUnquoted(text, '{', 0)
-	if (brace === -1) return text
-	const members = splitTopLevelCommas(text.slice(0, brace)).map(member => {
-		const trimmed = member.trim()
-		const paren = trimmed.indexOf('(')
-		const closeParen = paren === -1 ? -1 : matchingParen(trimmed, paren)
-		return closeParen === -1
-			? trimmed
-			: trimmed.slice(paren + 1, closeParen).trim()
-	})
-	return `${members.join(', ')} ${text.slice(brace).trim()}`
-}
-
-/**
- * A leading `:host` compound in a flat selector, located: the wrapper span
- * and, when present, its argument span. After the flattening pass `:host`
- * is always the leading compound of a complex selector — shadow-root CSS
- * has no other legal position, and lightningcss keeps it verbatim.
- */
-const leadingHost = (
-	selector: string,
-): { wrapper: [number, number]; args: [number, number] | null } | null => {
-	const match = /^:host(?![a-zA-Z-])/.exec(selector)
-	if (!match) return null
-	const paren = selector.indexOf('(', match[0].length)
-	if (paren !== match[0].length)
-		return { wrapper: [0, match[0].length], args: null }
-	const close = matchingParen(selector, paren)
-	if (close === -1) return { wrapper: [0, match[0].length], args: null }
-	return { wrapper: [0, close + 1], args: [paren + 1, close] }
-}
-
-/** The four CSS2.1 pseudo-elements, which also have a single-colon spelling. */
-const LEGACY_PSEUDO_ELEMENT =
-	/^:(?:before|after|first-line|first-letter)(?![\w-])/
-
-/**
- * Where the guard goes in a flat complex selector: before the first
- * pseudo-element of the SUBJECT compound (`::before`, legacy `:before`,
- * `::part(x)`, `::-webkit-scrollbar-thumb`), else at the end. `:where()`
- * cannot follow a pseudo-element — only user-action pseudo-classes may
- * (`::part(x):hover`) — so the guard anchors on the originating element,
- * which constrains the same element (LT-398).
- */
-const guardOffset = (selector: string): number => {
-	let depth = 0
-	let subject = 0
-	for (let i = 0; i < selector.length; i++) {
-		const c = selector[i] as string
-		if (c === '"' || c === "'") {
-			const quote = c
-			i++
-			while (i < selector.length && selector[i] !== quote) {
-				if (selector[i] === '\\') i++
-				i++
-			}
-		} else if (c === '(' || c === '[') depth++
-		else if (c === ')' || c === ']') depth--
-		else if (depth === 0 && /[\s>+~]/.test(c)) subject = i + 1
-	}
-	depth = 0
-	for (let i = subject; i < selector.length; i++) {
-		const c = selector[i] as string
-		if (c === '(' || c === '[') depth++
-		else if (c === ')' || c === ']') depth--
-		else if (depth === 0 && c === ':') {
-			if (selector[i + 1] === ':') return i
-			if (LEGACY_PSEUDO_ELEMENT.test(selector.slice(i))) return i
-		}
-	}
-	return selector.trimEnd().length
-}
-
-/** Splice the guard into a flat complex selector at `guardOffset`. */
-const withGuard = (selector: string, guard: string): string => {
-	const at = guardOffset(selector)
-	return `${selector.slice(0, at)}${guard}${selector.slice(at)}`
-}
 
 /** Commas outside parens/brackets/strings — a selector list's separators. */
 const splitTopLevelCommas = (selectorText: string): string[] => {
@@ -980,91 +785,6 @@ const splitTopLevelCommas = (selectorText: string): string[] => {
 	return parts
 }
 
-/**
- * Rewrite one flat complex selector for the emission mode.
- *
- * Native: only `:host` rewrites — `:host` → `:where(:scope)`,
- * `:host(<sel>)` → `:where(:scope:is(<sel>))` (zero specificity, page
- * styles win as over `:host` in a shadow root).
- *
- * Lowered: the scope root leads (`${tag} ${selector}`), a zero-specificity
- * guard per boundary tag closes the subject, and `:host` becomes
- * `:where(${tag})` / `:where(${tag}:is(<sel>))`. A bare `:host` rule —
- * subject the host itself — and any `:host`-led selector skip the tag
- * prefix (the host compound already anchors the root); a bare `:host` also
- * skips the guard (the host is always in scope).
- */
-const rewriteSelector = (
-	selectorText: string,
-	tag: string,
-	mode: ScopeMode,
-	boundaries: readonly string[],
-): string =>
-	splitTopLevelCommas(selectorText)
-		.flatMap(distributeLeadingHostIs)
-		.map(part => rewriteComplexSelector(part, tag, mode, boundaries))
-		.join(', ')
-
-/**
- * Flattening a rule nested under a selector LIST yields a leading `:is()`
- * (`:host .a, :host .b { &:empty {} }` → `:is(:host .a, :host .b):empty`),
- * which hides `:host` from the leading-compound rewrite and leaves a rule
- * that matches nothing (LT-398). When that `:is()` holds a `:host`, the
- * list distributes back out — `:host .a:empty, :host .b:empty` — each
- * member then rewritten on its own. Each member keeps its own specificity
- * instead of the list's maximum; the members came from one authored list.
- */
-const distributeLeadingHostIs = (part: string): string[] => {
-	const selector = part.trim()
-	if (!selector.startsWith(':is(')) return [part]
-	const close = matchingParen(selector, 3)
-	if (close === -1) return [part]
-	const members = splitTopLevelCommas(selector.slice(4, close))
-	if (!members.some(member => leadingHost(member.trim()) !== null))
-		return [part]
-	const rest = selector.slice(close + 1)
-	return members.map(member => `${member.trim()}${rest}`)
-}
-
-const rewriteComplexSelector = (
-	selectorText: string,
-	tag: string,
-	mode: ScopeMode,
-	boundaries: readonly string[],
-): string => {
-	const selector = selectorText.trim()
-	const host = leadingHost(selector)
-	const guard =
-		boundaries.length > 0
-			? `:where(:not(${boundaries
-					.flatMap(b => [`${tag} ${b} > *`, `${tag} ${b} > * *`])
-					.join(', ')}))`
-			: ''
-	if (host) {
-		const args = host.args
-			? selector.slice(host.args[0], host.args[1]).trim()
-			: null
-		const hostText =
-			mode === 'native'
-				? args
-					? `:where(:scope:is(${args}))`
-					: ':where(:scope)'
-				: args
-					? `:where(${tag}:is(${args}))`
-					: `:where(${tag})`
-		const rest = selector.slice(host.wrapper[1])
-		if (rest.trim() === '') return hostText
-		const rewritten = `${hostText}${rest}`
-		return mode === 'lowered' && guard ? withGuard(rewritten, guard) : rewritten
-	}
-	if (mode === 'native') return selector
-	// R1 (owner, 2026-10-02): the scope root leads as `:where(tag)` — zero
-	// specificity, so a lowered rule carries the same specificity as its
-	// native form (`:where(my-el) .x` ≙ `.x` under `@scope`).
-	const prefixed = `:where(${tag}) ${selector}`
-	return guard ? withGuard(prefixed, guard) : prefixed
-}
-
 /** Apply `{offset, from, to}` splices in one reverse pass. */
 const splice = (
 	text: string,
@@ -1078,78 +798,349 @@ const splice = (
 	return out
 }
 
+/* === The scope block's prelude === */
+
 /**
- * Emit the scoped stylesheet (ADR 0033 s3/s4): partition the authored
- * sheet, flatten the scoped remainder's nesting through a plain
- * lightningcss `transform` (never the visitor write path — see the module
- * doc), rewrite every flat selector for the mode, and assemble the
- * fragments before the `@scope` block (native) or the lowered rules.
+ * A component `@scope` block as the emission reads it from its text: the
+ * prelude (`(<root>)`, absent for the host) and the authored limits.
+ */
+type ScopeHead = {
+	/** The text between `@scope` and `{`, trimmed. */
+	text: string
+	/** The authored root selector, or null when the block is prelude-less. */
+	root: string | null
+	/** The authored limits, one per member of `to (…)`. */
+	limits: string[]
+}
+
+const scopeHeadOf = (head: string): ScopeHead => {
+	let rest = head.trim()
+	const text = rest
+	let root: string | null = null
+	if (rest.startsWith('(')) {
+		const close = matchingParen(rest, 0)
+		if (close !== -1) {
+			root = rest.slice(1, close).trim()
+			rest = rest.slice(close + 1).trim()
+		}
+	}
+	const limits: string[] = []
+	if (/^to\s*\(/.test(rest)) {
+		const open = rest.indexOf('(')
+		const close = matchingParen(rest, open)
+		if (close !== -1)
+			for (const member of splitTopLevelCommas(rest.slice(open + 1, close)))
+				if (member.trim() !== '') limits.push(member.trim())
+	}
+	return { text, root, limits }
+}
+
+/* === Native emission === */
+
+/**
+ * Walk a canonical sheet's rules, giving every component `@scope` its
+ * explicit root (ADR 0033 s3). A conditional group can hold a `@scope`;
+ * everything inside a `@scope` — nested blocks included — stays verbatim.
+ */
+const nativeRules = (
+	text: string,
+	from: number,
+	to: number,
+	tag: string,
+): string => {
+	let out = ''
+	let cursor = from
+	for (const rule of scanRules(text, from, to)) {
+		out += text.slice(cursor, rule.start)
+		cursor = rule.end
+		const name = atRuleName(text, rule)
+		if (name === 'scope') {
+			const head = text.slice(rule.start + '@scope'.length, rule.brace).trim()
+			const body = text.slice(rule.brace, rule.end)
+			if (head === '') out += `@scope (${tag}) ${body}`
+			else if (/^to\s*\(/.test(head)) out += `@scope (${tag}) ${head} ${body}`
+			else out += text.slice(rule.start, rule.end)
+		} else if (name !== null && CONDITIONAL_AT_RULES.has(name)) {
+			out += `${text.slice(rule.start, rule.brace + 1)}${nativeRules(
+				text,
+				rule.brace + 1,
+				rule.end - 1,
+				tag,
+			)}}`
+		} else out += text.slice(rule.start, rule.end)
+	}
+	return out + text.slice(cursor, to)
+}
+
+/* === Lowered emission === */
+
+/**
+ * The never-present attribute inside `:not()` that gives the root compound
+ * the (0,1,0) specificity of `:scope`, on top of the zero-specificity
+ * `:where(<root>)`. The compound still matches the host: the attribute is
+ * not one any element carries.
+ */
+const SCOPE_PAD = ':not([data-truc-scope-pad])'
+
+/** What lowering one component `@scope` block needs. */
+type LoweringScope = {
+	/** The root compound: `:where(<root>)` plus the specificity pad. */
+	rootCompound: string
+	/** The bare root as a leading `:where()`. */
+	lead: string
+	/** The guards, one per authored limit, ready to splice. */
+	guards: string
+}
+
+const loweringScopeOf = (head: ScopeHead, tag: string): LoweringScope => {
+	const root = head.root ?? tag
+	const listed = splitTopLevelCommas(root).length > 1 ? `:is(${root})` : root
+	const guard = (limit: string): string =>
+		`:where(:not(:is(${listed} ${limit}, ${listed} ${limit} *):not(${listed} ${limit} ${tag}, ${listed} ${limit} ${tag} *)))`
+	return {
+		rootCompound: `:where(${root})${SCOPE_PAD}`,
+		lead: `:where(${root})`,
+		guards: head.limits.map(guard).join(''),
+	}
+}
+
+/** The four CSS2.1 pseudo-elements, which also have a single-colon spelling. */
+const LEGACY_PSEUDO_ELEMENT =
+	/^:(?:before|after|first-line|first-letter)(?![\w-])/
+
+/**
+ * Where a flat complex selector's subject compound starts, and where the
+ * guard goes: before the first pseudo-element of the subject (`::before`,
+ * legacy `:before`, `::part(x)`, `::-webkit-scrollbar-thumb`), else at the
+ * end. `:where()` cannot follow a pseudo-element — only user-action
+ * pseudo-classes may (`::part(x):hover`) — so the guard anchors on the
+ * originating element, which constrains the same element (LT-398).
+ */
+const subjectOf = (selector: string): { subject: number; guard: number } => {
+	let depth = 0
+	let subject = 0
+	for (let i = 0; i < selector.length; i++) {
+		const c = selector[i] as string
+		if (c === '"' || c === "'") {
+			const quote = c
+			i++
+			while (i < selector.length && selector[i] !== quote) {
+				if (selector[i] === '\\') i++
+				i++
+			}
+		} else if (c === '(' || c === '[') depth++
+		else if (c === ')' || c === ']') depth--
+		else if (depth === 0 && /[\s>+~]/.test(c)) subject = i + 1
+	}
+	depth = 0
+	for (let i = subject; i < selector.length; i++) {
+		const c = selector[i] as string
+		if (c === '(' || c === '[') depth++
+		else if (c === ')' || c === ']') depth--
+		else if (depth === 0 && c === ':') {
+			if (selector[i + 1] === ':') return { subject, guard: i }
+			if (LEGACY_PSEUDO_ELEMENT.test(selector.slice(i)))
+				return { subject, guard: i }
+		}
+	}
+	return { subject, guard: selector.trimEnd().length }
+}
+
+const SCOPE_PSEUDO = /:scope(?![\w-])/
+const SCOPE_PSEUDO_ALL = /:scope(?![\w-])/g
+const WHERE_SCOPE = /:where\(\s*:scope\s*\)/g
+
+/** Whether a compound text holds `:scope` outside any parentheses. */
+const hasTopLevelScope = (compound: string): boolean => {
+	let depth = 0
+	for (let i = 0; i < compound.length; i++) {
+		const c = compound[i] as string
+		if (c === '(' || c === '[') depth++
+		else if (c === ')' || c === ']') depth--
+		else if (
+			depth === 0 &&
+			c === ':' &&
+			/^:scope(?![\w-])/.test(compound.slice(i))
+		)
+			return true
+	}
+	return false
+}
+
+/**
+ * Rewrite one flat complex selector of a component `@scope` block. An
+ * explicit `:scope` becomes the root compound and the selector needs no
+ * lead; any other selector leads with `:where(<root>)`, the implicit
+ * descendant prefix. The limits' guards close the subject — except where
+ * the subject IS the root, which no limit can exclude.
+ */
+const lowerSelector = (selector: string, scope: LoweringScope): string => {
+	const member = selector.trim()
+	// `:where(:scope)` — the authored way to a zero-specificity host rule —
+	// is the bare root lead; every other `:scope` is the padded compound.
+	const plain = member.replace(WHERE_SCOPE, () => scope.lead)
+	const rootSubject = hasTopLevelScope(
+		member.replace(WHERE_SCOPE, ':scope').slice(subjectOf(member).subject),
+	)
+	const explicit = SCOPE_PSEUDO.test(plain) || plain !== member
+	const rewritten = explicit
+		? plain.replace(SCOPE_PSEUDO_ALL, () => scope.rootCompound)
+		: `${scope.lead} ${member}`
+	if (rootSubject || scope.guards === '') return rewritten
+	const at = subjectOf(rewritten).guard
+	return `${rewritten.slice(0, at)}${scope.guards}${rewritten.slice(at)}`
+}
+
+const lowerSelectorList = (list: string, scope: LoweringScope): string =>
+	splitTopLevelCommas(list)
+		.map(member => lowerSelector(member, scope))
+		.join(', ')
+
+/**
+ * Lower the rules of a flattened sheet range. Outside a component
+ * `@scope`, rules stay verbatim; a component `@scope` unwraps into its
+ * lowered rules; conditional groups are entered to reach a `@scope` or to
+ * lower the rules of one.
+ */
+const lowerRules = (
+	text: string,
+	from: number,
+	to: number,
+	tag: string,
+	scope: LoweringScope | null,
+): string => {
+	let out = ''
+	let cursor = from
+	for (const rule of scanRules(text, from, to)) {
+		out += text.slice(cursor, rule.start)
+		cursor = rule.end
+		const name = atRuleName(text, rule)
+		if (name === null) {
+			out += scope
+				? `${lowerSelectorList(text.slice(rule.start, rule.brace), scope)} ${text.slice(rule.brace, rule.end)}`
+				: text.slice(rule.start, rule.end)
+		} else if (name === 'scope' && scope === null) {
+			const head = scopeHeadOf(
+				text.slice(rule.start + '@scope'.length, rule.brace),
+			)
+			const body = lowerRules(
+				text,
+				rule.brace + 1,
+				rule.end - 1,
+				tag,
+				loweringScopeOf(head, tag),
+			)
+			// The block's rules sat one indentation step in.
+			out += body.replace(/^ {1,2}/gm, '').trim()
+		} else if (CONDITIONAL_AT_RULES.has(name)) {
+			out += `${text.slice(rule.start, rule.brace + 1)}${lowerRules(
+				text,
+				rule.brace + 1,
+				rule.end - 1,
+				tag,
+				scope,
+			)}}`
+		} else out += text.slice(rule.start, rule.end)
+	}
+	return out + text.slice(cursor, to)
+}
+
+/* === The partition === */
+
+/**
+ * Partition of the authored sheet for the lowered emission: verbatim
+ * fragments hoisted out of the flattening, and the remainder's text spans.
+ */
+type Fragment = { start: number; end: number }
+
+const HOISTED_AT_RULES = new Set([
+	'keyframes',
+	'import',
+	'namespace',
+	'font-face',
+	'property',
+	'counter-style',
+	'font-palette-values',
+	'font-feature-values',
+	'page',
+	'view-transition',
+	'color-profile',
+])
+
+/**
+ * Top-level partition of the authored sheet, over the parsed rules' locs:
+ * `@keyframes`/`@font-face`/`@property` and the other hoisted at-rules
+ * become fragments; everything else stays in the remainder.
+ */
+const partitionSheet = (
+	sheet: unknown,
+	sheetText: string,
+): { canonical: string; fragments: Fragment[] } => {
+	const fragments: Fragment[] = []
+	const { text: canonical, strip } = dedentWithStrips(sheetText)
+	const rules = (sheet as { rules?: LcRule[] })?.rules ?? []
+	const lineStarts = lineStartsOf(canonical)
+	const bounds: number[] = rules.map(rule =>
+		rule.value?.loc ? shiftedLocToOffset(lineStarts, strip, rule.value.loc) : 0,
+	)
+	for (const [index, rule] of rules.entries()) {
+		if (!HOISTED_AT_RULES.has(rule.type)) continue
+		fragments.push({
+			start: bounds[index] as number,
+			end: (bounds[index + 1] as number | undefined) ?? canonical.length,
+		})
+	}
+	return { canonical, fragments }
+}
+
+/* === The emission === */
+
+/**
+ * Emit the component stylesheet (ADR 0033 s3/s4). Native: the canonical
+ * (dedented) sheet with the explicit root on every prelude-less component
+ * `@scope`. Lowered: the hoisted at-rules verbatim, then the remainder
+ * flattened through a plain lightningcss `transform` (never the visitor
+ * write path — see the module doc) and lowered block by block.
  */
 export const emitScopedSheet = (
 	sheet: unknown,
 	sheetText: string,
 	tag: string,
-	boundaries: readonly string[],
 	cssTargets: CssTargets,
 ): string => {
-	const mode = scopeModeOf(cssTargets)
-	const { canonical, fragments, scopedSpans } = partitionSheet(sheet, sheetText)
+	if (scopeModeOf(cssTargets) === 'native') {
+		const { text } = dedentWithStrips(sheetText)
+		const emitted = nativeRules(text, 0, text.length, tag).trim()
+		return emitted === '' ? '' : `${emitted}\n`
+	}
 
-	const hoisted = fragments.map(fragment =>
-		fragmentText(fragment, canonical).trim(),
+	const { canonical, fragments } = partitionSheet(sheet, sheetText)
+	const hoisted = fragments
+		.map(fragment => canonical.slice(fragment.start, fragment.end).trim())
+		.filter(fragment => fragment !== '')
+
+	// The remainder: the canonical sheet with every hoisted fragment's span
+	// removed, separators and all — lightningcss reformats what it re-emits.
+	const remainder = splice(
+		canonical,
+		fragments.map(fragment => ({ ...fragment, text: '' })),
 	)
-
-	let flat = ''
-	if (scopedSpans.length > 0) {
-		// The scoped remainder: the canonical sheet with every hoisted
-		// fragment's span removed, separators and all — lightningcss
-		// reformats what it re-emits.
-		const scoped = splice(
-			canonical,
-			fragments.map(fragment => ({
-				start: fragment.start,
-				end: fragment.end,
-				text: '',
-			})),
-		)
-		const lowered = transform({
-			code: Buffer.from(scoped) as Buffer,
-			filename: 'scoped.css',
-			...flatteningTargets(cssTargets),
-		})
-		flat = new TextDecoder().decode(lowered.code).trim()
+	let lowered = ''
+	if (remainder.trim() !== '') {
+		const flat = new TextDecoder()
+			.decode(
+				transform({
+					code: Buffer.from(remainder) as Buffer,
+					filename: 'scoped.css',
+					...flatteningTargets(cssTargets),
+				}).code,
+			)
+			.trim()
+		lowered = lowerRules(flat, 0, flat.length, tag, null)
+			.replace(/\n{3,}/g, '\n\n')
+			.trim()
 	}
 
-	let scopedEmitted = ''
-	if (flat !== '') {
-		const rules: TextRule[] = []
-		collectTextRules(flat, 0, flat.length, rules)
-		const replacements = rules
-			.filter(rule => atRuleName(flat, rule) === null)
-			.map(rule => {
-				const rewritten = rewriteSelector(
-					flat.slice(rule.start, rule.brace),
-					tag,
-					mode,
-					boundaries,
-				)
-				return { start: rule.start, end: rule.brace, text: `${rewritten} ` }
-			})
-		scopedEmitted = splice(flat, replacements)
-	}
-
-	const parts: string[] = []
-	for (const fragment of hoisted) if (fragment !== '') parts.push(fragment)
-	if (scopedEmitted !== '') {
-		parts.push(
-			mode === 'native'
-				? `@scope (${tag})${
-						boundaries.length
-							? ` to (${boundaries.map(b => `${b} > *`).join(', ')})`
-							: ''
-					} {\n${scopedEmitted}\n}`
-				: scopedEmitted,
-		)
-	}
+	const parts = [...hoisted, ...(lowered !== '' ? [lowered] : [])]
 	return parts.length > 0 ? `${parts.join('\n\n')}\n` : ''
 }

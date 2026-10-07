@@ -34,12 +34,16 @@ afterAll(() => generated.cleanup())
 
 /* === Helpers === */
 
-const STYLE_TSRX = `<style>:host {
-	  display: block;
-	}</style>`
-const STYLE_TSX = `<style>{css\`:host {
-	  display: block;
-	}\`}</style>`
+const STYLE_TSRX = `<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>`
+const STYLE_TSX = `<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>`
 
 /** A `.tsrx` component `C` around `body`. */
 const tsrx = (
@@ -973,9 +977,11 @@ const PASS_CHILD_TSRX = `export function BasicChild({ label }: { label: string }
 	@{
 		expose({ value: '' })
 			<basic-child>{label}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-child>
 	}`
 
@@ -986,9 +992,11 @@ export function BasicChild({ label }: { label: string }, { expose }: FactoryCont
 	expose({ value: '' })
 	return (
 		<basic-child>{label}
-			<style>{css\`:host {
-	  display: block;
-	}\`}</style>
+			<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>
 		</basic-child>
 	)
 }`
@@ -1198,9 +1206,11 @@ describe('a `truc:pass` compose in a server branch is refused (LT-470)', () => {
 	@{
 		expose({})
 			<outer-child>{label}{children}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</outer-child>
 	}`
 		const outerTsx = `import { css } from '@zeix/le-truc-compiler/macros'
@@ -1213,9 +1223,11 @@ export function OuterChild({ label, children }: {
 	expose({})
 	return (
 		<outer-child>{label}{children}
-			<style>{css\`:host {
-	  display: block;
-	}\`}</style>
+			<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>
 		</outer-child>
 	)
 }`

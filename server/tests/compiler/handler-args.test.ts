@@ -28,7 +28,9 @@ const CHILD_TSX = `export function BasicChild(
 	return (
 		<basic-child>
 			<button type="button" onClick={onPress}>{label}</button>
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-child>
 	)
 }`
@@ -37,7 +39,9 @@ const CHILD_TSRX = `export function BasicChild({ label, onPress }: { label: stri
 	@{
 		<basic-child>
 			<button type="button" onClick={onPress}>{label}</button>
-			<style>:host { display: block; }</style>
+			<style>@scope {
+	:scope { display: block; }
+}</style>
 		</basic-child>
 	}`
 
@@ -62,7 +66,9 @@ export function BasicParent({}: {}${ctx}) {
 	return (
 		<basic-parent>
 			${body}
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-parent>
 	)
 }`
@@ -115,7 +121,9 @@ describe('the child half: no emission, one published placement', () => {
 	return (
 		<basic-child>
 			{open ? <button type="button" onClick={onPress}>x</button> : null}
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-child>
 	)
 }`,
@@ -133,7 +141,9 @@ describe('the child half: no emission, one published placement', () => {
 		<basic-child>
 			<button type="button" class="a" onClick={onPress}>a</button>
 			<input class="b" onKeyup={onPress} />
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-child>
 	)
 }`,
@@ -255,7 +265,9 @@ export function BasicParent({ open }: { open: boolean }) {
 	return (
 		<basic-parent>
 			{open ? <BasicChild label="a" onPress={() => console.log('a')} /> : null}
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-parent>
 	)
 }`,
@@ -314,7 +326,9 @@ export function BasicMiddle({ onClick }: { onClick?: (e: MouseEvent) => void }) 
 	return (
 		<basic-middle>
 			<div><BasicChild label="m" onPress={onClick} /></div>
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-middle>
 	)
 }`,
@@ -331,7 +345,9 @@ export function BasicParent({}: {}) {
 	return (
 		<basic-parent>
 			<BasicMiddle onClick={() => console.log('m')} />
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-parent>
 	)
 }`,
@@ -356,7 +372,9 @@ export function BasicMiddle({ onClick }: { onClick?: () => void }) {
 	return (
 		<basic-middle>
 			<BasicChild label="m" onPress={onClick} />
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-middle>
 	)
 }`,
@@ -381,7 +399,9 @@ export function BasicMiddle({ onClick }: { onClick?: () => void }) {
 	return (
 		<basic-middle>
 			<ul>{items.map(item => <li><BasicChild label="m" onPress={onClick} /></li>)}</ul>
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-middle>
 	)
 }`,
@@ -403,7 +423,9 @@ export function BasicParent({ rows }: { rows: string[] }) {
 	return (
 		<basic-parent>
 			<ul>{rows.map(row => <li><BasicChild label={row} onPress={() => console.log(1)} /></li>)}</ul>
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-parent>
 	)
 }`,
@@ -425,7 +447,9 @@ export function BasicMiddle({ onClick }: { onClick?: () => void }) {
 	return (
 		<basic-middle>
 			<BasicChild label="m"><button type="button" onClick={onClick}>x</button></BasicChild>
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope {
+	:scope { display: block; }
+}\`}</style>
 		</basic-middle>
 	)
 }`,
@@ -445,7 +469,9 @@ export function BasicParent({}: {})
 	@{
 		<basic-parent>
 			<BasicChild class="top" label="a" onPress={e => console.log(e.button)} />
-			<style>:host { display: block; }</style>
+			<style>@scope {
+	:scope { display: block; }
+}</style>
 		</basic-parent>
 	}`,
 			'examples/parent/basic-parent.tsrx',

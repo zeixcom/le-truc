@@ -88,8 +88,10 @@ export function Seeded({ initial }: { initial?: string[] })
 					<li><span>{item}</span></li>
 				}
 			</ul>
-			<style>:host {
-  color: red;
+			<style>@scope {
+	:scope {
+	  color: red;
+	}
 }</style>
 		</c-el>
 	}`
@@ -553,13 +555,17 @@ const sheetOfSource = (source: string): string => {
 	return (tsx ?? tsrx)?.[1] ?? ''
 }
 
-describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-304/LT-306)', () => {
-	// A compiled component's authored sheet is shadow-root CSS (LT-306's
-	// migration): the IR's `authoredCss` is its dedent, and the emitted
-	// artifact (`css`) is the scoped emission — at the default targets the
-	// LOWERED form, `:where(tag)` for the host and a zero-specificity guard
-	// per boundary tag. The hand-written `.css` files are the `.ts` twins'
-	// 2.x artifacts (ADR 0033 s10), no longer the compiled contract.
+/** The never-present attribute that pads a lowered `:scope` root to (0,1,0). */
+const PAD = ':not([data-truc-scope-pad])'
+
+describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-501)', () => {
+	// A compiled component's authored sheet is an `@scope` block (LT-501):
+	// the IR's `authoredCss` is its dedent, and the emitted artifact (`css`)
+	// is the scoped emission — at the default targets the LOWERED form, the
+	// root as `:where(tag)` (padded to `:scope`'s specificity where the sheet
+	// writes `:scope`) and a zero-specificity guard per authored limit. The
+	// hand-written `.css` files are the `.ts` twins' 2.x artifacts (ADR 0033
+	// s10), no longer the compiled contract.
 	test('basic-counter: authored sheet carried verbatim, emission scoped', () => {
 		expect(counter.component?.authoredCss).toBe(
 			dedentCss(
@@ -567,8 +573,8 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-304/L
 			),
 		)
 		const css = counter.component?.css ?? ''
-		expect(css).toContain(':where(basic-counter) {')
-		expect(css).toContain(':where(basic-counter) button {')
+		expect(css).toContain(`:where(basic-counter)${PAD} {`)
+		expect(css).toContain(`:where(basic-counter)${PAD} button {`)
 		expect(css).not.toContain('@scope')
 	})
 	test('module-tabgroup: authored sheet carried verbatim, emission scoped', () => {
@@ -578,7 +584,7 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-304/L
 			),
 		)
 		const css = tabgroup.component?.css ?? ''
-		expect(css).toContain(':where(module-tabgroup) {')
+		expect(css).toContain(`:where(module-tabgroup)${PAD} {`)
 		expect(css).not.toContain('module-tabgroup {')
 	})
 	// The form fixture's sheet is the fuller migration (LT-020 follow-up):
@@ -590,21 +596,21 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-304/L
 			dedentCss(sheetOfSource(read('examples/form/textbox/form-textbox.tsrx'))),
 		)
 		const css = formTextbox.component?.css ?? ''
-		expect(css).toContain(':where(form-textbox) {')
+		expect(css).toContain(`:where(form-textbox)${PAD} {`)
 		expect(css).toContain(
-			':where(form-textbox) input, :where(form-textbox) textarea',
+			`:where(form-textbox)${PAD} input, :where(form-textbox)${PAD} textarea`,
 		)
 		expect(css).not.toContain(':where(:not(')
 	})
-	// module-list composes form-textbox (ADR 0024 sub-design 10): the
-	// boundary stops at the composed child — the guard names form-textbox,
-	// and the composed child's internals stay unreachable.
-	test('module-list: authored sheet carried verbatim, boundary at the composed child', () => {
+	// module-list composes form-textbox (ADR 0024 sub-design 10): its
+	// sheet's authored limit stops the scope at the composed child — the
+	// guard names form-textbox, and the child's internals stay unreachable.
+	test('module-list: authored sheet carried verbatim, authored limit at the composed child', () => {
 		expect(moduleList.component?.authoredCss).toBe(
 			dedentCss(sheetOfSource(read('examples/module/list/module-list.tsrx'))),
 		)
 		const css = moduleList.component?.css ?? ''
-		expect(css).toContain(':where(module-list) {')
+		expect(css).toContain(`:where(module-list)${PAD} {`)
 		expect(css).toContain('form-textbox > *')
 	})
 })

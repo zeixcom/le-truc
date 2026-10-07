@@ -497,9 +497,11 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 						<li aria-label={removeLabel}><span>{item}</span></li>
 					))}
 				</ul>
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</c-el2>
 	)
 }`
@@ -540,9 +542,11 @@ export function Seeded({ initial, removeLabel }: { initial?: string[]; removeLab
 						<li aria-label={removeLabel}><span>{item}</span></li>
 					}
 				</ul>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el2>
 	}`
 		const tsrx = compileComponent(tsrxSource, 'seeded.tsrx', new Set(['c-el2']))
@@ -739,9 +743,11 @@ export function C(${params}) {
 	expose({})
 	return (
 			<c-el>{label}
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</c-el>
 	)
 }`
@@ -833,9 +839,11 @@ describe('the loop empty arm on both surfaces (LT-212)', () => {
 						<li class="none">Nothing yet</li>
 					}
 				</ul>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</empty-each>
 	}`,
 			tsxx: `import { css } from '@zeix/le-truc-compiler/macros'
@@ -849,9 +857,11 @@ export function EmptyEach({ rows }: { rows: string[] }) {
 						rows.map(row => <li class="row">{row}</li>)
 					)}
 				</ul>
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</empty-each>
 	)
 }`,
@@ -873,9 +883,11 @@ export function EmptyList({ initial }: { initial?: string[] })
 						<p class="none">Nothing yet</p>
 					}
 				</ul>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</empty-list>
 	}`,
 			tsxx: `import { css } from '@zeix/le-truc-compiler/macros'
@@ -891,9 +903,11 @@ export function EmptyList({ initial }: { initial?: string[] }) {
 						items.map(item => <li><span>{item}</span></li>)
 					)}
 				</ul>
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</empty-list>
 	)
 }`,

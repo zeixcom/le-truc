@@ -16,9 +16,11 @@ export function C({}: {})
 	expose({ value: asNumber() })
 		<c-el>
 			<p>{String(host.value)}</p>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`
 

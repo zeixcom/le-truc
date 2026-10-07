@@ -80,9 +80,11 @@ export function C({ i18n: { t } }: { i18n: I18n })
 @{
 	expose({})
 		<c-el>${template}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`
 
@@ -139,9 +141,11 @@ export function BasicI18nChild({ lang = 'en', i18n: { t } }: { lang?: string; i1
 @{
 	expose({})
 		<basic-i18n-child {lang}>{t.task}
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</basic-i18n-child>
 }`
 
@@ -153,9 +157,11 @@ export function BasicI18nParent({}: {})
 	expose({})
 		<basic-i18n-parent>
 			<BasicI18nChild ${attrs} />
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</basic-i18n-parent>
 }`
 
@@ -170,9 +176,11 @@ export function BasicI18nParent({ lang = 'en', i18n: { t } }: { lang?: string; i
 	expose({})
 		<basic-i18n-parent>
 			<BasicI18nChild ${attrs} />
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</basic-i18n-parent>
 }`
 
@@ -276,9 +284,11 @@ export function C({ i18n: { lang } }: { i18n: I18n })
 @{
 	expose({})
 		<c-el>ok
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`
 
@@ -294,9 +304,11 @@ export function C({ lang = 'en', i18n: { t } }: { lang?: string; i18n: I18n })
 @{
 	expose({})
 		<c-el {lang}>ok
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		if (!component) throw new Error('must compile')
@@ -1202,9 +1214,11 @@ export function C({ i18n }: { i18n: I18n })
 @{
 	expose({})
 		<c-el>{i18n.t.tasks({})}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		const hit = diagnostics.find(d => d.code === 'LTC055')
@@ -1227,9 +1241,11 @@ export function CIcuFold({ count, i18n: { t } }: { count: number; i18n: I18n })
 			<span class="literal">{t.tasks({ count: 1 })}</span>
 			<span class="arg" title={t.tasks({ count })}>{t.tasks({ count })}</span>
 			<span class="done">{t.done}</span>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-icu-fold>
 }`
 	const { component, diagnostics } = compileComponent(
@@ -1302,9 +1318,11 @@ export function ${name}({ count, i18n: { t } }: { count: number; i18n: I18n<type
 @{
 	expose({})
 		<c-el>${template}
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }`
 	const build = (name: string, tag: string, template: string) => {

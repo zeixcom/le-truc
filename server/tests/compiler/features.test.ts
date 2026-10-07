@@ -36,9 +36,11 @@ const wrap = (
 		expose({})
 			<c-el>
 				${template}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -120,9 +122,11 @@ describe('@switch — multi-branch conditional rendering', () => {
 						<p>a</p>
 					}
 				}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -224,9 +228,11 @@ export function C({}: {})
 				} @catch (e) {
 					<p class="error">{e.message}</p>
 				}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -242,9 +248,11 @@ export function C({}: {})
 				} @pending {
 					<p class="loading">Loading</p>
 				}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { deriveCell } from '@zeix/le-truc'`,
@@ -270,9 +278,11 @@ import { deriveCell } from '@zeix/le-truc'`,
 				} @catch (e) {
 					<p class="error">{e.message}</p>
 				}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { deriveCell } from '@zeix/le-truc'`,
@@ -373,9 +383,11 @@ export function C({}: {})
 				} @catch (e) {
 					<p class="error"><input name="x" value="error" />{e.message}</p>
 				}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -459,9 +471,11 @@ describe('truc:html={expr} — dynamic rendering', () => {
 		const body = createState('<b>seed</b>')
 			<c-el>
 				<article class="target" truc:html={() => body.get()}></article>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createState } from '@zeix/le-truc'`
@@ -535,9 +549,11 @@ export function C({}: {})
 				} @catch (e) {
 					<card-callout class="danger"><p class="error">{e.message}</p></card-callout>
 				}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -676,9 +692,11 @@ describe('createMemo — recognized signal constructor (LT-025)', () => {
 			<c-el>
 				<span class="value">{value}</span>
 				<span class="doubled">{doubled}</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createState, createMemo } from '@zeix/le-truc'`
@@ -709,9 +727,11 @@ import { createState, createMemo } from '@zeix/le-truc'`
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
 			<c-el>
 				<p>static</p>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { asString, createMemo } from '@zeix/le-truc'`
@@ -734,9 +754,11 @@ import { asString, createMemo } from '@zeix/le-truc'`
 		const lowerFilter = createMemo(() => host.filter.toLowerCase())
 			<c-el>
 				<span>{lowerFilter}</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { asString, createMemo } from '@zeix/le-truc'`
@@ -847,9 +869,11 @@ describe('review fixes (2026-08-22 architect pass)', () => {
 						<li><span>{item}</span></li>
 					}
 				</ul>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createList } from '@zeix/le-truc'`
@@ -883,9 +907,11 @@ import { createList } from '@zeix/le-truc'`
 						<li><span>{item}</span></li>
 					}
 				</ul>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createList } from '@zeix/le-truc'`
@@ -955,8 +981,10 @@ describe('newer-grammar constructs — parse-error hints', () => {
 		const data = await load(id)
 		expose({})
 		<c-el><p>{data}</p>
-			<style>:host {
-  color: red;
+			<style>@scope {
+	:scope {
+	  color: red;
+	}
 }</style>
 		</c-el>}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())

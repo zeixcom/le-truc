@@ -21,9 +21,11 @@ ${setup}
 	expose({})
 		<c-el>
 			<p style={() => ({ color: color.get() })}>hi</p>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 import { createState } from '@zeix/le-truc'
@@ -103,9 +105,11 @@ describe('a reactive thunk may read an authored import (LT-091 plainLocalNames)'
 		<c-el>
 			<p>{color}</p>
 			<span class={() => shade(color.get())}>hi</span>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 import { createState } from '@zeix/le-truc'
@@ -125,9 +129,11 @@ describe('the LTC004 routing reason names an unportable initializer (LT-093 step
 		<c-el>
 			<ul><li>a</li></ul>
 			<p class={() => String(count.get() + 1)}>n</p>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 import { createState } from '@zeix/le-truc'`)
@@ -147,9 +153,11 @@ import { createState } from '@zeix/le-truc'`)
 	expose({})
 		<c-el>
 			<p>hi</p>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 import { createState } from '@zeix/le-truc'`,

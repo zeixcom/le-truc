@@ -13,7 +13,7 @@ import { css } from '../../compiler/macros'
 
 /* === Sources === */
 
-const SHEET = ':host { display: block; }'
+const SHEET = '@scope { :scope { display: block; } }'
 
 const tsx = (head: string, tag: string, setup = ''): string => `${head}
 export function C({}: {}) {

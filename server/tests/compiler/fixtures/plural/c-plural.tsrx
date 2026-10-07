@@ -88,8 +88,10 @@ export function CPlural(
 				</p>
 
 			<style>
-			:host {
-				display: block;
+			@scope {
+				:scope {
+					display: block;
+				}
 			}</style>
 			</c-plural>
 	}

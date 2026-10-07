@@ -26,9 +26,11 @@ describe('attribute shorthand `{name}`', () => {
 	@{
 		expose({})
 			<c-el ${attr}>ok
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -75,9 +77,11 @@ describe('freeIdentifiers', () => {
 				const open = createCell(false)
 				expose({ selected: selected.get })
 					<c-el hidden={() => !open.get() && selected.get() === 'a'}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -99,9 +103,11 @@ import { createCell } from '@zeix/le-truc'`,
 						const local = e.target
 						selected.set(String(local))
 					}}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -125,9 +131,11 @@ import { createCell } from '@zeix/le-truc'`,
 							console.log(i)
 						}
 					}}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -149,9 +157,11 @@ import { createCell } from '@zeix/le-truc'`,
 						}
 						el.addEventListener('up', handleUp)
 					}}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -171,9 +181,11 @@ describe('reactive attribute thunks may reference a plain setup const (LT-088)',
 				const fmt = (n: number) => \`#\${n}\`
 				expose({})
 					<c-el><span aria-label={() => fmt(1)}>ok</span>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -193,9 +205,11 @@ describe('reactive attribute thunks may reference a plain setup const (LT-088)',
 			@{
 				expose({})
 					<c-el><span aria-label={() => mysteryHelper(1)}>ok</span>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -220,9 +234,11 @@ describe('template classification', () => {
 						hidden={() => state.get() > 0}
 						onClick={() => state.set(0)}
 					>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -244,9 +260,11 @@ import { createCell } from '@zeix/le-truc'`,
 			@{
 				expose({})
 					<c-el><input ref={box} />
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -267,9 +285,11 @@ import { createCell } from '@zeix/le-truc'`,
 				const box = first('input', 'required')
 				expose({})
 					<c-el><input />
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -288,9 +308,11 @@ import { createCell } from '@zeix/le-truc'`,
 				const n = createCell(1)
 				expose({ n: n.get })
 					<c-el><span>{n}</span>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -311,9 +333,11 @@ import { createCell } from '@zeix/le-truc'`,
 			@{
 				expose({})
 					<c-el><span>{label}</span>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -337,9 +361,11 @@ import { createCell } from '@zeix/le-truc'`,
 							const pid = tab.id
 							<button aria-selected={() => String(selected.get() === pid)} onClick={() => selected.set(pid)}>{tab.id}</button>
 						}
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -364,9 +390,11 @@ export function C({ value = '' }: { value?: string })
 @{
 	expose({ value: asString('') })
 		<c-el value={value}><input value={() => host.value} />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`
 
@@ -401,9 +429,11 @@ export function C({ value = '' }: { value?: string })
 					clear: defineMethod(() => {}),
 				})
 					<c-el><span>ok</span>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
@@ -439,9 +469,11 @@ import { asString, asInteger, defineMethod } from '@zeix/le-truc'`,
 					}),
 				})
 					<c-el><span>ok</span>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { asString, defineMethod } from '@zeix/le-truc'`,
@@ -460,9 +492,11 @@ import { asString, defineMethod } from '@zeix/le-truc'`,
 					e.preventDefault()
 				})
 					<c-el><button>go</button>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -485,9 +519,11 @@ import { asString, defineMethod } from '@zeix/le-truc'`,
 					return () => ro.disconnect()
 				})
 					<c-el><canvas></canvas>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { createCell } from '@zeix/le-truc'`,
@@ -508,9 +544,11 @@ import { createCell } from '@zeix/le-truc'`,
 					if (e.key === 'Enter') child.value = 'x'
 				})
 					<c-el><Widget />
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}
 import { Widget } from './widget.tsrx'`,
@@ -529,9 +567,11 @@ import { Widget } from './widget.tsrx'`,
 					stray.focus()
 				})
 					<c-el><input />
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -552,9 +592,11 @@ import { Widget } from './widget.tsrx'`,
 				expose({})
 				on(mysteryVariable, 'click', () => {})
 					<c-el><button>go</button>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -576,9 +618,11 @@ import { Widget } from './widget.tsrx'`,
 			@{
 				expose({})
 					<c-el><p>{host.validationMessage}</p>
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',

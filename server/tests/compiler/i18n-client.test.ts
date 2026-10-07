@@ -64,9 +64,11 @@ export function C(${p})
 	@{
 		${s}
 			<c-el>${b}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -82,9 +84,11 @@ export function C(${p}) {
 	${s}
 	return (
 			<c-el>${b}
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</c-el>
 	)
 }`
@@ -532,9 +536,11 @@ export function C(${params})
 	@{
 		${setup}
 			<c-fb><button title={() => t.hi}>x</button><span>{() => t.tasks({ count: host.count })}</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-fb>
 	}`
 	const { component, diagnostics } = compileComponent(
@@ -589,9 +595,11 @@ export function P(${parentParams})
 	@{
 		${parentSetup}
 			<p-el><ul data-container>@for (const item of items) { <li><span>{item}</span><C /></li> }</ul>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</p-el>
 	}`,
 		tsx: `import { css } from '@zeix/le-truc-compiler/macros'
@@ -602,9 +610,11 @@ export function P(${parentParams}) {
 	${parentSetup}
 	return (
 			<p-el><ul data-container>{items.map(item => <li><span>{item}</span><C /></li>)}</ul>
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</p-el>
 	)
 }`,

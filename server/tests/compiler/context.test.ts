@@ -15,9 +15,11 @@ describe('requestContext() — consumer side', () => {
 		expose({})
 			<c-el>
 				<span class="motion">{motion}</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -66,9 +68,11 @@ describe('requestContext() — reactive attribute referencing the context signal
 		expose({})
 			<c-el>
 				<span class={() => theme.get()}>{theme}</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -92,9 +96,11 @@ describe('requestContext() — misuse diagnostics', () => {
 			const motion = requestContext('motion')
 			expose({})
 				<c-el>ok
-					<style>:host {
-	  color: red;
-	}</style>
+					<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 				</c-el>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -107,9 +113,11 @@ describe('requestContext() — misuse diagnostics', () => {
 			const motion = requestContext('motion', host.value)
 			expose({})
 				<c-el>ok
-					<style>:host {
-	  color: red;
-	}</style>
+					<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 				</c-el>
 		}`
 		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
@@ -125,9 +133,11 @@ describe('requestContext() — misuse diagnostics', () => {
 			const wrapped = [requestContext('motion', 'unknown')]
 			expose({})
 				<c-el>ok
-					<style>:host {
-	  color: red;
-	}</style>
+					<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 				</c-el>
 		}`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
@@ -145,9 +155,11 @@ describe('provideContexts() — provider side', () => {
 		expose({ count: count.get })
 		provideContexts(['count'])
 			<c-el>{count}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -178,9 +190,11 @@ import { createCell } from '@zeix/le-truc'`
 			expose({ count: count.get })
 			const p = provideContexts(['count'])
 				<c-el>{count}
-					<style>:host {
-	  color: red;
-	}</style>
+					<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 				</c-el>
 		}
 import { createCell } from '@zeix/le-truc'`

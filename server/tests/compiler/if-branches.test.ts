@@ -39,7 +39,9 @@ const wrap = (template: string, tag = 'c-el'): string =>
 	expose({ note: asString('') })
 	<${tag}>
 		${template}
-		<style>:host { color: red }</style>
+		<style>@scope {
+	:scope { color: red }
+}</style>
 	</${tag}>
 }
 import { asString } from '@zeix/le-truc'`
@@ -269,9 +271,11 @@ ${setup}
 	expose({ note: asString('') })
 		<c-el>
 			${template}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }
 import { asString } from '@zeix/le-truc'`

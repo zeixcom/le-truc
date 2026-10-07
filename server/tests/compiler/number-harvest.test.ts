@@ -28,9 +28,11 @@ export function C(${PARAMS})
 	@{
 		${SETUP}
 			<${tag}>${body}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</${tag}>
 	}`
 
@@ -40,9 +42,11 @@ export function C(${PARAMS}) {
 	${SETUP}
 	return (
 			<${tag}>${body}
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</${tag}>
 	)
 }`

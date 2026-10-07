@@ -45,9 +45,11 @@ export function Toggle({ label }: { label: string })
 						<button type="button" class="opener" onClick={() => { open.set(true) }}>Open</button>
 					}
 				</div>
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</c-toggle>
 	}
 `
@@ -74,9 +76,11 @@ export function Toggle(
 						<button type="button" class="opener" onClick={() => { open.set(true) }}>Open</button>
 					)}
 				</div>
-				<style>{css\`:host {
-	  display: block;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>
 			</c-toggle>
 	)
 }
@@ -95,9 +99,11 @@ export function C(${params})
 	@{
 		${setup}
 			<c-el>${body}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -240,9 +246,11 @@ export function C({ open }: { open?: boolean })
 	@{
 		expose({ open: asBoolean() })
 			<c-el open={open}>@if (host.open) { <p>a</p> }
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`,
 			).root,

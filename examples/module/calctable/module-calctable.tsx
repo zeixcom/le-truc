@@ -299,80 +299,82 @@ export function ModuleCalctable(
 			</table>
 
 			<style>{css`
-			:host {
-				display: block;
+			@scope to (basic-number > *) {
+				:scope {
+					display: block;
 
-				& .amount,
-				& .price-per-unit,
-				& .price,
-				& .entry-amount,
-				& .entry-price,
-				& .amount-total,
-				& .price-total {
-					text-align: right;
-				}
-
-				& tbody {
-					& tr:last-child {
-						border-bottom-color: var(--color-border);
+					& .amount,
+					& .price-per-unit,
+					& .price,
+					& .entry-amount,
+					& .entry-price,
+					& .amount-total,
+					& .price-total {
+						text-align: right;
 					}
 
-					& td {
-						vertical-align: middle;
-					}
+					& tbody {
+						& tr:last-child {
+							border-bottom-color: var(--color-border);
+						}
 
-					& td.description,
-					& td.amount,
-					& td.price-per-unit {
-						padding: 0 var(--space-xxs) 0 0;
-					}
+						& td {
+							vertical-align: middle;
+						}
 
-					& td.price {
-						padding-block: var(--space-xxs);
-					}
+						& td.description,
+						& td.amount,
+						& td.price-per-unit {
+							padding: 0 var(--space-xxs) 0 0;
+						}
 
-					& input {
-						display: inline-block;
-						box-sizing: border-box;
-						background: var(--color-input);
-						color: var(--color-text);
-						border: none;
-						border-radius: 0;
-						padding: var(--space-xs) var(--space-s);
-						font-size: var(--font-size-m);
-						width: 100%;
-						height: var(--input-height);
+						& td.price {
+							padding-block: var(--space-xxs);
+						}
 
-						&::placeholder {
+						& input {
+							display: inline-block;
+							box-sizing: border-box;
+							background: var(--color-input);
 							color: var(--color-text);
-							opacity: var(--opacity-translucent);
-						}
+							border: none;
+							border-radius: 0;
+							padding: var(--space-xs) var(--space-s);
+							font-size: var(--font-size-m);
+							width: 100%;
+							height: var(--input-height);
 
-						&.amount,
-						&.price-per-unit {
-							text-align: right;
-						}
+							&::placeholder {
+								color: var(--color-text);
+								opacity: var(--opacity-translucent);
+							}
 
-						&:focus {
-							position: relative;
-							z-index: 1;
-						}
+							&.amount,
+							&.price-per-unit {
+								text-align: right;
+							}
 
-						&:user-invalid {
-							box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
-						}
+							&:focus {
+								position: relative;
+								z-index: 1;
+							}
 
-						&::-webkit-outer-spin-button,
-						&::-webkit-inner-spin-button {
-							-webkit-appearance: none;
-							margin: 0;
+							&:user-invalid {
+								box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
+							}
+
+							&::-webkit-outer-spin-button,
+							&::-webkit-inner-spin-button {
+								-webkit-appearance: none;
+								margin: 0;
+							}
 						}
 					}
-				}
 
-				& tfoot td {
-					font-weight: var(--font-weight-bold);
-					padding-block: var(--space-s);
+					& tfoot td {
+						font-weight: var(--font-weight-bold);
+						padding-block: var(--space-s);
+					}
 				}
 			}`}</style>
 		</module-calctable>

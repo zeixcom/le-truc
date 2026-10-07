@@ -190,111 +190,113 @@ export function ModuleColorinfo(
 			</details>
 
 			<style>{css`
-			:host {
-				--module-colorinfo-swatch-size: var(--input-height);
-				--module-colorinfo-color-fallback: transparent;
+			@scope to (basic-number > *) {
+				:scope {
+					--module-colorinfo-swatch-size: var(--input-height);
+					--module-colorinfo-color-fallback: transparent;
 
-				display: inline-flex;
-				gap: var(--space-l);
-
-				& summary {
-					cursor: pointer;
-					margin: 0 0 var(--space-s);
-
-					&::marker {
-						color: var(--color-text-soft);
-					}
-				}
-
-				& details[open] summary {
-					margin-bottom: var(--space-xs);
-				}
-
-				.summary {
 					display: inline-flex;
-					align-items: center;
-					gap: var(--space-s);
-					margin-left: var(--space-xs);
-					vertical-align: middle;
-				}
+					gap: var(--space-l);
 
-				.swatch {
-					position: relative;
-					display: inline-block;
-					background: var(--module-colorinfo-color-swatch);
-					width: var(--module-colorinfo-swatch-size);
-					height: var(--module-colorinfo-swatch-size);
-					border-radius: var(--space-xxs);
-					overflow: hidden;
+					& summary {
+						cursor: pointer;
+						margin: 0 0 var(--space-s);
 
-					&::before {
-						position: absolute;
-						content: "";
+						&::marker {
+							color: var(--color-text-soft);
+						}
+					}
+
+					& details[open] summary {
+						margin-bottom: var(--space-xs);
+					}
+
+					.summary {
+						display: inline-flex;
+						align-items: center;
+						gap: var(--space-s);
+						margin-left: var(--space-xs);
+						vertical-align: middle;
+					}
+
+					.swatch {
+						position: relative;
+						display: inline-block;
+						background: var(--module-colorinfo-color-swatch);
+						width: var(--module-colorinfo-swatch-size);
+						height: var(--module-colorinfo-swatch-size);
+						border-radius: var(--space-xxs);
+						overflow: hidden;
+
+						&::before {
+							position: absolute;
+							content: "";
+							display: block;
+							width: 0;
+							height: 0;
+							border-left: var(--module-colorinfo-swatch-size) solid transparent;
+							border-bottom: var(--module-colorinfo-swatch-size) solid
+								var(--module-colorinfo-color-fallback);
+						}
+					}
+
+					.label {
+						display: inline-block;
+						line-height: 1;
+					}
+
+					& strong,
+					& small {
 						display: block;
-						width: 0;
-						height: 0;
-						border-left: var(--module-colorinfo-swatch-size) solid transparent;
-						border-bottom: var(--module-colorinfo-swatch-size) solid
-							var(--module-colorinfo-color-fallback);
-					}
-				}
-
-				.label {
-					display: inline-block;
-					line-height: 1;
-				}
-
-				& strong,
-				& small {
-					display: block;
-				}
-
-				& strong {
-					font-size: var(--font-size-m);
-				}
-
-				& small {
-					color: var(--color-text-soft);
-					font-size: var(--font-size-xs);
-				}
-
-				.details {
-					display: flex;
-					flex-wrap: wrap;
-					gap: 0 var(--space-m);
-					margin-left: var(--space-l);
-				}
-
-				& dl {
-					margin: 0 0 var(--space-s);
-					display: inline-grid;
-					grid-template-rows: auto auto;
-					gap: var(--space-xxs) var(--space-xs);
-
-					&:last-of-type dt {
-						display: none;
 					}
 
-					/* Nested under the dl rule so the emitted selector ties the
-					   page's dl dt / dl dd rules (specificity 0,0,2) — the scoped
-					   emission leads with zero-specificity :where(module-colorinfo)
-					   (ADR 0033 s7). */
-					& dt {
-						grid-column: 1;
+					& strong {
+						font-size: var(--font-size-m);
+					}
+
+					& small {
 						color: var(--color-text-soft);
-						display: inline-block;
-						text-align: right;
-						font-size: var(--font-size-s);
-						font-weight: 400;
-						line-height: var(--line-height-s);
+						font-size: var(--font-size-xs);
 					}
 
-					& dd {
-						grid-column: 2;
-						display: inline-block;
-						margin: 0;
-						font-size: var(--font-size-s);
-						line-height: var(--line-height-s);
+					.details {
+						display: flex;
+						flex-wrap: wrap;
+						gap: 0 var(--space-m);
+						margin-left: var(--space-l);
+					}
+
+					& dl {
+						margin: 0 0 var(--space-s);
+						display: inline-grid;
+						grid-template-rows: auto auto;
+						gap: var(--space-xxs) var(--space-xs);
+
+						&:last-of-type dt {
+							display: none;
+						}
+
+						/* Nested under the dl rule so the emitted selector ties the
+						   page's dl dt / dl dd rules (specificity 0,0,2) — the scoped
+						   emission leads with zero-specificity :where(module-colorinfo)
+						   (ADR 0033 s7). */
+						& dt {
+							grid-column: 1;
+							color: var(--color-text-soft);
+							display: inline-block;
+							text-align: right;
+							font-size: var(--font-size-s);
+							font-weight: 400;
+							line-height: var(--line-height-s);
+						}
+
+						& dd {
+							grid-column: 2;
+							display: inline-block;
+							margin: 0;
+							font-size: var(--font-size-s);
+							line-height: var(--line-height-s);
+						}
 					}
 				}
 			}`}</style>

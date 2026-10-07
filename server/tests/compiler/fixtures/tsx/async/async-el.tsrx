@@ -27,8 +27,10 @@ export function AsyncEl({}: {})
 				<p role="status" class={() => (isPending(data) ? 'pending' : null)}>
 					status
 				</p>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</async-el>
 	}

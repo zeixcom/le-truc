@@ -76,47 +76,49 @@ export function ModuleList({}: {})
 			</ul>
 
 			<style>
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
-
-				> form {
+			@scope to (form-textbox > *, basic-button > *) {
+				:scope {
 					display: flex;
 					flex-direction: column;
-					align-items: flex-start;
-					gap: var(--space-m);
-					justify-content: space-between;
-				}
+					gap: var(--space-l);
 
-				& ul {
-					display: flex;
-					flex-direction: column;
-					gap: var(--space-m);
-					list-style: none;
-					margin: 0;
-					padding: 0;
-
-					&:empty {
-						display: none;
+					> form {
+						display: flex;
+						flex-direction: column;
+						align-items: flex-start;
+						gap: var(--space-m);
+						justify-content: space-between;
 					}
 
-					& li {
+					& ul {
 						display: flex;
-						align-items: center;
-						justify-content: space-between;
+						flex-direction: column;
 						gap: var(--space-m);
+						list-style: none;
 						margin: 0;
 						padding: 0;
+
+						&:empty {
+							display: none;
+						}
+
+						& li {
+							display: flex;
+							align-items: center;
+							justify-content: space-between;
+							gap: var(--space-m);
+							margin: 0;
+							padding: 0;
+						}
 					}
 				}
-			}
 
-			@container (width > 27rem) {
-				:host {
-					& form {
-						flex-direction: row;
-						align-items: flex-end;
+				@container (width > 27rem) {
+					:scope {
+						& form {
+							flex-direction: row;
+							align-items: flex-end;
+						}
 					}
 				}
 			}</style>

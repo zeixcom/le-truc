@@ -141,8 +141,10 @@ export function ModuleLazyload(
 				></div>
 			</truc:try>
 			<style>{css`
-:host {
-	display: block;
+@scope to (card-callout > *) {
+	:scope {
+		display: block;
+	}
 }`}</style>
 		</module-lazyload>
 	)

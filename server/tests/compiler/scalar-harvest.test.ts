@@ -61,9 +61,11 @@ export function C(${params})
 		${setup}
 		<${tag}${rootAttrs}>
 			${markup}
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</${tag}>
 	}
 `
@@ -75,9 +77,11 @@ export function C(${params}, { expose }: FactoryContext<${props}>) {
 	return (
 		<${tag}${rootAttrs}>
 			${markup}
-			<style>{css\`:host {
-	  display: block;
-	}\`}</style>
+			<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>
 		</${tag}>
 	)
 }

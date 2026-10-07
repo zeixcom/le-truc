@@ -98,12 +98,12 @@ export type DiagnosticCode =
 	| 'LTC063' // a reactive condition inside a reactive list's reconcile() container (ADR 0037 s5, LT-274) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC064' // the component's stylesheet does not parse (ADR 0033 s9, LT-268) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC065' // a stylesheet declaration names a property the CSS dictionary does not know, or a value outside the property's grammar (ADR 0033 s9, LT-394) — tier 2 Contained: the dictionary (mdn-data, via css-tree) lags the platform, so a finding is evidence, not proof; the sheet ships as authored
-	| 'LTC066' // a rule in the component's stylesheet is led by the component's own tag — shadow-root form styles the host through `:host` (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC066' // a rule inside the component's `@scope` led by the component's own tag — it matches only a nested instance, never the host; the fix-it is `:scope` (ADR 0033 s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC067' // `::slotted()` in a component stylesheet — slotted content is a shadow-DOM construct, and compiled components are light DOM (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC068' // `:host-context()` in a component stylesheet — removed from the CSS spec, matched by no browser (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
-	| 'LTC069' // `:global` in a form other than the two whole-rule forms — nested, prefixed, trailing, leading-ancestor, mid-selector, or declarations directly in a bare block (ADR 0033 s6a, LT-304) — tier 1 Prevented, statically decidable, no runtime half
-	| 'LTC070' // `:host` directly followed by a qualifier (`:host.x`, `:host:hover`, `:host[attr]`) — matches nothing in a shadow root; the qualifier belongs in the arguments (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
-	| 'LTC071' // a stylesheet selector descends past a boundary tag (`child-tag .x`, `child-tag > .x`) — its subject is a composed child's content, which the scope always excludes (ADR 0033 s6, LT-399) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC069' // `:global` anywhere in a component stylesheet — an unscoped rule is a top-level rule, so the fix-it removes the wrapper and moves the rule to the top level (ADR 0033 s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC070' // RETIRED (LT-501) — a qualifier after `:scope` is valid CSS; the number is spent, see VOCABULARY_LEDGER.md
+	| 'LTC071' // a selector inside a `@scope` block descends past a compound the block's own `to (…)` limit excludes, so the limit always excludes its subject — a dead rule (ADR 0033 s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC072' // a field of a list item seeded from server args has no harvest site in the item — no text child or reactive attribute reads exactly the field, and the `keyConfig` does not return it verbatim — so the client cannot rebuild the item at connect (ADR 0046 s7, LT-429) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC073' // a `<style>` block that is not the root's single direct `<style>` child — a second direct one, or one nested in a descendant; only the first direct child is hoisted as the stylesheet, so the CSS would be dropped (ADR 0032 s1, LT-417) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC074' // an element sibling of a reactive-list loop in its reconcile() container — directly or as an arm root, in any arm, of a server-mode conditional or a non-async `try` — carries no `data-unreconciled`, so the first reconcile removes it (LT-186, LT-431; an authored `data-key` is no exemption) — tier 1 Prevented, statically decidable; the runtime half is LT-185's DEV_MODE advisory, not a Contained error. Lands out of numeric order: `LTC072` is LT-429's, `LTC073` LT-417's — both reserved before this rule picked
@@ -113,6 +113,8 @@ export type DiagnosticCode =
 	| 'LTC078' // a `<style>` block whose content is not a stylesheet spelling — on `.tsx` anything but the `css` marker's tagged template, a bare template literal or nothing (another tag, a shadowed or unimported `css`, a `${}` substitution, any other expression or text); on `.tsrx` an expression child in place of the CSS body. The sheet would read as empty and ship no CSS (ADR 0034 s1, LT-444) — tier 1 Prevented, statically decidable, no runtime half. Lands out of numeric order: `LTC076` is LT-429's, `LTC077` LT-443's — both reserved before this rule picked
 	| 'LTC080' // a key alias that does not meet ADR 0047 s1 — a host-level list seeded from server args, never rendered by its own `map`, is harvested through `const t = list.byKey(k)` in a reactive list's item setup only when the aliasing list keys each item by itself, the read is that alias statement over the loop key, the list has one alias scope, and every field renders at a site in it (LT-453) — tier 1 Prevented, statically decidable; the render witness is the dynamic half, a server-render error with no client counterpart
 	| 'LTC081' // a handler arg (an `on[A-Z]…` arg, LT-461) the parent cannot address: its declared type is not a function type; or it is read anywhere but as an event attribute on a raw element or forwarded to a composed child's handler arg; or it is placed inside one of the component's reactive arms or list items, whose elements are recreated on a flip or a reconcile — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC086' // `:host` anywhere in a component stylesheet — it matches nothing in light DOM; the fix-it is `:scope` (`:host(X)` → `:scope:is(X)`) (ADR 0033 s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC089' // a `@scope` form the flat-selector lowering cannot express — a `@scope` inside a component `@scope`, or a limit naming `:scope` — on a CSS target without native `@scope` (ADR 0033 s4, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 
 /**
  * A range in the file the author wrote (ADR 0044 s1–s2): `start` and `end`
@@ -2062,12 +2064,9 @@ export const diagnostic = {
 	 * the build fails naming every member, and none of the set's artifacts
 	 * are written (mirroring LTC048's both-dropped semantics).
 	 *
-	 * Two faces (ADR 0033 s10, LT-304): the authored sheets differ, or the
-	 * sheets agree but the members stop the scope at different boundary
-	 * sets — each member's boundaries are the custom elements its own
-	 * lowered template renders, so the same sheet emits different CSS. The
-	 * caller passes `boundaries` (source → boundary tags) only for the
-	 * second face; copying styles cannot fix it, so it names the sets.
+	 * One face (ADR 0033 s10, LT-501): the authored sheets differ. The
+	 * comparison reads authored sheets only — the emission adds no boundaries
+	 * of its own, so nothing else can drift.
 	 *
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
 	 * (reviewed 2026-10-02, LT-402). Corpus-level: fires once per involved
@@ -2079,20 +2078,10 @@ export const diagnostic = {
 		sources: ReadonlyArray<string>,
 		at: DiagnosticLocation,
 		related: DiagnosticLocation[],
-		boundaries?: ReadonlyMap<string, readonly string[]>,
 	): CompileDiagnostic =>
 		corpusError(
 			'LTC051',
-			boundaries
-				? `Variant set \`${tag}\` has the same styles in every member, but its members render different custom elements, so the scope stops at different boundaries: ${sources
-						.map(source => {
-							const tags = boundaries.get(source) ?? []
-							return `${source} stops at ${tags.length ? tags.map(t => `<${t}>`).join(', ') : 'no custom element'}`
-						})
-						.join(
-							'; ',
-						)} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make every member render the same custom elements.`
-				: `Variant set \`${tag}\` compiles to different CSS across its members: ${sources.join(', ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make the styles of every member byte-identical: copy the styles of the served member into the others.`,
+			`Variant set \`${tag}\` compiles to different CSS across its members: ${sources.join(', ')} — the build writes one stylesheet for the whole set, so it wrote no artifact of the set. Make the styles of every member byte-identical: copy the styles of the served member into the others.`,
 			at,
 			related,
 		),
@@ -2215,25 +2204,37 @@ export const diagnostic = {
 			rangeOf(source, at),
 		),
 
-	// --- Shadow-root stylesheet contract (ADR 0033 s6/s6a, LT-304) ---
+	// --- Platform-CSS stylesheet contract (ADR 0033 s6, LT-501) ---
 
 	/**
-	 * A rule in the component's stylesheet is led by the component's own tag
-	 * (ADR 0033 s6, LT-304). A compiled sheet is shadow-root CSS: bare
-	 * selectors style the component's internals, and the host is styled
-	 * through `:host`. Tag-led authoring was the 2.x form; under the scoped
-	 * emission a tag-led rule would silently stop styling the host — the tag
-	 * compound addresses the element INSIDE the scope, and the scope root
-	 * itself is never its own descendant. ADR 0028 tier 1 (Prevented):
-	 * statically decidable, no runtime half.
+	 * A rule inside the component's `@scope` is led by the component's own
+	 * tag (ADR 0033 s6, LT-501). A rule in `@scope` already starts at the
+	 * host's descendants, so the tag addresses only a nested instance of the
+	 * component — never the host. The host is `:scope`. A tag-led rule at
+	 * the sheet's top level is the 2.x form and stays legal. ADR 0028 tier 1
+	 * (Prevented): statically decidable, no runtime half.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
-	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
 	 */
 	ownTagLedRule: (source: string, at: Site, tag: string) =>
 		error(
 			'LTC066',
-			`This rule is led by the component's own tag \`${tag}\`. A compiled stylesheet is shadow-root CSS: bare selectors style the component's internals, and the host element is styled through \`:host { … }\`. A \`${tag} { … }\` rule would silently stop applying — the selector addresses a nested \`<${tag}>\` inside the scope, not the host. Style the host through \`:host\`, and drop the tag from selectors that mean the component's own internals.`,
+			`This rule sits inside \`@scope\` and is led by the component's own tag \`${tag}\`. A rule in \`@scope\` starts at the host's descendants, so \`${tag} { … }\` matches only a nested \`<${tag}>\` and never the host. Write \`:scope\` for the host, and drop the tag from selectors that mean the component's own content.`,
+			rangeOf(source, at),
+		),
+
+	/**
+	 * `:host` in a component stylesheet (ADR 0033 s6, LT-501). `:host`
+	 * addresses the root of a shadow tree and matches nothing in light DOM.
+	 * The host is `:scope` inside `@scope`; `:host(X)` is `:scope:is(X)`.
+	 * ADR 0028 tier 1 (Prevented): statically decidable, no runtime half.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 */
+	hostSelector: (source: string, at: Site) =>
+		error(
+			'LTC086',
+			'`:host` matches nothing in a compiled component: it names the root of a shadow tree, and a compiled component renders light DOM. Write `:scope` for the host inside `@scope { … }` — `:host { … }` becomes `:scope { … }`, and `:host(.x)` becomes `:scope:is(.x)`.',
 			rangeOf(source, at),
 		),
 
@@ -2274,89 +2275,59 @@ export const diagnostic = {
 		),
 
 	/**
-	 * `:host` directly followed by a qualifier (ADR 0033 s6, LT-304; R3,
-	 * owner 2026-10-02). `:host.x`, `:host:hover` and `:host[attr]` match
-	 * nothing in a shadow root — the compound on the bare `:host`
-	 * pseudo-class has no matchable form; the qualifier belongs in the
-	 * pseudo-class's arguments: `:host(.x)`, `:host(:hover)`,
-	 * `:host([attr])`. ADR 0028 tier 1 (Prevented): statically decidable,
-	 * no runtime half.
+	 * A selector inside a `@scope` block descends past a compound that one of
+	 * the block's own `to (…)` limits excludes (ADR 0033 s6, LT-501). The
+	 * limit always excludes the subject, so the rule matches nothing.
+	 * Sibling combinators stay legal, and so does styling the limit's own
+	 * element. ADR 0028 tier 1 (Prevented): statically decidable, no runtime
+	 * half.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
-	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
 	 */
-	hostQualifier: (source: string, at: Site) =>
-		error(
-			'LTC070',
-			'`:host` followed directly by a qualifier matches nothing in a shadow root — a compound on the bare `:host` pseudo-class has no matchable form. Move the qualifier into the arguments: `:host(.x)`, `:host(:hover)`, `:host([attr])`.',
-			rangeOf(source, at),
-		),
-
-	/**
-	 * A selector that descends past a boundary tag (ADR 0033 s6, LT-399):
-	 * a compound naming a custom element the template renders, followed by
-	 * a descendant or child combinator. The subject is that child's content;
-	 * the scope limit (native) and the guard (lowered) always exclude it, so
-	 * the rule matches nothing — as a shadow root's sheet cannot reach into
-	 * a child's shadow root. Sibling combinators stay legal, and so does
-	 * styling the child's own tag. ADR 0028 tier 1 (Prevented): statically
-	 * decidable, no runtime half.
-	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
-	 * (reviewed 2026-10-02, LT-402 — the LT-399 first draft, finalized).
-	 */
-	descendsPastBoundary: (
-		source: string,
-		at: Site,
-		selector: string,
-		boundary: string,
-	) =>
+	deadByLimit: (source: string, at: Site, selector: string, limit: string) =>
 		error(
 			'LTC071',
-			`The selector \`${selector}\` reaches inside \`<${boundary}>\`, a custom element this component renders — the scope stops at it, so the rule matches nothing. Style that content from \`<${boundary}>\`'s own stylesheet, or, for a page-level rule, move it into a top-level \`:global { … }\` block.`,
+			`The selector \`${selector}\` reaches inside \`${limit}\`, which a \`to (…)\` limit of this \`@scope\` block excludes, so the rule matches nothing. Remove the limit, or move the rule out of the \`@scope\` block — a top-level rule applies page-wide.`,
 			rangeOf(source, at),
 		),
 
 	/**
-	 * `:global` in a form other than the two whole-rule forms (ADR 0033
-	 * s6a, LT-304). The admitted forms are a top-level
-	 * `:global(<whole selector>) { … }` rule and a top-level bare `:global
-	 * { … }` block, both hoisted out of the scope and emitted unwrapped;
-	 * every other spelling would either reach past the boundary into
-	 * composed children's markup (nested, prefixed, leading-ancestor — the
-	 * data account forbids it), do nothing (trailing — classes are never
-	 * rewritten, so the wrapper is a no-op), be an error in TSRX too
-	 * (mid-selector), or style nothing (declarations directly in a bare
-	 * block). `face` names which; each carries its own reason in the copy.
-	 * ADR 0028 tier 1 (Prevented): statically decidable, no runtime half.
+	 * `:global` in a component stylesheet (ADR 0033 s6, LT-501). A rule
+	 * outside `@scope` already applies page-wide, so the wrapper has no
+	 * meaning. ADR 0028 tier 1 (Prevented): statically decidable, no
+	 * runtime half.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages)
-	 * (reviewed 2026-10-02, LT-402 — the LT-304 first draft, finalized).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
 	 */
-	globalMisuse: (
-		source: string,
-		at: Site,
-		face:
-			| 'nested'
-			| 'prefixed'
-			| 'trailing'
-			| 'leading-ancestor'
-			| 'mid-selector'
-			| 'declarations',
-	) =>
+	globalSelector: (source: string, at: Site) =>
 		error(
 			'LTC069',
-			face === 'nested'
-				? 'This `:global` sits inside another rule or block. A global rule escapes the component scope, so from inside a rule it would reach past the boundary into composed children — hoist it to the top level of the stylesheet instead: a whole `:global(<selector>) { … }` rule or a bare `:global { … }` block (an at-rule-conditioned global rides in the bare block: `:global { @media … }`).'
-				: face === 'prefixed'
-					? "This `:global(<selector>)` is followed by more selector. A global escape owns the whole rule; extending it would address markup past the boundary into composed children. Hoist the rule to the top level as `:global(<whole selector>) { … }`, or drop the wrapper if the selector means this component's own internals."
-					: face === 'trailing'
-						? 'This `:global(…)` trails a selector, so it wraps nothing that needs escaping — classes are never rewritten, and the compiled selector keeps the compound as written. Drop the wrapper and write the compound plainly.'
-						: face === 'leading-ancestor'
-							? 'This selector starts at `:global(…)` and then descends into the component. A leading global ancestor has no shadow-root equivalent — the page cannot reach into the component from outside, and inside the scope the descendant needs no escape. Style internals with bare selectors; a genuinely page-level rule hoists as `:global(<whole selector>) { … }`.'
-							: face === 'mid-selector'
-								? "This `:global(…)` sits in the middle of a selector, which is an error in TSRX too. Split the rule: the component's own compounds style internals with bare selectors, and a genuinely page-level rule hoists as `:global(<whole selector>) { … }` at the top level."
-								: 'These declarations sit directly in a bare `:global { … }` block, which carries no selector — they style nothing. Put them under a selector: a `:global(<selector>) { … }` rule, or a rule inside the block.',
+			'`:global` has no meaning in a compiled stylesheet: a top-level rule outside `@scope` already applies page-wide. Remove the wrapper and move the rule to the top level of the stylesheet, outside the `@scope` block.',
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A `@scope` form the flat-selector lowering cannot express (ADR 0033
+	 * s4, LT-501). Only a CSS target without native `@scope` fails; a native
+	 * target ships the same sheet. The message names the configured target.
+	 * ADR 0028 tier 1 (Prevented): statically decidable from the sheet and
+	 * the configuration, no runtime half.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 */
+	scopeNotLowerable: (
+		source: string,
+		at: Site,
+		face: 'nested-scope' | 'scope-in-limit',
+		targets: string,
+	) =>
+		error(
+			'LTC089',
+			`${
+				face === 'nested-scope'
+					? 'A `@scope` inside the component `@scope` has no flat-selector form'
+					: 'A `to (…)` limit that names `:scope` or `&` has no flat-selector form'
+			}, and the configured CSS targets (${targets}) need one. Write the sheet without it, or raise \`cssTargets\` in \`le-truc.config.json\` to browsers with native \`@scope\` (Chrome 118, Firefox 128, Safari 17.4).`,
 			rangeOf(source, at),
 		),
 }

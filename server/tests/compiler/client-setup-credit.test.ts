@@ -25,9 +25,11 @@ describe('client-only setup statements credit a signal as rendered', () => {
 	watch(() => !open.get(), bindAttribute(panel, 'hidden'))
 		<c-el>
 			<div class="panel" hidden>ok</div>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 import { bindAttribute, createState } from '@zeix/le-truc'`
@@ -86,9 +88,11 @@ import { bindAttribute, createState } from '@zeix/le-truc'`
 	expose({})
 		<c-el>
 			<button type="button" onClick={() => console.log(count.get())}>log</button>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 import { createState } from '@zeix/le-truc'`)
@@ -112,9 +116,11 @@ import { createState } from '@zeix/le-truc'`)
 			<ul><li>a</li></ul>
 			<output></output>
 			<p>{() => label()}</p>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 import { bindText, createMemo } from '@zeix/le-truc'`)
@@ -145,9 +151,11 @@ import { bindText, createMemo } from '@zeix/le-truc'`)
 					<p>other</p>
 				}
 			}
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 import { bindText, createMemo } from '@zeix/le-truc'`)

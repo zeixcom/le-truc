@@ -20,9 +20,11 @@ describe('plain import used only server-side', () => {
 				@if (gated) {
 					<p>shown</p>
 				}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -52,9 +54,11 @@ describe('plain import used only client-side', () => {
 		expose({ value: asNumber() })
 			<c-el style={() => ({ '--x': clientOnlyHelper(host.value) })}>
 				<p>{host.value}</p>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -95,9 +99,11 @@ describe('plain import used both server- and client-side', () => {
 		expose({ formatted: formatted.get })
 			<c-el>
 				<p>{formatted}</p>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -124,9 +130,11 @@ describe('plain import used only inside a bare (non-arrow) attribute expression'
 	@{
 		expose({})
 			<c-el data-x={helper(count)}>ok
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -154,9 +162,11 @@ describe('relative specifier rewriting', () => {
 				@if (gated) {
 					<p>shown</p>
 				}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -179,9 +189,11 @@ describe('an unused plain import', () => {
 	@{
 		expose({})
 			<c-el>ok
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -202,9 +214,11 @@ describe('a side-effect-only plain import', () => {
 	@{
 		expose({})
 			<c-el>ok
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 

@@ -51,9 +51,11 @@ export function C(${params})
 	@{
 		${setup}
 			<${tag}${rootAttrs}>${body}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</${tag}>
 	}`
 
@@ -71,9 +73,11 @@ export function C(${params}) {
 	${setup}
 	return (
 			<${tag}${rootAttrs}>${body}
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</${tag}>
 	)
 }`

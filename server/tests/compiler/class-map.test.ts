@@ -18,9 +18,11 @@ describe('class-map on a descendant native element', () => {
 			<c-el>
 				<p>{open}</p>
 				<span class={() => ({ open: open.get(), disabled: false })}>ok</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -56,9 +58,11 @@ describe('class-map on the component root (targets host)', () => {
 		expose({})
 			<c-el class={() => ({ open: open.get(), disabled: false })}>
 				<p>{open}</p>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -94,9 +98,11 @@ describe('class-map on a descendant custom element bypasses the reactive-attribu
 			<c-el>
 				<p>{open}</p>
 				<sub-el class={() => ({ open: open.get() })}>ok</sub-el>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -124,9 +130,11 @@ describe('signal used only inside the class-map thunk (LT-036)', () => {
 	expose({})
 		<c-el>
 			<span class={() => ({ active: on.get() })}>ok</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }
 import { createCell } from '@zeix/le-truc'`
@@ -136,9 +144,11 @@ import { createCell } from '@zeix/le-truc'`
 	expose({})
 		<c-el class={() => ({ active: on.get() })}>
 			<span>ok</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }
 import { createCell } from '@zeix/le-truc'`
@@ -178,9 +188,11 @@ describe('quoted class keys (LT-221 §1.3)', () => {
 			<c-el>
 				<p>{open}</p>
 				<span class={() => ({ 'has-error': open.get() })}>ok</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -206,9 +218,11 @@ import { createCell } from '@zeix/le-truc'`
 						<li class={() => ({ 'is-active': open.get() })}>{tab.id}</li>
 					}
 				</ul>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -237,9 +251,11 @@ describe('the class:-prefix spelling is rejected (LT-222)', () => {
 		expose({})
 			<c-el>
 				<span class:has-error={() => open.get()}>ok</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
@@ -261,9 +277,11 @@ import { createCell } from '@zeix/le-truc'`
 		expose({})
 			<c-el>
 				<span class:has-error={open.get()}>ok</span>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`

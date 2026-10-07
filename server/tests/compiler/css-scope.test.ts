@@ -1,9 +1,9 @@
 import { describe, expect, test } from 'bun:test'
 import { parseComponentSheet } from '../../compiler/css'
 import {
-	checkSheetBoundaries,
 	checkSheetContract,
-	collectScopeBoundaries,
+	checkSheetLowering,
+	describeCssTargets,
 	emitScopedSheet,
 	scopeModeOf,
 } from '../../compiler/css-scope'
@@ -14,11 +14,7 @@ import { DEFAULT_CSS_TARGETS } from '../../compiler/emit-paths'
 /** Parse a sheet and emit it; the one-call shape every test below uses. */
 const emit = (
 	sheetText: string,
-	options: {
-		tag?: string
-		boundaries?: string[]
-		cssTargets?: Record<string, number>
-	} = {},
+	options: { tag?: string; cssTargets?: Record<string, number> } = {},
 ): string => {
 	const { sheet, errors } = parseComponentSheet(sheetText)
 	expect(errors).toEqual([])
@@ -27,7 +23,6 @@ const emit = (
 		sheet,
 		sheetText,
 		options.tag ?? 'my-box',
-		options.boundaries ?? [],
 		options.cssTargets ?? DEFAULT_CSS_TARGETS,
 	)
 }
@@ -39,9 +34,88 @@ const NATIVE: Record<string, number> = {
 	safari: (17 << 16) | (4 << 8),
 }
 
+/** The guard one limit adds (ADR 0033 s4), for tag `my-box`. */
+const guardOf = (limit: string, root = 'my-box'): string =>
+	`:where(:not(:is(${root} ${limit}, ${root} ${limit} *):not(${root} ${limit} my-box, ${root} ${limit} my-box *)))`
+
+const PAD = ':not([data-truc-scope-pad])'
+
+/**
+ * Specificity of a flat selector as [ids, classes, types]: `:where()` is
+ * zero, `:is()`/`:not()` take their argument's maximum, a class, attribute
+ * or pseudo-class counts as a class, a type as a type. Enough for the
+ * selectors the emission writes.
+ */
+const specificity = (selector: string): [number, number, number] => {
+	const total: [number, number, number] = [0, 0, 0]
+	const add = (other: [number, number, number]) => {
+		total[0] += other[0]
+		total[1] += other[1]
+		total[2] += other[2]
+	}
+	let i = 0
+	while (i < selector.length) {
+		const rest = selector.slice(i)
+		const functional = /^:(where|is|not|has)\(/.exec(rest)
+		if (functional) {
+			let depth = 0
+			let j = i + functional[0].length - 1
+			for (; j < selector.length; j++) {
+				if (selector[j] === '(') depth++
+				if (selector[j] === ')' && --depth === 0) break
+			}
+			if (functional[1] !== 'where') {
+				const members: string[] = []
+				let level = 0
+				let from = i + functional[0].length
+				for (let k = from; k < j; k++) {
+					if (selector[k] === '(') level++
+					else if (selector[k] === ')') level--
+					else if (selector[k] === ',' && level === 0) {
+						members.push(selector.slice(from, k))
+						from = k + 1
+					}
+				}
+				members.push(selector.slice(from, j))
+				const best = members
+					.map(specificity)
+					.sort((a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2])
+					.pop() ?? [0, 0, 0]
+				add(best)
+			}
+			i = j + 1
+			continue
+		}
+		if (rest.startsWith('::')) {
+			total[2]++
+			i += 2 + (/^[\w-]+/.exec(rest.slice(2))?.[0].length ?? 0)
+		} else if (rest[0] === ':') {
+			total[1]++
+			i += 1 + (/^[\w-]+/.exec(rest.slice(1))?.[0].length ?? 0)
+		} else if (rest[0] === '.') {
+			total[1]++
+			i += 1 + (/^[\w-]+/.exec(rest.slice(1))?.[0].length ?? 0)
+		} else if (rest[0] === '#') {
+			total[0]++
+			i += 1 + (/^[\w-]+/.exec(rest.slice(1))?.[0].length ?? 0)
+		} else if (rest[0] === '[') {
+			total[1]++
+			i += rest.indexOf(']') + 1
+		} else if (/^[a-z]/i.test(rest)) {
+			total[2]++
+			i += /^[\w-]+/.exec(rest)?.[0].length ?? 1
+		} else i++
+	}
+	return total
+}
+
+/** The selector text of the first rule of an emitted sheet. */
+const firstSelector = (css: string): string =>
+	css.slice(0, css.indexOf(' {')).trim()
+
 /* === The CSS target === */
 
-describe('scopeModeOf (ADR 0033 s5)', () => {
+describe('scopeModeOf (ADR 0033 s7)', () => {
 	test('the default target lowers — @scope is not widely available there', () => {
 		expect(scopeModeOf(DEFAULT_CSS_TARGETS)).toBe('lowered')
 	})
@@ -54,6 +128,12 @@ describe('scopeModeOf (ADR 0033 s5)', () => {
 	test('an empty target lowers', () => {
 		expect(scopeModeOf({})).toBe('lowered')
 	})
+	test('describeCssTargets names each browser and version', () => {
+		expect(
+			describeCssTargets({ chrome: 118 << 16, safari: (17 << 16) | (3 << 8) }),
+		).toBe('chrome 118, safari 17.3')
+		expect(describeCssTargets({})).toBe('no named browser')
+	})
 })
 
 /* === The authored-form checks (ADR 0033 s6) === */
@@ -64,199 +144,386 @@ describe('checkSheetContract', () => {
 		expect(sheet).not.toBeNull()
 		return checkSheetContract(sheet, sheetText, tag)
 	}
+	const faces = (sheetText: string) => findingsOf(sheetText).map(f => f.face)
 
-	test('a rule led by the own tag is the own-tag-led face, offset at the rule', () => {
-		const findings = findingsOf(':host { color: red }\nmy-box .x { top: 0 }')
+	test('a rule inside @scope led by the own tag is the own-tag-led face, offset at the rule', () => {
+		const findings = findingsOf('@scope {\n  my-box .x { top: 0 }\n}')
 		expect(findings).toHaveLength(1)
 		expect(findings[0]?.face).toBe('own-tag-led')
-		expect(findings[0]?.offset).toBe(21)
+		expect(findings[0]?.offset).toBe(11)
 	})
 
-	test('a rule inside a top-level conditional group is still top-level for own-tag-led (LT-398 d)', () => {
-		const findings = findingsOf(
-			'@media (width > 30em) { my-box .x { top: 0 } }\n@supports (display: grid) { @container (width > 1px) { my-box { top: 0 } } }',
-		)
-		expect(findings.map(f => f.face)).toEqual(['own-tag-led', 'own-tag-led'])
-		// The nested-:global face still counts every enclosing block.
+	test('a tag-led rule at the top level is the legal 2.x form, in conditional groups too', () => {
 		expect(
-			findingsOf('@media (width > 1px) { :global(body) { top: 0 } }').map(
-				f => f.globalFace,
+			faces(
+				'my-box .x { top: 0 }\n@media (width > 30em) { my-box { top: 0 } }',
 			),
-		).toEqual(['nested'])
+		).toEqual([])
 	})
 
-	test('a nested rule is not own-tag-led (the nesting semantics lead with &)', () => {
-		const findings = findingsOf(':host { & .deep { color: red } }')
-		expect(findings).toEqual([])
+	test('own-tag-led reaches a rule in a conditional group inside @scope, not a nested rule', () => {
+		expect(
+			faces('@scope { @media (width > 1px) { my-box { top: 0 } } }'),
+		).toEqual(['own-tag-led'])
+		expect(faces('@scope { .a { my-box { top: 0 } } }')).toEqual([])
+	})
+
+	test(':host anywhere is the host face, qualified or not, nested in :is() too', () => {
+		expect(faces(':host { color: red }')).toEqual(['host'])
+		expect(faces('@scope { :host(.x) .y { color: red } }')).toEqual(['host'])
+		expect(faces('@scope { .a:is(:host, .b) { color: red } }')).toEqual([
+			'host',
+		])
+		expect(faces(':host.x { color: red }')).toEqual(['host'])
+		// One finding per rule, not per occurrence.
+		expect(faces(':host .a, :host .b { color: red }')).toEqual(['host'])
+	})
+
+	test('a qualifier after :scope is valid CSS (LTC070 retired)', () => {
+		expect(
+			faces('@scope { :scope.x { color: red } :scope:hover .y { top: 0 } }'),
+		).toEqual([])
 	})
 
 	test('::slotted is the slotted face; :host-context the host-context face', () => {
-		const findings = findingsOf(
-			':host { ::slotted(.s) { color: red } :host-context(.c) .y { top: 0 } }',
-		)
-		expect(findings.map(f => f.face)).toEqual(['slotted', 'host-context'])
+		expect(
+			faces(
+				'@scope { ::slotted(.s) { color: red } :host-context(.c) .y { top: 0 } }',
+			),
+		).toEqual(['slotted', 'host-context'])
 	})
 
-	test(':host directly qualified is the host-qualifier face (R3, LTC070)', () => {
-		const findings = (text: string) => findingsOf(text).map(f => f.face)
-		expect(findings(':host.x { color: red }')).toEqual(['host-qualifier'])
-		expect(findings(':host:hover .y { color: red }')).toEqual([
-			'host-qualifier',
+	test(':global anywhere is the global face — whole-rule, block and nested', () => {
+		expect(faces(':global(.page) { color: red }')).toEqual(['global'])
+		expect(faces(':global { .other { color: teal } }')).toEqual(['global'])
+		expect(faces('@scope { .a :global(.b) { color: red } }')).toEqual([
+			'global',
 		])
-		expect(findings(':host[attr] { color: red }')).toEqual(['host-qualifier'])
-		// The argument forms and pseudo-element compounds are legal.
-		expect(findings(':host(.x) { color: red }')).toEqual([])
-		expect(findings(':host(:hover) .y { color: red }')).toEqual([])
-		expect(findings(':host([attr]) { color: red }')).toEqual([])
-		expect(findings(':host::before { content: "" }')).toEqual([])
+		expect(faces('@media (width > 1px) { :global(body) { top: 0 } }')).toEqual([
+			'global',
+		])
 	})
 
-	test('the two whole-rule :global forms pass; every other shape names its face', () => {
-		const legal = findingsOf(
-			':global(.page) { color: red }\n:global { .other { color: teal } }\n:host { color: red }',
-		)
-		expect(legal).toEqual([])
-		const faces = (text: string) =>
-			findingsOf(text)
-				.filter(f => f.face === 'global')
-				.map(f => f.globalFace)
-		expect(faces('.x :global(.trail) { color: red }')).toEqual(['trailing'])
-		expect(faces('.mid :global(.m) .z { color: red }')).toEqual([
-			'mid-selector',
-		])
-		expect(faces(':global(.lead) .x { color: red }')).toEqual([
-			'leading-ancestor',
-		])
-		expect(faces('.x.y:global(.z) { color: red }')).toEqual(['trailing'])
-		expect(faces(':global(.page), .b { color: red }')).toEqual(['prefixed'])
-		expect(faces(':host { :global(.inner) { color: red } }')).toEqual([
-			'nested',
-		])
-		expect(faces(':global { color: teal }')).toEqual(['declarations'])
+	describe('a selector an authored limit always excludes (LTC071)', () => {
+		const dead = (sheetText: string) =>
+			findingsOf(sheetText)
+				.filter(f => f.face === 'dead-by-limit')
+				.map(f => f.selector)
+
+		test('descending past a compound equal to a limit is dead', () => {
+			expect(
+				dead(
+					'@scope to (.card) { .card .x { top: 0 } .a > .card > p { top: 0 } }',
+				),
+			).toEqual(['.card .x', '.a > .card > p'])
+		})
+
+		test('a `<child> > *` limit makes the child tag a dead end', () => {
+			const findings = findingsOf(
+				'@scope to (b-child > *) { b-child .x { top: 0 } b-child > p { top: 0 } }',
+			)
+			expect(findings.map(f => f.limit)).toEqual(['b-child > *', 'b-child > *'])
+			expect(findings[1]?.offset).toBe(
+				'@scope to (b-child > *) { b-child .x { top: 0 } '.length,
+			)
+		})
+
+		test('the limit element itself, its pseudo-elements and its siblings stay legal', () => {
+			expect(
+				dead(
+					'@scope to (b-child > *) { b-child { top: 0 } :scope > b-child::before { top: 0 } b-child + .x, b-child ~ p { top: 0 } .x:has(b-child) { top: 0 } }',
+				),
+			).toEqual([])
+		})
+
+		test('a literal `> *` limit still reads literally: the run must match and be followed', () => {
+			expect(
+				dead('@scope to (b-child > *) { b-child > * .x { top: 0 } }'),
+			).toEqual(['b-child > * .x'])
+			expect(dead('@scope to (b-child > *) { .a > .x { top: 0 } }')).toEqual([])
+		})
+
+		test('nesting resolves through &, implicit and explicit', () => {
+			expect(
+				dead(
+					'@scope to (b-child > *) { @container (width > 1px) { :scope { & b-child { & h1, & h2 { top: 0 } } } } b-child { p { top: 0 } &:hover { top: 0 } & + .x { top: 0 } } }',
+				),
+			).toEqual(['& h1, & h2', '& p'])
+		})
+
+		test('a nested rule is dead only when dead under every parent alternative', () => {
+			expect(
+				dead('@scope to (b-child > *) { b-child, .live { .x { top: 0 } } }'),
+			).toEqual([])
+			expect(
+				dead(
+					'@scope to (b-child > *) { b-child, .a b-child { .x { top: 0 } } }',
+				),
+			).toEqual(['& .x'])
+		})
+
+		test('a block without limits, and a rule outside @scope, have nothing to exclude', () => {
+			expect(dead('@scope { b-child .x { top: 0 } }')).toEqual([])
+			expect(dead('b-child .x { top: 0 }')).toEqual([])
+		})
+	})
+})
+
+describe('checkSheetLowering (LTC089)', () => {
+	const findingsOf = (sheetText: string) => {
+		const { sheet } = parseComponentSheet(sheetText)
+		expect(sheet).not.toBeNull()
+		return checkSheetLowering(sheet, sheetText)
+	}
+
+	test('a plain component @scope is expressible', () => {
+		expect(
+			findingsOf('@scope (.card) to (.a > *) { :scope .x { top: 0 } }'),
+		).toEqual([])
+	})
+
+	test('a @scope inside the component @scope is the nested-scope face, ranged at its prelude', () => {
+		const findings = findingsOf('@scope {\n  @scope (.x) { .y { top: 0 } }\n}')
+		expect(findings.map(f => f.face)).toEqual(['nested-scope'])
+		expect(findings[0]?.offset).toBe(11)
+		expect(findings[0]?.end).toBe(11 + '@scope (.x)'.length)
+	})
+
+	test('a nested @scope under a conditional group is still nested', () => {
+		expect(
+			findingsOf(
+				'@scope { @media (width > 1px) { @scope (.x) { .y { top: 0 } } } }',
+			).map(f => f.face),
+		).toEqual(['nested-scope'])
+	})
+
+	test('a limit that names :scope is the scope-in-limit face', () => {
+		expect(
+			findingsOf('@scope to (:scope > .a) { .x { top: 0 } }').map(f => f.face),
+		).toEqual(['scope-in-limit'])
 	})
 })
 
 /* === The lowered emission (ADR 0033 s4) === */
 
 describe('emitScopedSheet — lowered (the default targets)', () => {
-	test(':host becomes :where(tag); bare selectors lead with :where(tag) (R1)', () => {
-		const css = emit(':host { display: block }\n.input { color: red }')
-		expect(css).toBe(
-			':where(my-box) {\n  display: block;\n}\n\n:where(my-box) .input {\n  color: red;\n}\n',
-		)
-	})
-
-	test('a composing component guards the subject per boundary tag', () => {
-		const css = emit('.input { color: red }', {
-			boundaries: ['form-listbox'],
-		})
-		expect(css).toBe(
-			':where(my-box) .input:where(:not(my-box form-listbox > *, my-box form-listbox > * *)) {\n  color: red;\n}\n',
-		)
-	})
-
-	test('a self-nested boundary joins the guard list first', () => {
-		const css = emit('.input { color: red }', {
-			boundaries: ['my-box', 'form-listbox'],
-		})
-		expect(css).toContain(
-			':where(my-box) .input:where(:not(my-box my-box > *, my-box my-box > * *, my-box form-listbox > *, my-box form-listbox > * *)) {',
-		)
-	})
-
-	test('the guard sits before a trailing pseudo-element', () => {
-		const css = emit('.input::before { content: "x" }', {
-			boundaries: ['form-listbox'],
-		})
-		expect(css).toContain(
-			':where(my-box) .input:where(:not(my-box form-listbox > *, my-box form-listbox > * *)):before {',
-		)
-	})
-
-	test(':host(sel) becomes :where(tag:is(sel)); a :host-led descendant skips the prefix but keeps the guard', () => {
+	test('bare selectors lead with :where(tag); :scope becomes the padded root compound', () => {
 		const css = emit(
-			':host(.compact) { padding: 0 }\n:host:hover .input { top: 0 }',
-			{ boundaries: ['form-listbox'] },
+			'@scope { :scope { display: block } .input { color: red } :scope.on > p { top: 0 } }',
 		)
-		expect(css).toContain(':where(my-box:is(.compact)) {')
-		expect(css).toContain(
-			':where(my-box):hover .input:where(:not(my-box form-listbox > *, my-box form-listbox > * *)) {',
+		expect(css).toBe(
+			`:where(my-box)${PAD} {\n  display: block;\n}\n\n:where(my-box) .input {\n  color: red;\n}\n\n:where(my-box)${PAD}.on > p {\n  top: 0;\n}\n`,
 		)
 	})
 
-	test('every part of a selector list is prefixed and guarded', () => {
-		const css = emit('label, p, button { opacity: 0.5 }', {
-			boundaries: ['form-listbox'],
-		})
-		expect(css).toContain(
-			':where(my-box) label:where(:not(my-box form-listbox > *, my-box form-listbox > * *)), :where(my-box) p:where(:not(my-box form-listbox > *, my-box form-listbox > * *)), :where(my-box) button:where(:not(my-box form-listbox > *, my-box form-listbox > * *)) {',
-		)
+	test('specificity equals the native form, :scope included (0,1,0)', () => {
+		// The native specificity of each authored selector, `:where(:scope)`
+		// leading the implicit-descendant forms.
+		const cases: Array<[string, [number, number, number]]> = [
+			['.x', [0, 1, 0]],
+			[':scope', [0, 1, 0]],
+			[':scope .x', [0, 2, 0]],
+			[':scope > p', [0, 1, 1]],
+			[':scope.on .x', [0, 3, 0]],
+			[':scope:is(.a, .b) .x', [0, 3, 0]],
+			['p .x', [0, 1, 1]],
+		]
+		for (const [selector, expected] of cases) {
+			const css = emit(`@scope { ${selector} { top: 0 } }`)
+			expect([selector, specificity(firstSelector(css))]).toEqual([
+				selector,
+				expected,
+			])
+		}
 	})
 
-	test('nesting flattens; rules inside @media are rewritten too', () => {
+	test('rules outside @scope emit verbatim: a tag-led rule and an unscoped rule', () => {
 		const css = emit(
-			':host { display: block; & .x { color: red } }\n@media (min-width: 40em) { .x { top: 0 } }',
-			{ boundaries: ['form-listbox'] },
+			'my-box .x { color: red }\n.page { top: 0 }\n@scope { .y { top: 1px } }',
+		)
+		expect(css).toBe(
+			'my-box .x {\n  color: red;\n}\n\n.page {\n  top: 0;\n}\n\n:where(my-box) .y {\n  top: 1px;\n}\n',
+		)
+	})
+
+	test('an authored limit adds its guard, the nested-instance re-include included', () => {
+		const css = emit('@scope to (form-listbox > *) { .input { color: red } }')
+		expect(css).toBe(
+			`:where(my-box) .input${guardOf('form-listbox > *')} {\n  color: red;\n}\n`,
+		)
+		// The guard is a zero-specificity addition.
+		expect(specificity(firstSelector(css))).toEqual([0, 1, 0])
+	})
+
+	test('each limit of a list adds its own guard; the compiler adds none', () => {
+		const css = emit(
+			'@scope to (form-listbox > *, b-x > *) { .input { color: red } }',
+		)
+		expect(css).toContain(
+			`:where(my-box) .input${guardOf('form-listbox > *')}${guardOf('b-x > *')} {`,
+		)
+		expect(emit('@scope { .input { color: red } }')).not.toContain(':not(')
+	})
+
+	test('a rule whose subject is the root takes no guard', () => {
+		const css = emit(
+			'@scope to (form-listbox > *) { :scope { top: 0 } :scope .a { top: 1px } .a :scope { top: 2px } }',
+		)
+		expect(css).toContain(`:where(my-box)${PAD} {\n  top: 0;`)
+		expect(css).toContain(
+			`:where(my-box)${PAD} .a${guardOf('form-listbox > *')} {\n  top: 1px;`,
+		)
+		expect(css).toContain(`.a :where(my-box)${PAD} {\n  top: 2px;`)
+	})
+
+	test(':where(:scope) is the zero-specificity root: the bare lead, no pad, no guard', () => {
+		const css = emit(
+			'@scope to (form-listbox > *) { :where(:scope) { top: 0 } :where(:scope) .a { top: 1px } }',
+		)
+		expect(css).toContain(':where(my-box) {\n  top: 0;')
+		expect(css).toContain(
+			`:where(my-box) .a${guardOf('form-listbox > *')} {\n  top: 1px;`,
+		)
+		expect(specificity(firstSelector(css))).toEqual([0, 0, 0])
+	})
+
+	test('the guard sits before the subject’s first pseudo-element', () => {
+		const css = emit(
+			'@scope to (form-listbox > *) { .x::-webkit-scrollbar-thumb:hover { color: red } .a::part(x):hover { color: red } .b:hover::before { content: "" } }',
+		)
+		const guard = guardOf('form-listbox > *')
+		expect(css).toContain(
+			`:where(my-box) .x${guard}::-webkit-scrollbar-thumb:hover {`,
+		)
+		expect(css).toContain(`:where(my-box) .a${guard}::part(x):hover {`)
+		expect(css).toContain(`:where(my-box) .b:hover${guard}:before {`)
+	})
+
+	test('every member of a selector list is prefixed and guarded', () => {
+		const css = emit(
+			'@scope to (form-listbox > *) { label, p { opacity: 0.5 } }',
+		)
+		const guard = guardOf('form-listbox > *')
+		expect(css).toContain(
+			`:where(my-box) label${guard}, :where(my-box) p${guard} {`,
+		)
+	})
+
+	test('a preluded @scope roots on its prelude; a list prelude wraps in :is()', () => {
+		const css = emit('@scope (.card) to (.a) { :scope .x { color: red } }')
+		expect(css).toContain(
+			`:where(.card)${PAD} .x:where(:not(:is(.card .a, .card .a *):not(.card .a my-box, .card .a my-box *))) {`,
+		)
+		const listed = emit('@scope (.card, .box) to (.a) { .x { color: red } }')
+		expect(listed).toContain(
+			':where(.card, .box) .x:where(:not(:is(:is(.card, .box) .a',
+		)
+	})
+
+	test('nesting flattens; rules inside @media and @layer in @scope are rewritten too', () => {
+		const css = emit(
+			'@scope to (form-listbox > *) { :scope { display: block; & .x { color: red } } @media (min-width: 40em) { .x { top: 0 } } @layer base { .y { top: 0 } } }',
 		)
 		expect(css).not.toContain('&')
-		expect(css).toContain('@media')
-		const media = css.slice(css.indexOf('@media'))
-		expect(media).toContain(':where(my-box) .x:where(:not(')
+		expect(css).not.toContain('@scope')
+		const guard = guardOf('form-listbox > *')
+		expect(css).toContain(`:where(my-box)${PAD} .x${guard} {`)
+		expect(css.slice(css.indexOf('@media'))).toContain(
+			`:where(my-box) .x${guard} {`,
+		)
+		expect(css.slice(css.indexOf('@layer'))).toContain(
+			`:where(my-box) .y${guard} {`,
+		)
 	})
 
-	test('@keyframes and the two :global forms hoist out, the wrapper unwrapped', () => {
-		const css = emit(
-			'@keyframes spin { from { opacity: 0 } to { opacity: 1 } }\n:global(body.scroll-lock) { position: fixed }\n:global { .page { color: black } }\n.input { color: red }',
-			{ boundaries: ['form-listbox'] },
+	test('an & at the top of the block is the root, as lightningcss reads it', () => {
+		expect(emit('@scope { & .q { top: 0 } }')).toBe(
+			`:where(my-box)${PAD} .q {\n  top: 0;\n}\n`,
 		)
-		expect(css.indexOf('@keyframes')).toBeLessThan(css.indexOf('.input'))
-		expect(css).toContain('body.scroll-lock {')
-		expect(css).toContain('.page {')
-		expect(css).not.toContain(':global')
-		expect(css).toContain(':where(my-box) .input:where(:not(')
+	})
+
+	test('a @scope inside a conditional group unwraps in place', () => {
+		const css = emit(
+			'@media (min-width: 1px) { @scope to (b-x > *) { .y { top: 0 } } }',
+		)
+		expect(css).toBe(
+			`@media (width >= 1px) {\n  :where(my-box) .y${guardOf('b-x > *')} {\n    top: 0;\n  }\n}\n`,
+		)
+	})
+
+	test('@keyframes emit verbatim before the rules', () => {
+		const css = emit(
+			'@scope { .input { color: red } }\n@keyframes spin { from { opacity: 0 } to { opacity: 1 } }',
+		)
+		expect(
+			css.startsWith(
+				'@keyframes spin { from { opacity: 0 } to { opacity: 1 } }',
+			),
+		).toBe(true)
+		expect(css).toContain(':where(my-box) .input {')
 	})
 
 	test('the emission does not vary with the authored sheet indentation', () => {
-		const flat = emit(':host { display: block }\n.input { color: red }')
+		const flat = emit(
+			'@scope {\n:scope { display: block }\n.input { color: red }\n}',
+		)
 		const indented = emit(
-			'\n\t\t\t:host {\n\t\t\t  display: block;\n\t\t\t}\n\t\t\t.input {\n\t\t\t  color: red;\n\t\t\t}',
+			'\n\t\t\t@scope {\n\t\t\t\t:scope {\n\t\t\t\t  display: block;\n\t\t\t\t}\n\t\t\t\t.input {\n\t\t\t\t  color: red;\n\t\t\t\t}\n\t\t\t}',
 		)
 		expect(indented).toBe(flat)
+	})
+
+	test('a sheet with no @scope and no rules emits nothing', () => {
+		expect(
+			emit('@keyframes spin { from { opacity: 0 } to { opacity: 1 } }'),
+		).toBe('@keyframes spin { from { opacity: 0 } to { opacity: 1 } }\n')
 	})
 })
 
 /* === The native emission (ADR 0033 s3) === */
 
 describe('emitScopedSheet — native (@scope-capable targets)', () => {
-	test('a composing component wraps in @scope … to; :host becomes :where(:scope)', () => {
-		const css = emit(
-			':host { display: block }\n:host(.compact) { padding: 0 }\n.input { color: red }\n@keyframes spin { from { opacity: 0 } to { opacity: 1 } }\n:global(.page) { color: black }',
-			{ boundaries: ['form-listbox'], cssTargets: NATIVE },
+	const native = (sheetText: string) => emit(sheetText, { cssTargets: NATIVE })
+
+	test('a prelude-less @scope gains the explicit root; the body stays verbatim', () => {
+		expect(
+			native('@scope { :scope { display: block } .input { color: red } }'),
+		).toBe(
+			'@scope (my-box) { :scope { display: block } .input { color: red } }\n',
 		)
-		expect(css.startsWith('@keyframes')).toBe(true)
-		expect(css).toContain('@scope (my-box) to (form-listbox > *) {')
-		expect(css).toContain(':where(:scope) {')
-		expect(css).toContain(':where(:scope:is(.compact)) {')
-		expect(css).toContain('.input {')
-		expect(css).toContain('.page {')
-		expect(css.endsWith('}\n')).toBe(true)
 	})
 
-	test('a leaf gets no to clause', () => {
-		const css = emit('.input { color: red }', { cssTargets: NATIVE })
-		expect(css).toContain('@scope (my-box) {')
-		expect(css).not.toContain(' to (')
+	test('the authored limits ride along; none are added', () => {
+		expect(
+			native('@scope to (form-listbox > *) { .input { color: red } }'),
+		).toBe('@scope (my-box) to (form-listbox > *) { .input { color: red } }\n')
+		expect(native('@scope { .input { color: red } }')).not.toContain(' to (')
 	})
 
-	test('no stylesheet content beyond hoisted rules emits no scope block', () => {
-		const css = emit(
-			'@keyframes spin { from { opacity: 0 } to { opacity: 1 } }',
-			{
-				cssTargets: NATIVE,
-			},
+	test('a preluded @scope, a tag-led rule and an unscoped rule emit verbatim', () => {
+		const sheet =
+			'@scope (.card) to (.a) { .x { color: red } }\nmy-box .x { top: 0 }\n.page { top: 1px }'
+		expect(native(sheet)).toBe(`${sheet}\n`)
+	})
+
+	test('a component @scope inside a conditional group gains the root there', () => {
+		expect(native('@media (min-width: 1px) { @scope { .y { top: 0 } } }')).toBe(
+			'@media (min-width: 1px) { @scope (my-box) { .y { top: 0 } } }\n',
 		)
-		expect(css).not.toContain('@scope')
-		expect(css).toContain('@keyframes')
+	})
+
+	test('a nested @scope stays verbatim (it is native CSS)', () => {
+		expect(native('@scope { @scope (.x) { .y { top: 0 } } }')).toBe(
+			'@scope (my-box) { @scope (.x) { .y { top: 0 } } }\n',
+		)
+	})
+
+	test('the emission does not vary with the authored sheet indentation', () => {
+		const flat = native('@scope {\n  .input { color: red }\n}')
+		const indented = native(
+			'\n\t\t\t@scope {\n\t\t\t  .input { color: red }\n\t\t\t}',
+		)
+		expect(indented).toBe(flat)
 	})
 })
 
@@ -267,148 +534,58 @@ describe('emitScopedSheet — LT-398 review defects, both modes', () => {
 		['lowered', DEFAULT_CSS_TARGETS],
 		['native', NATIVE],
 	] as const
-	const GUARD =
-		':where(:not(my-box form-listbox > *, my-box form-listbox > * *))'
 
 	for (const [mode, cssTargets] of modes) {
 		test(`(a) a blockless statement does not swallow the next rule — ${mode}`, () => {
-			const css = emit('@layer base, theme;\n.x { color: red }', {
-				boundaries: ['form-listbox'],
-				cssTargets,
-			})
+			const css = emit(
+				'@layer base, theme;\n@scope to (form-listbox > *) { .x { color: red } }',
+				{
+					cssTargets,
+				},
+			)
 			expect(css).toContain('@layer base, theme;')
 			expect(css).toContain(
-				mode === 'lowered' ? `:where(my-box) .x${GUARD} {` : '\n.x {',
+				mode === 'lowered'
+					? `:where(my-box) .x${guardOf('form-listbox > *')} {`
+					: '.x { color: red }',
 			)
-			if (mode === 'lowered') expect(css).not.toMatch(/^\.x \{/m)
-		})
-
-		test(`(b) every member of a whole-rule :global list unwraps — ${mode}`, () => {
-			const css = emit(
-				':global(body.a), :global(html.b) { overflow: hidden }\n.x { top: 0 }',
-				{ cssTargets },
-			)
-			expect(css).toContain('body.a, html.b { overflow: hidden }')
-		})
-
-		test(`(c) the guard lands before the subject's first pseudo-element — ${mode}`, () => {
-			const css = emit(
-				'.x::-webkit-scrollbar-thumb:hover { color: red }\n.a::part(x):hover { color: red }\n.b:hover::before { content: "" }',
-				{ boundaries: ['form-listbox'], cssTargets },
-			)
-			if (mode === 'lowered') {
-				expect(css).toContain(
-					`:where(my-box) .x${GUARD}::-webkit-scrollbar-thumb:hover {`,
-				)
-				expect(css).toContain(`:where(my-box) .a${GUARD}::part(x):hover {`)
-				expect(css).toContain(`:where(my-box) .b:hover${GUARD}:before {`)
-			} else {
-				expect(css).toContain('.x::-webkit-scrollbar-thumb:hover {')
-				expect(css).not.toContain(':where(:not(')
-			}
 		})
 
 		test(`(e) flattening lowers nesting and nothing the targets do not demand — ${mode}`, () => {
 			const css = emit(
-				':host { & .x { color: light-dark(red, blue); backdrop-filter: blur(2px) } }',
+				'@scope { :scope { & .x { color: light-dark(red, blue); backdrop-filter: blur(2px) } } }',
 				{ cssTargets },
 			)
-			expect(css).not.toContain('&')
 			expect(css).toContain('light-dark(')
-			// Safari 17.4 (both fixtures) needs the prefix…
-			expect(css).toContain('-webkit-backdrop-filter')
+			if (mode === 'lowered') {
+				expect(css).not.toContain('&')
+				// Safari 17.4 (both fixtures) needs the prefix…
+				expect(css).toContain('-webkit-backdrop-filter')
+			}
 		})
 
-		test(`(e) …and a target past the prefix needs none — ${mode}`, () => {
-			const css = emit(':host { & .x { backdrop-filter: blur(2px) } }', {
-				cssTargets: { ...cssTargets, safari: 18 << 16 },
-			})
+		test(`(e) …and a target past the prefix needs none — lowered`, () => {
+			if (mode !== 'lowered') return
+			const css = emit(
+				'@scope { :scope { & .x { backdrop-filter: blur(2px) } } }',
+				{
+					cssTargets: { ...cssTargets, safari: 18 << 16 },
+				},
+			)
 			expect(css).not.toContain('-webkit-backdrop-filter')
 		})
 
-		test(`(f) a :host hidden in a flattened :is() list is rewritten — ${mode}`, () => {
+		test(`(f) :scope hidden in a flattened :is() list is rewritten — ${mode}`, () => {
 			const css = emit(
-				':host .a, :host .b { &:empty { display: none } }\n:host input, .t { &::placeholder { color: red } }',
+				'@scope { :scope .a, :scope .b { &:empty { display: none } } }',
 				{ cssTargets },
 			)
-			expect(css).not.toContain(':host')
-			expect(css).toContain(
-				mode === 'lowered'
-					? ':where(my-box) .a:empty, :where(my-box) .b:empty {'
-					: ':where(:scope) .a:empty, :where(:scope) .b:empty {',
-			)
-			expect(css).toContain(
-				mode === 'lowered'
-					? ':where(my-box) input::placeholder, :where(my-box) .t::placeholder {'
-					: ':where(:scope) input::placeholder, .t::placeholder {',
-			)
+			if (mode === 'lowered') {
+				expect(css).not.toContain(':scope')
+				expect(css).toContain(
+					`:is(:where(my-box)${PAD} .a, :where(my-box)${PAD} .b):empty {`,
+				)
+			} else expect(css).toContain('&:empty')
 		})
 	}
-})
-
-/* === LT-399: descending past a boundary (LTC071) === */
-
-describe('checkSheetBoundaries', () => {
-	const findingsOf = (sheetText: string, boundaries = ['b-child']) => {
-		const { sheet } = parseComponentSheet(sheetText)
-		expect(sheet).not.toBeNull()
-		return checkSheetBoundaries(sheet, sheetText, boundaries)
-	}
-
-	test('a descendant or child combinator after a boundary tag is dead', () => {
-		const findings = findingsOf(
-			'b-child .x { top: 0 }\n.a > b-child > p { top: 0 }',
-		)
-		expect(findings.map(f => f.boundary)).toEqual(['b-child', 'b-child'])
-		expect(findings[1]?.offset).toBe(22)
-	})
-
-	test('the child tag itself, its pseudo-elements and its siblings stay legal', () => {
-		expect(
-			findingsOf(
-				'b-child { top: 0 }\n:host > b-child::before { top: 0 }\nb-child + .x, b-child ~ p { top: 0 }\n.x:has(b-child) { top: 0 }',
-			),
-		).toEqual([])
-	})
-
-	test('nesting resolves through &, implicit and explicit (the listnav shape)', () => {
-		const findings = findingsOf(
-			'@container (width > 1px) { :host { & b-child { & h1, & h2 { top: 0 } } } }\nb-child { p { top: 0 } &:hover { top: 0 } & + .x { top: 0 } }',
-		)
-		// One finding per rule, every dead list member named.
-		expect(findings.map(f => f.selector)).toEqual(['& h1, & h2', '& p'])
-	})
-
-	test('a nested rule is dead only when dead under every parent alternative', () => {
-		expect(findingsOf('b-child, .live { .x { top: 0 } }')).toEqual([])
-		expect(findingsOf('b-child, .a b-child { .x { top: 0 } }')).toHaveLength(1)
-	})
-
-	test('the whole-rule :global forms ship outside the scope and are exempt', () => {
-		expect(
-			findingsOf(
-				':global(b-child .x) { top: 0 }\n:global { @media (width > 1px) { b-child p { top: 0 } } }',
-			),
-		).toEqual([])
-	})
-
-	test('a leaf has no boundary to descend past', () => {
-		expect(findingsOf('b-child .x { top: 0 }', [])).toEqual([])
-	})
-})
-
-/* === The boundary === */
-
-describe('collectScopeBoundaries', () => {
-	// The IR walk is covered end-to-end by the golden tests (module-list
-	// names form-textbox); here the self-nesting rule, the one fact the
-	// unit cannot see from the corpus: the root itself is not a boundary,
-	// a nested instance of it is.
-	test('the scope root is not its own boundary', () => {
-		// Covered through emitScopedSheet above: a boundary list naming the
-		// tag only appears when the template renders it (collectScopeBoundaries
-		// skips the parent-less root). The golden corpus builds green with
-		// guards that name only composed children.
-		expect(true).toBe(true)
-	})
 })

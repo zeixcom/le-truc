@@ -261,165 +261,167 @@ export function ModuleCarousel(
 				</div>
 			</nav>
 			<style>{css`
-:host {
-	display: flex;
-	position: relative;
-	overflow: hidden;
-	margin-block-end: var(--space-l);
-	border-radius: var(--space-s);
-	container: carousel / inline-size;
-
-	.slides {
+@scope {
+	:scope {
 		display: flex;
-		align-items: center;
-		width: 100%;
-		min-height: calc(100cqi / (16 / 9));
-		overflow-x: auto;
-		scroll-snap-type: x mandatory;
-		scroll-behavior: smooth;
-		overscroll-behavior-x: none;
-	}
+		position: relative;
+		overflow: hidden;
+		margin-block-end: var(--space-l);
+		border-radius: var(--space-s);
+		container: carousel / inline-size;
 
-	[role="tabpanel"] {
-		width: 100%;
-		height: calc(100% - var(--input-height));
-		padding-bottom: var(--input-height);
-		text-align: center;
-		scroll-snap-align: start;
-		flex: 0 0 100%;
-
-		&.blue {
-			background-color: light-dark(var(--color-blue-20), var(--color-blue-80));
-			--color-text: light-dark(var(--color-blue-90), var(--color-blue-10));
-			--color-text-soft: light-dark(var(--color-blue-80), var(--color-blue-20));
-		}
-
-		&.purple {
-			background-color: light-dark(
-				var(--color-purple-20),
-				var(--color-purple-80)
-			);
-			--color-text: light-dark(var(--color-purple-90), var(--color-purple-10));
-			--color-text-soft: light-dark(
-				var(--color-purple-80),
-				var(--color-purple-20)
-			);
-		}
-
-		&.pink {
-			background-color: light-dark(var(--color-pink-20), var(--color-pink-80));
-			--color-text: light-dark(var(--color-pink-90), var(--color-pink-10));
-			--color-text-soft: light-dark(var(--color-pink-80), var(--color-pink-20));
-		}
-
-		&.orange {
-			background-color: light-dark(
-				var(--color-orange-20),
-				var(--color-orange-80)
-			);
-			--color-text: light-dark(var(--color-orange-90), var(--color-orange-10));
-			--color-text-soft: light-dark(
-				var(--color-orange-80),
-				var(--color-orange-20)
-			);
-		}
-
-		&.green {
-			background-color: light-dark(
-				var(--color-green-20),
-				var(--color-green-80)
-			);
-			--color-text: light-dark(var(--color-green-90), var(--color-green-10));
-			--color-text-soft: light-dark(
-				var(--color-green-80),
-				var(--color-green-20)
-			);
-		}
-
-		& h3 {
-			display: block;
-		}
-
-		& a[href].anchor {
-			justify-content: center;
-			padding: 0;
-		}
-
-		.slide-content {
-			width: 80%;
-			margin: 0 auto 0;
-			padding-bottom: var(--space-xl);
-			text-align: left;
-		}
-	}
-
-	> nav {
-		> button {
-			position: absolute;
-			top: 2%;
-			height: 96%;
-			border: 0;
-			border-radius: var(--space-xs);
-			background: transparent;
-			padding: var(--space-m);
-			font-size: var(--font-size-xl);
-			color: var(--color-text);
-			opacity: var(--opacity-dimmed);
-			transition: opacity var(--transition-short) var(--easing-inout);
-			cursor: pointer;
-
-			&:hover,
-			&:active,
-			&:focus {
-				opacity: var(--opacity-solid);
-			}
-
-			&:hover {
-				background-color: var(--color-overlay-hover);
-			}
-
-			&:active {
-				background-color: var(--color-overlay-active);
-			}
-
-			&.prev {
-				left: 1%;
-			}
-
-			&.next {
-				right: 1%;
-			}
-		}
-
-		[role="tablist"] {
-			position: absolute;
-			bottom: 0;
-			left: 0;
-			width: 100%;
+		.slides {
 			display: flex;
-			justify-content: center;
-			margin-block: var(--space-m);
+			align-items: center;
+			width: 100%;
+			min-height: calc(100cqi / (16 / 9));
+			overflow-x: auto;
+			scroll-snap-type: x mandatory;
+			scroll-behavior: smooth;
+			overscroll-behavior-x: none;
+		}
 
-			[role="tab"] {
-				width: var(--space-l);
-				height: var(--space-l);
-				border: 0;
+		[role="tabpanel"] {
+			width: 100%;
+			height: calc(100% - var(--input-height));
+			padding-bottom: var(--input-height);
+			text-align: center;
+			scroll-snap-align: start;
+			flex: 0 0 100%;
+
+			&.blue {
+				background-color: light-dark(var(--color-blue-20), var(--color-blue-80));
+				--color-text: light-dark(var(--color-blue-90), var(--color-blue-10));
+				--color-text-soft: light-dark(var(--color-blue-80), var(--color-blue-20));
+			}
+
+			&.purple {
+				background-color: light-dark(
+					var(--color-purple-20),
+					var(--color-purple-80)
+				);
+				--color-text: light-dark(var(--color-purple-90), var(--color-purple-10));
+				--color-text-soft: light-dark(
+					var(--color-purple-80),
+					var(--color-purple-20)
+				);
+			}
+
+			&.pink {
+				background-color: light-dark(var(--color-pink-20), var(--color-pink-80));
+				--color-text: light-dark(var(--color-pink-90), var(--color-pink-10));
+				--color-text-soft: light-dark(var(--color-pink-80), var(--color-pink-20));
+			}
+
+			&.orange {
+				background-color: light-dark(
+					var(--color-orange-20),
+					var(--color-orange-80)
+				);
+				--color-text: light-dark(var(--color-orange-90), var(--color-orange-10));
+				--color-text-soft: light-dark(
+					var(--color-orange-80),
+					var(--color-orange-20)
+				);
+			}
+
+			&.green {
+				background-color: light-dark(
+					var(--color-green-20),
+					var(--color-green-80)
+				);
+				--color-text: light-dark(var(--color-green-90), var(--color-green-10));
+				--color-text-soft: light-dark(
+					var(--color-green-80),
+					var(--color-green-20)
+				);
+			}
+
+			& h3 {
+				display: block;
+			}
+
+			& a[href].anchor {
+				justify-content: center;
 				padding: 0;
-				font-size: var(--font-size-l);
-				line-height: var(--line-height-xs);
-				border-radius: 50%;
+			}
+
+			.slide-content {
+				width: 80%;
+				margin: 0 auto 0;
+				padding-bottom: var(--space-xl);
+				text-align: left;
+			}
+		}
+
+		> nav {
+			> button {
+				position: absolute;
+				top: 2%;
+				height: 96%;
+				border: 0;
+				border-radius: var(--space-xs);
+				background: transparent;
+				padding: var(--space-m);
+				font-size: var(--font-size-xl);
 				color: var(--color-text);
-				background-color: transparent;
-				opacity: var(--opacity-translucent);
+				opacity: var(--opacity-dimmed);
 				transition: opacity var(--transition-short) var(--easing-inout);
 				cursor: pointer;
 
-				&:hover {
-					opacity: var(--opacity-dimmed);
+				&:hover,
+				&:active,
+				&:focus {
+					opacity: var(--opacity-solid);
 				}
 
-				&[aria-selected="true"] {
-					opacity: var(--opacity-solid);
+				&:hover {
+					background-color: var(--color-overlay-hover);
+				}
+
+				&:active {
+					background-color: var(--color-overlay-active);
+				}
+
+				&.prev {
+					left: 1%;
+				}
+
+				&.next {
+					right: 1%;
+				}
+			}
+
+			[role="tablist"] {
+				position: absolute;
+				bottom: 0;
+				left: 0;
+				width: 100%;
+				display: flex;
+				justify-content: center;
+				margin-block: var(--space-m);
+
+				[role="tab"] {
+					width: var(--space-l);
+					height: var(--space-l);
+					border: 0;
+					padding: 0;
+					font-size: var(--font-size-l);
+					line-height: var(--line-height-xs);
+					border-radius: 50%;
+					color: var(--color-text);
+					background-color: transparent;
+					opacity: var(--opacity-translucent);
+					transition: opacity var(--transition-short) var(--easing-inout);
+					cursor: pointer;
+
+					&:hover {
+						opacity: var(--opacity-dimmed);
+					}
+
+					&[aria-selected="true"] {
+						opacity: var(--opacity-solid);
+					}
 				}
 			}
 		}

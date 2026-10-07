@@ -26,7 +26,9 @@ const compile = (setup: string, template: string) =>
 	${setup}
 	expose({ x: '' })
 		<c-el>${template}
-			<style>:host { color: red }</style>
+			<style>@scope {
+	:scope { color: red }
+}</style>
 		</c-el>
 }`,
 		'c.tsrx',
@@ -142,7 +144,9 @@ describe('output shape (LT-123)', () => {
 		</>`,
 			`<>
 			<c-el><span>{label}</span></c-el>
-			<style>:host { color: red }</style>
+			<style>@scope {
+	:scope { color: red }
+}</style>
 		</>`,
 		]) {
 			const { component, diagnostics } = shape(output)
@@ -160,7 +164,9 @@ describe('output shape (LT-123)', () => {
 		const { component, diagnostics } = shape(
 			`<c-el>
 			<span>{label}</span>
-			<style>:host { color: red }</style>
+			<style>@scope {
+	:scope { color: red }
+}</style>
 		</c-el>`,
 		)
 		expect(diagnostics).toEqual([])
@@ -171,8 +177,10 @@ describe('output shape (LT-123)', () => {
 	})
 
 	test('output that is not an element is LTC008', () => {
-		const { diagnostics } = shape(`<style>:host {
-  color: red;
+		const { diagnostics } = shape(`<style>@scope {
+	:scope {
+	  color: red;
+	}
 }</style>`)
 		expect(diagnostics.some(d => d.code === 'LTC008')).toBe(true)
 	})

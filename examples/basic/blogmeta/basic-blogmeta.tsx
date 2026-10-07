@@ -139,37 +139,39 @@ export function BasicBlogmeta({
 				</span>
 			) : null}
 			<style>{css`
-:host {
-	display: flex;
-	align-items: center;
-	gap: var(--space-m);
-	font-size: var(--font-size-s);
-	color: var(--color-text-soft);
-	flex-wrap: wrap;
-	margin-bottom: var(--space-l);
-
-	& span {
+@scope {
+	:scope {
 		display: flex;
 		align-items: center;
-		gap: var(--space-xs);
-	}
+		gap: var(--space-m);
+		font-size: var(--font-size-s);
+		color: var(--color-text-soft);
+		flex-wrap: wrap;
+		margin-bottom: var(--space-l);
 
-	& img,
-	& svg.avatar {
-		width: var(--input-height);
-		height: var(--input-height);
-		border-radius: 50%;
-		object-fit: cover;
-		flex-shrink: 0;
-	}
+		& span {
+			display: flex;
+			align-items: center;
+			gap: var(--space-xs);
+		}
 
-	& svg.avatar {
-		color: var(--color-border-soft);
-		background-color: var(--color-background-alt);
-	}
+		& img,
+		& svg.avatar {
+			width: var(--input-height);
+			height: var(--input-height);
+			border-radius: 50%;
+			object-fit: cover;
+			flex-shrink: 0;
+		}
 
-	& time {
-		font-variant-numeric: tabular-nums;
+		& svg.avatar {
+			color: var(--color-border-soft);
+			background-color: var(--color-background-alt);
+		}
+
+		& time {
+			font-variant-numeric: tabular-nums;
+		}
 	}
 }`}</style>
 		</basic-blogmeta>

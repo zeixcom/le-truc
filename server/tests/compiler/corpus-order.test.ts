@@ -74,9 +74,11 @@ describe('corpus error policy', () => {
 	expose({})
 		<c-el>
 			<div truc:pass={{ disabled: () => false }}></div>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 			hash: '',

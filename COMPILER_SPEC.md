@@ -166,8 +166,10 @@ export function MyCounter(
         {label}: <span>{count}</span>
       </button>
       <style>{css`
-        :host { display: inline-block }
-        button { font: inherit }
+        @scope {
+          :scope { display: inline-block }
+          button { font: inherit }
+        }
       `}</style>
     </my-counter>
   )
@@ -403,40 +405,45 @@ The effective locale renders onto the root `lang` attribute; the client material
 
 ## 7. Styling
 
-A compiled stylesheet is **shadow-root CSS** (ADR 0033): `:host` for the host, bare selectors for the internals, identical in both DOM modes.
+A compiled stylesheet is **platform CSS** (ADR 0033): it means what the same sheet would mean as an inline `<style>` in its host. Scoping is authored with native `@scope`, and the compiler adds no limits of its own.
 
 **Authoring**
 
 - Style content MUST be static: a `css`-tagged template literal without substitutions. Dynamic values go through custom properties set by bindings.
 - The sheet is parsed (`lightningcss`); a parse error is an error.
+- `@scope { … }`, with optional author-written `to (<limits>)`, is scoped to the host: `:scope` is the host, bare selectors are its descendants.
+- A top-level rule led by the component's own tag emits verbatim (the 2.x convention). Any other top-level rule emits verbatim and applies page-wide. `@keyframes`, `@font-face` and `@property` emit verbatim.
 
-**Light DOM emission** scopes the sheet so rules stop at every custom element the template renders:
+**Light DOM emission** gives the sheet the meaning it would have inline in the host:
 
 | Emission | Output |
 | --- | --- |
-| Native | `@scope (my-el) to (<rendered custom-element tags> > *) { … }` — `> *` keeps the child's host stylable and excludes its contents; a leaf has no `to` |
-| Lowered, for CSS targets without `@scope` | Flat selectors with zero-specificity guards, `:where(my-el)` and `:where(:not(…))` |
-| `:host` | `:where(:scope)` / `:where(my-el)`: zero specificity, so page styles win as they do over a shadow root's `:host` |
-| `@keyframes`, `@font-face`, `@property`, `:global` rules | Hoisted out of the scope |
+| Native | The sheet as authored. A prelude-less `@scope` gains the explicit root, `@scope (my-el) to (<authored limits>) { … }` |
+| Lowered, for CSS targets without `@scope` | Each component `@scope` block unwraps into flat selectors: the root leads as `:where(my-el)`, an explicit `:scope` becomes the root compound with its (0,1,0) specificity, and each authored limit becomes a zero-specificity guard that re-includes a nested own-tag instance |
+| Top-level rules outside `@scope` | Verbatim in both emissions |
 
 - The CSS target is `cssTargets` (browserslist-style), defaulting to Baseline widely available; it decides native versus lowered emission and feeds `lightningcss`'s own lowering.
-- In light DOM mode `<style>` never reaches the HTML or the client bundle. In Shadow DOM mode it is inlined in each declarative shadow root, so components are styled at first paint without JS.
+- In light DOM mode `<style>` never reaches the HTML or the client bundle. In Shadow DOM mode the `@scope` block unwraps into each declarative shadow root (`:scope` becomes `:host`, the limits drop), so components are styled at first paint without JS.
 - **Hash classes are not used**, in CSS or in locators.
 
 **Errors** (compiler, Prevented):
 
-- a rule led by the component's own tag (fix-it: `:host`);
+- a rule inside `@scope` led by the component's own tag (fix-it: `:scope`);
+- `:host` anywhere in a light-mode sheet (fix-it: `:scope`; `:host(X)` is `:scope:is(X)`);
 - `::slotted()` in light mode;
 - `:host-context()`;
-- `:global` other than a whole rule (`:global(body.lock) { … }` or a top-level `:global { … }` block).
+- `:global` anywhere (fix-it: remove the wrapper, write a top-level rule);
+- a selector whose subject an authored limit always excludes (a dead rule);
+- a `@scope` form the lowering cannot express, on a lowered CSS target.
+
+**Warnings** (compiler, Contained; LT-502): a downward leak (a scoped rule that can match what a composed child renders, with no limit excluding it) and an unscoped top-level rule.
 
 **Checks over the parsed sheet** (ADR 0042, still Proposed): dead-rule detection (warning); typed custom-property registration where a signal drives `bindStyle`; the typed class handle (`const theme = <style>…</style>`, `class={theme.dark}`).
 
-**Documented differences from a real shadow root**, fixture-pinned:
+**Documented differences from the platform**, fixture-pinned:
 
 - page CSS can still reach a light-DOM component's internals;
-- page-authored children are styled by the component's rules;
-- runtime-inserted children are uncovered.
+- the lowered form has no scope proximity: a nested instance of the same component is reached by the outer instance's rules too.
 
 ## 8. Intermediate representation
 
@@ -623,7 +630,7 @@ Emitted bytes are not contract. Everything else under the compiler is internal.
 | D-21 | Tiered evaluation; unresolvable omitted everywhere; no synthesized hydration payload | Ratified | ADR 0027, 0029, 0035; REQUIREMENTS M19 | 5.2 |
 | D-22 | i18n as build-time server data; ICU MF1; catalog never shipped | Ratified | ADR 0030 | 6 |
 | D-23 | Template targets format messages through backend ICU | Ratified — superseded by ADR 0043 s6 (`MessageFormatter` over the localized pattern; one partial per locale, no locale hole) | ADR 0043 | 6.3 |
-| D-24 | Shadow-root CSS, `@scope` / `:where()` lowering, no hash classes | Ratified | ADR 0033; owner 2026-09-29 | 7 |
+| D-24 | Platform CSS: authored `@scope`, native or `:where()` lowering, no hash classes | Ratified | ADR 0033; owner 2026-09-29 | 7 |
 | D-25 | IR is the lowering, internal, one walk with many emitters | Ratified — endorsed 2026-10-01 and recorded | ADR 0034 s8, ADR 0040 | 8 |
 | D-26 | Reactivity class annotation on every expression | Ratified — endorsed 2026-10-01 and recorded | ADR 0040 s7 | 8.2 |
 | D-27 | Template emission: holes, escaping as a security boundary | Ratified | ADR 0034 s3, ADR 0043 | 9.2 |

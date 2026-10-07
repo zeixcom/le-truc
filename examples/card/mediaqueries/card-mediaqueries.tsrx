@@ -70,28 +70,30 @@ export function CardMediaqueries({ label }: { label?: string })
 			</dl>
 
 			<style>
-			:host {
-				display: block;
-				margin: 0 0 var(--space-l);
+			@scope {
+				:scope {
+					display: block;
+					margin: 0 0 var(--space-l);
 
-				& h5 {
-					margin: 0 0 var(--space-s);
-				}
+					& h5 {
+						margin: 0 0 var(--space-s);
+					}
 
-				& dl {
-					display: grid;
-					grid-template-columns: auto 1fr;
-					gap: var(--space-xs) var(--space-s);
-					margin: 0;
-				}
+					& dl {
+						display: grid;
+						grid-template-columns: auto 1fr;
+						gap: var(--space-xs) var(--space-s);
+						margin: 0;
+					}
 
-				& dt {
-					font-weight: var(--font-weight-bold);
-				}
+					& dt {
+						font-weight: var(--font-weight-bold);
+					}
 
-				& dd {
-					margin: 0;
-					color: var(--color-text-soft);
+					& dd {
+						margin: 0;
+						color: var(--color-text-soft);
+					}
 				}
 			}</style>
 		</card-mediaqueries>

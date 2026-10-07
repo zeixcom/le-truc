@@ -25,9 +25,11 @@ const withReason = (reasonLiteral: string): string =>
 		const input = first('input', ${reasonLiteral})
 		expose({})
 			<c-el><input/>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`

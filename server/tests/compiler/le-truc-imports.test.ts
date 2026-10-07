@@ -25,9 +25,11 @@ export function C({}: {})
 ${setup}
 	expose({})
 		<c-el><span data-count={() => String(count.get())}>ok</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`
 
@@ -166,9 +168,11 @@ export function C({}: {})
 	const data = createTask(async () => 1)
 	expose({})
 		<c-el><span class={() => (isPending(data) ? 'pending' : null)}>ok</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`
 		const messages = compile(source)

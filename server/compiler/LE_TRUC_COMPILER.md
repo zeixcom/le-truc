@@ -1129,11 +1129,17 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   rides the translation census instead.
 - *Stylesheet* (ADR 0033): a sheet that does not parse (LTC064), the
   unknown-property-or-value warning (LTC065), and the forms with no meaning
-  under the shadow-root contract — a rule led by the component's own tag
-  (LTC066), `::slotted()` (LTC067), `:host-context()` (LTC068), `:global`
-  outside the two top-level whole-rule forms (LTC069), a qualifier on bare
-  `:host` (LTC070), and a selector that descends past a boundary tag
-  (LTC071); and a `<style>` block that is not the root's single direct
+  under the platform-CSS contract — a rule inside `@scope` led by the
+  component's own tag (LTC066, fix-it `:scope`), `::slotted()` (LTC067),
+  `:host-context()` (LTC068), `:global` anywhere (LTC069), a selector that
+  descends past a compound one of its block's `to (…)` limits always
+  excludes (LTC071), and `:host` anywhere (LTC086, fix-it `:scope`);
+  LTC070 is retired (a qualifier after `:scope` is valid CSS). A `@scope`
+  form the flat-selector lowering cannot express — a `@scope` inside the
+  component `@scope`, a limit that names `:scope` — is LTC089 on a lowered
+  CSS target and emits verbatim on a native one; it is the one stylesheet
+  check that reads the configured `cssTargets`. And a `<style>` block that
+  is not the root's single direct
   `<style>` child — a second direct one, or one nested in a descendant —
   whose CSS the hoist would drop (LTC073, LT-417); and a `<style>` block
   whose content is not a stylesheet spelling — on `.tsx` anything but the
@@ -1144,9 +1150,10 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
 - *Corpus-level*: one component tag declared by more than one corpus source
   outside a folder-local variant set (LTC048) — fires before pass 2, names
   every declaring file whatever surface each is written in, and drops them
-  all; and a variant set whose compiled members disagree on CSS or on scope
-  boundaries (LTC051) — names every member and writes no artifact of the
-  set, because the set serves one stylesheet (ADR 0039, ADR 0033 s10).
+  all; and a variant set whose compiled members disagree on CSS (LTC051) —
+  the authored sheets are compared, since the emission derives nothing from
+  the template; it names every member and writes no artifact of the set,
+  because the set serves one stylesheet (ADR 0039, ADR 0033 s10).
 
 **Reclassification under ADR 0029.** The impure-ambient refusal is not in the
 table below because it does not become a routing signal at all: it becomes

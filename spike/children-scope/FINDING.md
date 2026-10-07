@@ -1,5 +1,8 @@
 # LT-465: Style Scope for Parent-Owned Children
 
+> **Archived (LT-501).** This is the evidence behind the rejected ownership-scoped style form (ADR 0048 s5). `generate.ts` and `measure.ts` need the prototype emitters that LT-501 removed (`server/tests/compiler/children-scope.ts`, `collectScopeBoundaries`); they no longer run. The run of record below stands.
+
+
 **Run of record:** 2026-10-06, branch `task/LT-465`, Chromium and WebKit (the
 Playwright projects). The two browsers gave identical results.
 

@@ -169,26 +169,28 @@ export function ModuleCatalog(
 			</ul>
 
 			<style>{css`
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
-
-				> header,
-				p {
-					margin: 0;
-				}
-
-				& ul {
-					padding: 0;
-					margin: 0;
-				}
-
-				& header,
-				li {
+			@scope to (basic-button > *, form-spinbutton > *) {
+				:scope {
 					display: flex;
-					gap: var(--space-m);
-					justify-content: space-between;
+					flex-direction: column;
+					gap: var(--space-l);
+
+					> header,
+					p {
+						margin: 0;
+					}
+
+					& ul {
+						padding: 0;
+						margin: 0;
+					}
+
+					& header,
+					li {
+						display: flex;
+						gap: var(--space-m);
+						justify-content: space-between;
+					}
 				}
 			}`}</style>
 		</module-catalog>

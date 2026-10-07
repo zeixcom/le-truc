@@ -209,121 +209,123 @@ export function FormListbox(
 			</div>
 
 			<style>{css`
-			:host {
-				display: block;
-				margin: 0;
-				max-width: 16rem;
-
-				.input {
-					position: relative;
-					margin-bottom: var(--space-m);
-
-					& input.filter {
-						display: inline-block;
-						box-sizing: border-box;
-						background: var(--color-input);
-						color: var(--color-text);
-						border: none;
-						border-bottom: 1px solid var(--color-border);
-						padding: var(--space-xs) var(--input-height) var(--space-xs)
-							var(--space-xxs);
-						font-size: var(--font-size-m);
-						width: 100%;
-						height: var(--input-height);
-
-						&::placeholder {
-							color: var(--color-text);
-							opacity: var(--opacity-translucent);
-						}
-					}
-
-					& button.clear {
-						position: absolute;
-						bottom: 0;
-						right: 0;
-						border: 0;
-						border-radius: 50%;
-						font-size: var(--font-size-xs);
-						line-height: var(--line-height-xs);
-						color: var(--color-input);
-						background-color: var(--color-text-soft);
-						width: calc(0.6 * var(--input-height));
-						height: calc(0.6 * var(--input-height));
-						margin: calc(0.2 * var(--input-height));
-						padding: 0;
-
-						&:hover {
-							background-color: var(--color-text);
-						}
-					}
-				}
-
-				& module-scrollarea {
-					max-height: 40rem;
-					background-color: var(--color-background);
-
-					&:has([role="group"]) {
-						scroll-padding-block-start: var(--space-xl);
-					}
-				}
-
-				[role="listbox"] {
-					display: flex;
-					flex-direction: column;
-					gap: 0;
-					list-style: none;
-					padding: 0;
-					margin: 0;
-					background: var(--color-input);
-				}
-
-				[role="group"] {
-					margin-block-end: var(--space-xs);
-
-					&:not(:has(button:not([hidden]))) {
-						display: none;
-					}
-				}
-
-				[role="presentation"] {
-					position: sticky;
-					top: 0;
-					background-color: var(--color-background);
-					padding: var(--space-xs) var(--space-m);
-					font-size: var(--font-size-xs);
-					font-weight: var(--font-weight-bold);
-					text-transform: uppercase;
-					letter-spacing: 1px;
-					margin-block-end: var(--space-xxs);
-				}
-
-				[role="option"] {
+			@scope {
+				:scope {
 					display: block;
-					width: 100%;
-					text-align: left;
 					margin: 0;
-					padding: var(--space-xs) var(--space-m);
-					border: 0;
-					font-size: var(--font-size-s);
-					line-height: var(--line-height-s);
-					background: transparent;
-					color: var(--color-text);
-					cursor: pointer;
-					transition: background var(--transition-short) var(--easing-inout);
-					text-overflow: ellipsis;
-					max-width: 100%;
-					overflow-x: hidden;
+					max-width: 16rem;
 
-					&[aria-selected="true"] {
-						background: var(--color-selection-selected);
-						color: var(--color-text-inverted);
+					.input {
+						position: relative;
+						margin-bottom: var(--space-m);
+
+						& input.filter {
+							display: inline-block;
+							box-sizing: border-box;
+							background: var(--color-input);
+							color: var(--color-text);
+							border: none;
+							border-bottom: 1px solid var(--color-border);
+							padding: var(--space-xs) var(--input-height) var(--space-xs)
+								var(--space-xxs);
+							font-size: var(--font-size-m);
+							width: 100%;
+							height: var(--input-height);
+
+							&::placeholder {
+								color: var(--color-text);
+								opacity: var(--opacity-translucent);
+							}
+						}
+
+						& button.clear {
+							position: absolute;
+							bottom: 0;
+							right: 0;
+							border: 0;
+							border-radius: 50%;
+							font-size: var(--font-size-xs);
+							line-height: var(--line-height-xs);
+							color: var(--color-input);
+							background-color: var(--color-text-soft);
+							width: calc(0.6 * var(--input-height));
+							height: calc(0.6 * var(--input-height));
+							margin: calc(0.2 * var(--input-height));
+							padding: 0;
+
+							&:hover {
+								background-color: var(--color-text);
+							}
+						}
 					}
 
-					&:hover {
-						background: var(--color-selection-hover);
+					& module-scrollarea {
+						max-height: 40rem;
+						background-color: var(--color-background);
+
+						&:has([role="group"]) {
+							scroll-padding-block-start: var(--space-xl);
+						}
+					}
+
+					[role="listbox"] {
+						display: flex;
+						flex-direction: column;
+						gap: 0;
+						list-style: none;
+						padding: 0;
+						margin: 0;
+						background: var(--color-input);
+					}
+
+					[role="group"] {
+						margin-block-end: var(--space-xs);
+
+						&:not(:has(button:not([hidden]))) {
+							display: none;
+						}
+					}
+
+					[role="presentation"] {
+						position: sticky;
+						top: 0;
+						background-color: var(--color-background);
+						padding: var(--space-xs) var(--space-m);
+						font-size: var(--font-size-xs);
+						font-weight: var(--font-weight-bold);
+						text-transform: uppercase;
+						letter-spacing: 1px;
+						margin-block-end: var(--space-xxs);
+					}
+
+					[role="option"] {
+						display: block;
+						width: 100%;
+						text-align: left;
+						margin: 0;
+						padding: var(--space-xs) var(--space-m);
+						border: 0;
+						font-size: var(--font-size-s);
+						line-height: var(--line-height-s);
+						background: transparent;
+						color: var(--color-text);
+						cursor: pointer;
+						transition: background var(--transition-short) var(--easing-inout);
+						text-overflow: ellipsis;
+						max-width: 100%;
+						overflow-x: hidden;
 
 						&[aria-selected="true"] {
-							background: var(--color-selection-active);
+							background: var(--color-selection-selected);
+							color: var(--color-text-inverted);
+						}
+
+						&:hover {
+							background: var(--color-selection-hover);
+
+							&[aria-selected="true"] {
+								background: var(--color-selection-active);
+							}
 						}
 					}
 				}

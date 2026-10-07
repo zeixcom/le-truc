@@ -149,9 +149,11 @@ describe('integration — emitClientModule spans locate the authored thunk', () 
 				<button type="button" onClick={() => count.set(count.get() + 1)}>
 					{count}
 				</button>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}
 import { createCell } from '@zeix/le-truc'`
