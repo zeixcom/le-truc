@@ -331,6 +331,57 @@ Full entry text: `git log -p -- DONE.md`.
   cannot carry the task read); item/key reads in composed content stay LTC075; the LT-221 probe pin
   ("compose site in a `@pending` arm is rejected") is overruled.
 
+- [x] LT-461: Handler args — an `on`-prefixed function arg the child places on an owned element lowers to a parent-side `on()`. — done, pending review ⏳
+  **Area:** compiler
+  **Gates:** check:corpus, test:server
+  **Area:** compiler
+  **Ruled — pickable (Architect, planning 2026-10-06):** the design below is the owner's ruling; the
+  task is implementation, not a session. LTC081 is reserved for rule 6.
+  **Filed (Architect, 2026-10-06; design by the owner, 2026-10-06):** today `onClick` on
+  `<BasicButton>` is forwarded as a server arg into `renderBasicButton({ …, onClick })` and dropped:
+  no listener exists anywhere. In a reactive-list item it is misdiagnosed as LTC075.
+  **Design (owner):** a handler is an ordinary server arg — never exposed, never stored on the
+  host, never a reactive property. The child declares delegation by placing the arg on an owned
+  raw element:
+  `export function BasicButton({ type = 'button', onClick, … }: { onClick?: (e: MouseEvent) => void; … })`
+  with `<basic-button><button {type} {onClick}>…</button></basic-button>`. The parent's compose site
+  `<BasicButton class="remove" onClick={e => items.remove(k)} />` lowers in the parent's client to
+  `on(first('basic-button.remove button'), 'click', e => items.remove(k))`.
+  **Rules:**
+  1. **Which args:** a parameter whose name matches `on[A-Z]…` and whose declared type is a function
+     type, read syntactically from the child's parameter annotation (no checker).
+  2. **The event comes from the placement, not the arg name:** `onPress` placed as
+     `<button onClick={onPress}>` delegates `click`.
+  3. **Server:** the child's render never emits the arg (no attribute, no serialization); the
+     child's client emits nothing for it. Page-authored instances simply carry no handler.
+  4. **Selector:** the compose site's tag-plus-discriminator selector (LT-127/LT-338), joined with
+     the placement element's selector from the child's template, proven unique by the structural
+     verifier (ADR 0045). The compiler synthesizes it; an author never writes it, so it is no
+     reach-in (HOST_PROFILE § data account, bullet 3): the child's signature is the contract.
+  5. **Scope:** the `on()` emits into the compose site's enclosing Mount Scope — host, arm
+     (`bindArm`), list item (`bindItem`) — so item/key reads are legal; LTC075 exempts handler args.
+     The `on()` return-value contract applies to the **parent's** host (`{ prop: value }` batches
+     into the parent), as for any parent handler.
+  6. **Placements the parent cannot address are refused** in the child (new **LTC081**, tier 1
+     Prevented, compiler; statically decidable, no runtime half): a handler arg placed anywhere but
+     as an event attribute on a raw element; inside one of the child's reactive arms or list items
+     (recreated on flip or reconcile, so the parent's `first()` would go stale); or an `on[A-Z]` arg
+     whose type is not a function type. Several placements of one arg emit one `on()` each.
+  7. **Forwarding:** a child that passes its handler arg on to its own compose site
+     (`<Inner onClick={onClick} />`) resolves through the registry to the inner placement; the
+     selector descends through both boundaries.
+  8. **Typing:** on `.tsx`, compose-site handler args typecheck as ordinary props; an undeclared
+     `onX` stays the existing tsc excess-property error. `.tsrx` parity on the same IR.
+  **Then:** `BasicButton` gains `type?: 'button' | 'submit'`, `ariaLabel?: string` (rendered as
+  `aria-label`) and `onClick?: (e: MouseEvent) => void`, placed on its native button.
+  **Verification:** test:server unit legs (host, arm and list-item compose sites; forwarding; each
+  LTC081 case; return-value batching into the parent); check:corpus; a Playwright leg on a
+  converted list remove button.
+
+  **Changed:** handler args (LT-461). A child arg named `on[A-Z]…` with a function type, placed as an event attribute on an owned raw element, emits nothing on either half of the child. Its placement is published on the registry entry as the new optional `RegistryEntry.handlerArgs` (`HandlerPlacement`). A parent compose site's `onX={…}` (new `ComposeAttrIR` `handler`, never a server arg) lowers to one `on()` for each placement, in the site's Mount Scope: host factory queries, list-item locals, arm-root and arm-descendant locals. The selector is the site's tag plus discriminator, joined with the child-proven placement selector. Forwards (`<Inner onClick={onClick} />`) resolve recursively through the registry. New LTC081 (not a function type / a read outside a placement or forward / inside a reactive arm or list item / inside a server-data loop body) runs in the shared front end on both surfaces. `BasicButton` gains `type`, `ariaLabel` and `onClick`. `test-listitem`'s remove button is now `<BasicButton onClick={() => items.remove(k)} />`.
+  **How:** `params.ts` reads handler args syntactically: an inline literal, a same-file alias or interface, or an intersection. `classify-attributes.ts` adds `handler-arg` (raw) and `handler` (compose). `validate-lowered.ts` adds `reportHandlerArgPlacements`. New `analysis/handler-args.ts` holds the child placements and the parent resolution. Placement selectors are proved with every composed child's markup taken as unknown, because the parent reads the discovery-pass entry, so they fall back to `:scope >` paths when the child composes anything. In `effects.ts`: `planHostComposeHandlers`, item `collectCompose`, `planArmRootComposePass` and `planArmComposeHandlers`, plus a backstop (`reportUnplannedHandlers`, LTC005) so no handler drops silently. Also: placements in server-rendered branches are `optional` (non-throwing query); `reportServerOnlyNames` skips handler args (LTC081 owns that read); the host profile's event attributes accept `undefined` (needed under `exactOptionalPropertyTypes`). Docs: HOST_PROFILE § Handler args, LE_TRUC_COMPILER inventory and module map, VOCABULARY_LEDGER, `skills/le-truc/references/errors.md`.
+  **Check:** `bun test server/tests/compiler/handler-args.test.ts` (17 tests: host, arm root and descendant, item, forward, batching, optional, refusals) and the 5 LTC081 parity cases in `tsx/diagnostic-parity.test.ts`. Gates green: test:server (3519/0, after build:docs), typecheck, check:contract, check:corpus, build:docs, check:links, biome on touched paths. Unrunnable in the sandbox: `test:component test-listitem` (browser launch timeout, every test including the untouched `.tsx` ones), and so `test:variants` and Playwright. The new legs in `test-listitem.spec.ts` (remove an adopted item, remove a clone) need an owner run. Doubts for review: (1) The in-loop LTC081 and the LTC005 for loop or unmounted compose sites go beyond rule 6's list. (2) `module-todo`'s remove button is not converted: it needs `tertiary destructive small`, and `variant` cannot express that. That needs a ruling on a variant shape (follow-up). (3) `HandlerPlacement` is reachable from the public `RegistryEntry` but not exported from `contract.ts`. (4) The return-value batching leg is asserted textually (the parent factory's own `on`), not run. (5) LTC081 copy may want a `writer` pass.
+
 - [x] LT-462: Children contract — parent-owned children, child-declared roles and content model (design; ADR 0048). — done ✓
   **Area:** design
   **Needs:** LT-465
@@ -681,6 +732,47 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** Approved. The ruling's "same wording and remedy" was the Architect's error for a
   `try` and is not held against the task; LT-488 corrects it.
+
+- [x] LT-485: The examples layout graph registers module-calctable, module-cem-list and module-ticker through their `.ts` twins — switch them to the compiled clients. — reviewed ✓
+  **Area:** examples
+  **Needs:** LT-467
+  **Gates:** test:variants, test:server, check:corpus
+  **Area:** examples
+  **Needs:** LT-467
+  **Filed (Architect, 2026-10-07, from LT-467's rework and its NOTES entry):** `examples/main.ts`
+  imports `./module/calctable/module-calctable.ts`, `./module/cem-list/module-cem-list.ts` and
+  `./module/ticker/module-ticker.ts`, the hand-written twins, instead of
+  `server/generated/components/<tag>.client.ts`. The graph is the default page bundle and the
+  base of every `test:variants` surface bundle. `buildSurfaceBundle` (`server/routes.ts`) empties
+  only the generated-client slot, so the twin holds the tag on every surface: the `tsx` bundle
+  carries no compiled client, and the `tsrx` module's `define` throws. A green `test:variants`
+  for these three sets has measured the twin three times. That breaks the iteration's exit
+  criterion ("every example folder is served compiled") and leaves the compiled spellings
+  untested in a browser before LT-463 converts them.
+  **Change:** for each of the three, replace the twin import with the generated client import,
+  in the same position and with the same comment style as LT-467's module-todo switch. Remove
+  the tag from `KNOWN_TWIN_IMPORTS` in `server/tests/layout-graph.test.ts`. When the set is
+  empty, the first test asserts `[]`; keep it as the standing guard.
+  **Expect failures:** the compiled clients have never run in a browser. Triage each failing
+  leg by cause:
+  - a spec that asserted twin-only behavior is adjusted, with the reason stated;
+  - a compiled-client defect the corpus compile did not catch is NOT fixed in this task. File
+    it in `NOTES.md` with the leg, the surface and a minimal reproduction, and leave that one
+    tag on its twin (back in `KNOWN_TWIN_IMPORTS`, with a comment naming the note). The other
+    switches still land.
+  **Check:** `bun run test:variants module-calctable module-cem-list module-ticker` (or one at
+  a time) is green on every surface for each switched tag. Run it outside the sandbox if
+  Playwright cannot launch; otherwise state it as unrun for the owner. `test:server`
+  (layout-graph) and `check:corpus` are also green.
+  **Channel/tier:** none — serving-path and test fix, no runtime check.
+
+  **Changed:** `examples/main.ts` registers module-calctable, module-cem-list and module-ticker through their generated clients (`server/generated/components/<tag>.client.ts`) instead of the hand-written `.ts` twins; `KNOWN_TWIN_IMPORTS` in `server/tests/layout-graph.test.ts` is now empty and its first test (`imports no variant-set twin`) is the standing inverted guard.
+
+  **How:** The same switch LT-467 made for module-todo, one comment block in its style per import (the full twin-holds-the-tag explanation once, at module-calctable; cem-list and ticker point at it). The twins stay on disk — `test:variants`' `ts` legs still serve them through `buildSurfaceBundle`'s slot swap, so no surface loses coverage and nothing is deleted.
+
+  **Check:** `test:server` 3510 pass / 0 fail; `check:corpus` exit 0; `bun run test:variants module-ticker` green on all three surfaces (Chromium + WebKit, 24 legs) — the compiled ticker client's first browser run passed with no triage, so nothing went back on a twin and nothing was filed in NOTES.md. `typecheck` exit 0 (insurance, not a named gate). NOT runnable: `bun run test:variants module-calctable` and `module-cem-list` — neither folder carries a `.spec.ts`, so the runner refuses with "No variant set matches" (exit 1); the entry's Check line assumed otherwise. Their compiled clients still execute on every `/test/*` page load (main.ts is every surface bundle's base) — registration smoke passed in both browsers on all ticker legs; full behavior coverage awaits specs, a pre-existing gap left unfiled.
+
+  **Review:** Approved. Accepted: the not-runnable deviation for module-calctable and module-cem-list — the entry's Check line wrongly assumed specs, but the refusal is real, the graph-bundle registration smoke is a fair substitute, and spec-less module folders are the corpus norm (5 of 19); no follow-up filed. Accepted: `module-ticker.client.ts` placed in the generated block's sorted position rather than at the twin's old out-of-order spot at the end. Reviewer re-ran the gates on the branch tip in the worktree: `check:corpus` exit 0, `test:server` 3510 pass / 0 fail, `test:variants module-ticker` green on all three surfaces, both refusals reproduced, biome clean on the two touched files. The branch tip sat on v3's HEAD; the integrate is a fast-forward.
 
 - [x] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy. — reviewed ✓
   **Area:** compiler
