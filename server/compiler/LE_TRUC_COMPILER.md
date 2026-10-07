@@ -1247,7 +1247,8 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   gate.
 - **Golden tests** (`server/tests/compiler/*.golden.test.ts`) pin server renders,
   CSS bytes, client snapshots, and diagnostics for the corpus; regenerate
-  with `bun server/tests/compiler/update-snapshots.ts`. The fixture-pinned
+  the client snapshots with
+  `UPDATE_SNAPSHOTS=1 bun test server/tests/compiler/client.golden.test.ts`. The fixture-pinned
   corpus is load-bearing for simulation: where the simulated answer can only
   approximate (layout reads return zeros, absent APIs are `undefined`), drift
   is caught by fixtures, not assumed absent.

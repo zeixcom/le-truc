@@ -1,8 +1,8 @@
 /**
  * Golden tests — client half (LT-002): the generated `defineComponent()`
  * modules must equal the committed snapshots (regenerate with
- * `UPDATE_SNAPSHOTS=1 bun test server/tests/tsrx` or
- * `bun server/tests/compiler/update-snapshots.ts`) and must typecheck against
+ * `UPDATE_SNAPSHOTS=1 bun test server/tests/compiler/client.golden.test.ts`)
+ * and must typecheck against
  * the real `@zeix/le-truc` types — emit-then-check, the CI half of ADR
  * 0023 sub-design 6.
  *

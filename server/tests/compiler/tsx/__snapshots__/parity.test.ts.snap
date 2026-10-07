@@ -877,7 +877,7 @@ export default defineComponent(
 		}
 		const container = first('ol', 'Add a container element for items.')
 		const form = first('form', 'module-todo: form missing')
-		const textbox = first('form-textbox', 'Add <form-textbox> component to enter a new todo item.')
+		const textbox = first('form-textbox:not(form-inplace-edit *)', 'Add <form-textbox> component to enter a new todo item.')
 		const basicButton = first('basic-button.submit', 'module-todo: basic-button.submit missing')
 		const liveRegion = first('[role="status"]', 'Add a live region for status messages.')
 		const p = first('p.remaining', 'module-todo: p.remaining missing')
