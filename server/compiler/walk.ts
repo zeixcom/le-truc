@@ -213,7 +213,9 @@ export type WalkOptions = {
 	/**
 	 * Recurse into composed children. Default true; the compose node itself
 	 * is always visited. Consumers that treat composition as a boundary
-	 * (element collection, compose-element collection) pass false.
+	 * (compose-element collection) pass false. A compose site's content is
+	 * the composing component's markup (ADR 0048 s1), so `first()` element
+	 * collection enters it.
 	 */
 	intoCompose?: boolean
 }

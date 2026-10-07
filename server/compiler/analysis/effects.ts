@@ -3345,6 +3345,7 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 	}
 	if (node.kind === 'compose') {
 		emitComposeEffects(fx, node)
+		planContentRefs(fx, node)
 		return
 	}
 	if (!isElement(node)) return
@@ -3451,6 +3452,36 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 		}
 	}
 	for (const child of node.children) emitTopEffects(fx, child)
+}
+
+/**
+ * The `first()` references into a compose site's content (ADR 0048 s1): the
+ * content is this scope's markup, rendered into the child's Children
+ * Region, so its references query from here. A reference is the one client
+ * construct the content admits; the rest are LTC011's, nested compose
+ * sites included, so the walk stops at them.
+ */
+const planContentRefs = (fx: EffectsContext, node: ComposeNode): void => {
+	for (const child of node.children)
+		walkTemplate(
+			child,
+			inner => {
+				if (!isElement(inner)) return
+				const refAttr = refOf(inner)
+				if (!refAttr) return
+				const { selector, unique } = resolveSelector(fx, inner)
+				if (!unique)
+					fx.diagnostics.push(
+						diagnostic.unaddressableElement(
+							fx.source,
+							inner.node,
+							`No unique selector for <${inner.tag}> in the content passed to <${node.component}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
+						),
+					)
+				fx.addQuery(refAttr.name, selector, 'one')
+			},
+			{ intoCompose: false },
+		)
 }
 
 /**

@@ -59,7 +59,12 @@ export const handlerPlacementsOf = (
 	const unknownMarkup = new Map<string, ComposedMarkup>(
 		allComposeNodes(component.root).map(node => [
 			node.source,
-			{ tag: null, shapes: [{ kind: 'any' }] },
+			{
+				tag: null,
+				shapes: [{ kind: 'any' }],
+				region: null,
+				owner: component.tag,
+			},
 		]),
 	)
 	const loopOutputs = new Set<TemplateNode>(

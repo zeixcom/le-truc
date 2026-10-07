@@ -211,10 +211,11 @@ export const matchesAuthoredSelectorOn = (
 /* === Exported Functions === */
 
 /**
- * Every element in `root` matching an author-written selector. Composed
- * elements are a boundary — their own template is a different component,
- * so the walk doesn't enter them, mirroring `collectComposeElements`'s
- * `intoCompose: false`.
+ * Every element in `root` matching an author-written selector. A composed
+ * element's own template is a different component and never enters the IR,
+ * but the content a compose site passes as `children` does: it is this
+ * component's markup, rendered into the child's Children Region (ADR 0048
+ * s1), so the walk enters it.
  */
 export const collectMatchingElements = (
 	root: ElementNode,
@@ -222,19 +223,15 @@ export const collectMatchingElements = (
 ): { elements: ElementNode[]; unsupported: boolean } => {
 	const elements: ElementNode[] = []
 	let unsupported = false
-	walkTemplate(
-		root,
-		node => {
-			if (node.kind !== 'element') return
-			const result = matchesAuthoredSelectorOn(
-				{ tag: node.tag, attrs: staticAttrs(node) },
-				selectorList,
-			)
-			if (result === null) unsupported = true
-			else if (result) elements.push(node)
-		},
-		{ intoCompose: false },
-	)
+	walkTemplate(root, node => {
+		if (node.kind !== 'element') return
+		const result = matchesAuthoredSelectorOn(
+			{ tag: node.tag, attrs: staticAttrs(node) },
+			selectorList,
+		)
+		if (result === null) unsupported = true
+		else if (result) elements.push(node)
+	})
 	return { elements, unsupported }
 }
 

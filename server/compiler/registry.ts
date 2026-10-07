@@ -22,6 +22,7 @@
  *   functions and stylesheets through this file.
  */
 
+import type { ChildrenRegion } from './children-region'
 import type { ExposeKind, RenderedShape } from './ir'
 import type { SuppressedSite } from './simulation/contract.ts'
 import type { EvaluationTier, RoutingSignal } from './tier'
@@ -85,6 +86,14 @@ export type RegistryEntry = {
 	 * for hand-built entries; an entry without it constrains nothing.
 	 */
 	renderedShapes?: RenderedShape[]
+	/**
+	 * What this component renders inside its Children Region besides the
+	 * content a composing parent passes (ADR 0048 s1). Present exactly when
+	 * the template inserts `{children}`: a parent's compose site then passes
+	 * its own tag as the region owner, and the parent's selector engine
+	 * proves a reference into its content against these shapes.
+	 */
+	childrenRegion?: ChildrenRegion
 	/**
 	 * Which server-evaluation mechanism renders this component's initial
 	 * HTML (ADR 0029, LT-165), and why it was routed there.

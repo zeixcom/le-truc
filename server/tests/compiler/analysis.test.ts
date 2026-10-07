@@ -442,7 +442,7 @@ export function P({}: {})
 }`,
 			'child.tsrx',
 		).component as ComponentIR
-		expect(renderedShapesOf(rawChild)).toContainEqual({ kind: 'any' })
+		expect(renderedShapesOf(rawChild)).toContainEqual({ kind: 'children' })
 		const component = withChild(rawChild)
 		expect(resolveSelector(component, elementByTag(component, 'code'))).toEqual(
 			{
