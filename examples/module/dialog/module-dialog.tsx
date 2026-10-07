@@ -3,16 +3,15 @@
  * stays beside this source as the variant set's `.ts` twin (ADR 0039). Every
  * member declares its own `HTMLElementTagNameMap` entry (s4).
  *
- * The template renders what module-dialog.html authors by hand, with two
- * differences: the open button is a direct `<button>` child (the sheet's
- * `> button` rule), not a composed `basic-button`, and the scrollable content
- * area composes `ModuleScrollarea` (LT-463) instead of hand-authoring the
- * child's markup. The opener must carry
+ * The template renders what module-dialog.html authors by hand, with one
+ * difference: the open button is a direct `<button>` child (the sheet's
+ * `> button` rule), not a composed `basic-button`. The opener must carry
  * `aria-haspopup`/`aria-controls`, which a compose site cannot pass to the
  * child's own button, and addressing that button through `first()` would
  * reach into markup the child owns (HOST_PROFILE § data account, bullet 3).
  * A page may still author the opener inside a `basic-button`; the selector
- * matches either way. `children` is the dialog's content markup.
+ * matches either way. `children` is the dialog's content markup; the
+ * scrollable content area composes `ModuleScrollarea` (LT-463).
  *
  * Setup is the twin's verbatim: every `dialog.`/`document.` call runs inside
  * `on()` handlers or the `open` watcher, never at setup time.
