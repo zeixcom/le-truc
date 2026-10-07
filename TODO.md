@@ -100,9 +100,10 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   layout's `<base>`). Done (2026-10-07).
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
 - **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463 → LT-495 →
-  LT-496. LT-463 and LT-495 are done (2026-10-07; LT-495 repaired the `test:server` fallout,
-  ruling 13). LT-496, from LT-495's review, makes the compose-site reference count raw
-  same-tag elements.
+  LT-496 → LT-498. LT-463 and LT-495 are done (2026-10-07; LT-495 repaired the `test:server` fallout,
+  ruling 13). LT-496 (from LT-495's review) made the compose-site reference count raw
+  same-tag elements. LT-498 (from LT-496's review) closes the same blind spot in the other
+  discriminator callers and in composed children's own templates.
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
@@ -135,7 +136,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-498.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-499.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -149,65 +150,85 @@ LTC056 is LT-358's).
 
 ### K — composition
 
-- [ ] LT-496: A compose site's element reference ignores raw same-tag elements — count every element of the child's tag when choosing the selector.
+- [ ] LT-498: Close the remaining raw-same-tag blind spots in compose-site selectors — the other discriminator callers and composed children's own templates.
   **Area:** compiler
-  **Needs:** LT-495
+  **Needs:** LT-496
   **Gates:** test:server, check:corpus, typecheck
   **Area:** compiler
-  **Needs:** LT-495
-  **Filed (Architect, 2026-10-07, from LT-495's review):** in `analysis/effects.ts`, the
-  compose-site reference adds a discriminator clause only when `countComposeBySource` finds more
-  than one compose site of the same child. Raw elements of the same tag in the parent's template
-  are not counted. module-todo composes one `<BasicButton class="submit">` beside raw
-  `<basic-button class="remove">` (in list items) and `<basic-button class="clear-completed">`, so
-  the generated client queries `first('basic-button')`. That is correct today only because the
-  submit comes first in document order. Moving the form below the footer would silently bind the
-  submit's `disabled` pass to the clear-completed button. module-list has the same shape.
-  **Change:** the uniqueness count covers every element of the child's tag the parent's
-  template can render, raw or composed. That includes elements in list items and arms, since a
-  host-level `first()` matches them too. When the tag is not unique, use the site's
-  discriminator clause (`composeDiscriminatorClause`, now considering all those elements). With
-  no distinguishing static class/id/`data-*`, refuse through the existing
-  `unaddressableElement` diagnostic with the same fix-it. Leave LT-319's shared-pass grouping
-  unchanged; it still applies only to compose sites.
-  **Check:** a `test:server` pin: a compose site beside a raw same-tag element emits the
-  discriminated selector (`first('basic-button.submit')`), and an indistinguishable pair is
-  refused. Regenerate module-list's and module-todo's client snapshots; the only change should be
-  `basic-button` → `basic-button.submit`. `check:corpus` and `typecheck` green.
-  **Channel/tier:** compiler, tier 1 Prevented. No new LTC: the refusal reuses the existing
-  unaddressable-element diagnostic's code.
+  **Needs:** LT-496
+  **Filed (Architect, 2026-10-07, from LT-496's review):** LT-496 made `emitComposeEffects`'s
+  reference count raw elements of the child's tag. Two blind spots of the same class remain, and
+  each can bind a query to the wrong element by document order:
+  1. **The other `composeDiscriminatorClause` callers** still decide uniqueness among compose
+     sites alone:
+     - the forwarded handler arg's site selector (`analysis/handler-args.ts`, which uses `''`
+       for a single sibling);
+     - the reactive-list item's compose passes;
+     - the arm-held compose site's `composeSiteSelector`;
+     - `composeSharedPassClause`'s sibling check (`analysis/selectors.ts`).
 
-- [ ] LT-496: A compose site's element reference ignores raw same-tag elements — count every element of the child's tag when choosing the selector.
+     Route them all through the LT-496 predicate (`matchesRaw` over `countRenderedForSelector`),
+     scoped the way each query is scoped: the host for host-level queries, the item root for
+     item queries, the arm root for arm queries. Better, give the four one shared helper that
+     returns the clause or the refusal, so a fifth caller cannot drift.
+  2. **Elements inside a composed child's own template.** A host-level `first('<tag>.<clause>')`
+     also matches an element of that tag that another composed child renders internally, e.g. a
+     `basic-button` inside a composed child's template. The registry's `renderedShapes` closure
+     (the one LT-472's region proof uses) already lists them. Count those shapes too, or exclude
+     other composed children's subtrees from the query, the way raw `first()` refs do with
+     `:not(<child> *)`. Prefer the exclusion. It is what LT-316 does for raw refs, and it doesn't
+     refuse sites that are in fact unique in the served DOM.
+
+  Tooling rider: `server/tests/compiler/update-snapshots.ts` no longer regenerates module-list's
+  client snapshot (only `UPDATE_SNAPSHOTS=1` on `client.golden.test.ts` does). Fix it or delete it
+  in favor of the env flag, and say which in the handoff.
+  **Check:** `test:server` pins one case per caller in (1), plus (2)'s case: a child whose
+  template renders the tag, composed beside a site of that tag. `check:corpus` green, and every
+  corpus selector change listed in the handoff.
+  **Channel/tier:** compiler, tier 1 Prevented. It reuses LTC007's raw-clash message from
+  LT-496; no new code.
+
+- [ ] LT-498: Close the remaining raw-same-tag blind spots in compose-site selectors — the other discriminator callers and composed children's own templates.
   **Area:** compiler
-  **Needs:** LT-495
+  **Needs:** LT-496
   **Gates:** test:server, check:corpus, typecheck
   **Area:** compiler
-  **Needs:** LT-495
-  **Filed (Architect, 2026-10-07, from LT-495's review):** in `analysis/effects.ts`, the
-  compose-site reference adds a discriminator clause only when `countComposeBySource` finds more
-  than one compose site of the same child. Raw elements of the same tag in the parent's template
-  are not counted. module-todo composes one `<BasicButton class="submit">` beside raw
-  `<basic-button class="remove">` (in list items) and `<basic-button class="clear-completed">`, so
-  the generated client queries `first('basic-button')`. That is correct today only because the
-  submit comes first in document order. Moving the form below the footer would silently bind the
-  submit's `disabled` pass to the clear-completed button. module-list has the same shape.
-  **Change:** the uniqueness count covers every element of the child's tag the parent's
-  template can render, raw or composed. That includes elements in list items and arms, since a
-  host-level `first()` matches them too. When the tag is not unique, use the site's
-  discriminator clause (`composeDiscriminatorClause`, now considering all those elements). With
-  no distinguishing static class/id/`data-*`, refuse through the existing
-  `unaddressableElement` diagnostic with the same fix-it. Leave LT-319's shared-pass grouping
-  unchanged; it still applies only to compose sites.
-  **Check:** a `test:server` pin: a compose site beside a raw same-tag element emits the
-  discriminated selector (`first('basic-button.submit')`), and an indistinguishable pair is
-  refused. Regenerate module-list's and module-todo's client snapshots; the only change should be
-  `basic-button` → `basic-button.submit`. `check:corpus` and `typecheck` green.
-  **Channel/tier:** compiler, tier 1 Prevented. No new LTC: the refusal reuses the existing
-  unaddressable-element diagnostic's code.
+  **Needs:** LT-496
+  **Filed (Architect, 2026-10-07, from LT-496's review):** LT-496 made `emitComposeEffects`'s
+  reference count raw elements of the child's tag. Two blind spots of the same class remain, and
+  each can bind a query to the wrong element by document order:
+  1. **The other `composeDiscriminatorClause` callers** still decide uniqueness among compose
+     sites alone:
+     - the forwarded handler arg's site selector (`analysis/handler-args.ts`, which uses `''`
+       for a single sibling);
+     - the reactive-list item's compose passes;
+     - the arm-held compose site's `composeSiteSelector`;
+     - `composeSharedPassClause`'s sibling check (`analysis/selectors.ts`).
+
+     Route them all through the LT-496 predicate (`matchesRaw` over `countRenderedForSelector`),
+     scoped the way each query is scoped: the host for host-level queries, the item root for
+     item queries, the arm root for arm queries. Better, give the four one shared helper that
+     returns the clause or the refusal, so a fifth caller cannot drift.
+  2. **Elements inside a composed child's own template.** A host-level `first('<tag>.<clause>')`
+     also matches an element of that tag that another composed child renders internally, e.g. a
+     `basic-button` inside a composed child's template. The registry's `renderedShapes` closure
+     (the one LT-472's region proof uses) already lists them. Count those shapes too, or exclude
+     other composed children's subtrees from the query, the way raw `first()` refs do with
+     `:not(<child> *)`. Prefer the exclusion. It is what LT-316 does for raw refs, and it doesn't
+     refuse sites that are in fact unique in the served DOM.
+
+  Tooling rider: `server/tests/compiler/update-snapshots.ts` no longer regenerates module-list's
+  client snapshot (only `UPDATE_SNAPSHOTS=1` on `client.golden.test.ts` does). Fix it or delete it
+  in favor of the env flag, and say which in the handoff.
+  **Check:** `test:server` pins one case per caller in (1), plus (2)'s case: a child whose
+  template renders the tag, composed beside a site of that tag. `check:corpus` green, and every
+  corpus selector change listed in the handoff.
+  **Channel/tier:** compiler, tier 1 Prevented. It reuses LTC007's raw-clash message from
+  LT-496; no new code.
 
 ### C — children contract
 
-- [ ] LT-473: Scoped emission follows ownership — region re-include, child-side stop, self-nesting re-include (ADR 0048 s5/s6).
+- [ ] LT-473: Scoped emission follows ownership — region re-include, child-side stop, self-nesting re-include (ADR 0048 s5/s6). — in progress ⚙
   **Area:** compiler
   **Needs:** LT-472
   **Gates:** check:corpus, build:docs, check:links, test:variants
