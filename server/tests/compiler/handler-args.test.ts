@@ -17,6 +17,7 @@
  * LTC081's cases are pinned on both surfaces in `tsx/diagnostic-parity`.
  */
 import { describe, expect, test } from 'bun:test'
+import ts from 'typescript'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../compiler/registry'
@@ -211,6 +212,40 @@ describe('the parent half: one on() per placement, in the site’s scope', () =>
 		expect(parent.clientCode).toContain(
 			"on(button, 'click', () => ({ open: true }))",
 		)
+	})
+
+	test('a setup const only a handler arg reads reaches the client (LT-490)', () => {
+		const parent = compileParent(
+			parentTsx(
+				'<BasicChild label="a" onPress={() => console.log(ALPHA[0])} />',
+				"const ALPHA = 'ABC'",
+			),
+			registry,
+		)
+		expect(parent.clientCode).toContain("const ALPHA = 'ABC'")
+		// The generated module declares every name it reads: no TS2304. Its
+		// imports stay unresolved here, which is TS2307, not TS2304.
+		const file = 'basic-parent.ts'
+		const host = ts.createCompilerHost({ noEmit: true })
+		const getSourceFile = host.getSourceFile
+		host.getSourceFile = (name, version) =>
+			name === file
+				? ts.createSourceFile(name, parent.clientCode, version)
+				: getSourceFile(name, version)
+		const program = ts.createProgram(
+			[file],
+			{
+				noEmit: true,
+				noResolve: true,
+				lib: ['lib.esnext.d.ts', 'lib.dom.d.ts'],
+			},
+			host,
+		)
+		const undeclared = program
+			.getSemanticDiagnostics(program.getSourceFile(file))
+			.filter(d => d.code === 2304)
+			.map(d => ts.flattenDiagnosticMessageText(d.messageText, '\n'))
+		expect(undeclared).toEqual([])
 	})
 
 	test('a site in a server-rendered branch queries without throwing', () => {
