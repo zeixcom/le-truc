@@ -84,8 +84,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 
 **The chain.**
 - **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-481 → LT-482 → LT-488 → LT-461 → LT-490. LT-460 through LT-461 are integrated (2026-10-07);
-  LT-490 is next (ruling 12).
+  LT-481 → LT-482 → LT-488 → LT-461 → LT-490. Every task in the track is integrated (LT-490 on
+  2026-10-07, ruling 12). Done.
 
   LT-481 and LT-482 joined from the reviews of LT-470 and LT-481: the arm-root pass planning,
   and the server-only `try` as a server-rendered branch. LT-488 rewords LT-470's remedy for a
@@ -96,10 +96,11 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   so `test:variants` has never measured their compiled clients (found in LT-467's rework). It
   runs before LT-463, which converts them; LT-463 needs it. LT-485. Pickable now.
 - **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done
-  (2026-10-07). LT-491 (ruling 12) fixes its link-click close failure and is pickable now.
+  (2026-10-07). LT-491 (ruling 12) fixed its link-click close failure (a fixture link under the test
+  layout's `<base>`). Done (2026-10-07).
 - **F — form-checkbox `.tsx`** — example folder only, pickable now. LT-464.
 - **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463 → LT-495.
-  LT-463 is done (2026-10-07). LT-495 repairs its `test:server` fallout (ruling 13) after LT-490.
+  LT-463 is done (2026-10-07). LT-495 repairs its `test:server` fallout (ruling 13) and is pickable now.
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
   LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
