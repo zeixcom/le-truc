@@ -181,7 +181,7 @@ signal is **two numbers**, not one:
 1. **The compile baseline** — `bun run check:corpus` counts the standing corpus warnings in
    its summary line (`Compile-warning baseline: N unique…`) — read that count, never a
    tail-read of the ⚠️ lines (LT-168). The gate-wave target is the counted **6 unique**
-   (LT-145 and LT-146 remove form-listbox and form-tokenbox); the six `basic-pluralize`
+   (LT-145 and LT-146 remove form-listbox and form-tokenbox); the six `basic-pluralize` (retired in LT-467)
    warnings are **correct refusals** — the fold cannot follow the authored `pluralCategory`
    const, its opaque `getLocale` helper, or the `hasAttribute` sensor — and they retire with
    LTC034 at stage 3 (LT-165). Zero compile warnings is the stage-3 state. This is the
@@ -189,7 +189,7 @@ signal is **two numbers**, not one:
    LT-145 landed as a pure runtime pin (its own instruction was "pin it, not build the
    route") and does not move `check:corpus`'s count — `form-listbox`'s LTC034 stays standing.
    The gate-wave target is **7 unique**, not 6: `LT-146` alone delivers the compile
-   reduction (8 → 7), and `form-listbox`'s LTC034 joins the six `basic-pluralize` refusals
+   reduction (8 → 7), and `form-listbox`'s LTC034 joins the six `basic-pluralize` (retired in LT-467) refusals
    in the stage-3 (LT-165) retirement bucket, seven total.
    **Landed, 2026-09-06 (LT-165 step 5):** the seven retired with the channel
    reclassification (ADR 0029 § 5) — the standing `check:corpus` count is **0**, and those

@@ -6,7 +6,7 @@ authored source (`export const i18n = { key: 'Source string' } as const`), so th
 stays the single source of truth and no per-component catalog file exists.
 
 ```
-i18n/de.json        { "basic-pluralize.remaining": "verbleibend", … }
+i18n/de.json        { "module-todo.remaining": "{count, plural, …}", … }
 i18n/manifest.json  per locale, per key: the source-string hash the
                     translation was recorded against (staleness detection)
 ```
@@ -15,8 +15,9 @@ i18n/manifest.json  per locale, per key: the source-string hash the
   else the inline source string. There is no global or page layer.
 - **One ICU MessageFormat 1 pattern per key.** Plural morphology lives
   inside the pattern, so each locale spells only its own arms in one entry.
-  The cardinal arm of `basic-pluralize.tasks` is `{count, plural, one
-  {Aufgabe} other {Aufgaben}}` in de; cy spells all six categories. Every
+  `module-todo.remaining` is `{count, plural, =0 {Alles erledigt!} one
+  {# Aufgabe verbleibend} other {# Aufgaben verbleibend}}` in de; cy spells
+  all six categories. Every
   locale carries the same key set. The census checks each translation against
   its source pattern: the arguments must match, and every `plural` must
   cover the locale's CLDR categories.

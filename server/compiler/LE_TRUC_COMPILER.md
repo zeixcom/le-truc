@@ -780,8 +780,8 @@ route; parser-exposed and arg-rendered props are the first two) — while an
 ANCESTOR WALK through a user-land helper (`getLocale(el)`) is outside the
 fold vocabulary and routes Simulated, because the realm executes that read
 for real. Only a runtime-default locale is unresolvable under limb (b).
-`basic-pluralize` reads `host.lang` over a root-rendered config attribute and
-is Folded-tier (LT-173): its locale is server-known through the reserved
+The `c-plural` compiler fixture reads `host.lang` over a root-rendered config
+attribute and is Folded-tier (LT-173): its locale is server-known through the reserved
 record.
 
 **Classification is static and conservative.** There is no render-time

@@ -28,7 +28,8 @@ The **component split is identical on both sides**:
 module-todo (composite)
 ├── form-textbox        (add-item input, clear affordance, clear() method)
 ├── basic-button  × 3   (submit / remove / clear-completed)
-├── basic-pluralize     (remaining count, CLDR categories)
+├── basic-pluralize     (remaining count, CLDR categories; retired in LT-467 —
+│                        module-todo now words its own count, so a rerun measures five)
 ├── form-checkbox       (complete toggle)
 ├── form-inplace-edit   (label ⇄ edit textbox)
 └── form-radiogroup     (all / active / completed filter)
