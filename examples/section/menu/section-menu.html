@@ -9,7 +9,11 @@
      compose-site id="sidebar" attribute it writes itself (pinned by
      templates/menu.test.ts). The page keeps #sidebar-toggle before the host
      and #outside-target after <main>; the sheet is the set's emitted
-     stylesheet (examples/main.css). -->
+     stylesheet (examples/main.css).
+     The menu links carry the page path, not a bare fragment: the test
+     layout sets <base href="/">, so "#page-one" would resolve to
+     "/#page-one" and navigate away to a 404 (LT-491). -->
+
 <button
 	id="sidebar-toggle"
 	type="button"
@@ -26,20 +30,20 @@
 			<ol>
 				<li class="group" role="presentation">Guide</li>
 				<li>
-					<a href="#page-one">
+					<a href="/test/section-menu#page-one">
 						<span class="icon">📘</span>
 						<strong>Page One</strong>
 					</a>
 				</li>
 				<li>
-					<a href="#page-two" class="active" aria-current="page">
+					<a href="/test/section-menu#page-two" class="active" aria-current="page">
 						<span class="icon">📗</span>
 						<strong>Page Two</strong>
 					</a>
 				</li>
 				<li class="group" role="presentation">Reference</li>
 				<li>
-					<a href="#page-three">
+					<a href="/test/section-menu#page-three">
 						<span class="icon">📙</span>
 						<strong>Page Three</strong>
 					</a>
