@@ -14,6 +14,26 @@ into this prose.
 
 ---
 
+Struck 2026-10-07 (Architect, owner ruling: compiled CSS is platform CSS, ADR 0033 rewritten
+and ADR 0048 s5 cut back; ITERATION ruling 14). Deleted without integration: LT-473, LT-475,
+LT-499, LT-500, LT-405, LT-407, LT-408, LT-409.
+- **LT-473** (approved, not integrated) built the ownership emission. Its measurements are the
+  evidence behind ADR 0048's rejected style form. The lowered form cost up to about 13.5 kB raw
+  per component, and native owners carried their rules twice. `test:variants` was green under
+  it. **Open obligation:** `task/LT-473` and `.worktrees/LT-473` stay until LT-501's review,
+  for the salvage of `css-probe-child` and its spec cells. The reviewer then removes both
+  (`git worktree remove`, `git branch -D`).
+- **LT-500's owner rulings that survive:** `{children}` directly in a child's root is allowed,
+  with no wrapper, and own elements beside it are allowed and count as the parent's region
+  (ADR 0048 s1). Components such as card-callout and section-menu are chosen partly for the
+  styles they give their content. The platform model keeps that.
+- **LT-409** asked for a ruling on each ADR 0033 s7 departure. The rewrite removes the
+  emulation, so only inward reach and the lowered form's missing scope proximity remain.
+  LT-405's `:host(X)` zero-specificity ruling (2026-10-02) is void: `:scope:is(X)` carries
+  the platform's specificity.
+
+---
+
 Pruned 2026-10-06, seventh pass (Architect, after the "corpus port and pre-publish reshapes"
 iteration closed; the `writer` recorded it in `CHANGELOG.md [Unreleased]` the same day).
 Consumed: LT-109–LT-111, LT-186, LT-187, LT-277, LT-280, LT-305, LT-334, LT-342, LT-353,
@@ -301,6 +321,24 @@ Full entry text: `git log -p -- DONE.md`.
   settles, so the realm bought nothing. The reviewer ran the unrunnable gates outside the
   sandbox: `test:variants form-combobox` (tsrx 60, tsx 60) and `test:variants module-lazyload`
   (ts 40, tsx 40), all green.
+
+- [x] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review). — done ✓
+  **Area:** server
+  **Context:** `_media/*.md` inside the gitignored TypeDoc output dir are hand-copied mirrors
+  of repo docs (`REQUIREMENTS.md`, ADRs). No build generates or refreshes them, so they go
+  stale silently and freshness depends on somebody remembering (LT-272 hand-refreshed them
+  once; the gap was left unfiled). Decide: generate the mirror in `build:docs` from the repo
+  sources, or delete it and link the repo files instead. **Probe first (Architect, planning 2026-10-06):** the premise may be wrong. `docs-src/api/` is
+  TypeDoc's `out` dir (gitignored), and TypeDoc copies relatively linked local files into `_media`
+  when it runs. Find out whether `build:docs` runs TypeDoc and whether a run refreshes `_media`.
+  If it does, close the task with `done` and a one-line finding. If it does not, prefer deleting
+  the mirror and linking the repo files (fewer moving parts) unless a link target cannot be
+  reached from the published site, and record which one you chose.
+  **Channel/tier:** none — build pipeline.
+  Filed while its staleness was
+  re-observed during the LT-179 review.
+
+  **Closed (Architect, 2026-10-07; owner ruling):** premise wrong — everything inside `docs-src/api/` is TypeDoc output or files TypeDoc copies (relatively linked local files land in `_media` on each run), so the mirrors are not hand-kept. No mirror to generate or delete; no change.
 
 - [x] LT-437: Refresh the `cause-effect` skill for 1.6 — version stamp, list `map`/`forEach`, derived-list `stale` (LT-412 review follow-up). — done ✓
   **Area:** docs
@@ -901,6 +939,37 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** Approved. Accepted: the not-runnable deviation for module-calctable and module-cem-list — the entry's Check line wrongly assumed specs, but the refusal is real, the graph-bundle registration smoke is a fair substitute, and spec-less module folders are the corpus norm (5 of 19); no follow-up filed. Accepted: `module-ticker.client.ts` placed in the generated block's sorted position rather than at the twin's old out-of-order spot at the end. Reviewer re-ran the gates on the branch tip in the worktree: `check:corpus` exit 0, `test:server` 3510 pass / 0 fail, `test:variants module-ticker` green on all three surfaces, both refusals reproduced, biome clean on the two touched files. The branch tip sat on v3's HEAD; the integrate is a fast-forward.
 
+- [x] LT-486: Prose still cites the retired basic-pluralize — repoint each reference (writer). — done ✓
+  **Area:** docs
+  **Needs:** LT-467
+  **Gates:** build:docs, check:links
+  **Area:** docs
+  **Needs:** LT-467
+  **Filed (Architect, 2026-10-07, from LT-467's handoff):** LT-467 retired `basic-pluralize`.
+  Its coverage moved to the `c-plural` test fixture (`server/tests/compiler/fixtures/plural/`),
+  and module-todo now words its count through its own ICU message. These prose references still
+  cite the example as live:
+  - `AGENTS.md`: the built-in IDL property paragraph ("`basic-pluralize` materializes its
+    walked locale onto the `lang` attribute at connect; LT-191"). The behavior is still
+    compiled (`c-plural` pins it), but no served example shows it now.
+  - `server/compiler/HOST_PROFILE.md` :158 (locale precedence) and :178 (source strings and
+    catalogs).
+  - `server/compiler/LE_TRUC_COMPILER.md` :770.
+  - `server/TESTS.md` :184 and :192.
+  - `i18n/README.md` :9 and :18 (example keys).
+  - `spike/size-bet/FINDING.md` :31.
+  - `examples/main.ts` :53 (comment).
+  **Do:** repoint each to module-todo's `remaining` message where it illustrates a parent's own
+  ICU plural. Point it at the `c-plural` fixture where it illustrates compiler coverage (walked
+  locale, nested `select`/`selectordinal`). Delete it where the example was incidental. ADR text
+  stays as history. CHANGELOG records the removal at iteration close (Architect hands it to
+  `writer` with the iteration).
+  **Check:** `git grep basic-pluralize -- ':!adr' ':!CHANGELOG.md' ':!queue' ':!server/tests'`
+  returns only lines that name the retirement deliberately. `build:docs` and `check:links` are
+  green.
+
+  **Changed:** repointed the live `basic-pluralize` citations — `AGENTS.md`, `LE_TRUC_COMPILER.md` to the `c-plural` fixture; `HOST_PROFILE.md` and `i18n/README.md` keys to `module-todo.remaining`; locale-precedence names `basic-number` alone; `TESTS.md` and the size-bet `FINDING.md` (a run of record) mark the retirement in place.
+
 - [x] LT-488: The LT-470 refusal tells a server-only `@try` site to "make the condition reactive" — a `try` has no condition; give it its own remedy. — reviewed ✓
   **Area:** compiler
   **Needs:** LT-482
@@ -1053,3 +1122,45 @@ Full entry text: `git log -p -- DONE.md`.
   **Check:** test:server 3548/0, typecheck, check:corpus, check:contract, build:docs and check:links are green. Doubts: (1) The other `composeDiscriminatorClause` callers have the same blind spot but were left alone as out of scope: the forwarded handler args in `handler-args.ts`, list-item compose passes, and `composeSiteSelector`. A follow-up may be worth filing. (2) The LT-319 raw guard goes slightly beyond "leave unchanged". (3) When several sites clash and a raw element is also involved, the "Multiple sites" copy is still the one shown. (4) The browser gate `bun run test:component module-todo` hung with no output for 5 minutes, so it is unrunnable here and the owner should run it for module-todo and module-list. `server/tests/compiler/update-snapshots.ts` is stale: it doesn't regenerate module-list. `UPDATE_SNAPSHOTS=1` on client.golden.test.ts does.
 
   **Review:** Approved. `matchesRaw` over the region probe counts raw same-tag elements in list items, arms and compose content. A clause that a raw element also matches is rejected, and the corpus moves exactly as the entry predicted (`basic-button` → `basic-button.submit` in module-list and module-todo, live pipeline and snapshots alike). The pins cover each shape. Re-run in the worktree: `test:server` 3548/0, `typecheck`, `check:corpus`. Outside the sandbox: `test:variants module-todo` passes on every surface (ts 58, tsrx 60, tsx 60; the ts count is the twin's own suite). module-list has no spec. **Doubts:** (1) the other discriminator callers, filed as LT-498 (track K) together with a second gap: elements of the tag inside another composed child's own template. (2) The LT-319 raw guard is accepted. It is required for correctness, because a shared `all()` would otherwise sweep in the raw element, and refusing is the ruled fallback. (3) The "Multiple sites" copy for a mixed clash is accepted; it still names the right fix (a distinct class). (4) The browser gate: the reviewer ran it, see above. The stale `update-snapshots.ts` rides LT-498.
+
+- [x] LT-498: Close the remaining raw-same-tag blind spots in compose-site selectors — the other discriminator callers and composed children's own templates. — done, pending review ⏳
+  **Area:** compiler
+  **Needs:** LT-496
+  **Gates:** test:server, check:corpus, typecheck
+  **Area:** compiler
+  **Needs:** LT-496
+  **Filed (Architect, 2026-10-07, from LT-496's review):** LT-496 made `emitComposeEffects`'s
+  reference count raw elements of the child's tag. Two blind spots of the same class remain, and
+  each can bind a query to the wrong element by document order:
+  1. **The other `composeDiscriminatorClause` callers** still decide uniqueness among compose
+     sites alone:
+     - the forwarded handler arg's site selector (`analysis/handler-args.ts`, which uses `''`
+       for a single sibling);
+     - the reactive-list item's compose passes;
+     - the arm-held compose site's `composeSiteSelector`;
+     - `composeSharedPassClause`'s sibling check (`analysis/selectors.ts`).
+
+     Route them all through the LT-496 predicate (`matchesRaw` over `countRenderedForSelector`),
+     scoped the way each query is scoped: the host for host-level queries, the item root for
+     item queries, the arm root for arm queries. Better, give the four one shared helper that
+     returns the clause or the refusal, so a fifth caller cannot drift.
+  2. **Elements inside a composed child's own template.** A host-level `first('<tag>.<clause>')`
+     also matches an element of that tag that another composed child renders internally, e.g. a
+     `basic-button` inside a composed child's template. The registry's `renderedShapes` closure
+     (the one LT-472's region proof uses) already lists them. Count those shapes too, or exclude
+     other composed children's subtrees from the query, the way raw `first()` refs do with
+     `:not(<child> *)`. Prefer the exclusion. It is what LT-316 does for raw refs, and it doesn't
+     refuse sites that are in fact unique in the served DOM.
+
+  Tooling rider: `server/tests/compiler/update-snapshots.ts` no longer regenerates module-list's
+  client snapshot (only `UPDATE_SNAPSHOTS=1` on `client.golden.test.ts` does). Fix it or delete it
+  in favor of the env flag, and say which in the handoff.
+  **Check:** `test:server` pins one case per caller in (1), plus (2)'s case: a child whose
+  template renders the tag, composed beside a site of that tag. `check:corpus` green, and every
+  corpus selector change listed in the handoff.
+  **Channel/tier:** compiler, tier 1 Prevented. It reuses LTC007's raw-clash message from
+  LT-496; no new code.
+
+  **Changed:** Every compose-site query now chooses its clause through one helper, `composeSiteAddress` (`analysis/selectors.ts`): `emitComposeEffects`, the host and arm handler sites (`composeSiteSelector`), the reactive-list item's compose passes, the forwarded handler arg (`handler-args.ts`) and LT-319's shared-pass sibling check. A raw element of the child's tag counts against the site, within the query's own scope (host root, arm root or item root). An element of that tag rendered inside *another* composed child's template is excluded with `:not(<child> *)`, region-aware, through the same `composedEmitter` that raw refs use (factored out of `selectorCandidates`); the site is not refused. Refusals reuse LT-496's LTC007 wording via `composeSiteRefusal`. Tooling rider: `update-snapshots.ts` is **deleted**. It regenerated only 2 of the goldens and had no compose registry. `UPDATE_SNAPSHOTS=1 bun test server/tests/compiler/client.golden.test.ts` is now the one path, and SERVER.md, LE_TRUC_COMPILER.md and the golden test's header say so (the old `server/tests/tsrx` path was also stale). HOST_PROFILE's compose paragraph is extended.
+  **How:** Forwarded handler args differ from the other callers, because the clause is recorded in the registry-discovery pass, and that pass is the one parents read. It knows no composed child's tag, so the clause is chosen with `childTag` null in *both* passes, and then every raw custom element counts, whatever its tag. This is conservative but deterministic, and it mirrors the `:scope >` precedent for element placements. Part 2 for forwards cannot publish an exclusion that the discovery pass never saw. So once the tag is known (pass 2), a clause that another composed child's markup could match is refused with LTC007 rather than excluded. Corpus selector changes: module-todo (both surfaces) `form-textbox` → `form-textbox:not(form-inplace-edit *)`; module-listnav `form-listbox` → `form-listbox:not(module-lazyload *)` (lazyload's `truc:html` renders unknown markup). No other generated file changed (diffed against a pre-change `build:corpus`).
+  **Check:** test:server 3561/0. The new pins are in handler-args.test.ts (host, arm and item: class taken and refusal; forward: clause recorded past the raw element, unknown-tag refusal, and pass-2 composed-child refusal) and compose.test.ts (shared-pass sibling joins; a composed child rendering the tag raw and via a grandchild is excluded; a non-matching static class needs no exclusion). Twelve of these fail on the pre-change compiler. typecheck, check:corpus, check:contract, build:docs and check:links are green, and biome is clean on the changed paths. **Unrunnable:** `bun run test:component module-todo` (and module-listnav) timed out at 30s on every test, initial render included, which is the sandbox's browser-launch signature. The owner should run both. **Doubts:** (1) The forward rule over-refuses: a lone forwarding site with no class beside *any* raw custom element is refused, and one clashing with another composed child is refused rather than excluded. No corpus component forwards a handler today. (2) `composeSiteAddress` keeps candidate order and accepts an excluded `''` before trying a clean class; `selectorCandidates` prefers clean candidates. (3) The arm and item refusals now say "a handler arg needs…"/"truc:pass and handler args need a unique target", where they used to say just "give each site a distinct class".

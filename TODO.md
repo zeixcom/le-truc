@@ -23,7 +23,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 **Rulings taken at planning (Architect with the owner, 2026-10-06).**
 1. **Scope: P6 plus the two P2b compose fixes.** LT-460 and LT-470 join from P2b because they
    sit in the compose lowering that LT-461 extends and LT-463 exercises. The rest of P2b stays
-   in the backlog, including the CSS-departures cluster behind LT-409.
+   in the backlog. The CSS-departures cluster behind LT-409 was struck by ruling 14.
 2. **LT-461 is implementation, not a session.** The owner ruled its design on 2026-10-06, so its
    area flips from `design` to `compiler` and it becomes pickable. LTC081 is reserved for its
    rule 6.
@@ -49,9 +49,10 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
    them; it never holds this iteration open.
 10. **LT-462 ruled into ADR 0048 (owner, 2026-10-06), before track K closed.** Its tasks join as
     track C. Three owner rulings shape them:
-    - **Self-nesting gates too little, never too much.** The lowered guard always re-includes a
-      nested own-tag instance (LT-473).
-    - **A child styles its declared role boxes**, at zero specificity (LT-475).
+    - **Self-nesting gates too little, never too much.** It survives ruling 14 for authored
+      limits in the lowered form only (LT-501).
+    - **A child styles its declared role boxes**, at zero specificity. Withdrawn by ruling 14;
+      LT-475 struck.
     - **The content model is `Children`'s second type argument** (LT-477).
 
     Track C serializes after track E (LT-472 needs LT-461), because the region marker changes
@@ -72,6 +73,19 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     typing, but its gates named only `check:corpus` and `test:variants`. Sixteen server tests
     went red unseen. LT-495 repairs them. From now on an `examples` task that edits a compiled
     source lists `test:server` and `typecheck` among its gates, and the review runs them.
+14. **Compiled CSS is platform CSS (owner, 2026-10-07; ADR 0033 rewritten, ADR 0048 s5 cut
+    back).** The shadow-root emulation is withdrawn. Its compiler-derived boundaries, ownership
+    re-includes and root-insertion exception made the applied rules unpredictable. Scoping is
+    now an authored `@scope { … }` with author-written limits. The compiler warns at concrete
+    leaks and never emits a limit. Consequences:
+    - LT-473 was approved on its own terms but is not integrated. Its branch stays for
+      LT-501's salvage.
+    - LT-499, LT-500 and LT-475 are struck, and so is the P2b CSS-departures cluster
+      (LT-405, LT-407, LT-408, LT-409); the revision answers LT-409's question.
+    - LT-501 (emission, errors and the corpus cutover in one commit) → LT-502 (warnings, and
+      trimming the codemod's limits) → LT-503 (writer) join track C ahead of LT-478, which is
+      re-scoped.
+    - LTC070 retires. LTC086–LTC089 are reserved for LT-501/LT-502.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0, unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -104,8 +118,9 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   ruling 13). LT-496 (from LT-495's review) made the compose-site reference count raw
   same-tag elements. LT-498 (from LT-496's review) closes the same blind spot in the other
   discriminator callers and in composed children's own templates.
-- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
-  LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
+- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-501 → LT-502 →
+  LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-503 move compiled CSS to
+  authored `@scope` (ruling 14). LT-478 styles its passed content under that contract.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. LT-437 is done
   (2026-10-07).
@@ -113,8 +128,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
 
 **Deliberately not here.** P1 waits for this round: LT-254 now also needs LT-471 (ruled) and LT-480, its reshape, banded P1. The
-CSS-departures cluster (LT-405, LT-407, LT-408 behind the LT-409 session) and the rest of P2b
-stay in the backlog. So do LT-381, which needs the owner's sign-off because it changes the
+rest of P2b stays in the backlog (its CSS-departures cluster is struck by ruling 14). So do LT-381, which needs the owner's sign-off because it changes the
 census by design, and LT-246, which needs a settled census. The fetched-partials sessions
 (LT-448, LT-450) stay in P7, and P2–P5 stay where they are.
 
@@ -137,7 +151,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-499.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-504.** Next free diagnostic code: LTC090 (LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -149,137 +163,154 @@ LTC056 is LT-358's).
 
 <!-- entries -->
 
-### K — composition
-
-- [ ] LT-498: Close the remaining raw-same-tag blind spots in compose-site selectors — the other discriminator callers and composed children's own templates.
-  **Area:** compiler
-  **Needs:** LT-496
-  **Gates:** test:server, check:corpus, typecheck
-  **Area:** compiler
-  **Needs:** LT-496
-  **Filed (Architect, 2026-10-07, from LT-496's review):** LT-496 made `emitComposeEffects`'s
-  reference count raw elements of the child's tag. Two blind spots of the same class remain, and
-  each can bind a query to the wrong element by document order:
-  1. **The other `composeDiscriminatorClause` callers** still decide uniqueness among compose
-     sites alone:
-     - the forwarded handler arg's site selector (`analysis/handler-args.ts`, which uses `''`
-       for a single sibling);
-     - the reactive-list item's compose passes;
-     - the arm-held compose site's `composeSiteSelector`;
-     - `composeSharedPassClause`'s sibling check (`analysis/selectors.ts`).
-
-     Route them all through the LT-496 predicate (`matchesRaw` over `countRenderedForSelector`),
-     scoped the way each query is scoped: the host for host-level queries, the item root for
-     item queries, the arm root for arm queries. Better, give the four one shared helper that
-     returns the clause or the refusal, so a fifth caller cannot drift.
-  2. **Elements inside a composed child's own template.** A host-level `first('<tag>.<clause>')`
-     also matches an element of that tag that another composed child renders internally, e.g. a
-     `basic-button` inside a composed child's template. The registry's `renderedShapes` closure
-     (the one LT-472's region proof uses) already lists them. Count those shapes too, or exclude
-     other composed children's subtrees from the query, the way raw `first()` refs do with
-     `:not(<child> *)`. Prefer the exclusion. It is what LT-316 does for raw refs, and it doesn't
-     refuse sites that are in fact unique in the served DOM.
-
-  Tooling rider: `server/tests/compiler/update-snapshots.ts` no longer regenerates module-list's
-  client snapshot (only `UPDATE_SNAPSHOTS=1` on `client.golden.test.ts` does). Fix it or delete it
-  in favor of the env flag, and say which in the handoff.
-  **Check:** `test:server` pins one case per caller in (1), plus (2)'s case: a child whose
-  template renders the tag, composed beside a site of that tag. `check:corpus` green, and every
-  corpus selector change listed in the handoff.
-  **Channel/tier:** compiler, tier 1 Prevented. It reuses LTC007's raw-clash message from
-  LT-496; no new code.
-
-- [ ] LT-498: Close the remaining raw-same-tag blind spots in compose-site selectors — the other discriminator callers and composed children's own templates.
-  **Area:** compiler
-  **Needs:** LT-496
-  **Gates:** test:server, check:corpus, typecheck
-  **Area:** compiler
-  **Needs:** LT-496
-  **Filed (Architect, 2026-10-07, from LT-496's review):** LT-496 made `emitComposeEffects`'s
-  reference count raw elements of the child's tag. Two blind spots of the same class remain, and
-  each can bind a query to the wrong element by document order:
-  1. **The other `composeDiscriminatorClause` callers** still decide uniqueness among compose
-     sites alone:
-     - the forwarded handler arg's site selector (`analysis/handler-args.ts`, which uses `''`
-       for a single sibling);
-     - the reactive-list item's compose passes;
-     - the arm-held compose site's `composeSiteSelector`;
-     - `composeSharedPassClause`'s sibling check (`analysis/selectors.ts`).
-
-     Route them all through the LT-496 predicate (`matchesRaw` over `countRenderedForSelector`),
-     scoped the way each query is scoped: the host for host-level queries, the item root for
-     item queries, the arm root for arm queries. Better, give the four one shared helper that
-     returns the clause or the refusal, so a fifth caller cannot drift.
-  2. **Elements inside a composed child's own template.** A host-level `first('<tag>.<clause>')`
-     also matches an element of that tag that another composed child renders internally, e.g. a
-     `basic-button` inside a composed child's template. The registry's `renderedShapes` closure
-     (the one LT-472's region proof uses) already lists them. Count those shapes too, or exclude
-     other composed children's subtrees from the query, the way raw `first()` refs do with
-     `:not(<child> *)`. Prefer the exclusion. It is what LT-316 does for raw refs, and it doesn't
-     refuse sites that are in fact unique in the served DOM.
-
-  Tooling rider: `server/tests/compiler/update-snapshots.ts` no longer regenerates module-list's
-  client snapshot (only `UPDATE_SNAPSHOTS=1` on `client.golden.test.ts` does). Fix it or delete it
-  in favor of the env flag, and say which in the handoff.
-  **Check:** `test:server` pins one case per caller in (1), plus (2)'s case: a child whose
-  template renders the tag, composed beside a site of that tag. `check:corpus` green, and every
-  corpus selector change listed in the handoff.
-  **Channel/tier:** compiler, tier 1 Prevented. It reuses LTC007's raw-clash message from
-  LT-496; no new code.
-
 ### C — children contract
 
-- [ ] LT-473: Scoped emission follows ownership — region re-include, child-side stop, self-nesting re-include (ADR 0048 s5/s6). — in progress ⚙
+- [ ] LT-501: Authored `@scope` emission — native and lowered, the revised style errors, and the corpus cutover in one commit (ADR 0033 as revised 2026-10-07).
   **Area:** compiler
   **Needs:** LT-472
-  **Gates:** check:corpus, build:docs, check:links, test:variants
+  **Gates:** test:server, typecheck, check:corpus, check:contract, build:docs, check:links, test:variants
   **Area:** compiler
-  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s5/s6):** move the LT-465 prototype
-  into `server/compiler/css-scope.ts` as production emission, inside `rewriteComplexSelector` and
-  `emitScopedSheet`, not as post-processing.
+  **Needs:** LT-472
+  **Filed (Architect, 2026-10-07; owner ruling, ADR 0033 rewritten, ADR 0048 s5 cut back):** a
+  compiled sheet means what it would mean as an inline `<style>` in the host. Scoping is an
+  authored prelude-less `@scope { … }` with optional author-written `to (…)` limits. The compiler
+  adds no limits of its own. This replaces the shadow-root emulation, whose boundary set was
+  derived from the template. LT-473's ownership emission is not integrated. Its branch
+  `task/LT-473` stays until this task's review, for salvage only.
   **Do:**
-  1. **Child side.** A component whose template has a `{children}` insertion adds the
-     pseudo-boundary `[data-children]:not([data-children="<tag>"])` to its scope boundaries, in
-     both emissions.
-  2. **Owner side.** A component whose template composes a child with children re-includes its
-     own region.
-     - Native: a second `@scope ([data-children="<tag>"]) to (<same limits>)` block. Its rules
-       take the lowered lead with a `:where(:scope *)` subject anchor, placed before any
-       pseudo-element. Host-subject rules and hoisted rules are left out.
-     - Lowered: the guard gains the re-include clause. There is no second copy.
-  3. **Self-nesting (owner ruling: gate too little, never too much).** Every lowered guard
-     re-includes a nested own-tag instance and its subtree:
-     `:is(T B > *, T B > * *):not(T B T, T B T *)` per boundary B. Always emit it, not only where
-     the compiler sees nesting. Combine it with item 2's clause through the one helper from
-     LT-472.
-  4. **Fixtures.**
-     - Port `server/tests/compiler/children-scope.test.ts` into `css-scope.test.ts` against the
-       production emitter, then delete the prototype and its test.
-     - Extend `examples/test/scoping/css-probe` with a compose site that passes children,
-       covering the LT-465 matrix cells: `kid`, `btnint`, `childint`, `code`, `own2`, `kid2`.
-     - Flip the existing lowered self-nesting assertions in `css-probe.spec.ts` (lines ~289–295)
-       from "unstyled" to "styled".
-  5. **Docs.** HOST_PROFILE § Styles, the s7 differences list, per ADR 0033 s7 as amended:
-     self-nesting over-matches in both emissions, and children passed to a composed child are
-     the parent's.
-  **Variant sets:** the region flags derive from the template, so LTC051's boundary comparison
-  must include them.
-  **Check:** the lowered and native emissions of every corpus component that inserts `{children}`
-  change only by the pseudo-boundary. Record the byte delta in the handoff against LT-465's
-  table.
+  1. **Partition.** Split the parsed sheet into three groups:
+     - top-level `@scope` blocks;
+     - top-level rules led by the component's own tag;
+     - everything else. `@keyframes`, `@font-face` and `@property` emit verbatim, as now.
+
+     Tag-led rules and other top-level rules emit verbatim in both emissions.
+  2. **Native emission.** A prelude-less `@scope` gains the explicit root:
+     `@scope (<tag>) to (<authored limits>)`. A preluded `@scope` and the block bodies emit
+     verbatim.
+  3. **Lowered emission.**
+     - **Rule lead.** Each rule in a `@scope` block lowers to `:where(<root>) <selector>`, where
+       the root is the tag for a prelude-less block and the prelude otherwise. An explicit
+       `:scope` becomes the root compound.
+     - **Specificity** must equal the native form, including `:scope`'s (0,1,0). A
+       zero-specificity root plus a never-present attribute inside `:not()` is one way to get
+       it. Pin the specificity in tests.
+     - **Guard.** Each authored limit `L` adds the guard
+       `:where(:not(:is(R L, R L *):not(R L <tag>, R L <tag> *)))`. That is ADR 0033 s4's
+       re-include of a nested own-tag instance, applied to authored limits only.
+     - **Unsupported forms.** A nested `@scope` inside a component `@scope`, and any form the
+       lowering cannot express, are **LTC089** (compiler, Prevented) on lowered targets. The
+       message names the CSS target. The same forms emit verbatim on native targets.
+  4. **Errors** (compiler, Prevented; copy to `../writer/references/error-messages.md`):
+     - **LTC066** is reworded. It fires on a rule inside `@scope` led by the component's own
+       tag, with the fix-it `:scope`.
+     - **LTC086** (new): `:host` anywhere in a light-mode sheet, with the fix-it `:scope`
+       (`:host(X)` → `:scope:is(X)`).
+     - **LTC069** fires on any `:global`. The fix-it removes the wrapper and moves the rule to
+       the top level.
+     - **LTC071** is re-scoped to the authored-limit dead rule. It fires when a selector inside
+       a `@scope` block descends past a compound that equals one of that block's limits, so the
+       limit always excludes its subject.
+     - **LTC070** retires. A qualifier after `:scope` is valid CSS. Record the retirement in
+       `VOCABULARY_LEDGER.md`.
+     - **LTC067** and **LTC068** are unchanged.
+     - **LTC051** loses its boundary face. Variant sets compare authored sheets only. Remove
+       `CompiledComponent.scopeBoundaries` from the comparison, and remove it entirely if
+       nothing else reads it.
+  5. **Remove** the derived-boundary emission (`collectScopeBoundaries` as a scope source, the
+     boundary guard, `checkSheetBoundaries`'s template-boundary face) and any code left without
+     a caller.
+  6. **Corpus cutover (same commit).** Write a codemod and run it over every compiled sheet,
+     both surfaces and every variant-set member:
+     - Wrap the scoped rules in `@scope { … }`.
+     - Rewrite `:host` → `:scope` and `:host(X)` → `:scope:is(X)`.
+     - Unwrap `:global(…)`/`:global { … }` to top-level rules.
+     - **Preserve today's behavior with visible limits.** Where the old boundary set was
+       non-empty, write `to (<b1> > *, <b2> > *, …)` with the same tags. LT-502 then removes
+       every limit its leak check shows is unneeded.
+     - Keep the hand-written twin `.css` files as they are.
+  7. **Fixtures.**
+     - Rework `examples/test/scoping/css-probe` to the new contract: an authored limit, a
+       tag-led rule and an unscoped rule. Salvage `css-probe-child` and its compose-with-children
+       cells from `task/LT-473` (`git show task/LT-473:<path>`). Under the new model the parent's
+       rules reach its passed content, and so do the child's, unless an authored limit stops
+       them. Pin both emissions in Chromium and WebKit.
+     - Port the relevant `css-scope.test.ts` cases and delete the obsolete ones.
+  8. **Docs.** Update HOST_PROFILE § Styles, LE_TRUC_COMPILER's diagnostics families,
+     `docs-src/pages/styling.md` and `skills/le-truc/references/styling.md` to the new contract.
+     Remove the s7 "differences from a real shadow root" list, except for inward reach and the
+     lowered form's missing scope proximity.
+  **Check:** computed styles of the served corpus are unchanged, by LT-397's pixel-parity
+  procedure. Any change is a `NOTES.md` entry, not a workaround. Report the byte delta of the
+  emitted CSS per component against `v3` HEAD; the lowered form should shrink.
+  **Channel/tier:** compiler. LTC066, LTC069, LTC071, LTC086 and LTC089 are tier 1 Prevented.
+
+- [ ] LT-502: Leak and unscoped-rule warnings from the compiler's knowledge of composed children (ADR 0033 s5); drop the corpus limits they show are unneeded.
+  **Area:** compiler
+  **Needs:** LT-501
+  **Gates:** test:server, typecheck, check:corpus, test:variants
+  **Area:** compiler
+  **Needs:** LT-501
+  **Filed (Architect, 2026-10-07; ADR 0033 s5 as revised):** the compiler warns only where a
+  concrete leak exists. It never emits a limit.
+  **Do:**
+  1. **LTC087, downward leak** (compiler, Contained; the CSS ships as authored).
+     - Fires when a rule in a component `@scope` block has a subject that can match a shape that
+       a composed child renders in its own template. Use the registry's `renderedShapes`
+       closure, transitively, and exclude the child's Children Region content.
+     - It does not fire when an authored limit of that block excludes the child (`<child> > *`,
+       or any limit that matches the child's host or an ancestor of the shape inside the child).
+     - Content the component passes as `children` is its own markup, not a leak (ADR 0048 s5).
+     - The message names the rule, the child and the fix-it `to (<child-tag> > *)`.
+     - Raw custom elements in the template have no registry shapes and never warn.
+  2. **LTC088, unscoped rule** (compiler, Contained). Fires on a top-level rule that is neither
+     in `@scope` nor led by the component's own tag, nor `@keyframes`, `@font-face` or
+     `@property`.
+  3. **Corpus.** Remove every `to (…)` limit LT-501's codemod wrote whose removal raises no
+     LTC087. Keep the rest. List both sets in the handoff. Computed styles stay unchanged
+     (LT-397's procedure). The compile-warning baseline stays 0: resolve every LTC088 in the
+     corpus by scoping or tag-leading the rule, and list each one.
+  4. Copy goes to `../writer/references/error-messages.md` and the `skills/le-truc` errors row.
+  **Check:** `test:server` pins the following cases:
+  - a leak through a composed child's internal class;
+  - no leak when a limit excludes it;
+  - no leak into passed children;
+  - a transitive grandchild leak;
+  - LTC088 on an unscoped `.x` and not on `my-el .x`.
+
+  **Channel/tier:** compiler, tier 2 Contained (warnings).
+
+- [ ] LT-503: Writer pass over the platform-CSS contract — error copy and styling docs (ADR 0033 as revised).
+  **Area:** docs
+  **Needs:** LT-502
+  **Gates:** build:docs, check:links
+  **Area:** docs
+  **Needs:** LT-502
+  **Filed (Architect, 2026-10-07):** LT-501 and LT-502 write first-draft copy and update the
+  docs to the contract. This pass makes it one voice:
+  - the messages of LTC066, LTC069, LTC071, LTC086, LTC087, LTC088 and LTC089 per
+    `references/error-messages.md`, plus the `skills/le-truc` errors rows;
+  - `docs-src/pages/styling.md`, which now teaches `@scope { … }`, author-written limits,
+    `:where(:scope)` for page-overridable host rules, and the shadow-mode translation;
+  - the LTC051 copy that LT-473 extended is gone with its boundary face. Confirm that nothing
+    cites it.
+  **Check:** `build:docs` and `check:links` green. No prose describes compiler-derived scope
+  boundaries or `:host` in light-DOM sheets.
 
 - [ ] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped.
   **Area:** examples
-  **Needs:** LT-473
-  **Gates:** check:corpus, build:docs
+  **Needs:** LT-502
+  **Gates:** check:corpus, build:docs, test:server, typecheck
   **Area:** examples
-  **Filed (Architect, 2026-10-06, split from LT-463; ADR 0048):**
+  **Needs:** LT-502
+  **Filed (Architect, 2026-10-06, split from LT-463; re-scoped 2026-10-07 to ADR 0033 as revised):**
   1. **The compose site.** Replace the raw `<module-scrollarea orientation="horizontal">` with
      `<ModuleScrollarea orientation="horizontal">`, passing the `<pre><code>{children}</code></pre>`
      as children. `first('code', …)` now verifies into the parent's own region (LT-472).
-  2. **The styles.** Move the `:global { module-codeblock pre { … } module-codeblock code { … } }`
-     rules into the scoped sheet as bare `pre`/`code` rules, and drop the `:global` block and its
-     comment.
+  2. **The styles.** Move the former `:global` `pre`/`code` rules (top-level after LT-501) into
+     the component's `@scope` block as bare `pre`/`code` rules. The parent's scoped rules reach
+     its passed content as descendants. If the block carries a `to (module-scrollarea > *)`
+     limit, that limit would cut the content, so drop it unless LTC087 then fires on a real
+     leak. If it does, narrow the limit to the leaking scrollarea internals.
   **Check:** `bun run test:component module-codeblock` is unchanged, and the computed styles of
   `pre`/`code` are unchanged. Update `module-codeblock.md` if it describes the raw tag.
 
@@ -309,28 +340,6 @@ LTC056 is LT-358's).
   **Corpus survey first:** list every component that addresses its children today. For each,
   either declare roles or record it in `NOTES.md` (LT-463's rule for surprises). Do not widen
   LTC083's condition to pass a site.
-
-- [ ] LT-475: Role styling — a child styles its declared role boxes at zero specificity (ADR 0048 s5).
-  **Area:** compiler
-  **Needs:** LT-473, LT-474
-  **Gates:** check:corpus, build:docs, check:links
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, LT-462 session; owner ruling: style roles, `:where()`'d):**
-  1. **Which rules qualify.** A child rule qualifies when its subject compound contains a
-     declared role class and its other compounds lie in the child's own template or are `:host`.
-  2. **What it reaches.** The rule reaches role elements in the child's own Children Region and
-     stops at a nested foreign region (`[data-children]` inside the region).
-  3. **Specificity.** The whole subject compound is wrapped in `:where()`, so any parent rule with
-     specificity wins, in both emissions.
-  4. **Descending below a role** (`.tab .icon`) is ADR 0033 s6's boundary-descent face. Extend
-     LTC071's check to it; do not add a new code.
-  **Accepted residue to document in HOST_PROFILE § Styles:** a role class inside a raw custom
-  element nested in the region still matches, because CSS cannot name "any custom element".
-  **Check:** a browser fixture in `css-probe` shows four things:
-  - a role box is styled by the child;
-  - a parent rule on the same box wins at equal or higher specificity;
-  - the role's descendants are not styled by the child;
-  - a page-rendered instance (no marker) styles its page-authored roles.
 
 - [ ] LT-476: One writer per property — parent bindings on a child-written role property conflict (ADR 0048 s3; LTC084).
   **Area:** compiler
@@ -386,6 +395,120 @@ LTC056 is LT-358's).
   **Sequence:** module-todo's fourth edit, after LT-466 → LT-467 → LT-463 (ruling 5).
   **Check:** `test:component form-checkbox module-todo` is unchanged.
 
+- [ ] LT-501: Authored `@scope` emission — native and lowered, the revised style errors, and the corpus cutover in one commit (ADR 0033 as revised 2026-10-07).
+  **Area:** compiler
+  **Needs:** LT-472
+  **Gates:** test:server, typecheck, check:corpus, check:contract, build:docs, check:links, test:variants
+  **Area:** compiler
+  **Needs:** LT-472
+  **Filed (Architect, 2026-10-07; owner ruling, ADR 0033 rewritten, ADR 0048 s5 cut back):** a
+  compiled sheet means what it would mean as an inline `<style>` in the host. Scoping is an
+  authored prelude-less `@scope { … }` with optional author-written `to (…)` limits. The compiler
+  adds no limits of its own. This replaces the shadow-root emulation, whose boundary set was
+  derived from the template. LT-473's ownership emission is not integrated. Its branch
+  `task/LT-473` stays until this task's review, for salvage only.
+  **Do:**
+  1. **Partition.** Split the parsed sheet into three groups:
+     - top-level `@scope` blocks;
+     - top-level rules led by the component's own tag;
+     - everything else. `@keyframes`, `@font-face` and `@property` emit verbatim, as now.
+
+     Tag-led rules and other top-level rules emit verbatim in both emissions.
+  2. **Native emission.** A prelude-less `@scope` gains the explicit root:
+     `@scope (<tag>) to (<authored limits>)`. A preluded `@scope` and the block bodies emit
+     verbatim.
+  3. **Lowered emission.**
+     - **Rule lead.** Each rule in a `@scope` block lowers to `:where(<root>) <selector>`, where
+       the root is the tag for a prelude-less block and the prelude otherwise. An explicit
+       `:scope` becomes the root compound.
+     - **Specificity** must equal the native form, including `:scope`'s (0,1,0). A
+       zero-specificity root plus a never-present attribute inside `:not()` is one way to get
+       it. Pin the specificity in tests.
+     - **Guard.** Each authored limit `L` adds the guard
+       `:where(:not(:is(R L, R L *):not(R L <tag>, R L <tag> *)))`. That is ADR 0033 s4's
+       re-include of a nested own-tag instance, applied to authored limits only.
+     - **Unsupported forms.** A nested `@scope` inside a component `@scope`, and any form the
+       lowering cannot express, are **LTC089** (compiler, Prevented) on lowered targets. The
+       message names the CSS target. The same forms emit verbatim on native targets.
+  4. **Errors** (compiler, Prevented; copy to `../writer/references/error-messages.md`):
+     - **LTC066** is reworded. It fires on a rule inside `@scope` led by the component's own
+       tag, with the fix-it `:scope`.
+     - **LTC086** (new): `:host` anywhere in a light-mode sheet, with the fix-it `:scope`
+       (`:host(X)` → `:scope:is(X)`).
+     - **LTC069** fires on any `:global`. The fix-it removes the wrapper and moves the rule to
+       the top level.
+     - **LTC071** is re-scoped to the authored-limit dead rule. It fires when a selector inside
+       a `@scope` block descends past a compound that equals one of that block's limits, so the
+       limit always excludes its subject.
+     - **LTC070** retires. A qualifier after `:scope` is valid CSS. Record the retirement in
+       `VOCABULARY_LEDGER.md`.
+     - **LTC067** and **LTC068** are unchanged.
+     - **LTC051** loses its boundary face. Variant sets compare authored sheets only. Remove
+       `CompiledComponent.scopeBoundaries` from the comparison, and remove it entirely if
+       nothing else reads it.
+  5. **Remove** the derived-boundary emission (`collectScopeBoundaries` as a scope source, the
+     boundary guard, `checkSheetBoundaries`'s template-boundary face) and any code left without
+     a caller.
+  6. **Corpus cutover (same commit).** Write a codemod and run it over every compiled sheet,
+     both surfaces and every variant-set member:
+     - Wrap the scoped rules in `@scope { … }`.
+     - Rewrite `:host` → `:scope` and `:host(X)` → `:scope:is(X)`.
+     - Unwrap `:global(…)`/`:global { … }` to top-level rules.
+     - **Preserve today's behavior with visible limits.** Where the old boundary set was
+       non-empty, write `to (<b1> > *, <b2> > *, …)` with the same tags. LT-502 then removes
+       every limit its leak check shows is unneeded.
+     - Keep the hand-written twin `.css` files as they are.
+  7. **Fixtures.**
+     - Rework `examples/test/scoping/css-probe` to the new contract: an authored limit, a
+       tag-led rule and an unscoped rule. Salvage `css-probe-child` and its compose-with-children
+       cells from `task/LT-473` (`git show task/LT-473:<path>`). Under the new model the parent's
+       rules reach its passed content, and so do the child's, unless an authored limit stops
+       them. Pin both emissions in Chromium and WebKit.
+     - Port the relevant `css-scope.test.ts` cases and delete the obsolete ones.
+  8. **Docs.** Update HOST_PROFILE § Styles, LE_TRUC_COMPILER's diagnostics families,
+     `docs-src/pages/styling.md` and `skills/le-truc/references/styling.md` to the new contract.
+     Remove the s7 "differences from a real shadow root" list, except for inward reach and the
+     lowered form's missing scope proximity.
+  **Check:** computed styles of the served corpus are unchanged, by LT-397's pixel-parity
+  procedure. Any change is a `NOTES.md` entry, not a workaround. Report the byte delta of the
+  emitted CSS per component against `v3` HEAD; the lowered form should shrink.
+  **Channel/tier:** compiler. LTC066, LTC069, LTC071, LTC086 and LTC089 are tier 1 Prevented.
+
+- [ ] LT-503: Writer pass over the platform-CSS contract — error copy and styling docs (ADR 0033 as revised).
+  **Area:** docs
+  **Needs:** LT-502
+  **Gates:** build:docs, check:links
+  **Area:** docs
+  **Needs:** LT-502
+  **Filed (Architect, 2026-10-07):** LT-501 and LT-502 write first-draft copy and update the
+  docs to the contract. This pass makes it one voice:
+  - the messages of LTC066, LTC069, LTC071, LTC086, LTC087, LTC088 and LTC089 per
+    `references/error-messages.md`, plus the `skills/le-truc` errors rows;
+  - `docs-src/pages/styling.md`, which now teaches `@scope { … }`, author-written limits,
+    `:where(:scope)` for page-overridable host rules, and the shadow-mode translation;
+  - the LTC051 copy that LT-473 extended is gone with its boundary face. Confirm that nothing
+    cites it.
+  **Check:** `build:docs` and `check:links` green. No prose describes compiler-derived scope
+  boundaries or `:host` in light-DOM sheets.
+
+- [ ] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped.
+  **Area:** examples
+  **Needs:** LT-502
+  **Gates:** check:corpus, build:docs, test:server, typecheck
+  **Area:** examples
+  **Needs:** LT-502
+  **Filed (Architect, 2026-10-06, split from LT-463; re-scoped 2026-10-07 to ADR 0033 as revised):**
+  1. **The compose site.** Replace the raw `<module-scrollarea orientation="horizontal">` with
+     `<ModuleScrollarea orientation="horizontal">`, passing the `<pre><code>{children}</code></pre>`
+     as children. `first('code', …)` now verifies into the parent's own region (LT-472).
+  2. **The styles.** Move the former `:global` `pre`/`code` rules (top-level after LT-501) into
+     the component's `@scope` block as bare `pre`/`code` rules. The parent's scoped rules reach
+     its passed content as descendants. If the block carries a `to (module-scrollarea > *)`
+     limit, that limit would cut the content, so drop it unless LTC087 then fires on a real
+     leak. If it does, narrow the limit to the leaking scrollarea internals.
+  **Check:** `bun run test:component module-codeblock` is unchanged, and the computed styles of
+  `pre`/`code` are unchanged. Update `module-codeblock.md` if it describes the raw tag.
+
 ### P — compiler cleanup
 
 - [ ] LT-136: Name the `@for` collection/server-arg shadowing in the tsc failure it causes (LT-119 review finding).
@@ -412,51 +535,3 @@ LTC056 is LT-358's).
   shadowing and the rename. Low priority: no corpus component hits it, and the build already
   stops.
 
-
-### Q — docs and build cleanup
-
-- [ ] LT-282: `docs-src/api/_media` mirrors have no refresh path (LT-272 residue, unfiled until the LT-179 review).
-  **Area:** server
-  **Context:** `_media/*.md` inside the gitignored TypeDoc output dir are hand-copied mirrors
-  of repo docs (`REQUIREMENTS.md`, ADRs). No build generates or refreshes them, so they go
-  stale silently and freshness depends on somebody remembering (LT-272 hand-refreshed them
-  once; the gap was left unfiled). Decide: generate the mirror in `build:docs` from the repo
-  sources, or delete it and link the repo files instead. **Probe first (Architect, planning 2026-10-06):** the premise may be wrong. `docs-src/api/` is
-  TypeDoc's `out` dir (gitignored), and TypeDoc copies relatively linked local files into `_media`
-  when it runs. Find out whether `build:docs` runs TypeDoc and whether a run refreshes `_media`.
-  If it does, close the task with `done` and a one-line finding. If it does not, prefer deleting
-  the mirror and linking the repo files (fewer moving parts) unless a link target cannot be
-  reached from the published site, and record which one you chose.
-  **Channel/tier:** none — build pipeline.
-  Filed while its staleness was
-  re-observed during the LT-179 review.
-
-
-- [ ] LT-486: Prose still cites the retired basic-pluralize — repoint each reference (writer).
-  **Area:** docs
-  **Needs:** LT-467
-  **Gates:** build:docs, check:links
-  **Area:** docs
-  **Needs:** LT-467
-  **Filed (Architect, 2026-10-07, from LT-467's handoff):** LT-467 retired `basic-pluralize`.
-  Its coverage moved to the `c-plural` test fixture (`server/tests/compiler/fixtures/plural/`),
-  and module-todo now words its count through its own ICU message. These prose references still
-  cite the example as live:
-  - `AGENTS.md`: the built-in IDL property paragraph ("`basic-pluralize` materializes its
-    walked locale onto the `lang` attribute at connect; LT-191"). The behavior is still
-    compiled (`c-plural` pins it), but no served example shows it now.
-  - `server/compiler/HOST_PROFILE.md` :158 (locale precedence) and :178 (source strings and
-    catalogs).
-  - `server/compiler/LE_TRUC_COMPILER.md` :770.
-  - `server/TESTS.md` :184 and :192.
-  - `i18n/README.md` :9 and :18 (example keys).
-  - `spike/size-bet/FINDING.md` :31.
-  - `examples/main.ts` :53 (comment).
-  **Do:** repoint each to module-todo's `remaining` message where it illustrates a parent's own
-  ICU plural. Point it at the `c-plural` fixture where it illustrates compiler coverage (walked
-  locale, nested `select`/`selectordinal`). Delete it where the example was incidental. ADR text
-  stays as history. CHANGELOG records the removal at iteration close (Architect hands it to
-  `writer` with the iteration).
-  **Check:** `git grep basic-pluralize -- ':!adr' ':!CHANGELOG.md' ':!queue' ':!server/tests'`
-  returns only lines that name the retirement deliberately. `build:docs` and `check:links` are
-  green.

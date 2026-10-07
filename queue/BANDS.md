@@ -48,8 +48,8 @@ The equivalence contract between the authored surfaces, the diagnostics, and the
 — from the external review and COMPILER_REFLECTION. Two standing rules: adopt a maintained
 library where one exists instead of authoring version twelve, and two review proposals stay
 declined (memoising the redundant estree traversals; restructuring `sim/`) so future reviews
-do not re-propose them. The CSS-departures cluster waits on its design session: LT-409 rules
-on ADR 0033 s7's departures and re-scopes or strikes LT-405, LT-407 and LT-408. LT-460 sits
+do not re-propose them. The CSS-departures cluster (LT-405, LT-407–LT-409) was struck on
+2026-10-07: ADR 0033's rewrite to authored `@scope` removed the departures it policed. LT-460 sits
 above its P6 consumers on purpose: a compose site in an async-boundary arm is an equivalence
 gap, and the composition batch below is about to multiply compose-site call sites. LT-381
 changes the tier census and warning baseline by design and needs the owner's sign-off; LT-246

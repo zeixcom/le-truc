@@ -23,7 +23,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
 **Rulings taken at planning (Architect with the owner, 2026-10-06).**
 1. **Scope: P6 plus the two P2b compose fixes.** LT-460 and LT-470 join from P2b because they
    sit in the compose lowering that LT-461 extends and LT-463 exercises. The rest of P2b stays
-   in the backlog, including the CSS-departures cluster behind LT-409.
+   in the backlog. The CSS-departures cluster behind LT-409 was struck by ruling 14.
 2. **LT-461 is implementation, not a session.** The owner ruled its design on 2026-10-06, so its
    area flips from `design` to `compiler` and it becomes pickable. LTC081 is reserved for its
    rule 6.
@@ -49,9 +49,10 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
    them; it never holds this iteration open.
 10. **LT-462 ruled into ADR 0048 (owner, 2026-10-06), before track K closed.** Its tasks join as
     track C. Three owner rulings shape them:
-    - **Self-nesting gates too little, never too much.** The lowered guard always re-includes a
-      nested own-tag instance (LT-473).
-    - **A child styles its declared role boxes**, at zero specificity (LT-475).
+    - **Self-nesting gates too little, never too much.** It survives ruling 14 for authored
+      limits in the lowered form only (LT-501).
+    - **A child styles its declared role boxes**, at zero specificity. Withdrawn by ruling 14;
+      LT-475 struck.
     - **The content model is `Children`'s second type argument** (LT-477).
 
     Track C serializes after track E (LT-472 needs LT-461), because the region marker changes
@@ -72,6 +73,19 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     typing, but its gates named only `check:corpus` and `test:variants`. Sixteen server tests
     went red unseen. LT-495 repairs them. From now on an `examples` task that edits a compiled
     source lists `test:server` and `typecheck` among its gates, and the review runs them.
+14. **Compiled CSS is platform CSS (owner, 2026-10-07; ADR 0033 rewritten, ADR 0048 s5 cut
+    back).** The shadow-root emulation is withdrawn. Its compiler-derived boundaries, ownership
+    re-includes and root-insertion exception made the applied rules unpredictable. Scoping is
+    now an authored `@scope { … }` with author-written limits. The compiler warns at concrete
+    leaks and never emits a limit. Consequences:
+    - LT-473 was approved on its own terms but is not integrated. Its branch stays for
+      LT-501's salvage.
+    - LT-499, LT-500 and LT-475 are struck, and so is the P2b CSS-departures cluster
+      (LT-405, LT-407, LT-408, LT-409); the revision answers LT-409's question.
+    - LT-501 (emission, errors and the corpus cutover in one commit) → LT-502 (warnings, and
+      trimming the codemod's limits) → LT-503 (writer) join track C ahead of LT-478, which is
+      re-scoped.
+    - LTC070 retires. LTC086–LTC089 are reserved for LT-501/LT-502.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0, unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -104,8 +118,9 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   ruling 13). LT-496 (from LT-495's review) made the compose-site reference count raw
   same-tag elements. LT-498 (from LT-496's review) closes the same blind spot in the other
   discriminator callers and in composed children's own templates.
-- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-473 → LT-478 →
-  LT-474 → LT-475 → LT-476 → LT-477 → LT-479.
+- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 → LT-501 → LT-502 →
+  LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-503 move compiled CSS to
+  authored `@scope` (ruling 14). LT-478 styles its passed content under that contract.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. LT-437 is done
   (2026-10-07).
@@ -113,8 +128,7 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
 
 **Deliberately not here.** P1 waits for this round: LT-254 now also needs LT-471 (ruled) and LT-480, its reshape, banded P1. The
-CSS-departures cluster (LT-405, LT-407, LT-408 behind the LT-409 session) and the rest of P2b
-stay in the backlog. So do LT-381, which needs the owner's sign-off because it changes the
+rest of P2b stays in the backlog (its CSS-departures cluster is struck by ruling 14). So do LT-381, which needs the owner's sign-off because it changes the
 census by design, and LT-246, which needs a settled census. The fetched-partials sessions
 (LT-448, LT-450) stay in P7, and P2–P5 stay where they are.
 
@@ -137,7 +151,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-499.** Next free diagnostic code: LTC086 (LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
+**Next free task ID: LT-504.** Next free diagnostic code: LTC090 (LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 is reserved for LT-136
 if its re-verification confirms the shadowing; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

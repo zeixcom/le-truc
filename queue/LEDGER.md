@@ -14,6 +14,26 @@ into this prose.
 
 ---
 
+Struck 2026-10-07 (Architect, owner ruling: compiled CSS is platform CSS, ADR 0033 rewritten
+and ADR 0048 s5 cut back; ITERATION ruling 14). Deleted without integration: LT-473, LT-475,
+LT-499, LT-500, LT-405, LT-407, LT-408, LT-409.
+- **LT-473** (approved, not integrated) built the ownership emission. Its measurements are the
+  evidence behind ADR 0048's rejected style form. The lowered form cost up to about 13.5 kB raw
+  per component, and native owners carried their rules twice. `test:variants` was green under
+  it. **Open obligation:** `task/LT-473` and `.worktrees/LT-473` stay until LT-501's review,
+  for the salvage of `css-probe-child` and its spec cells. The reviewer then removes both
+  (`git worktree remove`, `git branch -D`).
+- **LT-500's owner rulings that survive:** `{children}` directly in a child's root is allowed,
+  with no wrapper, and own elements beside it are allowed and count as the parent's region
+  (ADR 0048 s1). Components such as card-callout and section-menu are chosen partly for the
+  styles they give their content. The platform model keeps that.
+- **LT-409** asked for a ruling on each ADR 0033 s7 departure. The rewrite removes the
+  emulation, so only inward reach and the lowered form's missing scope proximity remain.
+  LT-405's `:host(X)` zero-specificity ruling (2026-10-02) is void: `:scope:is(X)` carries
+  the platform's specificity.
+
+---
+
 Pruned 2026-10-06, seventh pass (Architect, after the "corpus port and pre-publish reshapes"
 iteration closed; the `writer` recorded it in `CHANGELOG.md [Unreleased]` the same day).
 Consumed: LT-109–LT-111, LT-186, LT-187, LT-277, LT-280, LT-305, LT-334, LT-342, LT-353,

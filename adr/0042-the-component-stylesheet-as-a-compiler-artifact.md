@@ -2,11 +2,11 @@
 
 ## Status
 
-🔄 Proposed — builds on ADR 0033 s9. Each sub-design is a recorded direction, taken up when a real use appears. None is scheduled.
+🔄 Proposed — builds on ADR 0033 s8. Each sub-design is a recorded direction, taken up when a real use appears. None is scheduled.
 
 ## Context
 
-[ADR 0033](0033-scope-component-styles-by-custom-element-name.md) s9 replaces the compiler's CSS dedent with a `lightningcss` parse, so the component's own sheet becomes reachable from the compiler alongside the template IR. Three wants that previously had nothing to stand on become small once the sheet is parsed. This ADR records them. Spec-grammar validation is not one of them: it comes free with the parse (ADR 0033 s9).
+[ADR 0033](0033-scope-component-styles-by-custom-element-name.md) s8 replaces the compiler's CSS dedent with a `lightningcss` parse, so the component's own sheet becomes reachable from the compiler alongside the template IR. Three wants that previously had nothing to stand on become small once the sheet is parsed. This ADR records them. Spec-grammar validation is not one of them: it comes free with the parse (ADR 0033 s9).
 
 ## Decision
 

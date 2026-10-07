@@ -37,7 +37,7 @@ Maintained by the Architect (`.agents/skills/architect/references/adr.md`) — u
 | [0030](0030-internationalization-as-build-time-server-data.md) | Internationalization as Build-Time Server Data | ✅ Accepted | §4, §5, §7 |
 | [0031](0031-pre-connect-property-writes-capture-and-install.md) | Pre-Connect Property Writes Are Captured and Installed | ✅ Accepted | M2, M3 |
 | [0032](0032-adopt-tsx-as-the-authored-component-surface.md) | Adopt `.tsx` as the Primary Authored Component Surface (`.tsrx` Retained) | ✅ Accepted | M1, M3, M4, §5, §7 |
-| [0033](0033-scope-component-styles-by-custom-element-name.md) | Compiled Component CSS Is Shadow-Root CSS — Scoped in Light DOM, Emitted per CSS Target | ✅ Accepted | M17, M18 |
+| [0033](0033-scope-component-styles-by-custom-element-name.md) | Compiled Component CSS Is Platform CSS — Authored `@scope`, Emitted per CSS Target | ✅ Accepted | M17, M18 |
 | [0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) | Distribution — `@zeix/le-truc-compiler`, TSX-Only at 3.0, the Fold Travels as Template Emission | ✅ Accepted | §1, §5, §7, M19, M20, M23, M24, M27, M28 |
 | [0035](0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) | The Simulation Seam — an SSG-Scoped Simulated Tier, a DOM-Free Realm Boundary, and a Substrate Package | ✅ Accepted | §1, §5, §6, M19, M20, M23, M27, M28 |
 | [0036](0036-corpus-configuration-surface.md) | The Corpus Configuration Surface — `le-truc.config.json`, This Repo as a Consumer | ✅ Accepted | §1, §2, §5, M24, M28 |
@@ -56,4 +56,4 @@ Maintained by the Architect (`.agents/skills/architect/references/adr.md`) — u
 
 ---
 
-**Last updated:** 2026-10-06
+**Last updated:** 2026-10-07
