@@ -95,6 +95,34 @@ export type RegistryEntry = {
 	 */
 	childrenRegion?: ChildrenRegion
 	/**
+	 * Whether the component's own template renders interactive content (ADR
+	 * 0048 s4, LT-477): an `a[href]`, `button`, `input` (except
+	 * `type="hidden"`), `select`, `textarea`, `label`, `details`, `iframe`,
+	 * any `[tabindex]`, or `audio`/`video` with `controls` — transitively
+	 * through its own composed children, which the registry-aware pass
+	 * closes over the entries' `renderedShapes` the way
+	 * `composedShapesFor` does. Content a parent passes at a compose site
+	 * is the parent's markup (ADR 0048 s1), not part of the template, and
+	 * never counts. The consumer of the flag is a composing parent: a
+	 * compose site of a child that declares `'non-interactive'` refuses
+	 * literal interactive content and a composed child this flag is set
+	 * through (LTC085, `analysis/content-model.ts`). The discovery pass
+	 * knows no composed child, so its entries carry the direct half only;
+	 * the entry that reaches `registry.json` is the registry-aware one.
+	 */
+	interactive: boolean
+	/**
+	 * The declared content model of the `children` arg's `Children<Roles,
+	 * Model>` annotation (ADR 0048 s4, LT-477): `'any'` when the second
+	 * type argument is absent (the default), `'non-interactive'` when
+	 * declared, `null` when a model argument is present that the compiler
+	 * cannot read (tsc owns it — the union constraint rejects anything
+	 * else at authored typecheck). Present exactly when the annotation
+	 * exists. A composing parent reads it at the compose site: `'non-interactive'`
+	 * turns LTC085 on there.
+	 */
+	childrenModel?: 'any' | 'non-interactive' | null
+	/**
 	 * Which server-evaluation mechanism renders this component's initial
 	 * HTML (ADR 0029, LT-165), and why it was routed there.
 	 *

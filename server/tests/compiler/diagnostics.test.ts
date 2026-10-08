@@ -4206,6 +4206,336 @@ export function C({ children = '' }: { children?: Children<{ icon: 'span' }> }, 
 	})
 })
 
+describe('the content-model check (LTC085, ADR 0048 s4, LT-477)', () => {
+	const styleTsrx = `<style>@scope {
+:scope {
+	  color: red;
+	}
+}</style>`
+	const styleTsx = `<style>{css\`@scope {
+:scope {
+	  color: red;
+	}
+}\`}</style>`
+
+	const childTsrx = (childrenType: string): string =>
+		`export function FormCheck({ children = '' }: { children?: ${childrenType} })
+@{
+	expose({})
+		<form-check>
+			<span class="label">{children}</span>
+			${styleTsrx}
+		</form-check>
+}`
+	const childTsx = (childrenType: string): string =>
+		`import { css } from '@zeix/le-truc-compiler/macros'
+
+export function FormCheck({ children = '' }: { children?: ${childrenType} }, {}) {
+	expose({})
+	return (
+		<form-check>
+			<span class="label">{children}</span>
+			${styleTsx}
+		</form-check>
+	)
+}`
+
+	const parentTsrx = (
+		content: string,
+		specifier = '../child/form-check.tsrx',
+	): string =>
+		`import { FormCheck } from '${specifier}'
+
+export function FormRow({}: {})
+@{
+	expose({})
+		<form-row>
+			<FormCheck>${content}</FormCheck>
+			${styleTsrx}
+		</form-row>
+}`
+	const parentTsx = (
+		content: string,
+		specifier = '../child/form-check.tsx',
+	): string =>
+		`import { css } from '@zeix/le-truc-compiler/macros'
+import { FormCheck } from '${specifier}'
+
+export function FormRow({}: {}, {}) {
+	expose({})
+	return (
+		<form-row>
+			<FormCheck>${content}</FormCheck>
+			${styleTsx}
+		</form-row>
+	)
+}`
+
+	const compileChildTsrx = (
+		childrenType = "Children<{}, 'non-interactive'>",
+	) => {
+		const { component, diagnostics } = compileComponent(
+			childTsrx(childrenType),
+			'examples/child/form-check.tsrx',
+			new Set(),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		return component
+	}
+
+	const ltc085 = (result: {
+		diagnostics: { code: string; message: string }[]
+	}): { code: string; message: string }[] =>
+		result.diagnostics.filter(d => d.code === 'LTC085')
+
+	test('a child declaring the model records childrenModel on its entry', () => {
+		const component = compileChildTsrx()
+		expect(component.entry.childrenModel).toBe('non-interactive')
+		expect(component.entry.interactive).toBe(false)
+	})
+
+	test('a button in the literal children is refused (.tsrx)', () => {
+		const child = compileChildTsrx()
+		const { diagnostics } = compileComponent(
+			parentTsrx('<button>Save</button>'),
+			'examples/parent/form-row.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc085({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`<button>`')
+		expect(hits[0]?.message).toContain('`<form-check>`')
+		expect(hits[0]?.message).toContain("'non-interactive'")
+		expect(hits[0]?.message).toContain('Remove the `<button>`')
+	})
+
+	test('a button in the literal children is refused (.tsx)', () => {
+		const { component: child } = compileComponentTsx(
+			childTsx("Children<{}, 'non-interactive'>"),
+			'examples/child/form-check.tsx',
+			new Set(),
+		)
+		if (!child) throw new Error('child must compile')
+		const { diagnostics } = compileComponentTsx(
+			parentTsx('<button>Save</button>'),
+			'examples/parent/form-row.tsx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc085({ diagnostics })).toHaveLength(1)
+	})
+
+	test('the interactive list decides per element', () => {
+		const child = compileChildTsrx()
+		const compile = (content: string) =>
+			compileComponent(
+				parentTsrx(content),
+				'examples/parent/form-row.tsrx',
+				new Set(),
+				undefined,
+				new Map([[child.entry.source, child.entry]]),
+			)
+		// Flagged: plain input, a[href], [tabindex], media with controls.
+		for (const content of [
+			'<input name="q" />',
+			'<a href="https://example.com">x</a>',
+			'<div tabindex="0">x</div>',
+			'<span tabindex="1">x</span>',
+			'<video controls></video>',
+			'<audio controls></audio>',
+			'<select></select>',
+			'<textarea></textarea>',
+			'<label>x</label>',
+			'<details></details>',
+			'<iframe></iframe>',
+		]) {
+			const hits = ltc085(compile(content))
+			expect(hits, content).toHaveLength(1)
+		}
+		// Not interactive: a bare anchor, a hidden input, inert media, and
+		// ordinary markup — and the whole site compiles clean.
+		for (const content of [
+			'<a>x</a>',
+			'<input type="hidden" name="q" />',
+			'<video></video>',
+			'<span>x</span>',
+		]) {
+			const result = compile(content)
+			expect(ltc085(result), content).toHaveLength(0)
+			expect(result.diagnostics, content).toEqual([])
+		}
+	})
+
+	test('an interactive component among the children is refused by its entry', () => {
+		const widgetSource = `export function WidgetBox({}: {})
+@{
+	expose({})
+		<widget-box>
+			<button>Go</button>
+			${styleTsrx}
+		</widget-box>
+}`
+		const { component: widget } = compileComponent(
+			widgetSource,
+			'examples/widget/widget-box.tsrx',
+			new Set(),
+		)
+		if (!widget) throw new Error('widget must compile')
+		expect(widget.entry.interactive).toBe(true)
+		const child = compileChildTsrx()
+		const parent = `import { FormCheck } from '../child/form-check.tsrx'
+import { WidgetBox } from '../widget/widget-box.tsrx'
+
+export function FormRow({}: {})
+@{
+	expose({})
+		<form-row>
+			<FormCheck><WidgetBox /></FormCheck>
+			${styleTsrx}
+		</form-row>
+}`
+		const { diagnostics } = compileComponent(
+			parent,
+			'examples/parent/form-row.tsrx',
+			new Set(),
+			undefined,
+			new Map([
+				[child.entry.source, child.entry],
+				[widget.entry.source, widget.entry],
+			]),
+		)
+		const hits = ltc085({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`<widget-box>`')
+		expect(hits[0]?.message).toContain('renders interactive content')
+	})
+
+	test('interactivity closes transitively through composed children', () => {
+		const leafSource = `export function LeafBox({}: {})
+@{
+	expose({})
+		<leaf-box>
+			<input name="q" />
+			${styleTsrx}
+		</leaf-box>
+}`
+		const midSource = `import { LeafBox } from '../leaf/leaf-box.tsrx'
+
+export function MidBox({}: {})
+@{
+	expose({})
+		<mid-box>
+			<LeafBox />
+			${styleTsrx}
+		</mid-box>
+}`
+		const { component: leaf } = compileComponent(
+			leafSource,
+			'examples/leaf/leaf-box.tsrx',
+			new Set(),
+		)
+		if (!leaf) throw new Error('leaf must compile')
+		const { component: mid } = compileComponent(
+			midSource,
+			'examples/mid/mid-box.tsrx',
+			new Set(['leaf-box']),
+			undefined,
+			new Map([[leaf.entry.source, leaf.entry]]),
+		)
+		if (!mid) throw new Error('mid must compile')
+		// The discovery pass knows no composed child, so the transitive
+		// half lands only in the registry-aware entry.
+		expect(mid.entry.interactive).toBe(true)
+		const child = compileChildTsrx()
+		const parent = `import { FormCheck } from '../child/form-check.tsrx'
+import { MidBox } from '../mid/mid-box.tsrx'
+
+export function FormRow({}: {})
+@{
+	expose({})
+		<form-row>
+			<FormCheck><MidBox /></FormCheck>
+			${styleTsrx}
+		</form-row>
+}`
+		const { diagnostics } = compileComponent(
+			parent,
+			'examples/parent/form-row.tsrx',
+			new Set(['leaf-box', 'mid-box']),
+			undefined,
+			new Map([
+				[child.entry.source, child.entry],
+				[leaf.entry.source, leaf.entry],
+				[mid.entry.source, mid.entry],
+			]),
+		)
+		const hits = ltc085({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`<mid-box>`')
+	})
+
+	test('a child without the annotation runs no check', () => {
+		const child = compileChildTsrx('string')
+		expect(child.entry.childrenModel).toBeUndefined()
+		const { diagnostics } = compileComponent(
+			parentTsrx('<button>Save</button>'),
+			'examples/parent/form-row.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(diagnostics).toEqual([])
+	})
+
+	test('an unreadable model argument keeps the check off', () => {
+		// The model argument is a name with no same-file declaration — tsc
+		// owns it (the `Model` union constraint), the compiler does not act
+		// on what it cannot read.
+		const child = compileChildTsrx('Children<{}, Missing>')
+		expect(child.entry.childrenModel).toBeNull()
+		const { diagnostics } = compileComponent(
+			parentTsrx('<button>Save</button>'),
+			'examples/parent/form-row.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(diagnostics).toEqual([])
+	})
+
+	test('the model reads through a same-file alias too', () => {
+		const source = `type Model = 'non-interactive'
+export function FormCheck({ children = '' }: { children?: Children<{}, Model> })
+@{
+	expose({})
+		<form-check>
+			<span class="label">{children}</span>
+			${styleTsrx}
+		</form-check>
+}`
+		const { component } = compileSource(source, 'c.tsrx')
+		expect(component?.childrenContract?.model).toBe('non-interactive')
+		const { component: child } = compileComponent(
+			source,
+			'examples/child/form-check.tsrx',
+			new Set(),
+		)
+		if (!child) throw new Error('child must compile')
+		const { diagnostics } = compileComponent(
+			parentTsrx('<button>Save</button>'),
+			'examples/parent/form-row.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc085({ diagnostics })).toHaveLength(1)
+	})
+})
+
 describe('a required role-addressed ref at runtime (LT-474 review)', async () => {
 	const fixture = (call: string): string =>
 		`export function C({ children = '' }: { children?: Children<{ icon: 'span' }> })
