@@ -217,10 +217,20 @@ does not apply and the plain handling stands (required → LTC026, optional
 → LT-123's silence; review 2). A roles
 declaration present but unreadable (an imported name) keeps the code and
 changes the fix copy, which names the readable shapes (LTC076's posture).
+`LTC085` (a compose site of a child whose `children` prop declares
+`Children<…, 'non-interactive'>` passing interactive content —
+`a[href]`, `button`, `input` except `type="hidden"`, `select`,
+`textarea`, `label`, `details`, `iframe`, any `[tabindex]`, media with
+`controls` — among the site's literal children, or a composed child whose
+own template renders any, transitively; ADR 0048 s4, LT-477) follows
+`LTC083`. It is `LTC`, not `TSRX`: the check runs in the shared pipeline
+on both surfaces (`analysis/content-model.ts`). No runtime half of its
+own: page-authored HTML is unchecked by design, and TypeScript cannot
+carry the check (JSX element types are opaque).
 `LTC086` (`:host` anywhere in a component stylesheet, fix-it `:where(:scope)`;
 ADR 0033 s6, LT-501) and `LTC089` (a `@scope` form the flat-selector lowering
 cannot express on a lowered CSS target; ADR 0033 s4, LT-501) follow
-`LTC081`; `LTC082`, `LTC084` and `LTC085` belong to other tasks. `LTC087` (a scoped rule
+`LTC081`; `LTC082` and `LTC084` belong to other tasks. `LTC087` (a scoped rule
 that reaches into a composed child's own markup) and `LTC088` (a top-level
 rule neither in `@scope` nor led by the own tag) are LT-502's warnings (ADR
 0033 s5). All four are `LTC`, not `TSRX`: the stylesheet is a string on both

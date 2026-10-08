@@ -8,6 +8,10 @@
  * pipeline change cannot drift between surfaces.
  */
 
+import {
+	findInteractiveContent,
+	templateInteractiveOf,
+} from './analysis/content-model'
 import { handlerPlacementsOf } from './analysis/handler-args'
 import { analyzeClient } from './analysis/plan'
 import {
@@ -128,6 +132,32 @@ export const compileFromIR = (
 	// unaddressable placement is LTC007.
 	const handlerArgs = handlerPlacementsOf(component, diagnostics)
 	const childrenRegion = childrenRegionOfComponent(component)
+	// The content model (ADR 0048 s4, LT-477): a compose site of a child
+	// that declares `'non-interactive'` refuses interactive content — a
+	// literal element among the site's literal children, or a composed
+	// child whose own template renders one, transitively. It reads each
+	// child's declaration and `interactive` flag off its registry entry,
+	// so it runs only in the registry-aware pass; the entry's own flag is
+	// recorded either way (the discovery pass knows no composed child, so
+	// its value carries the direct half only).
+	const interactive = templateInteractiveOf(component.root, composeRegistry)
+	if (composeRegistry) {
+		for (const node of composeNodes) {
+			if (node.children.length === 0) continue
+			const child = composeRegistry.get(node.source)
+			if (child?.childrenModel !== 'non-interactive') continue
+			const finding = findInteractiveContent(node.children, composeRegistry)
+			if (finding)
+				diagnostics.push(
+					diagnostic.interactiveContentRefused(
+						component.source,
+						node.node,
+						child.tag,
+						finding,
+					),
+				)
+		}
+	}
 	// LT-258: the partial-readiness invariant (ADR 0034 s4) — nothing but
 	// own args and the declared ambient set may reach the fold.
 	checkFoldInputs(component, diagnostics)
@@ -255,6 +285,10 @@ export const compileFromIR = (
 				clientMessageKeys: plan.clientMessageKeys,
 				...(handlerArgs ? { handlerArgs } : {}),
 				renderedShapes: renderedShapesOf(component),
+				interactive,
+				...(component.childrenContract
+					? { childrenModel: component.childrenContract.model }
+					: {}),
 				...(childrenRegion ? { childrenRegion } : {}),
 				composesTags: composeRegistry
 					? [

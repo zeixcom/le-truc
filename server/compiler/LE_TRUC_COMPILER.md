@@ -1157,7 +1157,25 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   passes no such element (channel: runtime, the existing required-ref
   check, tier 3 Escalated; LT-474 review). Without an insertion the
   content can never arrive — statically decidable, so the plain handling
-  applies (required → LTC026, optional → LT-123's silence; review 2).
+  applies (required → LTC026, optional → LT-123's silence; review 2). The
+  content model is the compose-site half (ADR 0048 s4, LT-477,
+  `analysis/content-model.ts`): a compose site of a child whose contract
+  declares `'non-interactive'` fails LTC085 when its literal children hold
+  interactive content — `a[href]`, `button`, `input` (except
+  `type="hidden"`), `select`, `textarea`, `label`, `details`, `iframe`, any
+  `[tabindex]`, `audio`/`video` with `controls`; a dynamically bound
+  deciding attribute counts as present — or compose a child whose own
+  template renders any, transitively. The registry carries the two facts the
+  site reads: the declared model (`childrenModel`, present exactly when the
+  annotation is) and, per component, whether its own template renders
+  interactive content (`interactive`; the discovery pass knows no composed
+  child, so its entries carry the direct half, and the registry-aware pass
+  closes the transitive half over `renderedShapes`' compose references the
+  way `composedShapesFor` does). The model reads through a same-file alias
+  like the roles do; a model argument the compiler cannot read keeps the
+  check off (tsc's `Model` union constraint owns it). Page-authored HTML is
+  unchecked, and TypeScript cannot carry the check (JSX element types are
+  opaque).
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

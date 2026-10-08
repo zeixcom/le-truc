@@ -17,6 +17,7 @@
  * `VOCABULARY_LEDGER.md` beside this file.
  */
 
+import type { InteractiveFinding } from './analysis/content-model'
 import type { MarkerName } from './imports'
 import type { SourceRange } from './ir'
 import type { SurfaceWording } from './surface'
@@ -114,6 +115,7 @@ export type DiagnosticCode =
 	| 'LTC080' // a key alias that does not meet ADR 0047 s1 — a host-level list seeded from server args, never rendered by its own `map`, is harvested through `const t = list.byKey(k)` in a reactive list's item setup only when the aliasing list keys each item by itself, the read is that alias statement over the loop key, the list has one alias scope, and every field renders at a site in it (LT-453) — tier 1 Prevented, statically decidable; the render witness is the dynamic half, a server-render error with no client counterpart
 	| 'LTC081' // a handler arg (an `on[A-Z]…` arg, LT-461) the parent cannot address: its declared type is not a function type; or it is read anywhere but as an event attribute on a raw element or forwarded to a composed child's handler arg; or it is placed inside one of the component's reactive arms or list items, whose elements are recreated on a flip or a reconcile — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC083' // a first()/all() selector that can only resolve inside the content a parent passes as `children` — it matches nothing in the component's own template, the template inserts `{children}`, and its subject compound names no role class declared on the `children` prop's `Children<…>` type (ADR 0048 s2, LT-474) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC085' // a compose site of a child whose `children` prop declares `Children<…, 'non-interactive'>` passes interactive content — `a[href]`, `button`, `input` (except `type="hidden"`), `select`, `textarea`, `label`, `details`, `iframe`, any `[tabindex]`, `audio`/`video` with `controls` — among its literal children, or a composed child whose own template renders any, transitively (ADR 0048 s4, LT-477) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC086' // `:host` anywhere in a component stylesheet — it matches nothing in light DOM; the fix-it is `:where(:scope)` (`:host(X)` → `:where(:scope)X`) (ADR 0033 s1/s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC087' // a rule in the component's `@scope` block whose subject can match an element a composed child renders in its own template (transitively through the registry), with no authored limit excluding the child; passed `children` content is the parent's own markup and never counts (ADR 0033 s5, ADR 0048 s5, LT-502) — tier 2 Contained: the CSS ships as authored
 	| 'LTC088' // a top-level stylesheet rule that is neither in `@scope` nor led by the component's own tag — it applies page-wide; `@keyframes`, `@font-face` and `@property` are exempt (ADR 0033 s1/s5, LT-502) — tier 2 Contained: the CSS ships as authored
@@ -1564,6 +1566,36 @@ export const diagnostic = {
 			unreadable
 				? `\`${helper}('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, and the template inserts children — a selector like this can only resolve inside the content a parent passes, which belongs to the parent (ADR 0048). The roles on the \`children\` prop's type are declared in a shape this compiler cannot read — it reads only an inline type literal or a same-file alias: \`Children<{ … }>\`, or a \`type Roles = { … }\` in this file. Write the roles that way so the compiler can check the selector against them, or address an element the template renders.`
 				: `\`${helper}('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, and the template inserts children — a selector like this can only resolve inside the content a parent passes, which belongs to the parent (ADR 0048). Declare a role for it on the \`children\` prop's type — \`Children<{ … }>\` — and give the passed element the role's class, or address an element the template renders.`,
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A compose site of a child whose `children` contract declares
+	 * `'non-interactive'` passes interactive content (ADR 0048 s4,
+	 * LT-477): a literal element among the site's children, or a composed
+	 * child whose own template renders one, transitively through the
+	 * registry. The content model is the child's declaration and the
+	 * parent's content to honor — the message names the offending element
+	 * or component and the child's declaration, and the fix is the
+	 * author's decision: drop the content, or relax the declaration.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-477). Page-authored HTML is unchecked (the compiler
+	 * sees only compiled compose sites), and TypeScript cannot carry the
+	 * check (JSX element types are opaque) — HOST_PROFILE says so where the
+	 * roles contract is documented.
+	 */
+	interactiveContentRefused: (
+		source: string,
+		at: Site,
+		childTag: string,
+		finding: InteractiveFinding,
+	) =>
+		error(
+			'LTC085',
+			finding.kind === 'element'
+				? `\`<${childTag}>\` declares its children \`Children<…, 'non-interactive'>\`, but this compose site passes \`${finding.describe}\` — interactive content (ADR 0048). Remove the \`${finding.describe}\` from the passed content, or drop the \`'non-interactive'\` model argument from \`<${childTag}>\`'s \`Children<…>\` type if the content may be interactive.`
+				: `\`<${childTag}>\` declares its children \`Children<…, 'non-interactive'>\`, but this compose site passes \`<${finding.tag}>\`, whose template renders interactive content (ADR 0048). Remove \`<${finding.tag}>\` from the passed content, or drop the \`'non-interactive'\` model argument from \`<${childTag}>\`'s \`Children<…>\` type if the content may be interactive.`,
 			rangeOf(source, at),
 		),
 

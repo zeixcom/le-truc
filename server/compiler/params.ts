@@ -297,6 +297,38 @@ const rolesLiteralOf = (
 	return null
 }
 
+/**
+ * The model argument as a string literal: the inline literal, or its
+ * same-file alias — the same readable shape `rolesLiteralOf` accepts.
+ * Anything else (an imported name, a union) reads null: tsc owns it, the
+ * `Model` union constraint rejects anything but `'any'`/`'non-interactive'`
+ * at authored typecheck (LT-477).
+ */
+const modelLiteralOf = (
+	ctx: ExtractContext,
+	arg: AstNode | undefined,
+	depth = 0,
+): string | null => {
+	if (!arg || !isNode(arg) || depth > 8) return null
+	if (
+		arg.type === 'TSLiteralType' &&
+		isNode(arg.literal) &&
+		(arg.literal as AstNode).type === 'Literal' &&
+		typeof (arg.literal as AstNode).value === 'string'
+	)
+		return (arg.literal as AstNode).value as string
+	if (arg.type === 'TSTypeReference') {
+		const name = identifierName(arg.typeName)
+		const decl = name ? ctx.moduleTypes.get(name) : undefined
+		const aliased =
+			decl?.type === 'TSTypeAliasDeclaration' && isNode(decl.typeAnnotation)
+				? unwrapType(decl.typeAnnotation)
+				: null
+		return aliased !== null ? modelLiteralOf(ctx, aliased, depth + 1) : null
+	}
+	return null
+}
+
 /** The declared contract of `children` in the args annotation, or null. */
 export const readChildrenContract = (
 	ctx: ExtractContext,
@@ -351,16 +383,18 @@ export const readChildrenContract = (
 			)
 		}
 	const modelArg = typeArgs[1]
+	const modelValue = modelLiteralOf(ctx, modelArg as AstNode | undefined)
 	const model =
-		modelArg && isNode(modelArg)
-			? modelArg.type === 'TSLiteralType' &&
-				isNode(modelArg.literal) &&
-				(modelArg.literal as AstNode).type === 'Literal' &&
-				((modelArg.literal as AstNode).value === 'any' ||
-					(modelArg.literal as AstNode).value === 'non-interactive')
-				? ((modelArg.literal as AstNode).value as 'any' | 'non-interactive')
-				: null
-			: 'any'
+		modelValue === 'any' || modelValue === 'non-interactive'
+			? modelValue
+			: // A model argument present but unreadable — an imported name, a
+				// union, anything but the inline literal or its same-file alias —
+				// is not a declaration the compiler can act on (LT-477): tsc
+				// owns it, and the absence of a readable 'non-interactive'
+				// keeps the compose-site check off.
+				modelValue === null && modelArg !== undefined
+				? null
+				: 'any'
 	return unreadable ? { roles, model, unreadable } : { roles, model }
 }
 

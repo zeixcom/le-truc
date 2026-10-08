@@ -180,7 +180,13 @@ export type FirstRefStage = 'matched' | 'deferred' | 'unmatched' | 'rejected'
  */
 export type ChildrenContractIR = {
 	roles: ReadonlyMap<string, string | null>
-	/** `'any'` when the second type argument is absent (the default). */
+	/**
+	 * `'any'` when the second type argument is absent (the default), the
+	 * declared literal (inline or same-file alias, LT-477) when readable —
+	 * `null` when a model argument is present that the compiler cannot
+	 * read: tsc owns it, and no compose-site check runs on an unreadable
+	 * declaration.
+	 */
 	model: 'any' | 'non-interactive' | null
 	/**
 	 * A roles declaration is present but the compiler cannot read it: the
