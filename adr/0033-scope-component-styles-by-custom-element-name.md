@@ -2,7 +2,7 @@
 
 ## Status
 
-✅ Accepted — owner ruling; ships in 3.0. Revised 2026-10-07 (owner ruling). Checks over the parsed sheet live in [ADR 0042](0042-the-component-stylesheet-as-a-compiler-artifact.md); style composition stays on the [ROADMAP](../ROADMAP.md).
+✅ Accepted — owner ruling; ships in 3.0. Revised 2026-10-07 and 2026-10-08 (owner rulings). Sheet checks: [ADR 0042](0042-the-component-stylesheet-as-a-compiler-artifact.md).
 
 ## Context
 
@@ -10,23 +10,24 @@ Hand-written stylesheets lead every rule with the component's tag. That stops **
 
 A compiled component's `<style>` sits inside its host. The platform already gives that placement a meaning: a prelude-less `@scope { … }` in an inline `<style>` is scoped to the style's parent element, and `@scope … to (…)` sets limits. The compiler also knows which custom elements each template renders, and what each of them renders.
 
-Using that knowledge to emulate a shadow root in light DOM made the emitted CSS diverge from what the author read: authors could not predict which rules applied without reading the emission.
+Emulating a shadow root with that knowledge made the emitted CSS diverge from what the author read.
 
 ## Decision
 
 **A compiled component's stylesheet means what it would mean as an inline `<style>` in its host. Scoping is authored with native `@scope`. The compiler emits that meaning for the configured CSS target and adds no limits of its own. Its knowledge of the rendered tree surfaces as warnings at concrete leaks, never as emitted selectors.**
 
 1. **Three authored forms.**
-   - **`@scope { … }`**, with an optional `to (<limits>)`, is scoped to the host. `:scope` is the host, and bare selectors are its descendants. The limits are exactly the ones authored.
+   - **`@scope { … }`**, with an optional `to (<limits>)`, is scoped to the host. `:scope` is the host, and bare selectors are its descendants. The limits are exactly the ones authored. The idiom roots host rules at `:where(:scope)`, writes descendants bare and lists a limit per composed child. That is the 2.x tag-led idiom minus one type selector throughout, so every contest it settled keeps its winner: a parent's rule beats a child's base host rule, and a child's host variant (`&.x`) beats the parent's.
    - **Rules led by the component's own tag** (`my-element .x`) at the top level emit verbatim. That is the 2.x convention: contained outward by the unique tag, with no warning.
    - **Any other top-level rule** emits verbatim and applies page-wide, as a top-level rule in any `<style>` does. The compiler warns (point 5). `@keyframes`, `@font-face` and `@property` emit verbatim.
 
 2. **One meaning in both emissions.** The compiled sheet behaves like the same sheet inline in the host, on the platform. Page-authored children and content a compiled parent passes are both descendants and style alike, so the page-versus-compiled difference does not exist. The native emission is that meaning. The lowered emission differs from it in one documented way (point 4).
 
-3. **Native emission** (`@scope` target). The sheet moves out of the host into the component's stylesheet, so the prelude-less `@scope` gains the explicit root `@scope (my-element)` and keeps the authored `to (…)`. For a component sheet the two are the same: scope proximity resolves nested instances exactly as it would for the inline form. Everything else emits verbatim.
+3. **Native emission** (`@scope` target). The sheet moves out of the host into the component's stylesheet, so the prelude-less `@scope` gains the explicit root `@scope (my-element)` and keeps the authored `to (…)`. Everything else emits verbatim.
 
 4. **Lowered emission** (no `@scope`). The output is flat selectors. The scope root leads as `:where(my-element)`, and each authored limit becomes a zero-specificity guard. Specificity matches the native form. The lowering cannot express scope proximity, which is its one difference from native:
    - A nested instance of the same component is reached by the outer instance's rules too. The sheet is the same, so the results differ only where a rule depends on the outer instance (`:scope.compact .x`).
+   - Ties that native breaks by proximity (parent and child rules on passed content, a component and the page on a bare element) fall to source order. An aggregate stylesheet puts page CSS first. Component order is unspecified: no order is right for every composition, so the lowering does not emulate proximity. HOST_PROFILE § Styles documents the hazard.
    - A guard for an authored limit re-includes a nested instance of the component's own tag below that limit, and its subtree. A guard that excluded it would leave the inner instance unstyled. The lowering gates too little, never too much.
 
    A `@scope` form the lowering cannot express in a component sheet is a build error that names the CSS target (Prevented). It never emits a silent approximation.
@@ -46,40 +47,40 @@ Using that knowledge to emulate a shadow root in light DOM made the emitted CSS 
 
    TSRX's `:global` has no meaning here, because an unscoped rule is written as a top-level rule. It is an error whose fix-it removes the wrapper.
 
-7. **The CSS target is configurable and defaults to Baseline widely available.** The `cssTargets` key in `le-truc.config.json` ([ADR 0036](0036-corpus-configuration-surface.md)) maps browser names to minimum versions. A browser left out imposes no constraint. The default is a fixed version set, pinned at 3.0 and moved only with a major version. The default lowers until a deliberate bump crosses native `@scope` support.
+7. **The CSS target is configurable and defaults to Baseline widely available.** The `cssTargets` key in `le-truc.config.json` ([ADR 0036](0036-corpus-configuration-surface.md)) maps browser names to minimum versions. The default is a fixed version set, pinned at 3.0 and moved only with a major version; it lowers until a bump crosses native `@scope` support.
 
-8. **The stylesheet is parsed, not dedented.** Emission needs the rules and selectors, so the sheet goes through a `lightningcss-wasm` parse that is portable across runtimes ([ADR 0038](0038-runtime-neutral-build-path.md)). A parse error is Prevented. A declaration outside the CSS grammar is Contained and ships as authored, because the parser's property dictionary lags the platform. The parse is read-only: emission rewrites selector text and never round-trips nodes through the parser's write path.
+8. **The stylesheet is parsed, not dedented.** Emission needs the rules and selectors, so the sheet goes through a `lightningcss-wasm` parse that is portable across runtimes ([ADR 0038](0038-runtime-neutral-build-path.md)). A parse error is Prevented. A declaration outside the CSS grammar is Contained and ships as authored, because the parser lags the platform. Emission rewrites selector text and never round-trips nodes through the parser.
 
-9. **Shadow mode translates the sheet. It is the opt-in for inward isolation.** Only a shadow root keeps page CSS out of a component. In shadow mode, the `@scope` block unwraps into the shadow root's `<style>`, `:scope` becomes `:host`, and the limits drop, because the shadow root bounds the scope. Top-level rules move to the document stylesheet. `::slotted()` becomes legal. Its authoring limits (slots, the children-are-data harvest, ID references) are listed in HOST_PROFILE § Styles. The mode is unscheduled.
+9. **Shadow mode translates the sheet. It is the opt-in for inward isolation.** Only a shadow root keeps page CSS out of a component. In shadow mode, the `@scope` block unwraps into the shadow root's `<style>`, `:scope` becomes `:host`, and the limits drop, because the shadow root bounds the scope. Top-level rules move to the document stylesheet. `::slotted()` becomes legal. Its authoring limits are in HOST_PROFILE § Styles. The mode is unscheduled.
 
 10. **Hand-written twin CSS splits off.** A compiled surface serves the emitted CSS. The twin's hand-written `.css` stays the 2.x artifact and is served only with the twin. Variant-set CSS identity compares the compiled members' authored sheets.
 
-11. **Upstream's hash-class scoping is not adopted.** It is a client-transform mechanism with no server-render counterpart. It also puts hash classes into every served byte.
+11. **Upstream's hash-class scoping is not adopted.** It is a client-transform mechanism with no server-render counterpart.
 
 ## Alternatives Considered
 
-- **Shadow-root CSS emulated in light DOM** (the first design): the compiler-derived limits, re-includes and nesting patches gave authored CSS a meaning that was visible only in the emission. It cost up to about 10 kB raw per component in the lowered form, and it needed exceptions for page-rendered instances and root insertion.
+- **Shadow-root CSS emulated in light DOM** (the first design): the compiler-derived limits, re-includes and nesting patches gave authored CSS a meaning that was visible only in the emission. It cost up to about 10 kB raw per component when lowered.
 - **Compiler-derived limits added to authored `@scope`**: the same hidden meaning in a smaller form. The compiler's knowledge is better spent naming the leak.
-- **Auto-wrap tag-led sheets**: one authored form with two behaviors, compiled and hand-written, and nothing in the source says so.
-- **An SCSS-like abstraction language**: no LSP or highlighting support.
+- **Auto-wrap tag-led sheets**: one authored form, two unmarked behaviors.
+- **`:scope` as the host idiom**: shorter, but raising the root while bare descendants drop inverts the 2.x parent-over-child-host contest.
+- **An SCSS-like abstraction language**: no editor support.
 - **Native `@scope` only**: excludes projects with older targets.
-- **Shadow DOM as the default**: forces slots onto every composition and gives up the light-DOM data account. It stays the opt-in.
+- **Shadow DOM as the default**: forces slots onto every composition. Opt-in only.
 
 ## Consequences
 
 **Good:**
 
 - What the author reads is what the platform does. Native emission is the authored sheet with an explicit root, and the lowering mirrors one platform construct.
-- A component styles its content the same way under a page and under a compiled parent.
-- The compiler's knowledge of the rendered tree arrives as a warning that names the leaking rule, the child and the fix.
+- The compiler's knowledge arrives as a warning naming the leaking rule, the child and the fix.
 - The lowering shrinks to nothing as targets cross native `@scope` support.
 
 **Bad / accepted tradeoffs:**
 
 - Authors write their limits themselves. A parent's scoped rules reach a composed child's internals until a limit stops them, and the warning is the safety net.
-- `:scope` carries pseudo-class specificity, so a scoped host rule beats a page rule led by the bare tag. That is platform behavior; authors who want page styles to win write `:where(:scope)`.
+- The idiom's `:where(:scope)` is longer than `:scope`, and nothing enforces it. A bare `:scope` (0,1,0) host rule outranks a parent's bare rule on that host. A lint waits for real conflicts.
 - Shadow mode needs a translation step (`:scope` to `:host`, limits dropped).
-- Every compiled sheet migrates mechanically: wrap it in `@scope { }` and rename `:host` to `:scope`.
+- Every compiled sheet migrates mechanically: wrap it in `@scope { }`, rename `:host` to `:where(:scope)`, and hoist descendant rules out of the host block.
 - The lowering lacks scope proximity, and it is ours to maintain because `lightningcss` does not lower `@scope`.
 - A folder with a hand-written twin carries two stylesheets.
 
