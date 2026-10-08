@@ -9,6 +9,7 @@
 
 import type { AstNode } from './ast-node'
 import { forEachFreeIdentifier } from './ast-utils'
+import { childrenInsertionsOf } from './children-region'
 import { dedentCss, parseComponentSheet } from './css'
 import { type ContractFinding, checkSheetContract } from './css-scope'
 import type { LocalDiagnostic, Site, StyleBlockRefusal } from './diagnostics'
@@ -20,6 +21,7 @@ import {
 	inReactiveArm,
 	inReconcileItem,
 	namesCustomElementTag,
+	namesDeclaredRole,
 	reportStaticIds,
 	shareExclusiveIf,
 } from './first-refs'
@@ -162,7 +164,13 @@ export const resolveTemplateOutput = (
 		)
 
 	// Resolve `first(selector, required)` element references (LT-055) now
-	// that `root` exists.
+	// that `root` exists. The reach-in check (LTC083) needs the `{children}`
+	// insertions once per template.
+	const insertions = childrenInsertionsOf(root)
+	const insertsChildren =
+		insertions.holders.size > 0 ||
+		insertions.forwards.size > 0 ||
+		insertions.unmarked
 	const firstRefs = new Map<string, FirstRefDecl>()
 	for (const [
 		refName,
@@ -190,6 +198,50 @@ export const resolveTemplateOutput = (
 			continue
 		}
 		if (elements.length === 0) {
+			// The reach-in check (ADR 0048 s2, LTC083): a selector that
+			// matches nothing here, in a template that inserts `{children}`,
+			// can only resolve inside the content a parent passes — unless
+			// its subject names a declared role, the one surface the child
+			// may address that content through. Fires for required and
+			// optional references alike, before LT-123's optional silence.
+			// An unreadable roles declaration changes the fix, not the
+			// verdict (LT-474 review): the compiler cannot claim a role the
+			// author may have declared in it is missing.
+			const roles = ctx.childrenContract?.roles
+			const declared = namesDeclaredRole(
+				selectorText,
+				new Set(roles?.keys() ?? []),
+			)
+			if (insertsChildren && declared === false) {
+				ctx.diagnostics.push(
+					diagnostic.childrenReachIn(
+						source,
+						node,
+						'first',
+						refName,
+						selectorText,
+						ctx.childrenContract?.unreadable === true,
+					),
+				)
+				resolve('rejected')
+				continue
+			}
+			// A role-addressed reference resolves inside the content a
+			// parent passes (ADR 0048 s2), so — in a template that inserts
+			// `{children}` — a no-match here is expected for it, required
+			// or optional (LT-474 review): the client queries the authored
+			// selector from the host — the region re-include finds the
+			// element inside the content (ADR 0048 s1) — and a required
+			// one throws the existing `MissingElementError` with the
+			// authored reason when the parent passes no such element.
+			// Without an insertion the content can never arrive, so the
+			// bypass does not apply (review 2): a required reference
+			// falls through to LTC026, an optional one to LT-123's
+			// silence.
+			if (insertsChildren && declared === true) {
+				resolve('unmatched')
+				continue
+			}
 			// An OPTIONAL ref is allowed to match nothing here
 			// (LT-123): "may be absent" includes "the page, not
 			// this template, authors it". The structural proof

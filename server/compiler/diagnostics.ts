@@ -113,6 +113,7 @@ export type DiagnosticCode =
 	| 'LTC078' // a `<style>` block whose content is not a stylesheet spelling — on `.tsx` anything but the `css` marker's tagged template, a bare template literal or nothing (another tag, a shadowed or unimported `css`, a `${}` substitution, any other expression or text); on `.tsrx` an expression child in place of the CSS body. The sheet would read as empty and ship no CSS (ADR 0034 s1, LT-444) — tier 1 Prevented, statically decidable, no runtime half. Lands out of numeric order: `LTC076` is LT-429's, `LTC077` LT-443's — both reserved before this rule picked
 	| 'LTC080' // a key alias that does not meet ADR 0047 s1 — a host-level list seeded from server args, never rendered by its own `map`, is harvested through `const t = list.byKey(k)` in a reactive list's item setup only when the aliasing list keys each item by itself, the read is that alias statement over the loop key, the list has one alias scope, and every field renders at a site in it (LT-453) — tier 1 Prevented, statically decidable; the render witness is the dynamic half, a server-render error with no client counterpart
 	| 'LTC081' // a handler arg (an `on[A-Z]…` arg, LT-461) the parent cannot address: its declared type is not a function type; or it is read anywhere but as an event attribute on a raw element or forwarded to a composed child's handler arg; or it is placed inside one of the component's reactive arms or list items, whose elements are recreated on a flip or a reconcile — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC083' // a first()/all() selector that can only resolve inside the content a parent passes as `children` — it matches nothing in the component's own template, the template inserts `{children}`, and its subject compound names no role class declared on the `children` prop's `Children<…>` type (ADR 0048 s2, LT-474) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC086' // `:host` anywhere in a component stylesheet — it matches nothing in light DOM; the fix-it is `:where(:scope)` (`:host(X)` → `:where(:scope)X`) (ADR 0033 s1/s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC087' // a rule in the component's `@scope` block whose subject can match an element a composed child renders in its own template (transitively through the registry), with no authored limit excluding the child; passed `children` content is the parent's own markup and never counts (ADR 0033 s5, ADR 0048 s5, LT-502) — tier 2 Contained: the CSS ships as authored
 	| 'LTC088' // a top-level stylesheet rule that is neither in `@scope` nor led by the component's own tag — it applies page-wide; `@keyframes`, `@font-face` and `@property` are exempt (ADR 0033 s1/s5, LT-502) — tier 2 Contained: the CSS ships as authored
@@ -1522,6 +1523,47 @@ export const diagnostic = {
 		error(
 			'LTC027',
 			`\`first('${selector}', …)\` (bound to \`${name}\`) matches ${count} elements in this component's template, and they are not all mutually-exclusive branches of the same ${wording.if} — give the target a distinguishing \`class\`/\`id\`/\`data-*\` and name it in the selector. On a COMPOSED (PascalCase) element the attribute goes on the COMPOSE SITE, not inside the child (LT-127): \`<FormSpinbutton class="lightness" />\` → \`first('form-spinbutton.lightness', …)\`.`,
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A `first()`/`all()` selector that can only resolve inside the content
+	 * a parent passes as `children` (ADR 0048 s2, LT-474): it matches
+	 * nothing in the component's own template, the template inserts
+	 * `{children}`, and its subject compound — the part the query matches —
+	 * names no role class declared on the `children` prop's `Children<…>`
+	 * type. The content belongs to the parent, and the child acts on it
+	 * only through its declared roles, so such a selector reaches past the
+	 * contract. The fix names the role declaration: declare the role on
+	 * `children` and mark the passed element with the role's class, or
+	 * address an element the template itself renders. Fires for required
+	 * and optional references alike, at both selector-verification sites —
+	 * the raw no-match here and the deferred no-match in
+	 * `analysis/compose-refs.ts`. A selector whose subject cannot be read
+	 * (unparsable) stays with the existing handling: the rule speaks only
+	 * where it can name the subject.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-474), unreadable variant from the review: when the
+	 * roles declaration is present but unreadable (an imported name or
+	 * another shape the compiler cannot see through, `ChildrenContractIR`'s
+	 * `unreadable`), the fix copy cannot say "declare a role" — the author
+	 * may have declared one — so it names the readable shapes instead
+	 * (LTC076's posture for imported item types).
+	 */
+	childrenReachIn: (
+		source: string,
+		at: Site,
+		helper: 'first' | 'all',
+		name: string,
+		selector: string,
+		unreadable = false,
+	) =>
+		error(
+			'LTC083',
+			unreadable
+				? `\`${helper}('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, and the template inserts children — a selector like this can only resolve inside the content a parent passes, which belongs to the parent (ADR 0048). The roles on the \`children\` prop's type are declared in a shape this compiler cannot read — it reads only an inline type literal or a same-file alias: \`Children<{ … }>\`, or a \`type Roles = { … }\` in this file. Write the roles that way so the compiler can check the selector against them, or address an element the template renders.`
+				: `\`${helper}('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, and the template inserts children — a selector like this can only resolve inside the content a parent passes, which belongs to the parent (ADR 0048). Declare a role for it on the \`children\` prop's type — \`Children<{ … }>\` — and give the passed element the role's class, or address an element the template renders.`,
 			rangeOf(source, at),
 		),
 

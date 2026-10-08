@@ -1123,6 +1123,41 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   placement with no unique selector is LTC007; a compose-site handler in a
   server-data loop body, or where no mount binds it (a server-rendered
   branch inside an arm), is LTC005.
+- *The children contract* (ADR 0048 s2, LT-474, `HOST_PROFILE.md`'s
+  *Element references*): a `first()`/`all()` selector that matches nothing
+  in the component's own template, in a component whose template inserts
+  `{children}`, whose subject compound — the part the query matches —
+  names no role class declared on the `children` prop's `Children<Roles,
+  Model>` type, is LTC083: such a selector can only resolve inside the
+  content a parent passes, which belongs to the parent, and the child acts
+  on it only through its declared roles. The check runs at both
+  selector-verification sites — the raw no-match in `resolveTemplateOutput`
+  and the deferred no-match in `analysis/compose-refs.ts` — for required
+  and optional references alike; a subject the compiler cannot read
+  (unparsable) stays with the existing handling. Its population is the
+  declared `const x = first(…)` references: inline `first()`/`all()` calls
+  and `all()` declarations are outside structural verification and outside
+  this check. The compiler reads the
+  roles and the model from the annotation syntactically (an inline
+  `Children<…>` or a same-file alias, `readChildrenContract` in
+  `params.ts`), carries them on the IR as `childrenContract`, and tsc owns
+  everything it cannot see: the tag constraint
+  (`keyof HTMLElementTagNameMap`) and the model union are type errors, not
+  diagnostics. A roles declaration present but unreadable — the
+  `Children<…>` type or its roles argument an imported name — is recorded
+  `unreadable` on the contract and changes LTC083's fix copy, which names
+  the readable shapes (an inline type literal or a same-file alias) instead
+  of a role the author may have declared (LT-474 review). A role-addressed
+  reference that matches nothing in a template that inserts `{children}`
+  resolves as an `unmatched` ref — the
+  authored selector, queried from the host, resolves inside the content
+  through the region re-include (ADR 0048 s1) — required included: a
+  required one keeps the throwing query, and the existing runtime check
+  throws its authored reason as `MissingElementError` when the parent
+  passes no such element (channel: runtime, the existing required-ref
+  check, tier 3 Escalated; LT-474 review). Without an insertion the
+  content can never arrive — statically decidable, so the plain handling
+  applies (required → LTC026, optional → LT-123's silence; review 2).
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

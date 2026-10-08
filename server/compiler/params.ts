@@ -19,6 +19,7 @@ import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
 import { ambientRecordViolations } from './fold-inputs'
 import { isOptionalBinding } from './infer-type'
+import type { ChildrenContractIR } from './ir'
 import { CONTEXT_NAMES, FACTORY_CONTEXT_MEMBERS } from './vocabulary'
 
 /** The component function's destructured args parameter, extracted. */
@@ -87,6 +88,7 @@ export const extractParams = (
 	// declared page-ambient members.
 	ctx.diagnostics.push(...ambientRecordViolations(ctx.source, paramsNode))
 	ctx.handlerArgs = readHandlerArgs(ctx, paramsNode)
+	ctx.childrenContract = readChildrenContract(ctx, paramsNode)
 
 	// The factory-context parameter (LT-209): the author's opt IN to precise
 	// context typing. Names shadow the profile ambients at function scope;
@@ -243,6 +245,123 @@ const argTypeOf = (
 		default:
 			return null
 	}
+}
+
+/**
+ * The declared contract of the component's `children` arg (ADR 0048 s2,
+ * LT-474), read from its `Children<Roles, Model>` annotation: the roles the
+ * child may address the passed content through and the declared content
+ * model. The shape is the IR's `ChildrenContractIR` — the record rides the
+ * IR for the analysis layer (LTC083's deferred-reference leg).
+ */
+export type ChildrenContract = ChildrenContractIR
+
+/**
+ * The `Children<…>` type reference in `type`, or null: an inline
+ * reference, or a same-file alias resolving to one (the same
+ * can't-read-it-don't-invent-it posture as `isFunctionType` — tsc owns
+ * everything the compiler cannot see).
+ */
+const childrenReferenceOf = (
+	ctx: ExtractContext,
+	type: AstNode | null,
+	depth = 0,
+): AstNode | null => {
+	if (!type || depth > 8) return null
+	if (type.type !== 'TSTypeReference') return null
+	const name = identifierName(type.typeName)
+	if (name === 'Children') return type
+	const decl = name ? ctx.moduleTypes.get(name) : undefined
+	return decl?.type === 'TSTypeAliasDeclaration' && isNode(decl.typeAnnotation)
+		? childrenReferenceOf(ctx, unwrapType(decl.typeAnnotation), depth + 1)
+		: null
+}
+
+/** A type-literal roles argument: the inline literal, or its same-file alias. */
+const rolesLiteralOf = (
+	ctx: ExtractContext,
+	arg: AstNode | undefined,
+	depth = 0,
+): AstNode | null => {
+	if (!arg || !isNode(arg) || depth > 8) return null
+	if (arg.type === 'TSTypeLiteral') return arg
+	if (arg.type === 'TSTypeReference') {
+		const name = identifierName(arg.typeName)
+		const decl = name ? ctx.moduleTypes.get(name) : undefined
+		const aliased =
+			decl?.type === 'TSTypeAliasDeclaration' && isNode(decl.typeAnnotation)
+				? unwrapType(decl.typeAnnotation)
+				: null
+		return aliased !== null ? rolesLiteralOf(ctx, aliased, depth + 1) : null
+	}
+	return null
+}
+
+/** The declared contract of `children` in the args annotation, or null. */
+export const readChildrenContract = (
+	ctx: ExtractContext,
+	paramsNode: AstNode,
+): ChildrenContract | null => {
+	const member = argTypeOf(ctx, paramsNode.typeAnnotation, 'children')
+	const reference = childrenReferenceOf(ctx, member)
+	// An annotation the compiler cannot see through — an imported alias of
+	// `Children`, a qualified name, an imported custom type — may still
+	// declare roles the author wrote (LT-474 review): recorded as
+	// `unreadable`, so LTC083's copy does not name a role the author
+	// declared. A readable non-reference (`children?: string`) declares no
+	// roles and keeps the plain read.
+	if (!reference)
+		return member?.type === 'TSTypeReference'
+			? { roles: new Map(), model: 'any', unreadable: true }
+			: null
+	const typeArgs = asArray(
+		isNode(reference.typeArguments)
+			? ((reference.typeArguments as AstNode).params as unknown)
+			: [],
+	)
+	const roles = new Map<string, string | null>()
+	const rolesLiteral = rolesLiteralOf(ctx, typeArgs[0] as AstNode | undefined)
+	// A roles argument that is present but unreadable — an imported name,
+	// a union, anything but an inline type literal or its same-file alias —
+	// is the same recorded unreadability (LT-474 review). An ABSENT
+	// argument declares no roles and reads plain.
+	const unreadable = rolesLiteral === null && typeArgs[0] !== undefined
+	if (rolesLiteral)
+		for (const memberNode of asArray(rolesLiteral.members)) {
+			if (memberNode.type !== 'TSPropertySignature') continue
+			const keyNode = isNode(memberNode.key) ? memberNode.key : null
+			const key =
+				identifierName(memberNode.key) ??
+				(keyNode &&
+				keyNode.type === 'Literal' &&
+				typeof keyNode.value === 'string'
+					? keyNode.value
+					: null)
+			if (!key) continue
+			const tag = unwrapType(memberNode.typeAnnotation)
+			roles.set(
+				key,
+				tag &&
+					tag.type === 'TSLiteralType' &&
+					isNode(tag.literal) &&
+					(tag.literal as AstNode).type === 'Literal' &&
+					typeof (tag.literal as AstNode).value === 'string'
+					? ((tag.literal as AstNode).value as string)
+					: null,
+			)
+		}
+	const modelArg = typeArgs[1]
+	const model =
+		modelArg && isNode(modelArg)
+			? modelArg.type === 'TSLiteralType' &&
+				isNode(modelArg.literal) &&
+				(modelArg.literal as AstNode).type === 'Literal' &&
+				((modelArg.literal as AstNode).value === 'any' ||
+					(modelArg.literal as AstNode).value === 'non-interactive')
+				? ((modelArg.literal as AstNode).value as 'any' | 'non-interactive')
+				: null
+			: 'any'
+	return unreadable ? { roles, model, unreadable } : { roles, model }
 }
 
 /**

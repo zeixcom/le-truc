@@ -373,6 +373,7 @@ export const assembleComponentIR = (
 		config: decls.config,
 		root: resolved.root,
 		firstRefs: resolved.firstRefs,
+		...(ctx.childrenContract ? { childrenContract: ctx.childrenContract } : {}),
 		fors: resolved.fors,
 		css: resolved.css,
 		sheetText: resolved.sheetText,

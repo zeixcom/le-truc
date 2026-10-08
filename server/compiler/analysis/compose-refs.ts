@@ -18,8 +18,13 @@
  * entry, and erroring there would make discovery depend on its own output.
  */
 
+import { childrenInsertionsOf } from '../children-region'
 import { diagnostic, type LocalDiagnostic } from '../diagnostics'
-import { inReconcileItem, matchesAuthoredSelectorOn } from '../first-refs'
+import {
+	inReconcileItem,
+	matchesAuthoredSelectorOn,
+	namesDeclaredRole,
+} from '../first-refs'
 import type { ComponentIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
 import { wordingOf } from '../surface'
@@ -39,7 +44,18 @@ export type ComposeRefs =
 	| {
 			mode: 'resolved'
 			registry: ReadonlyMap<string, RegistryEntry>
-			unmatchedOptional: ReadonlyArray<{ name: string; selector: string }>
+			/**
+			 * Refs that matched nothing — optional ones (LT-123) and
+			 * role-addressed ones, required included (ADR 0048 s2, LT-474
+			 * review). `required` picks the query cardinality: a required
+			 * one throws the existing `MissingElementError` at connect when
+			 * the queried markup is absent, an optional one stays silent.
+			 */
+			unmatched: ReadonlyArray<{
+				name: string
+				selector: string
+				required: boolean
+			}>
 			ambiguous: ReadonlySet<TemplateNode>
 	  }
 
@@ -56,9 +72,10 @@ export type ComposeRefs =
  * found" — it has to acknowledge the skip. The resolved result carries the
  * registry it resolved against.
  *
- * `unmatchedOptional` are the OPTIONAL refs that matched nothing:
- * legitimate, and queried from the authored selector verbatim, the same
- * treatment a `firstRefs` `unmatched` stage gets (LT-123). `ambiguous` are
+ * `unmatched` are the refs that matched nothing — legitimate, and queried
+ * from the authored selector verbatim, the same treatment a `firstRefs`
+ * `unmatched` stage gets (LT-123); `required` on each decides the query's
+ * cardinality (ADR 0048 s2, LT-474 review). `ambiguous` are
  * the compose nodes an ambiguous selector matched — already reported here,
  * so `emitComposeEffects` must not ALSO address them by tag or report them
  * again: one authoring mistake, one diagnostic, and LTC027 is the one that
@@ -72,12 +89,16 @@ export const resolveComposeRefs = (
 	// No registry: this is the discovery pass. Resolving is impossible and
 	// not needed — say nothing rather than reporting a false LTC026.
 	if (!composeRegistry) return { mode: 'skipped' }
-	const unmatchedOptional: Array<{ name: string; selector: string }> = []
+	const unmatched: Array<{
+		name: string
+		selector: string
+		required: boolean
+	}> = []
 	const ambiguous = new Set<TemplateNode>()
 	const result: ComposeRefs = {
 		mode: 'resolved',
 		registry: composeRegistry,
-		unmatchedOptional,
+		unmatched,
 		ambiguous,
 	}
 	const deferred = [...component.firstRefs.values()].filter(
@@ -97,8 +118,61 @@ export const resolveComposeRefs = (
 			)
 		})
 		if (matches.length === 0) {
+			// The reach-in check (ADR 0048 s2, LTC083) on the deferred leg: the
+			// selector matched no raw element (why it was deferred, LT-127) and
+			// no composed child either, so in a template that inserts
+			// `{children}` it can only resolve inside the content a parent
+			// passes — a reach-in unless its subject names a declared role. An
+			// unreadable roles declaration changes the fix, not the verdict
+			// (LT-474 review).
+			const insertions = childrenInsertionsOf(component.root)
+			const inserts =
+				insertions.holders.size > 0 ||
+				insertions.forwards.size > 0 ||
+				insertions.unmarked
+			const declared = namesDeclaredRole(
+				ref.selector,
+				new Set(component.childrenContract?.roles.keys() ?? []),
+			)
+			if (inserts && declared === false) {
+				diagnostics.push(
+					diagnostic.childrenReachIn(
+						component.source,
+						ref.at,
+						'first',
+						ref.name,
+						ref.selector,
+						component.childrenContract?.unreadable === true,
+					),
+				)
+				continue
+			}
+			// A role-addressed reference resolves inside the content a parent
+			// passes (ADR 0048 s2), so — in a template that inserts
+			// `{children}` — a no-match here is expected for it, required
+			// or optional (LT-474 review): the client queries the authored
+			// selector from the host — the region re-include finds the
+			// element inside the content (ADR 0048 s1) — and a required
+			// one throws the existing `MissingElementError` with the
+			// authored reason when the parent passes no such element.
+			// Without an insertion the content can never arrive, so the
+			// bypass does not apply (review 2): a required reference
+			// falls through to LTC026, an optional one to LT-123's
+			// silence.
+			if (inserts && declared === true) {
+				unmatched.push({
+					name: ref.name,
+					selector: ref.selector,
+					required: ref.required,
+				})
+				continue
+			}
 			if (!ref.required) {
-				unmatchedOptional.push({ name: ref.name, selector: ref.selector })
+				unmatched.push({
+					name: ref.name,
+					selector: ref.selector,
+					required: false,
+				})
 				continue
 			}
 			diagnostics.push(

@@ -132,6 +132,7 @@ export {
 	setTextPreservingComments,
 } from './src/bindings'
 export {
+	type Children,
 	defineComponent,
 	type FactoryContext,
 	type FormAssociatedCheckboxElement,

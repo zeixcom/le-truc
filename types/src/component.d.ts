@@ -1,8 +1,8 @@
-import { type MemoCallback, type Signal, type SlotDescriptor, type TaskCallback } from '@zeix/cause-effect';
+import { type Cell, type MemoCallback, type Signal, type SlotDescriptor, type TaskCallback } from '@zeix/cause-effect';
 import { type ComponentExtension } from './extension';
 import type { FormAssociatedCheckboxExtension, FormAssociatedExtension } from './extensions/form';
 import { type ProvideContextsHelper, type RequestContextHelper } from './helpers/context';
-import { type ElementQueries } from './helpers/dom';
+import { type AllElements, type ElementFromSingleSelector, type FirstElement } from './helpers/dom';
 import { type OnHelper } from './helpers/events';
 import { type PassHelper, type WatchHelper } from './helpers/reactive';
 import { type ComponentProps, type MethodProducer, type Parser } from './types';
@@ -72,11 +72,69 @@ interface FormAssociatedCheckboxElement extends FormAssociatedElement {
     defaultChecked: boolean;
 }
 /**
+ * The declared contract for the content a parent passes as `children`: the
+ * roles the child may address it through, and optionally the content model.
+ * A role key is a class; its value is the expected tag, which types the
+ * child's `first('.<role>')`/`all('.<role>')` and names the one surface the
+ * child may reach into the content with (LTC083). It stays assignable to
+ * and from the rendered markup string, so `children = ''` defaults and
+ * existing `children?: string` sources keep compiling.
+ *
+ * ```tsx
+ * { children = '' }: { children?: Children<{ tab: 'button'; panel: 'section' }> }
+ * ```
+ *
+ * The compiler reads the roles and the model from this annotation, on both
+ * authored surfaces. Type-only: zero runtime bytes.
+ *
+ * @since 3.0
+ */
+type Children<Roles extends Record<string, keyof HTMLElementTagNameMap> = {}, Model extends 'any' | 'non-interactive' = 'any'> = string & {
+    /** Phantom brand, never assigned — carries the declaration to the types. */
+    readonly __childrenContract?: {
+        readonly roles: Roles;
+        readonly model: Model;
+    };
+};
+/**
+ * The role classes `P`'s `children` prop declares (ADR 0048 s2), or `{}`
+ * when the prop is absent, a plain `string`, or carries no
+ * `Children<…>` annotation the compiler could read.
+ */
+type ChildrenRoles<P> = 'children' extends keyof P ? NonNullable<P['children']> extends Children<infer Roles, infer _Model> ? Roles extends Record<string, keyof HTMLElementTagNameMap> ? Roles : {} : {} : {};
+/** The selectors that name a declared role: `.tab` for `{ tab: … }`. */
+type RoleSelector<Roles> = {
+    [K in keyof Roles & string]: `.${K}`;
+}[keyof Roles & string];
+/** A declared role's tag, resolved through the DOM tag maps. */
+type RoleElement<Roles, S extends string> = S extends `.${infer Role}` ? Role extends keyof Roles ? ElementFromSingleSelector<Roles[Role] & string> : HTMLElement : HTMLElement;
+/**
+ * `first()` over a declared role resolves to the role's tag; every other
+ * selector falls through to the plain selector-string typing. An empty role
+ * set gives the role overloads a `never` parameter, so no call selects one.
+ */
+type RoleFirst<Roles> = {
+    <S extends RoleSelector<Roles> & string>(selector: S, required: string): RoleElement<Roles, S>;
+    <S extends RoleSelector<Roles> & string>(selector: S): RoleElement<Roles, S> | undefined;
+};
+type RoleAll<Roles> = {
+    <S extends RoleSelector<Roles> & string>(selector: S, required?: string): Cell<RoleElement<Roles, S>[]>;
+};
+/**
+ * The query helpers a component's factory sees. When the component's
+ * `children` prop declares roles (ADR 0048 s2), a `first('.<role>')`/
+ * `all('.<role>')` call types as the declared tag's element.
+ */
+type ComponentQueries<P extends ComponentProps> = {
+    first: RoleFirst<ChildrenRoles<P>> & FirstElement;
+    all: RoleAll<ChildrenRoles<P>> & AllElements;
+};
+/**
  * The context object passed to the factory function.
  *
  * Components destructure only what they need.
  */
-type FactoryContext<P extends ComponentProps> = ElementQueries & {
+type FactoryContext<P extends ComponentProps> = ComponentQueries<P> & {
     host: HTMLElement & P;
     /**
      * The `ElementInternals` object, or `null` if `attachInternals()` failed.
@@ -140,4 +198,4 @@ declare function defineComponent<P extends ComponentProps & {
     ...ComponentExtension[]
 ]): CustomElementConstructor | undefined;
 declare function defineComponent<P extends ComponentProps>(name: string, factory: (context: FactoryContext<P>) => void, extensions?: readonly ComponentExtension[]): CustomElementConstructor | undefined;
-export { defineComponent, type FactoryContext, type FormAssociatedCheckboxElement, type FormAssociatedElement, type FormAssociatedValueElement, type FormFactoryContext, type Initializers, type MaybeSignal, };
+export { type Children, defineComponent, type FactoryContext, type FormAssociatedCheckboxElement, type FormAssociatedElement, type FormAssociatedValueElement, type FormFactoryContext, type Initializers, type MaybeSignal, };

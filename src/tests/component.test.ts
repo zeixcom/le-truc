@@ -13,8 +13,17 @@
  */
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { createEffect, createState, createTask } from '@zeix/cause-effect'
-import { defineComponent } from '../component'
+import {
+	type Cell,
+	createEffect,
+	createState,
+	createTask,
+} from '@zeix/cause-effect'
+import {
+	type Children,
+	defineComponent,
+	type FactoryContext,
+} from '../component'
 import {
 	InvalidComponentNameError,
 	InvalidPassPropertyError,
@@ -942,3 +951,62 @@ const globalThisRegistry = (): WeakMap<Element, ElementInternals> =>
 			_elementInternals: WeakMap<Element, ElementInternals>
 		}
 	)._elementInternals
+
+describe('role-typed queries (the Children contract, ADR 0048 s2, LT-474)', () => {
+	// Compile-time pins: the typed local declarations hold only if
+	// `first()`/`all()` on a declared role type as the declared tag's
+	// element, the brand stays assignable to and from the markup string, and
+	// an undeclared tag is refused by the Roles constraint. Read at
+	// `bun run typecheck`; the stubs keep the tests runnable.
+	type TabsProps = {
+		children?: Children<{ tab: 'button'; panel: 'section' }>
+	}
+	const stub = () => undefined
+	const ctx = {
+		first: stub as unknown as FactoryContext<TabsProps>['first'],
+		all: stub as unknown as FactoryContext<TabsProps>['all'],
+	}
+	const plain = {
+		first: stub as unknown as FactoryContext<{ label: string }>['first'],
+	}
+
+	test('first() on a declared role types as the declared tag', () => {
+		const tab: HTMLButtonElement = ctx.first('.tab', 'tab')
+		const maybePanel: HTMLElement | undefined = ctx.first('.panel')
+		const tabs: Cell<HTMLButtonElement[]> = ctx.all('.tab')
+		expect(tab).toBeUndefined()
+		expect(maybePanel).toBeUndefined()
+		expect(tabs).toBeUndefined()
+	})
+
+	test('a selector outside the declared roles keeps the plain typing', () => {
+		const other: HTMLElement | undefined = ctx.first('.nope')
+		const option: HTMLButtonElement = plain.first(
+			'button[role="option"]',
+			'listbox',
+		)
+		expect(other).toBeUndefined()
+		expect(option).toBeUndefined()
+	})
+
+	test('the brand is assignable to and from the markup string', () => {
+		const declared: Children<{ tab: 'button' }> = '<button class="tab">'
+		const asString: string = declared
+		const back: Children = asString
+		const defaulted: Children<{ tab: 'button' }> = ''
+		expect(asString).toBe('<button class="tab">')
+		expect(back).toBe(asString)
+		expect(defaulted).toBe('')
+	})
+
+	test('a role tag outside HTMLElementTagNameMap is refused', () => {
+		// @ts-expect-error 'not-a-tag' is no HTMLElementTagNameMap key
+		type Bad = Children<{ tab: 'not-a-tag' }>
+		const bad: Bad | null = null
+		// @ts-expect-error a plain object is no markup string — the phantom
+		// prop is optional, but `{}` is not assignable to `string`
+		const notAString: Children = {}
+		expect(bad).toBeNull()
+		expect(typeof notAString).toBe('object')
+	})
+})
