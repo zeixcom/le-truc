@@ -245,6 +245,29 @@ LTC056 is LT-358's).
   Accepted as is: no `related` range to the annotation, `all()` named in the copy ahead of the
   surface, and the role overloads' resolution order. The NOTES.md cem-list entry is ruled into LT-513.
 
+  **Reworked:**
+  1. **A required role reference compiles.** Both verification sites resolve a role-addressed reference that matched nothing own-template as the `unmatched` stage, required included (`template-output.ts` raw site, `analysis/compose-refs.ts` deferred leg — the leg's `unmatchedOptional` became `unmatched` with a `required` flag). `analysis/plan.ts`'s unmatched-query loop now emits required ones at `one` cardinality with the authored reason as the message, so the runtime's existing required-ref check throws `MissingElementError` with the authored reason at connect when the parent passes no such element (channel: runtime, the existing check; tier 3 Escalated; no new runtime code). HOST_PROFILE's "write it optional" is dropped. Pinned on both surfaces: the compile is clean and `clientCode` carries the two-argument query (`.tsrx` also pins the IR stage), and the simulation-realm pins connect the compiled client — required throws the authored reason, optional stays silent, `.tsrx` and `.tsx` alike. Side effect of the ruling's wording, flagged for awareness: the required-role bypass is not gated on the template inserting `{children}` — a declared role addresses the content wherever the parent passes it, matching the optional behavior; a non-inserting template with a required role ref therefore compiles and throws at connect instead of failing LTC026.
+  2. **An unreadable roles declaration gets its own message.** `readChildrenContract` records `unreadable: true` on `ChildrenContractIR` when the `children` annotation is a type reference the compiler cannot see through (an imported alias of `Children`, a qualified name) or when a roles argument is present but unreadable (an imported name — the LTC076 posture; a bare `Children` and a plain `string` read plain). In that case LTC083 keeps the code and the condition but the fix copy names the readable shapes (inline type literal or same-file alias) instead of telling the author to declare a role they may have declared. Pinned: contract flag + copy for the imported roles argument and the imported `Children` alias, negatives for bare `Children`/`string`.
+  3. **State the check's population.** HOST_PROFILE's children-contract paragraph, the LTC083 rows in `skills/le-truc/references/errors.md` and `VOCABULARY_LEDGER.md`, and the `LE_TRUC_COMPILER.md` inventory entry now say the check verifies declared `const x = first(…)` references; inline `first()`/`all()` calls and `all()` declarations are not verified, so a reach-in through them is not caught (module-cem-list stays legal per LT-513). The previous handoff's doubt 1 is resolved by finding 1: the required-into-content shape no longer reaches LTC026, whose "adjust the selector" copy stays right for the shapes that still fire it.
+
+  **Check:** all green in the worktree — `test:server` 3624 pass / 0 fail (12 new tests: both surfaces' compile pins, deferred-leg required, unreadable copy pins + negatives, simulation-realm throw/silence on both surfaces), `lint:server` (biome, own paths), `typecheck` exit 0, `check:contract`, `check:corpus`, `build:docs`, `check:links` 775/775. No Playwright run: no example source or served output changed. No `src/` change: the two-argument role overload already types required calls (review-confirmed), so `types/` and `check:size` are untouched. Doubts for the review pass:
+  1. The LTC083 unreadable variant reuses the same code and condition by design (the finding asked for a message change, not a new code); the `DiagnosticCode` union comment still describes the rule as having "no runtime half", which stays true of the diagnostic — the required ref's throw is the pre-existing required-ref channel, now stated in the ledger row.
+  2. The unreadable read is same-file only, per LTC076's posture: an interface-named `children` annotation also records unreadable (a type reference the compiler cannot see through); an intersection like `Children<…> & string` still reads as no contract (pre-rework behavior, not widened).
+  3. The plan-level query bypasses `addQuery`'s dedup exactly as the optional path always did; a required role ref whose authored selector collides with another construct's `one` query would emit two locals querying the same selector — harmless (both throw or both resolve), pre-existing shape.
+  **Review (2nd, 2026-10-08, owner-confirmed):** Changes requested. Findings 1–3 are resolved, and
+  the rework's three doubts are accepted as is (one LTC083 code for both copies, intersections
+  reading as no contract, the undeduplicated required query). One finding remains:
+  4. **The role bypass requires a `{children}` insertion.** The new `declared === true` branch at
+     both verification sites ignores whether the template inserts `{children}`, so a required
+     role reference in a template with no insertion compiles and throws `MissingElementError` at
+     every connect: the content can never arrive. That is statically decidable and was LTC026
+     before the rework (ADR 0028: decidable checks belong to the compiler). Gate both branches on
+     the insertion, as LTC083 is: `insertsChildren && declared === true` in `template-output.ts`
+     and `inserts && declared === true` in `analysis/compose-refs.ts`. Without an insertion, a role
+     reference falls through to the existing handling (required → LTC026, optional → LT-123's
+     silence). Pin it on both surfaces: a required role reference in a template without
+     `{children}` fails LTC026.
+
 - [ ] LT-477: Content model — `Children<Roles, 'non-interactive'>` refuses interactive content at the compose site (ADR 0048 s4; LTC085).
   **Area:** compiler
   **Needs:** LT-474
