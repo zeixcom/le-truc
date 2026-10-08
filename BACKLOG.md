@@ -1411,10 +1411,11 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
      reason states the markup's source: `script` (naming the module) or `page` (naming the
      page). An unmatched finding fails, and so does a stale entry. If LT-508 has landed, share
      its allowlist matcher; otherwise build one LT-508 can reuse.
-  **Check:** on `v3` after LT-507, the gate passes with exactly five allowlist entries:
-  module-todo `&.dragging` and `&.drop-marker` (script), and form-listbox `module-scrollarea`,
-  `[role="group"]` and `[role="presentation"]` (page). Reverting LT-507 makes the gate fail on
-  the seven removed selectors. Unit tests cover the matcher (a combinator chain the template
+  **Check:** on `v3` after LT-507, the gate passes with exactly seven allowlist entries:
+  module-todo `&.dragging` and `&.drop-marker` (script), form-listbox `module-scrollarea`,
+  `[role="group"]` and `[role="presentation"]` (page, `form-listbox.html`), and form-spinbutton
+  `fieldset > input` and `fieldset > button` (page, `docs-src/pages/data-flow.md`). Reverting
+  LT-507 makes the gate fail on the six removed selectors. Unit tests cover the matcher (a combinator chain the template
   lacks is dead; a `children` region, a dynamic class or `:hover` keeps it alive) and the
   allowlist (unmatched fails, stale fails). Report the gate's wall time.
   **Channel/tier:** none. A corpus gate over authored sheets and templates; its verdict depends on
@@ -1537,3 +1538,23 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
   test injects a list template whose item is valid only inside its container and asserts no
   finding, then one invalid in its container and asserts the finding.
   **Channel/tier:** none. A corpus gate; no runtime check and no `LTC` code.
+
+- [ ] LT-511: Corpus — delete hand-written component sheets that no twin serves.
+  **Area:** compiler
+  **Gates:** test:server, check:corpus, test:variants, build:docs, check:links
+  **Area:** compiler
+  **Filed (Architect, 2026-10-08; LT-507 review):** ADR 0033 s10 serves a folder's hand-written
+  `.css` only with its `.ts` twin, and `examples/main.css` imports the compiler's emitted sheet for
+  every compiled folder. 22 folders keep a `.css` with no `.ts` twin beside it, sheets from before
+  their twins were retired: basic-button, basic-gauge, basic-hello, card-blogpost, card-callout,
+  card-collapsible, card-colorscale, form-checkbox, form-colorgraph, form-combobox,
+  form-inplace-edit, form-listbox, form-radiogroup, form-spinbutton, form-textbox, form-tokenbox,
+  module-blogarchive, module-demo, module-list, module-tabgroup, section-hero and section-menu's
+  `chapter-nav.css`. They drift from the authored sheets (LT-504 and LT-507 edited the sources,
+  not these), and a reader can mistake one for the component's CSS.
+  **Do:** for each file, confirm that nothing reads it: no `@import`, spec, build or corpus script,
+  docs page (a source listing or `{% demo %}`), or `le-truc.config.json` entry. Delete the files
+  nothing reads. Report any that are read, and by what.
+  **Check:** `build:docs` and `check:links` green; `test:variants` and the component specs pass;
+  the served `docs/assets/main.css` is byte-identical to `v3`'s.
+  **Channel/tier:** none. Corpus housekeeping.
