@@ -186,25 +186,6 @@ LTC056 is LT-358's).
 
 ### C — children contract
 
-- [ ] LT-477: Content model — `Children<Roles, 'non-interactive'>` refuses interactive content at the compose site (ADR 0048 s4; LTC085).
-  **Area:** compiler
-  **Needs:** LT-474
-  **Gates:** check:corpus, check:contract
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, LT-462 session; owner ruling (c), second type argument):**
-  1. **Interactive content** means: `a[href]`, `button`, `input` (except `type="hidden"`),
-     `select`, `textarea`, `label`, `details`, `iframe`, any `[tabindex]`, and `audio`/`video`
-     with `controls`.
-  2. **Registry.** The compose registry gains `interactive: boolean` per component, set when its
-     template contains such an element, transitively through its own composed children.
-  3. **LTC085.** A compose site of a child that declares `'non-interactive'` is an error when its
-     literal children contain interactive content or compose an interactive component.
-     - Channel/tier: compiler, Prevented (ADR 0028).
-     - The message names the offending element or component and the child's declaration.
-  4. **Documentation.** Document in HOST_PROFILE that page-authored HTML is unchecked and that
-     TypeScript cannot carry the check.
-  **Copy:** to `../writer/references/error-messages.md`.
-
 - [ ] LT-479: module-todo composes `<FormCheckbox>` with its label as non-interactive children.
   **Area:** examples
   **Needs:** LT-463, LT-464, LT-477
