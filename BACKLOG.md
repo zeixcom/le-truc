@@ -1582,3 +1582,33 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
   (`test:component module-cem-list`, and the filter narrows the list on the built docs page).
   Variant sets stay byte-identical.
   **Channel/tier:** none. Corpus authoring under the existing LTC083.
+
+- [ ] LT-514: Form components and BasicButton take their visible label as non-interactive children.
+  **Area:** examples
+  **Needs:** LT-477, LT-479
+  **Gates:** check:corpus, test:variants, typecheck, build:docs
+  **Area:** examples
+  **Filed (Architect, 2026-10-09; owner ruling on BasicButton, this session):** LT-479 lets FormCheckbox take its label as children. This task does the same for the other corpus components whose visible label is a `string` arg rendered as a text node, where the raw HTML element would accept phrasing content. The pattern is ADR 0048 s4: `children?: Children<{}, 'non-interactive'>`. LT-479 keeps a reactive `label` beside the children for FormCheckbox; here only BasicButton keeps one (item 2), because no form component in item 1 exposes its label. Change every member of each variant set (ADR 0039) and keep the CSS byte-identical.
+  1. **Form components: `label` (`legend`) becomes `children`.** Remove the string arg and insert `{children}` where the arg was rendered:
+     - `form-textbox`, `form-combobox` (both the `.tsrx` and the `.tsx` member) and `form-tokenbox`: `<label for={inputId}>{label}</label>`.
+     - `form-spinbutton`: the label is optional, so `@if (label)` becomes a test on `children`.
+     - `form-radiogroup`: `<legend>{legend}</legend>`. The options' `option.label` is list-item data and stays a string.
+     None of these components exposes its label, so the change touches no client code.
+  2. **BasicButton gets both.** `label` stays as the reactive text prop: it is exposed, and module-ticker's `.ts` twin `pass()`es it at runtime. Add `children?: Children<{}, 'non-interactive'>` for rich static content such as an icon plus text. `span.label` renders the passed children when present, otherwise `{label}`. Writing `label` at runtime replaces the rich content with text; document this on the arg's JSDoc. Existing `label=` compose sites stay valid.
+  3. **Compose sites.** Move every compiled compose site of a form component in item 1 from `label=`/`legend=` to passed children: the `examples/` sources and `server/tests/compiler/imported-setup-helper.test.ts`. Page-authored `.html` markup is unaffected.
+  4. **Out of scope:** `aria-label`-style args (`form-listbox`'s `ariaLabel`), `description` args (a description may legitimately hold a link, and a component has only one `children` region), and the card components' `label`.
+
+  **Channel/tier:** no new check. LTC085 (LT-477) already refuses interactive content at these compose sites. Any remaining interactive site is a `NOTES.md` entry, not a workaround.
+  **Check:** `test:component` for each changed component and its composers is unchanged. `check:corpus` and `test:variants` stay green.
+
+- [ ] LT-515: Lazy children in composed content — the reactive half of ADR 0048 s1's grant.
+  **Area:** design
+  **Needs:** LT-477
+  **Area:** design
+  **Filed (Architect, 2026-10-09, from the LT-479 block; owner asked for it to be filed):** ADR 0048 s1 grants a parent "structure, text, bindings and `first()` references" in the content it passes. Today the lowering substitutes compose content once, at compile time, into the child's `children` server arg. `validateComposedChildren` refuses any reactive child with LTC011 ("A lazy child (`{expr}`) in a composed element's content is not supported yet"), except an async boundary's catch parameter (LT-460). So a parent cannot pass live text, such as module-todo's `{() => item.label.get()}` per list item. The only live channel today is a pass-able prop beside the children (the LT-479/LT-514 shape).
+  **Questions to settle before this becomes buildable:**
+  - **Re-render:** how a lazy child in passed content updates through the substitution boundary, both at page level and per clone in a reactive list item (ADR 0046). The parent owns the content, so the parent's client binds it. The open part is how the parent's client addresses a text site inside the child's inserted region.
+  - **Arms:** whether reactive conditionals in passed content become legal (arm emission inside a region the child inserts).
+  - **LTC085:** its composed-component leg and the `interactive` flag once nesting is admitted (LT-477, review doubt 1).
+  - **Channel/tier:** for whatever stays refused.
+  **Not in scope:** interactive content and child-owned `id`/`for`, which stay the child's template (ADR 0048 s4).

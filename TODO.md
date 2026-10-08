@@ -172,7 +172,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-514.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Next free task ID: LT-516.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -186,43 +186,24 @@ LTC056 is LT-358's).
 
 ### C — children contract
 
-- [ ] LT-479: module-todo composes `<FormCheckbox>` with its label as non-interactive children.
+- [ ] LT-479: FormCheckbox takes its label as non-interactive children beside a reactive `label` prop; module-todo stays raw. — in progress ⚙
   **Area:** examples
   **Needs:** LT-463, LT-464, LT-477
   **Gates:** check:corpus, test:variants
   **Area:** examples
-  **Filed (Architect, 2026-10-06, split from LT-463; owner ruling (c) in LT-462):**
-  1. **form-checkbox.** Takes its label as `children: Children<{}, 'non-interactive'>`, inserted
-     where its template renders the label text. Change it in every variant-set member, and keep
-     the CSS byte-identical (ADR 0039).
-  2. **module-todo.** Replace its raw `<form-checkbox>` markup with `<FormCheckbox>`, passing the
-     label as children.
-  LT-466 has already moved the in-place editor out of the label, so the children are
-  non-interactive and LTC085 passes. A remaining interactive site is a `NOTES.md` entry, not a
-  workaround.
-  **Sequence:** module-todo's fourth edit, after LT-466 → LT-467 → LT-463 (ruling 5).
-  **Check:** `test:component form-checkbox module-todo` is unchanged.
+  **Filed (Architect, 2026-10-06, split from LT-463; owner ruling (c) in LT-462). Re-scoped 2026-10-09 after the contributor's block (owner ruling; same shape as LT-514's BasicButton ruling):**
+  module-todo cannot compose `<FormCheckbox>`. Its checkbox label is live per item (`{() => item.label.get()}`), but passed children are substituted once at compile time (LTC011 refuses a lazy child), and the items are cloned from an empty server render. module-todo's raw `<form-checkbox>` is also the acceptance check for key-derived `id`/`for` (LT-111) and per-item passes, and `module-todo.spec.ts` pins that shape. So module-todo stays raw, and this task delivers the contract only.
+  1. **form-checkbox: children plus a reactive label.** Add `children?: Children<{}, 'non-interactive'>` for static rich label content.
+     - `label` becomes optional. It stays as the reactive text prop: expose it, and add it to the `'truc:pass'` compose surface beside `checked`, so a parent can pass it live. BasicButton's `label` is the precedent.
+     - `span.label` renders the passed children when present, otherwise `{label}`.
+     - Writing `label` at runtime replaces rich content with text. Say so on the arg's JSDoc.
+     - Change both variant-set members (`.tsrx`, `.tsx`). The template keeps its wrapping `<label>`, and the CSS stays byte-identical (ADR 0039).
+  2. **test-listitem** is the composing consumer. Change both its `.tsrx` and `.tsx` members from `label="Done"` to passed children (`<FormCheckbox …>Done</FormCheckbox>`). The rendered DOM is unchanged.
+  3. **module-todo** is unchanged. Replace the stale "switch to children" wording in its header, and in the twin's, with one line: the site stays raw because its label is live per item and passed children are static. LT-515 tracks lazy children in composed content.
+  **Channel/tier:** no new check. LTC085 (LT-477) polices the children.
+  **Check:** `test:component form-checkbox module-todo test-listitem` is unchanged. `check:corpus` and `test:variants` stay green.
 
 ### C2 — role writers
-
-- [ ] LT-476: One writer per property — parent bindings on a child-written role property conflict (ADR 0048 s3; LTC084).
-  **Area:** compiler
-  **Needs:** LT-474, LT-477
-  **Gates:** check:corpus, check:contract
-  **Area:** compiler
-  **Needs:** LT-474, LT-477
-  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s3):**
-  - **Registry.** The compose registry records, per child, the role properties its client writes:
-    the role-targeted `watch` bindings (`bindProperty`, `bindAttribute`, `bindText`, `bindClass`,
-    `bindVisible`, `bindStyle`, `bindAria`). `on()` return updates write host props, so they are
-    out of scope.
-  - **Check.** A parent binding on an element of its passed children that carries that role's
-    class and binds the same property, attribute, class token or style property is LTC084.
-  - **Channel/tier:** compiler, Prevented (ADR 0028).
-  - **Where it reports:** at the parent's binding. The message names both writers.
-  - **Copy:** to `../writer/references/error-messages.md`.
-  **Check:** both surfaces. Pin a passing fixture where the parent binds a different property on
-  the same role.
 
 - [ ] LT-512: A composed child's `children` shape is not a clash for a reference into the owner's own region; hand-authored markup mirrors the render.
   **Area:** compiler
