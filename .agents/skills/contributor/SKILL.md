@@ -70,6 +70,7 @@ The **full gate**, required before an iteration milestone, is: `typecheck`, the 
 - **Keep the library boundary.** If a feature needs no DOM API, it belongs in `@zeix/cause-effect`, not here (`references/runtime.md`).
 - **Brand parsers and method producers.** Use `asParser()` and `defineMethod()`. An unbranded function silently becomes a memo.
 - **Add a regression test with every fix.** Before you treat a symptom as a bug, check `AGENTS.md` and `references/runtime-internals.md`. Many reports describe documented behavior.
+- **Leave `CHANGELOG.md` to `writer`.** The changelog is recorded once per iteration, after every task is reviewed, from the task entries. Put the user-facing facts on your `**Changed:**` line instead; a task branch that edits the changelog has the edit dropped at review.
 - **Update the docs your change makes stale**, in the same change: JSDoc, `SERVER.md`, `HOST_PROFILE.md`, `LE_TRUC_COMPILER.md` or the pages. Ask for `writer` only for larger prose work. Never hand-edit the generated files: `docs-src/api/` and `docs/`.
 
 ## Protected files and the sandbox
