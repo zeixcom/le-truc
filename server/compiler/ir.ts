@@ -1111,7 +1111,8 @@ export type ComposedMarkup = {
  * `querySelector` descends into at runtime. `attrs` are the static
  * attributes; `dynamic` names attributes whose value is only known at render
  * time (they may match anything). `compose` stands for a composed child's
- * own shapes, resolved through the registry; `any` for markup the template
+ * own shapes, resolved through the registry, with the attributes its
+ * compose site adds to the child's host; `any` for markup the template
  * cannot know (a `truc:html` site); `children` for a `{children}` insertion,
  * as unknown as `any` except where the content's owner is known — inside a
  * composing parent's closure, where the content is the parent's own markup
@@ -1124,6 +1125,16 @@ export type RenderedShape =
 			attrs: Record<string, string | null>
 			dynamic: string[]
 	  }
-	| { kind: 'compose'; source: string }
+	| {
+			kind: 'compose'
+			source: string
+			/**
+			 * The compose site's static attributes and the names of its
+			 * dynamic `class`/`id`/`data-*` ones (LT-505): they land on the
+			 * composed child's host, so they merge into it there.
+			 */
+			attrs: Record<string, string>
+			dynamic: string[]
+	  }
 	| { kind: 'any' }
 	| { kind: 'children' }
