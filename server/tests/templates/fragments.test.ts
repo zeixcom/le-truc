@@ -103,6 +103,20 @@ describe('tabPanel', () => {
 		)
 	})
 
+	test('marks the panel content as the codeblock-owned region (LT-478)', () => {
+		// The compiled module-codeblock client only enhances pre/code inside
+		// its data-children region, so the served fragment carries the same
+		// wrapper the composed template renders.
+		const panel = mockPanel({
+			type: 'ts',
+			content: '<pre class="shiki"><code>export const x = 1</code></pre>',
+		})
+		const result = tabPanel({ name: 'widget', panel })
+		expect(result).toContain(
+			'<div data-children="module-codeblock"><pre class="shiki"><code>export const x = 1</code></pre></div>',
+		)
+	})
+
 	test('adds hidden attribute for non-selected panel', () => {
 		const result = tabPanel({
 			name: 'widget',

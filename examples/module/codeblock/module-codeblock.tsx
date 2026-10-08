@@ -5,8 +5,12 @@
  *
  * The template renders what the docs' fence schema and tab-panel fragment
  * author by hand: a `.meta` line, the highlighted code inside a horizontal
- * `module-scrollarea`, a composed copy button, and — only when collapsed —
- * the expand overlay. `children` is the code's highlighted markup.
+ * `ModuleScrollarea` (composed; its `<div>` wraps the passed markup), a
+ * composed copy button, and — only when collapsed — the expand overlay.
+ * `children` is the code's highlighted markup. The `pre`/`code` rules sit
+ * in the `@scope` block, because content the component passes as children
+ * is its own markup and its scoped rules reach it as descendants
+ * (ADR 0033 s5, ADR 0048).
  *
  * The copy effect is a raw `EffectDescriptor`, so it registers through
  * `watch(() => true, …)` (AGENTS.md): called bare, as the twin did before
@@ -18,6 +22,7 @@ import { asBoolean, bindAttribute, type FactoryContext } from '@zeix/le-truc'
 import { css } from '@zeix/le-truc-compiler/macros'
 import { BasicButton } from '../../basic/button/basic-button.tsrx'
 import { copyToClipboard } from '../../basic/button/copyToClipboard'
+import { ModuleScrollarea } from '../scrollarea/module-scrollarea.tsx'
 
 export type ModuleCodeblockProps = {
 	/** Whether the code block is collapsed (truncated). Read from the `collapsed` attribute at connect time. */
@@ -105,11 +110,11 @@ export function ModuleCodeblock(
 				{file && <span class="file">{file}</span>}
 				<span class="language">{language}</span>
 			</p>
-			<module-scrollarea orientation="horizontal">
+			<ModuleScrollarea orientation="horizontal">
 				<pre>
 					<code class={`language-${language}`}>{children}</code>
 				</pre>
-			</module-scrollarea>
+			</ModuleScrollarea>
 			<BasicButton class="copy" label="Copy" size="small" />
 			{collapsed && (
 				<button
@@ -123,18 +128,6 @@ export function ModuleCodeblock(
 			)}
 
 			<style>{css`
-			module-codeblock pre {
-				font-size: var(--font-size-s);
-				padding-block: var(--space-s);
-				border-radius: var(--space-s);
-			}
-
-			module-codeblock code {
-				padding-inline: var(--space-s);
-				display: block;
-				line-height: var(--line-height-l);
-			}
-
 			@scope to (basic-button > *) {
 				:where(:scope) {
 					--module-codeblock-color-background: #272822;
@@ -160,6 +153,18 @@ export function ModuleCodeblock(
 				.language {
 					margin-left: auto;
 					text-transform: uppercase;
+				}
+
+				pre {
+					font-size: var(--font-size-s);
+					padding-block: var(--space-s);
+					border-radius: var(--space-s);
+				}
+
+				code {
+					padding-inline: var(--space-s);
+					display: block;
+					line-height: var(--line-height-l);
 				}
 
 				.copy {

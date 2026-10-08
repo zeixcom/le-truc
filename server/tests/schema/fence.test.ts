@@ -273,13 +273,33 @@ describe('fence schema - code placeholder', () => {
 		const scrollArea = result.children.find(
 			child => child instanceof Tag && child.name === 'module-scrollarea',
 		) as Tag
-		const preElement = scrollArea.children[0] as Tag
+		const region = scrollArea.children[0] as Tag
+		const preElement = region.children[0] as Tag
 
 		expect(scrollArea).toBeDefined()
 		expect(scrollArea.attributes.orientation).toBe('horizontal')
 		expect(preElement).toBeDefined()
 		expect(preElement.attributes['data-language']).toBe('typescript')
 		expect(preElement.attributes['data-code']).toBe(code)
+	})
+
+	test('marks the pre as the codeblock-owned region inside the scrollarea (LT-478)', () => {
+		// The compiled template composes <ModuleScrollarea> around the
+		// pre/code, and the compiled client's element queries reach the code
+		// only through the data-children region — hand-authored markup on
+		// docs pages must carry the same wrapper or enhancement is lost.
+		const node = new Node('fence', { content: 'code', language: 'typescript' })
+
+		const result = fence.transform!(node, {}) as Tag
+		const scrollArea = result.children.find(
+			child => child instanceof Tag && child.name === 'module-scrollarea',
+		) as Tag
+		const region = scrollArea.children[0] as Tag
+		const preElement = region?.children[0] as Tag
+
+		expect(region.name).toBe('div')
+		expect(region.attributes['data-children']).toBe('module-codeblock')
+		expect(preElement.name).toBe('pre')
 	})
 
 	test('should create code element with language class', () => {
@@ -292,7 +312,8 @@ describe('fence schema - code placeholder', () => {
 		const scrollArea = result.children.find(
 			child => child instanceof Tag && child.name === 'module-scrollarea',
 		) as Tag
-		const preElement = scrollArea.children[0] as Tag
+		const region = scrollArea.children[0] as Tag
+		const preElement = region.children[0] as Tag
 
 		const codeElement = preElement.children[0] as Tag
 
@@ -311,7 +332,8 @@ describe('fence schema - code placeholder', () => {
 		const scrollArea = result.children.find(
 			child => child instanceof Tag && child.name === 'module-scrollarea',
 		) as Tag
-		const preElement = scrollArea.children[0] as Tag
+		const region = scrollArea.children[0] as Tag
+		const preElement = region.children[0] as Tag
 
 		const codeElement = preElement.children[0] as Tag
 
