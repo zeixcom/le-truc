@@ -119,8 +119,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   same-tag elements. LT-498 (from LT-496's review) closes the same blind spot in the other
   discriminator callers and in composed children's own templates. Done (2026-10-07).
 - **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 (done) → LT-501 → LT-502 →
-  LT-504 → LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-504 move compiled CSS to
-  authored `@scope` (ruling 14); LT-504 retires the corpus's 2.x child chains. LT-478 styles its passed content under that contract.
+  LT-504 → LT-505 → LT-506 → LT-507 → LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-504 move compiled CSS to
+  authored `@scope` (ruling 14); LT-504 retires the corpus's 2.x child chains. LT-505–LT-507 complete the leak warning, add the dead-rule warning (LTC090) and remove the corpus's dead rules (owner ruling on LT-504). LT-478 styles its passed content under that contract.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. Done
   (2026-10-07). LT-136 closed with a pinning test: LTC005 already refuses the shadowed read.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. Done
@@ -152,7 +152,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-505.** Next free diagnostic code: LTC090 (LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Next free task ID: LT-508.** Next free diagnostic code: LTC091 (LTC090 is reserved for LT-506; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -166,52 +166,103 @@ LTC056 is LT-358's).
 
 ### C — children contract
 
-- [ ] LT-504: Corpus — relative `> x` selectors in component `@scope` blocks become bare where limits keep computed styles; the native emission anchors the rest.
+- [ ] LT-505: LTC087 sees the static attributes at a nested compose site, so a parent's `.hue` reaching a grandchild host's `class="hue"` warns.
   **Area:** compiler
-  **Needs:** LT-502
-  **Gates:** test:server, typecheck, check:corpus, test:variants, build:docs, check:links
+  **Needs:** LT-504
+  **Gates:** test:server, typecheck, check:corpus
   **Area:** compiler
-  **Needs:** LT-502
-  **Filed (Architect, 2026-10-08; owner ruling):** the corpus's direct-child chains (`> button`,
-  `> .input > input`) are a 2.x workaround. They kept the cascade on owned elements because
-  there were no scope limits. Under authored `@scope` with limits, a bare selector does the same
-  job. This is a gap in the original corpus, written before native `@scope` reached every
-  evergreen browser. It also breaks native builds: `bun build examples/main.css` (lightningcss)
-  rejects a relative selector at the top of `@scope`, although the platform accepts it (LT-502
-  handoff: module-dialog, module-tabgroup).
+  **Needs:** LT-504
+  **Filed (Architect, 2026-10-08; LT-504 review):** `leakChildrenFor`
+  (`server/compiler/analysis/selectors.ts`) recurses into a child's own composed children, but
+  the nested call passes an empty site map (`build(shape.source, new Map(), inner)`). The
+  `compose` variant of `RenderedShape` (`server/compiler/ir.ts`) records only `source`, so the
+  attributes written at a compose site inside a child's template are lost. Confirmed: with
+  module-coloreditor's limit removed, bare `.hue` reaches form-colorgraph's
+  `<FormSpinbutton class="hue">` and module-colorinfo's `<BasicNumber class="hue">`, and LTC087
+  stays silent. The top-level compose sites already merge their static attributes
+  (`composeStaticAttrs`).
   **Do:**
-  1. **Corpus.** In every compiled source, both surfaces and every variant-set member, rewrite
-     each selector that reaches owned elements through a child chain from the scope root to the
-     bare form: `> button` becomes `button`, and `> .input > input` becomes `.input input`. This
-     covers relative selectors at the top of a `@scope` block and chains nested directly in the
-     `:where(:scope)` rule.
-     - Where the bare form reaches into a composed child, add `to (<child-tag> > *)`. LTC087
-       names those cases.
-     - Where the bare form also matches the component's own deeper markup and would change a
-       computed style, keep the chain, or use a class that already exists in the template. List
-       each kept chain with its reason in the handoff.
-     - Variant sets stay byte-identical.
-  2. **Native emission.** A relative selector at the top of a component `@scope` block, which
-     is valid CSS and stays legal to author, emits as `:where(:scope) <combinator> …`. That is
-     its implicit form, with the same specificity, and every lightningcss-based bundler accepts
-     it. The lowered emission already reads it this way (`anchorRelativeSelectors`). Pin it in
-     `css-scope.test.ts`.
-  **Check:** a computed-style diff of every served example page (lowered, Chromium, `v3` HEAD vs
-  branch, LT-501's procedure) shows zero differences outside module-ticker's live data. With a
-  temporary native `cssTargets` config, `bun build examples/main.css` passes. Report the byte
-  delta of the lowered CSS.
-  **Channel/tier:** none. The task adds no check: the rewrite is corpus authoring, and the
-  emission change makes a valid form portable to lightningcss-based bundlers.
+  1. Give the `compose` shape the site's static attributes and its dynamic attribute names,
+     recorded by `renderedShapesOf` the way an `element` shape records them.
+  2. In `leakChildrenFor`, merge them into the nested child's host exactly as the top-level
+     call does (class values concatenate). A dynamic attribute stays a possible match, as for
+     elements.
+  3. Pin it in the selectors or pipeline tests: a parent rule on a class set only at a
+     grandchild's compose site warns, and the authored limit on the intermediate child
+     silences it.
+  **Check:** with module-coloreditor's limit removed, `check:corpus` reports LTC087 for `.hue`,
+  `.lightness` and `.chroma`; restored, the baseline is unchanged. No new tree walk: the shapes
+  are computed once per component in the registry pass, and matching tests the same elements
+  as before, now with complete attributes.
+  **Channel/tier:** compiler, tier 2 (Contained) — the existing LTC087; no new code.
+
+- [ ] LT-506: LTC090 — a scoped rule that provably matches nothing the component renders warns (dead rule).
+  **Area:** compiler
+  **Needs:** LT-505
+  **Gates:** test:server, typecheck, check:corpus
+  **Area:** compiler
+  **Needs:** LT-505
+  **Filed (Architect, 2026-10-08; owner ruling on LT-504):** LT-504 found rules in the corpus
+  that match no element in any form, 2.x leftovers: form-combobox `> button` (top level and under
+  `:focus-within`), form-spinbutton `fieldset { > input, > button }`, module-coloreditor `.hue`,
+  `.lightness` and `.chroma`. The compiler knows what a component renders, so it can name them
+  (ADR 0033 s5, *Dead rule*). LTC071 already rejects a rule a limit excludes on the selector
+  alone; this warning uses the template.
+  **Do:**
+  1. **The check.** For each selector-list member of each style rule in a component's `@scope`
+     block (a dead member in a live list counts: combobox's `label, p, > button`), decide whether its full
+     selector — combinators included, not the subject alone as LTC087 tests — can match an
+     element of the rendered tree: the component's own template (every arm, every list item
+     template, the host as `:scope`) plus each composed child's rendered shapes that no authored
+     limit excludes, with the compose site's attributes (LT-505). Warn only when no element can
+     match. Precision over recall; each of these keeps a rule alive:
+     - the selector could reach a `children` region or an `any` shape (passed content, `truc:html`,
+       markup the compiler cannot see);
+     - a dynamic attribute or class on a candidate element;
+     - a pseudo-class that depends on state or structure the compiler does not track (`:hover`,
+       `:user-invalid`, `:state()`, `:nth-child()`, …): treat it as matching;
+     - a structure the matcher cannot place (composed children's shapes carry no parent chain):
+       treat any combinator into a child's subtree as matching.
+     Rules outside `@scope`, nested `@scope` blocks and own-tag-led top-level rules are out of
+     scope.
+  2. **The diagnostic.** `LTC090`, tier 2 (Contained); the CSS ships as authored. The message
+     names the selector and says it matches nothing the component renders; the fix is to remove it
+     or correct the selector. Add the row to `skills/le-truc/references/errors.md` and the line
+     to HOST_PROFILE § Styles.
+  3. **Tests.** The corpus deficits above are the first fixtures: each warns, and a near variant
+     that matches (the chain written bare, a dynamic class, a `children` region in reach) does
+     not.
+  **Check:** `check:corpus` reports LTC090 for exactly the selectors above and nothing else. The
+  warning baseline rises by them until LT-507 removes them (ruling 8 exception, this task only).
+  Report the compile-time cost on the corpus (`check:corpus` wall time, v3 vs branch).
+  **Channel/tier:** compiler, tier 2 (Contained). Statically decidable only where the template is
+  fully known, hence a warning, not an error.
+
+- [ ] LT-507: Corpus — remove the dead rules LTC090 names, on every surface.
+  **Area:** compiler
+  **Needs:** LT-506
+  **Gates:** test:server, typecheck, check:corpus, test:variants, build:docs
+  **Area:** compiler
+  **Needs:** LT-506
+  **Filed (Architect, 2026-10-08; owner ruling on LT-504):** remove every selector LTC090 reports (and a rule left with none) in
+  the corpus, in each compiled source, both surfaces and every variant-set member (byte-identical).
+  A hand-written twin's `.css` is the 2.x artifact; remove the same rules there only where the
+  twin's markup also leaves them dead.
+  **Check:** `check:corpus` reports no LTC090 and the warning baseline is back to 1 (module-dialog's
+  `body.scroll-lock`). A computed-style diff of every served example page (lowered, Chromium, v3
+  vs branch, LT-501's procedure) shows zero differences outside live data. Report the lowered
+  CSS byte delta.
+  **Channel/tier:** none. Corpus authoring.
 
 - [ ] LT-503: Writer pass over the platform-CSS contract — error copy and styling docs (ADR 0033 as revised).
   **Area:** docs
-  **Needs:** LT-502, LT-504
+  **Needs:** LT-502, LT-504, LT-507
   **Gates:** build:docs, check:links
   **Area:** docs
-  **Needs:** LT-502, LT-504
+  **Needs:** LT-502, LT-504, LT-507
   **Filed (Architect, 2026-10-07):** LT-501 and LT-502 write first-draft copy and update the
   docs to the contract. This pass makes it one voice:
-  - the messages of LTC066, LTC069, LTC071, LTC086, LTC087, LTC088 and LTC089 per
+  - the messages of LTC066, LTC069, LTC071, LTC086, LTC087, LTC088, LTC089 and LTC090 per
     `references/error-messages.md`, plus the `skills/le-truc` errors rows;
   - `docs-src/pages/styling.md`, which now teaches `@scope { … }`, author-written limits,
     `:where(:scope)` for page-overridable host rules, and the shadow-mode translation;
@@ -319,79 +370,51 @@ LTC056 is LT-358's).
   **Sequence:** module-todo's fourth edit, after LT-466 → LT-467 → LT-463 (ruling 5).
   **Check:** `test:component form-checkbox module-todo` is unchanged.
 
-- [ ] LT-504: Corpus — relative `> x` selectors in component `@scope` blocks become bare where limits keep computed styles; the native emission anchors the rest.
+- [ ] LT-505: LTC087 sees the static attributes at a nested compose site, so a parent's `.hue` reaching a grandchild host's `class="hue"` warns.
   **Area:** compiler
-  **Needs:** LT-502
-  **Gates:** test:server, typecheck, check:corpus, test:variants, build:docs, check:links
+  **Needs:** LT-504
+  **Gates:** test:server, typecheck, check:corpus
   **Area:** compiler
-  **Needs:** LT-502
-  **Filed (Architect, 2026-10-08; owner ruling):** the corpus's direct-child chains (`> button`,
-  `> .input > input`) are a 2.x workaround. They kept the cascade on owned elements because
-  there were no scope limits. Under authored `@scope` with limits, a bare selector does the same
-  job. This is a gap in the original corpus, written before native `@scope` reached every
-  evergreen browser. It also breaks native builds: `bun build examples/main.css` (lightningcss)
-  rejects a relative selector at the top of `@scope`, although the platform accepts it (LT-502
-  handoff: module-dialog, module-tabgroup).
+  **Needs:** LT-504
+  **Filed (Architect, 2026-10-08; LT-504 review):** `leakChildrenFor`
+  (`server/compiler/analysis/selectors.ts`) recurses into a child's own composed children, but
+  the nested call passes an empty site map (`build(shape.source, new Map(), inner)`). The
+  `compose` variant of `RenderedShape` (`server/compiler/ir.ts`) records only `source`, so the
+  attributes written at a compose site inside a child's template are lost. Confirmed: with
+  module-coloreditor's limit removed, bare `.hue` reaches form-colorgraph's
+  `<FormSpinbutton class="hue">` and module-colorinfo's `<BasicNumber class="hue">`, and LTC087
+  stays silent. The top-level compose sites already merge their static attributes
+  (`composeStaticAttrs`).
   **Do:**
-  1. **Corpus.** In every compiled source, both surfaces and every variant-set member, rewrite
-     each selector that reaches owned elements through a child chain from the scope root to the
-     bare form: `> button` becomes `button`, and `> .input > input` becomes `.input input`. This
-     covers relative selectors at the top of a `@scope` block and chains nested directly in the
-     `:where(:scope)` rule.
-     - Where the bare form reaches into a composed child, add `to (<child-tag> > *)`. LTC087
-       names those cases.
-     - Where the bare form also matches the component's own deeper markup and would change a
-       computed style, keep the chain, or use a class that already exists in the template. List
-       each kept chain with its reason in the handoff.
-     - Variant sets stay byte-identical.
-  2. **Native emission.** A relative selector at the top of a component `@scope` block, which
-     is valid CSS and stays legal to author, emits as `:where(:scope) <combinator> …`. That is
-     its implicit form, with the same specificity, and every lightningcss-based bundler accepts
-     it. The lowered emission already reads it this way (`anchorRelativeSelectors`). Pin it in
-     `css-scope.test.ts`.
-  **Check:** a computed-style diff of every served example page (lowered, Chromium, `v3` HEAD vs
-  branch, LT-501's procedure) shows zero differences outside module-ticker's live data. With a
-  temporary native `cssTargets` config, `bun build examples/main.css` passes. Report the byte
-  delta of the lowered CSS.
-  **Channel/tier:** none. The task adds no check: the rewrite is corpus authoring, and the
-  emission change makes a valid form portable to lightningcss-based bundlers.
+  1. Give the `compose` shape the site's static attributes and its dynamic attribute names,
+     recorded by `renderedShapesOf` the way an `element` shape records them.
+  2. In `leakChildrenFor`, merge them into the nested child's host exactly as the top-level
+     call does (class values concatenate). A dynamic attribute stays a possible match, as for
+     elements.
+  3. Pin it in the selectors or pipeline tests: a parent rule on a class set only at a
+     grandchild's compose site warns, and the authored limit on the intermediate child
+     silences it.
+  **Check:** with module-coloreditor's limit removed, `check:corpus` reports LTC087 for `.hue`,
+  `.lightness` and `.chroma`; restored, the baseline is unchanged. No new tree walk: the shapes
+  are computed once per component in the registry pass, and matching tests the same elements
+  as before, now with complete attributes.
+  **Channel/tier:** compiler, tier 2 (Contained) — the existing LTC087; no new code.
 
-- [ ] LT-504: Corpus — relative `> x` selectors in component `@scope` blocks become bare where limits keep computed styles; the native emission anchors the rest.
+- [ ] LT-507: Corpus — remove the dead rules LTC090 names, on every surface.
   **Area:** compiler
-  **Needs:** LT-502
-  **Gates:** test:server, typecheck, check:corpus, test:variants, build:docs, check:links
+  **Needs:** LT-506
+  **Gates:** test:server, typecheck, check:corpus, test:variants, build:docs
   **Area:** compiler
-  **Needs:** LT-502
-  **Filed (Architect, 2026-10-08; owner ruling):** the corpus's direct-child chains (`> button`,
-  `> .input > input`) are a 2.x workaround. They kept the cascade on owned elements because
-  there were no scope limits. Under authored `@scope` with limits, a bare selector does the same
-  job. This is a gap in the original corpus, written before native `@scope` reached every
-  evergreen browser. It also breaks native builds: `bun build examples/main.css` (lightningcss)
-  rejects a relative selector at the top of `@scope`, although the platform accepts it (LT-502
-  handoff: module-dialog, module-tabgroup).
-  **Do:**
-  1. **Corpus.** In every compiled source, both surfaces and every variant-set member, rewrite
-     each selector that reaches owned elements through a child chain from the scope root to the
-     bare form: `> button` becomes `button`, and `> .input > input` becomes `.input input`. This
-     covers relative selectors at the top of a `@scope` block and chains nested directly in the
-     `:where(:scope)` rule.
-     - Where the bare form reaches into a composed child, add `to (<child-tag> > *)`. LTC087
-       names those cases.
-     - Where the bare form also matches the component's own deeper markup and would change a
-       computed style, keep the chain, or use a class that already exists in the template. List
-       each kept chain with its reason in the handoff.
-     - Variant sets stay byte-identical.
-  2. **Native emission.** A relative selector at the top of a component `@scope` block, which
-     is valid CSS and stays legal to author, emits as `:where(:scope) <combinator> …`. That is
-     its implicit form, with the same specificity, and every lightningcss-based bundler accepts
-     it. The lowered emission already reads it this way (`anchorRelativeSelectors`). Pin it in
-     `css-scope.test.ts`.
-  **Check:** a computed-style diff of every served example page (lowered, Chromium, `v3` HEAD vs
-  branch, LT-501's procedure) shows zero differences outside module-ticker's live data. With a
-  temporary native `cssTargets` config, `bun build examples/main.css` passes. Report the byte
-  delta of the lowered CSS.
-  **Channel/tier:** none. The task adds no check: the rewrite is corpus authoring, and the
-  emission change makes a valid form portable to lightningcss-based bundlers.
+  **Needs:** LT-506
+  **Filed (Architect, 2026-10-08; owner ruling on LT-504):** remove every selector LTC090 reports (and a rule left with none) in
+  the corpus, in each compiled source, both surfaces and every variant-set member (byte-identical).
+  A hand-written twin's `.css` is the 2.x artifact; remove the same rules there only where the
+  twin's markup also leaves them dead.
+  **Check:** `check:corpus` reports no LTC090 and the warning baseline is back to 1 (module-dialog's
+  `body.scroll-lock`). A computed-style diff of every served example page (lowered, Chromium, v3
+  vs branch, LT-501's procedure) shows zero differences outside live data. Report the lowered
+  CSS byte delta.
+  **Channel/tier:** none. Corpus authoring.
 
 - [ ] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped.
   **Area:** examples
