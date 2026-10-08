@@ -1525,7 +1525,7 @@ const FAMILIES: Case[] = [
 				.replace('@scope {', '@scope to (other-el > *) {')
 				.replace(':scope {', 'other-el span {'),
 		},
-		pins: ['`other-el > *`', 'Remove the limit'],
+		pins: ['`other-el > *`', 'remove the limit'],
 	},
 	// LT-501: the platform-CSS stylesheet contract reports identically on
 	// both surfaces — the sheet text is the same string either side of the seam.

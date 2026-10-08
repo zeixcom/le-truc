@@ -2216,12 +2216,13 @@ export const diagnostic = {
 	 * the sheet's top level is the 2.x form and stays legal. ADR 0028 tier 1
 	 * (Prevented): statically decidable, no runtime half.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages) (reviewed
+	 * 2026-10-08, LT-503).
 	 */
 	ownTagLedRule: (source: string, at: Site, tag: string) =>
 		error(
 			'LTC066',
-			`This rule sits inside \`@scope\` and is led by the component's own tag \`${tag}\`. A rule in \`@scope\` starts at the host's descendants, so \`${tag} { … }\` matches only a nested \`<${tag}>\` and never the host. Write \`:where(:scope)\` for the host, and drop the tag from selectors that mean the component's own content.`,
+			`A rule inside \`@scope\` is led by the component's own tag \`${tag}\` — a \`@scope\` rule starts at the host's descendants, so the tag matches only a nested \`<${tag}>\`, never the host. Write \`:where(:scope)\` for the host, and drop the tag from selectors for the component's own content.`,
 			rangeOf(source, at),
 		),
 
@@ -2232,12 +2233,13 @@ export const diagnostic = {
 	 * parent's rule on the host winning (s1); `:host(X)` is `:where(:scope)X`.
 	 * ADR 0028 tier 1 (Prevented): statically decidable, no runtime half.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages) (reviewed
+	 * 2026-10-08, LT-503).
 	 */
 	hostSelector: (source: string, at: Site) =>
 		error(
 			'LTC086',
-			'`:host` matches nothing in a compiled component: it names the root of a shadow tree, and a compiled component renders light DOM. Write `:where(:scope)` for the host inside `@scope { … }`: `:host { … }` becomes `:where(:scope) { … }`, and `:host(.x)` becomes `:where(:scope).x`.',
+			'`:host` matches nothing in a compiled component — it names the root of a shadow tree, and a compiled component renders light DOM. Write `:where(:scope)` for the host inside `@scope { … }`: `:host { … }` becomes `:where(:scope) { … }`, and `:host(.x)` becomes `:where(:scope).x`.',
 			rangeOf(source, at),
 		),
 
@@ -2285,12 +2287,13 @@ export const diagnostic = {
 	 * element. ADR 0028 tier 1 (Prevented): statically decidable, no runtime
 	 * half.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages) (reviewed
+	 * 2026-10-08, LT-503).
 	 */
 	deadByLimit: (source: string, at: Site, selector: string, limit: string) =>
 		error(
 			'LTC071',
-			`The selector \`${selector}\` reaches inside \`${limit}\`, which a \`to (…)\` limit of this \`@scope\` block excludes, so the rule matches nothing. Remove the limit, or move the rule out of the \`@scope\` block — a top-level rule applies page-wide.`,
+			`The selector \`${selector}\` reaches inside \`${limit}\`, which a \`to (…)\` limit of this \`@scope\` block excludes — the limit always excludes the rule's subject, so the rule matches nothing. Style an element above the limit instead, and pass values inward with custom properties. If the rule must reach inside, remove the limit.`,
 			rangeOf(source, at),
 		),
 
@@ -2300,12 +2303,13 @@ export const diagnostic = {
 	 * meaning. ADR 0028 tier 1 (Prevented): statically decidable, no
 	 * runtime half.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages) (reviewed
+	 * 2026-10-08, LT-503).
 	 */
 	globalSelector: (source: string, at: Site) =>
 		error(
 			'LTC069',
-			'`:global` has no meaning in a compiled stylesheet: a top-level rule outside `@scope` already applies page-wide. Remove the wrapper and move the rule to the top level of the stylesheet, outside the `@scope` block.',
+			'`:global` has no meaning in a compiled stylesheet — a rule at the top level, outside `@scope`, already applies page-wide. Remove the wrapper, and move the rule to the top level of the stylesheet.',
 			rangeOf(source, at),
 		),
 
@@ -2319,7 +2323,8 @@ export const diagnostic = {
 	 * (ADR 0048 s5). ADR 0028 tier 2 (Contained): a warning, the CSS ships
 	 * as authored — a rule may reach in on purpose.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages) (reviewed
+	 * 2026-10-08, LT-503).
 	 */
 	downwardLeak: (
 		source: string,
@@ -2335,7 +2340,7 @@ export const diagnostic = {
 		const limits = children.map(tag => `${tag} > *`).join(', ')
 		return warning(
 			'LTC087',
-			`The selector \`${selector}\` can match elements inside ${named}, which this component composes — a \`@scope\` rule reaches every descendant of the host, a composed child's own markup included. Add \`${limits}\` to the block's limits, \`@scope to (${limits}) { … }\`, to stop the rule below the child's host. If the rule styles the child on purpose, ignore this warning: the CSS ships as written.`,
+			`The selector \`${selector}\` can match elements inside ${named}, which this component composes — a \`@scope\` rule reaches every descendant of the host, a composed child's own markup included. Add \`${limits}\` to the block's limits, \`@scope to (${limits}) { … }\`, to stop the rule below the child's host. If the rule styles the child's internals on purpose, ignore this warning: the CSS ships as written.`,
 			rangeOf(source, at),
 		)
 	},
@@ -2348,12 +2353,13 @@ export const diagnostic = {
 	 * never fire. ADR 0028 tier 2 (Contained): a warning, the CSS ships as
 	 * authored.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages) (reviewed
+	 * 2026-10-08, LT-503).
 	 */
 	unscopedRule: (source: string, at: Site, selector: string, tag: string) =>
 		warning(
 			'LTC088',
-			`The rule \`${selector}\` sits outside \`@scope\` and is not led by the component's tag \`${tag}\`, so it applies to the whole page. Move it into the \`@scope { … }\` block, or lead it with the tag (\`${tag} ${selector}\`). If the page owns the rule, move it to the page's stylesheet. If the component owns it — a class its own script sets on \`body\`, say — keep it here: the warning marks it as page-wide on purpose.`,
+			`The rule \`${selector}\` sits outside \`@scope\` and is not led by the component's tag \`${tag}\` — a top-level rule applies to the whole page. Move it into the \`@scope { … }\` block, or lead it with the tag (\`${tag} ${selector}\`). If the page owns the rule, move it to the page's stylesheet. If the component owns it (for example, a class its own script sets on \`body\`), keep it here and ignore this warning: the CSS ships as written.`,
 			rangeOf(source, at),
 		),
 
@@ -2364,7 +2370,8 @@ export const diagnostic = {
 	 * ADR 0028 tier 1 (Prevented): statically decidable from the sheet and
 	 * the configuration, no runtime half.
 	 *
-	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages) (reviewed
+	 * 2026-10-08, LT-503).
 	 */
 	scopeNotLowerable: (
 		source: string,
@@ -2378,7 +2385,7 @@ export const diagnostic = {
 				face === 'nested-scope'
 					? 'A `@scope` inside the component `@scope` has no flat-selector form'
 					: 'A `to (…)` limit that names `:scope` or `&` has no flat-selector form'
-			}, and the configured CSS targets (${targets}) need one. Write the sheet without it, or raise \`cssTargets\` in \`le-truc.config.json\` to browsers with native \`@scope\` (Chrome 118, Firefox 128, Safari 17.4).`,
+			} — the configured CSS targets (${targets}) have no native \`@scope\`, so the compiler must lower the sheet. Write the sheet without it, or raise \`cssTargets\` in \`le-truc.config.json\` to browsers with native \`@scope\` (Chrome 118, Firefox 128, Safari 17.4).`,
 			rangeOf(source, at),
 		),
 }
