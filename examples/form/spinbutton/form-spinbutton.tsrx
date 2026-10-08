@@ -371,7 +371,7 @@ export function FormSpinbutton(
 				margin-bottom: var(--space-xxs);
 			}
 
-			> fieldset {
+			fieldset {
 				all: unset;
 				display: inline-flex;
 				min-width: var(--form-spinbutton-min-width);
@@ -512,7 +512,7 @@ export function FormSpinbutton(
 				}
 			}
 
-			> .error {
+			.error {
 				flex-basis: 100%;
 				margin: var(--space-xs) 0 0;
 				font-size: var(--font-size-xs);

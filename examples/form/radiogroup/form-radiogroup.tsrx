@@ -137,7 +137,7 @@ export function FormRadiogroup(
 				display: inline-block;
 			}
 
-			> fieldset {
+			fieldset {
 				display: flex;
 				gap: var(--space-m);
 				border: none;

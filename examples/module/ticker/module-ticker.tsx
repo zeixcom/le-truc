@@ -268,7 +268,7 @@ export function ModuleTicker(
 					display: block;
 				}
 
-				> .controls {
+				.controls {
 					display: flex;
 					justify-content: flex-end;
 					gap: var(--space-m);

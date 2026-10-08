@@ -1,4 +1,5 @@
 import { describe, expect, test } from 'bun:test'
+import { transform } from 'lightningcss-wasm'
 import { parseComponentSheet } from '../../compiler/css'
 import {
 	checkSheetContract,
@@ -528,10 +529,38 @@ describe('emitScopedSheet — native (@scope-capable targets)', () => {
 		)
 	})
 
-	test('a relative selector at the top of @scope ships as authored', () => {
+	test('a relative selector at the top of @scope ships in its implicit form (LT-504)', () => {
 		expect(native('@scope { > p { top: 0 } }')).toBe(
-			'@scope (my-box) { > p { top: 0 } }\n',
+			'@scope (my-box) { :where(:scope) > p { top: 0 } }\n',
 		)
+		expect(
+			native('@scope to (b-x > *) { label, > p, + q, ~ r { top: 0 } }'),
+		).toBe(
+			'@scope (my-box) to (b-x > *) { label, :where(:scope) > p, :where(:scope) + q, :where(:scope) ~ r { top: 0 } }\n',
+		)
+	})
+
+	test('a nested relative selector stays as authored: it is nesting (LT-504)', () => {
+		expect(
+			native('@scope { :where(:scope):focus-within { > p { top: 0 } } }'),
+		).toBe(
+			'@scope (my-box) { :where(:scope):focus-within { > p { top: 0 } } }\n',
+		)
+	})
+
+	test('a lightningcss bundler accepts the native emission (LT-504)', () => {
+		const css = native(
+			'@scope { > p { top: 0 } }\n@media (min-width: 1px) { @scope to (b-x > *) { > q { top: 0 } } }',
+		)
+		expect(() =>
+			transform({ code: Buffer.from(css), filename: 'native.css' }),
+		).not.toThrow()
+		expect(() =>
+			transform({
+				code: Buffer.from('@scope (my-box) { > p { top: 0 } }'),
+				filename: 'authored.css',
+			}),
+		).toThrow()
 	})
 
 	test('the authored limits ride along; none are added', () => {

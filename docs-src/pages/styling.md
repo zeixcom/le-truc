@@ -89,7 +89,7 @@ A prelude-less `@scope { … }` is scoped to the host. `:scope` is the host, and
 ### The Idiom
 
 - **Host rules** start at `:where(:scope)`. Root variants nest inside as `&.x`, or sit at the top as `:where(:scope).x`.
-- **Descendants** are bare (`.input`) or relative (`> label`).
+- **Descendants** are bare (`.input`). With limits in place, a bare selector reaches what a `> label` chain did. Keep a relative selector only where the bare form would also match deeper markup of your own.
 - **A descendant that depends on host state** leads with the variant: `:where(:scope).compact .input`.
 - **Limits**: one per composed child, `to (<child-tag> > *)`.
 

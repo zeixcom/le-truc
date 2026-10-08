@@ -176,7 +176,7 @@ export function ModuleCatalog(
 					gap: var(--space-l);
 				}
 
-				> header,
+				header,
 				p {
 					margin: 0;
 				}

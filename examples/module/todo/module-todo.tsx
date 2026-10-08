@@ -291,7 +291,7 @@ export function ModuleTodo(
 					display: none;
 				}
 
-				> form {
+				form {
 					display: flex;
 					flex-direction: column;
 					align-items: flex-start;
@@ -389,7 +389,7 @@ export function ModuleTodo(
 					}
 				}
 
-				> footer {
+				footer {
 					display: grid;
 					grid-template-columns: 1fr 1fr;
 					grid-template-areas: "filter filter" "count clear";

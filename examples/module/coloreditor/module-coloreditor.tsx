@@ -249,7 +249,7 @@ export function ModuleColoreditor(
 				/>
 			</div>
 			<style>{css`
-@scope {
+@scope to (form-colorgraph > *, module-colorinfo > *) {
 	:where(:scope) {
 		display: grid;
 		grid-template-areas:
@@ -263,32 +263,32 @@ export function ModuleColoreditor(
 		column-gap: var(--space-m);
 	}
 
-	> form-colorgraph {
+	form-colorgraph {
 		grid-area: graph;
 	}
 
-	> .hue {
+	.hue {
 		grid-area: hue;
 	}
 
-	> .lightness {
+	.lightness {
 		grid-area: lightness;
 	}
 
-	> .chroma {
+	.chroma {
 		grid-area: chroma;
 	}
 
-	> .scale {
+	.scale {
 		grid-area: scale;
 	}
 
-	> .name {
+	.name {
 		grid-area: name;
 		margin: var(--space-s) 0;
 	}
 
-	> .info {
+	.info {
 		grid-area: info;
 		display: flex;
 		flex-direction: column;

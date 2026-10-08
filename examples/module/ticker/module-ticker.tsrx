@@ -247,7 +247,7 @@ export function ModuleTicker({ rows, fraction = 0.1 }: { rows?: TickerItem[]; fr
 					display: block;
 				}
 
-				> .controls {
+				.controls {
 					display: flex;
 					justify-content: flex-end;
 					gap: var(--space-m);

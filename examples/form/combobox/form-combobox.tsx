@@ -196,24 +196,24 @@ export function FormCombobox(
 					width: 100%;
 				}
 
-				> label,
-				> p,
+				label,
+				p,
 				> button {
 					opacity: var(--opacity-dimmed);
 					transition: opacity var(--transition-short) var(--easing-inout);
 				}
 
-				> label {
+				label {
 					display: block;
 					font-size: var(--font-size-s);
 					color: var(--color-text);
 					margin-bottom: var(--space-xxs);
 				}
 
-				> .input {
+				.input {
 					position: relative;
 
-					> input {
+					input {
 						display: inline-block;
 						box-sizing: border-box;
 						background: var(--color-input);
@@ -261,7 +261,7 @@ export function FormCombobox(
 				}
 
 				/* Native validity styling — replaces the old aria-invalid attribute hook. */
-				:where(:scope):user-invalid > .input > input {
+				:where(:scope):user-invalid .input input {
 					box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 				}
 
@@ -277,8 +277,8 @@ export function FormCombobox(
 					z-index: 1;
 				}
 
-				> .error,
-				> .description {
+				.error,
+				.description {
 					margin: var(--space-xs) 0 0;
 					font-size: var(--font-size-xs);
 					line-height: var(--line-height-s);
@@ -288,22 +288,22 @@ export function FormCombobox(
 					}
 				}
 
-				> .error {
+				.error {
 					color: color-mix(in srgb, var(--color-text) 50%, var(--color-error));
 				}
 
-				> .description {
+				.description {
 					color: var(--color-text-soft);
 				}
 
 				:where(:scope):focus-within {
-					> label,
-					> p,
+					label,
+					p,
 					> button {
 						opacity: var(--opacity-solid);
 					}
 
-					> .input > input {
+					.input input {
 						color: var(--color-text);
 					}
 

@@ -411,7 +411,7 @@ A compiled stylesheet is **platform CSS** (ADR 0033): it means what the same she
 
 - Style content MUST be static: a `css`-tagged template literal without substitutions. Dynamic values go through custom properties set by bindings.
 - The sheet is parsed (`lightningcss`); a parse error is an error.
-- `@scope { … }`, with optional author-written `to (<limits>)`, is scoped to the host: `:scope` is the host, bare selectors are its descendants. The idiom roots host rules at `:where(:scope)`, writes descendants bare or relative (`> p`) and lists a limit per composed child (ADR 0033 s1).
+- `@scope { … }`, with optional author-written `to (<limits>)`, is scoped to the host: `:scope` is the host, bare selectors are its descendants. The idiom roots host rules at `:where(:scope)`, writes descendants bare (relative, `> p`, only where bare would also match deeper own markup) and lists a limit per composed child (ADR 0033 s1).
 - A top-level rule led by the component's own tag emits verbatim (the 2.x convention). Any other top-level rule emits verbatim and applies page-wide. `@keyframes`, `@font-face` and `@property` emit verbatim.
 
 **Light DOM emission** gives the sheet the meaning it would have inline in the host:
