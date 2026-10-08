@@ -197,8 +197,7 @@ export function FormCombobox(
 				}
 
 				label,
-				p,
-				> button {
+				p {
 					opacity: var(--opacity-dimmed);
 					transition: opacity var(--transition-short) var(--easing-inout);
 				}
@@ -298,8 +297,7 @@ export function FormCombobox(
 
 				:where(:scope):focus-within {
 					label,
-					p,
-					> button {
+					p {
 						opacity: var(--opacity-solid);
 					}
 

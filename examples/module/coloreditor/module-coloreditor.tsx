@@ -267,18 +267,6 @@ export function ModuleColoreditor(
 		grid-area: graph;
 	}
 
-	.hue {
-		grid-area: hue;
-	}
-
-	.lightness {
-		grid-area: lightness;
-	}
-
-	.chroma {
-		grid-area: chroma;
-	}
-
 	.scale {
 		grid-area: scale;
 	}
