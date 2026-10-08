@@ -157,9 +157,12 @@ interface FormAssociatedCheckboxElement extends FormAssociatedElement {
  * roles the child may address it through, and optionally the content model.
  * A role key is a class; its value is the expected tag, which types the
  * child's `first('.<role>')`/`all('.<role>')` and names the one surface the
- * child may reach into the content with (LTC083). It stays assignable to
- * and from the rendered markup string, so `children = ''` defaults and
- * existing `children?: string` sources keep compiling.
+ * child may reach into the content with (LTC083). The contract binds both
+ * ways: a `watch` binding the child keeps on a role element is the write it
+ * owns there, and a parent binding that writes the same property on the
+ * role's element is refused — one writer per property (LTC084). It stays
+ * assignable to and from the rendered markup string, so `children = ''`
+ * defaults and existing `children?: string` sources keep compiling.
  *
  * ```tsx
  * { children = '' }: { children?: Children<{ tab: 'button'; panel: 'section' }> }

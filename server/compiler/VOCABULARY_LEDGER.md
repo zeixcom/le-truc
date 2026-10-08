@@ -227,10 +227,20 @@ own template renders any, transitively; ADR 0048 s4, LT-477) follows
 on both surfaces (`analysis/content-model.ts`). No runtime half of its
 own: page-authored HTML is unchecked by design, and TypeScript cannot
 carry the check (JSX element types are opaque).
+`LTC084` (a parent `watch` binding on a `first()` reference into a compose
+site's content writing the same property, attribute, class token, style
+property or text on an element carrying a role class the child's client
+also writes through its role-targeted `watch` bindings; ADR 0048 s3,
+LT-476) follows `LTC085`. It is `LTC`, not `TSRX`: the check runs in the
+shared pipeline on both surfaces (`analysis/role-writes.ts`). No runtime
+half: the registry (`RegistryEntry.roleWrites`) carries the child's half,
+the parent's authored `watch` statements the other, and a hand-authored
+pairing has no registry to read — the DOM's last-write-wins is [M15]'s
+posture for foreign markup.
 `LTC086` (`:host` anywhere in a component stylesheet, fix-it `:where(:scope)`;
 ADR 0033 s6, LT-501) and `LTC089` (a `@scope` form the flat-selector lowering
 cannot express on a lowered CSS target; ADR 0033 s4, LT-501) follow
-`LTC081`; `LTC082` and `LTC084` belong to other tasks. `LTC087` (a scoped rule
+`LTC081`; `LTC082` belongs to another task. `LTC087` (a scoped rule
 that reaches into a composed child's own markup) and `LTC088` (a top-level
 rule neither in `@scope` nor led by the own tag) are LT-502's warnings (ADR
 0033 s5). All four are `LTC`, not `TSRX`: the stylesheet is a string on both
