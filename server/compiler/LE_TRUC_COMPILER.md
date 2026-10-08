@@ -1138,7 +1138,16 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   form the flat-selector lowering cannot express — a `@scope` inside the
   component `@scope`, a limit that names `:scope` — is LTC089 on a lowered
   CSS target and emits verbatim on a native one; it is the one stylesheet
-  check that reads the configured `cssTargets`. And a `<style>` block that
+  check that reads the configured `cssTargets`. Two warnings (tier 2
+  Contained; the CSS ships as authored) carry the compiler's knowledge of
+  the rendered tree (ADR 0033 s5, LT-502): a rule in the `@scope` block
+  whose subject can match an element a composed child renders in its own
+  template — closed over the registry's `renderedShapes`, minus the content
+  the component passes as `children` — with no authored limit excluding the
+  child (LTC087, fix-it `to (<child-tag> > *)`); and a top-level rule that
+  is neither in `@scope` nor led by the component's own tag (LTC088). LTC087
+  runs in the registry-aware pass only; a raw custom element, `truc:html`
+  and an unregistered child have no shapes and never warn. And a `<style>` block that
   is not the root's single direct
   `<style>` child — a second direct one, or one nested in a descendant —
   whose CSS the hoist would drop (LTC073, LT-417); and a `<style>` block
@@ -1180,7 +1189,11 @@ two that keep the code are server-evaluation guards.
 
 The consequence for the regression signal: **the compile-warning baseline's
 target stays zero.** Once routing signals leave the channel, the remaining
-warnings are all genuinely author-fixable again. The tier census is a
+warnings are all genuinely author-fixable again. Two kinds stand outside that
+target: a test fixture under `examples/test/` that pins a warned form, whose
+warnings `check:corpus` prints on an uncounted line, and a page-wide rule that
+is part of a component's contract (module-dialog's `body.scroll-lock`, LTC088),
+which keeps its warning (owner ruling 2026-10-08, LT-502). The tier census is a
 separate, non-zero, expected-to-grow record with its own regression story — a
 component drifting from the Folded tier to the Simulated tier is a build-cost regression worth
 seeing, and it is now visible without being miscast as a warning. The census

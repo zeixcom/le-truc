@@ -135,7 +135,7 @@ export function ModuleCodeblock(
 				line-height: var(--line-height-l);
 			}
 
-			@scope to (module-scrollarea > *, basic-button > *) {
+			@scope to (basic-button > *) {
 				:where(:scope) {
 					--module-codeblock-color-background: #272822;
 

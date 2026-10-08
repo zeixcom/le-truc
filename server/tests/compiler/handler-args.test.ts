@@ -595,7 +595,7 @@ export function BasicMiddle({ onClick }: { onClick?: (e: MouseEvent) => void }) 
 	return (
 		<basic-middle>
 			${body}
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope { :where(:scope) { display: block; } }\`}</style>
 		</basic-middle>
 	)
 }`
@@ -632,7 +632,7 @@ export function BasicMiddle({ onClick }: { onClick?: (e: MouseEvent) => void }) 
 	return (
 		<basic-card>
 			<basic-child>c</basic-child>
-			<style>{\`:host { display: block; }\`}</style>
+			<style>{\`@scope { :where(:scope) { display: block; } }\`}</style>
 		</basic-card>
 	)
 }`,

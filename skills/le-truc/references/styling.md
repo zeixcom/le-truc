@@ -14,7 +14,7 @@ Le Truc applies no scoping to this CSS. It reaches the page exactly as written.
 
 A compiled sheet means what the same sheet would mean as an inline `<style>` in the host. Scope it with a prelude-less `@scope { … }`: `:scope` is the host, bare selectors are its descendants, and `to (<limits>)` stops the scope where you write it. The compiler adds no limits of its own. It emits native `@scope` (with the explicit root `@scope (my-tag)`) where the build's CSS targets support it, and a flat lowering otherwise: `:where(my-tag)`-led selectors, a bare `:scope` as the root with the same specificity, and a zero-specificity guard per limit.
 
-**The idiom** (ADR 0033 s1): host rules at `:where(:scope)`, root variants as `&.x` inside it, descendants bare or relative, a state-dependent descendant as `:where(:scope).x .label`, and one limit per composed child.
+**The idiom** (ADR 0033 s1): host rules at `:where(:scope)`, root variants as `&.x` inside it, descendants bare or relative, a state-dependent descendant as `:where(:scope).x .label`, and a limit, `to (child-tag > *)`, for each composed child your rules would otherwise reach (LTC087 names them).
 
 ```css
 @scope to (basic-button > *) {
@@ -43,6 +43,8 @@ A rule led by the component's own tag at the top level (`my-tag .x { … }`) sta
 | a flat form: a single `@scope`, limits without `:scope` | a `@scope` inside the component `@scope`, a limit that names `:scope`, on a CSS target without native `@scope` | LTC089 |
 
 - A qualifier after `:scope` (`:scope.x`, `:scope:hover`) is valid CSS.
+- A scoped rule that can match an element a composed child renders in its own template, with no limit excluding the child, **warns** (LTC087) and ships. The fix is the limit `to (child-tag > *)`. A component that composes nothing, or whose rules reach nothing inside its children, needs no limit. Content you pass as `children` is your own markup, so your rules reach it without a warning.
+- A top-level rule that is not led by the component's own tag **warns** (LTC088) and ships. It applies to the whole page.
 - The sheet must parse (LTC064). An unknown property or value **warns** (LTC065) and still ships. The compiler's CSS dictionary lags the platform, so a newer property can trigger it.
 - Every member of a variant set must have byte-identical authored CSS (LTC051).
 - Limits of the light-DOM scope:

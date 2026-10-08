@@ -82,7 +82,7 @@ export function TestListitemTsx({}: TestListitemTsxProps) {
 			>
 				Add
 			</button>
-			<style>{css`@scope to (form-checkbox > *) {
+			<style>{css`@scope {
 	:where(:scope) {
 		display: block;
 	}

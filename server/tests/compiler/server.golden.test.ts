@@ -607,12 +607,15 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-501)'
 	// module-list composes form-textbox (ADR 0024 sub-design 10): its
 	// sheet's authored limit stops the scope at the composed child — the
 	// guard names form-textbox, and the child's internals stay unreachable.
-	test('module-list: authored sheet carried verbatim, authored limit at the composed child', () => {
+	test('module-list: authored sheet carried verbatim, no limit the sheet does not author (LT-502)', () => {
 		expect(moduleList.component?.authoredCss).toBe(
 			dedentCss(sheetOfSource(read('examples/module/list/module-list.tsrx'))),
 		)
 		const css = moduleList.component?.css ?? ''
 		expect(css).toContain(':where(module-list) {')
-		expect(css).toContain('form-textbox > *')
+		// Its rules reach nothing inside its composed children, so LT-502
+		// pruned the limits; the emission adds none of its own.
+		expect(css).not.toContain('form-textbox')
+		expect(css).not.toContain(':where(:not(')
 	})
 })

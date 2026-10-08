@@ -201,8 +201,10 @@ on both surfaces, and it has no runtime half.
 `LTC086` (`:host` anywhere in a component stylesheet, fix-it `:where(:scope)`;
 ADR 0033 s6, LT-501) and `LTC089` (a `@scope` form the flat-selector lowering
 cannot express on a lowered CSS target; ADR 0033 s4, LT-501) follow
-`LTC081`; `LTC082`–`LTC085` belong to other tasks, and `LTC087`/`LTC088`
-are LT-502's. Both are `LTC`, not `TSRX`: the stylesheet is a string on both
+`LTC081`; `LTC082`–`LTC085` belong to other tasks. `LTC087` (a scoped rule
+that reaches into a composed child's own markup) and `LTC088` (a top-level
+rule neither in `@scope` nor led by the own tag) are LT-502's warnings (ADR
+0033 s5). All four are `LTC`, not `TSRX`: the stylesheet is a string on both
 surfaces, so the same check reports identically (`tsx/diagnostic-parity`).
 `LTC070` (a qualifier on bare `:host`) is **retired** by LT-501: under the
 platform-CSS contract a qualifier after `:scope` is valid CSS, and `:host`

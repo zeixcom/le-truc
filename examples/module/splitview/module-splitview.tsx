@@ -129,7 +129,7 @@ export function ModuleSplitview(
 			</module-scrollarea>
 
 			<style>{css`
-			@scope to (module-scrollarea > *) {
+			@scope {
 				:where(:scope) {
 					display: grid;
 					grid-template-columns: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;

@@ -275,7 +275,7 @@ export function ModuleTodo(
 			</footer>
 
 			<style>{css`
-			@scope to (form-textbox > *, basic-button > *, form-checkbox > *, form-inplace-edit > *, form-radiogroup > *) {
+			@scope to (basic-button > *) {
 				:where(:scope) {
 					display: flex;
 					flex-direction: column;

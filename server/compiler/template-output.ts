@@ -421,5 +421,12 @@ const contractDiagnostic = (
 				finding.selector,
 				finding.limit ?? '',
 			)
+		case 'unscoped':
+			return diagnostic.unscopedRule(
+				source,
+				authoredOffset,
+				finding.selector,
+				tag,
+			)
 	}
 }

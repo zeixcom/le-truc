@@ -114,6 +114,8 @@ export type DiagnosticCode =
 	| 'LTC080' // a key alias that does not meet ADR 0047 s1 — a host-level list seeded from server args, never rendered by its own `map`, is harvested through `const t = list.byKey(k)` in a reactive list's item setup only when the aliasing list keys each item by itself, the read is that alias statement over the loop key, the list has one alias scope, and every field renders at a site in it (LT-453) — tier 1 Prevented, statically decidable; the render witness is the dynamic half, a server-render error with no client counterpart
 	| 'LTC081' // a handler arg (an `on[A-Z]…` arg, LT-461) the parent cannot address: its declared type is not a function type; or it is read anywhere but as an event attribute on a raw element or forwarded to a composed child's handler arg; or it is placed inside one of the component's reactive arms or list items, whose elements are recreated on a flip or a reconcile — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC086' // `:host` anywhere in a component stylesheet — it matches nothing in light DOM; the fix-it is `:where(:scope)` (`:host(X)` → `:where(:scope)X`) (ADR 0033 s1/s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC087' // a rule in the component's `@scope` block whose subject can match an element a composed child renders in its own template (transitively through the registry), with no authored limit excluding the child; passed `children` content is the parent's own markup and never counts (ADR 0033 s5, ADR 0048 s5, LT-502) — tier 2 Contained: the CSS ships as authored
+	| 'LTC088' // a top-level stylesheet rule that is neither in `@scope` nor led by the component's own tag — it applies page-wide; `@keyframes`, `@font-face` and `@property` are exempt (ADR 0033 s1/s5, LT-502) — tier 2 Contained: the CSS ships as authored
 	| 'LTC089' // a `@scope` form the flat-selector lowering cannot express — a `@scope` inside a component `@scope`, or a limit naming `:scope` — on a CSS target without native `@scope` (ADR 0033 s4, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 
 /**
@@ -2304,6 +2306,54 @@ export const diagnostic = {
 		error(
 			'LTC069',
 			'`:global` has no meaning in a compiled stylesheet: a top-level rule outside `@scope` already applies page-wide. Remove the wrapper and move the rule to the top level of the stylesheet, outside the `@scope` block.',
+			rangeOf(source, at),
+		),
+
+	/**
+	 * A rule in the component's `@scope` block can match an element that a
+	 * composed child renders in its own template, directly or through the
+	 * child's own composed children, and no authored limit excludes the
+	 * child (ADR 0033 s5, LT-502). The fix-it limit `<child> > *` stops the
+	 * rule below the child's host, so the host stays stylable. Content the
+	 * component passes as `children` is its own markup and never counts
+	 * (ADR 0048 s5). ADR 0028 tier 2 (Contained): a warning, the CSS ships
+	 * as authored — a rule may reach in on purpose.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 */
+	downwardLeak: (
+		source: string,
+		at: Site,
+		selector: string,
+		children: readonly string[],
+	) => {
+		const tags = children.map(tag => `<${tag}>`)
+		const named =
+			tags.length > 1
+				? `${tags.slice(0, -1).join(', ')} and ${tags[tags.length - 1]}`
+				: (tags[0] ?? '')
+		const limits = children.map(tag => `${tag} > *`).join(', ')
+		return warning(
+			'LTC087',
+			`The selector \`${selector}\` can match elements inside ${named}, which this component composes — a \`@scope\` rule reaches every descendant of the host, a composed child's own markup included. Add \`${limits}\` to the block's limits, \`@scope to (${limits}) { … }\`, to stop the rule below the child's host. If the rule styles the child on purpose, ignore this warning: the CSS ships as written.`,
+			rangeOf(source, at),
+		)
+	},
+
+	/**
+	 * A top-level rule in a component stylesheet that is neither inside
+	 * `@scope` nor led by the component's own tag (ADR 0033 s1/s5, LT-502).
+	 * It applies page-wide, as a top-level rule in any `<style>` does.
+	 * `@keyframes`, `@font-face` and `@property` hold no style rules and
+	 * never fire. ADR 0028 tier 2 (Contained): a warning, the CSS ships as
+	 * authored.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
+	 */
+	unscopedRule: (source: string, at: Site, selector: string, tag: string) =>
+		warning(
+			'LTC088',
+			`The rule \`${selector}\` sits outside \`@scope\` and is not led by the component's tag \`${tag}\`, so it applies to the whole page. Move it into the \`@scope { … }\` block, or lead it with the tag (\`${tag} ${selector}\`). If it is meant to apply page-wide, move it to the page's stylesheet.`,
 			rangeOf(source, at),
 		),
 

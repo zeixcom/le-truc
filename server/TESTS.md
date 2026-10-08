@@ -180,7 +180,9 @@ signal is **two numbers**, not one:
 
 1. **The compile baseline** — `bun run check:corpus` counts the standing corpus warnings in
    its summary line (`Compile-warning baseline: N unique…`) — read that count, never a
-   tail-read of the ⚠️ lines (LT-168). The gate-wave target is the counted **6 unique**
+   tail-read of the ⚠️ lines (LT-168). Warnings from test fixtures under `examples/test/`
+   print on their own uncounted line, because a fixture pins a warned form on purpose
+   (css-probe's LTC087/LTC088; owner ruling 2026-10-08, LT-502). The gate-wave target is the counted **6 unique**
    (LT-145 and LT-146 remove form-listbox and form-tokenbox); the six `basic-pluralize` (retired in LT-467)
    warnings are **correct refusals** — the fold cannot follow the authored `pluralCategory`
    const, its opaque `getLocale` helper, or the `hasAttribute` sensor — and they retire with

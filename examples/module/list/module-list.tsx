@@ -73,7 +73,7 @@ export function ModuleList({}: {}) {
 			</ul>
 
 			<style>{css`
-			@scope to (form-textbox > *, basic-button > *) {
+			@scope {
 				:where(:scope) {
 					display: flex;
 					flex-direction: column;

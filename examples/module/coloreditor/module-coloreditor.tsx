@@ -249,7 +249,7 @@ export function ModuleColoreditor(
 				/>
 			</div>
 			<style>{css`
-@scope to (card-colorscale > *, form-colorgraph > *, form-textbox > *, module-colorinfo > *) {
+@scope {
 	:where(:scope) {
 		display: grid;
 		grid-template-areas:

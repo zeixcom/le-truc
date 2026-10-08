@@ -84,7 +84,7 @@ export function TestListitem({}: {})
 			</button>
 
 			<style>
-			@scope to (form-checkbox > *, basic-button > *) {
+			@scope {
 				:where(:scope) {
 					display: block;
 				}
