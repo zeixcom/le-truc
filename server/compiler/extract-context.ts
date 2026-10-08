@@ -10,6 +10,7 @@
 import type { AstNode } from './ast-node'
 import type { LocalDiagnostic } from './diagnostics'
 import type { MarkerName } from './imports'
+import type { ChildrenContract } from './params'
 import type { Surface } from './surface'
 import type { LocalRoutingSignal } from './tier'
 
@@ -100,6 +101,14 @@ export type ExtractContext = {
 	 */
 	handlerArgs: ReadonlyMap<string, string>
 	/**
+	 * The declared contract of the component's `children` arg (ADR 0048 s2,
+	 * LT-474), or null when the arg has no `Children<…>` annotation: the
+	 * roles the child may address the passed content through, and the
+	 * declared content model. Read by the reach-in check (LTC083) and
+	 * carried on the IR for the analysis layer.
+	 */
+	childrenContract: ChildrenContract | null
+	/**
 	 * The identifier nodes that read a handler arg where it may be read
 	 * (LT-461): an event attribute's value on a raw element, a forwarding
 	 * compose-site handler arg. Every other read is LTC081.
@@ -158,6 +167,7 @@ export const createExtractContext = (
 	moduleTypes: new Map<string, AstNode>(),
 	setupInits: new Map<string, AstNode>(),
 	handlerArgs: new Map<string, string>(),
+	childrenContract: null,
 	handlerArgRefs: new Set<AstNode>(),
 	loopBound: [],
 	loopReactive: [],

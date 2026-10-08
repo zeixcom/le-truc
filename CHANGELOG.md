@@ -66,6 +66,8 @@
 - **An async boundary may read its task through `truc:html`**: `truc:html={() => data.get()}` on the ok arm's root drives the boundary, and that root's other client constructs mount and die with the arm. `createTask` is a compiled signal constructor.
 - **`bun run check:baseline`**: the build fails when the library or compiler-emitted code uses a web feature newer than the `leTruc.baseline` pin in `package.json` (2023). Features in authored code are reported, not judged.
 - **The `le-truc` and `cause-effect` skills ship in the package**: agents find them at `node_modules/@zeix/le-truc/skills/`. `le-truc` covers the `.tsx` surface, the `LTC` codes and runtime errors; `cause-effect` states the version it describes.
+- **The `Children` type declares the children contract** (ADR 0048 s2): `{ children = '' }: { children?: Children<{ tab: 'button'; panel: 'section' }> }` names the roles a child may address the passed content through — a role key is a class, its value the expected tag, which types `first('.tab')` as `HTMLButtonElement`. An optional second argument declares the content model. The type is a branded string, so `children = ''` and existing `children?: string` sources keep compiling.
+- **`LTC083`**: a `first()`/`all()` selector that matches nothing in the child's own template, in a child whose template inserts `{children}`, and whose subject names no declared role class fails the compile — such a selector can only resolve inside the content, which belongs to the parent. The fix declares the role and marks the passed element with the role's class.
 
 ### Changed
 

@@ -171,6 +171,19 @@ export type ExposePropDecl = {
  */
 export type FirstRefStage = 'matched' | 'deferred' | 'unmatched' | 'rejected'
 
+/**
+ * The declared contract of a component's `children` arg (ADR 0048 s2,
+ * LT-474), read from its `Children<Roles, Model>` annotation. A role key is
+ * a class, its value the expected tag (`null` when the annotation's tag is
+ * not a string literal — tsc rejects those at authored typecheck, so the
+ * value is documentation, not a check input).
+ */
+export type ChildrenContractIR = {
+	roles: ReadonlyMap<string, string | null>
+	/** `'any'` when the second type argument is absent (the default). */
+	model: 'any' | 'non-interactive' | null
+}
+
 /** One `const name = first(selector, reason?)` element reference (LT-055). */
 export type FirstRefDecl = {
 	name: string
@@ -1008,6 +1021,16 @@ export type ComponentIR = {
 	 * is `stage`, not a different collection.
 	 */
 	firstRefs: ReadonlyMap<string, FirstRefDecl>
+	/**
+	 * The declared contract of the component's `children` arg (ADR 0048 s2,
+	 * LT-474), read from its `Children<Roles, Model>` annotation: the roles
+	 * the child may address the passed content through (role class →
+	 * expected tag) and the declared content model. Present exactly when the
+	 * annotation reads; the reach-in check (LTC083) runs with no declared
+	 * roles otherwise. Optional: contract IR; a front end that omits it only
+	 * loses that one check.
+	 */
+	childrenContract?: ChildrenContractIR
 	/** `@for` loops, keyed by their template node. */
 	fors: Map<AstNode, ForIR>
 	/** Dedented verbatim CSS ("" when no style block). */

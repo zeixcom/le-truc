@@ -6,6 +6,7 @@
 import { describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { namesDeclaredRole } from '../../compiler/first-refs'
 import { assertFoldScopeClosed } from '../../compiler/fold-inputs'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
@@ -3794,5 +3795,242 @@ ${setup}	return (
 			serverKnown: new Set(['label', 'isPending', 'pageUrl']),
 		} as unknown as Parameters<typeof assertFoldScopeClosed>[0]
 		expect(() => assertFoldScopeClosed(component)).toThrow('`pageUrl`')
+	})
+})
+
+describe('the reach-in check (LTC083, ADR 0048 s2, LT-474)', () => {
+	const styleTsrx = `<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>`
+	const tsrx = (childrenType: string, refs: string): string =>
+		`export function C({ children = '' }: { children?: ${childrenType} })
+@{
+	${refs}
+	expose({})
+		<c-el>
+			<div class="wrap">{children}</div>
+			${styleTsrx}
+		</c-el>
+}`
+	const tsx = (childrenType: string, refs: string): string =>
+		`import { css } from '@zeix/le-truc-compiler/macros'
+
+export function C({ children = '' }: { children?: ${childrenType} }, { first }: any) {
+	${refs}
+	expose({})
+	return (
+		<c-el>
+			<div class="wrap">{children}</div>
+			<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
+		</c-el>
+	)
+}`
+	const reachIns = (result: {
+		diagnostics: { code: string; message: string }[]
+	}): { code: string; message: string }[] =>
+		result.diagnostics.filter(d => d.code === 'LTC083')
+
+	test('an optional ref that can only resolve in the content is a reach-in (.tsrx)', () => {
+		const { diagnostics } = compileComponent(
+			tsrx('string', `const icon = first('.icon')`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(1)
+	})
+
+	test('an optional ref that can only resolve in the content is a reach-in (.tsx)', () => {
+		const { diagnostics } = compileComponentTsx(
+			tsx('string', `const icon = first('.icon')`),
+			'c.tsx',
+			new Set(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(1)
+	})
+
+	test('a required ref is a reach-in too', () => {
+		const { diagnostics } = compileComponent(
+			tsrx('string', `const icon = first('.icon', 'the icon')`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(1)
+	})
+
+	test('a declared role addressing the content is not a reach-in (.tsrx)', () => {
+		const { diagnostics, component } = compileComponent(
+			tsrx("Children<{ icon: 'span' }>", `const icon = first('.icon')`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+		expect(diagnostics).toHaveLength(0)
+		// The role-addressed ref queries the authored selector from the host;
+		// the region re-include resolves it inside the content (ADR 0048 s1).
+		expect(component?.clientCode).toContain("'.icon'")
+	})
+
+	test('a declared role addressing the content is not a reach-in (.tsx)', () => {
+		const { diagnostics } = compileComponentTsx(
+			tsx("Children<{ icon: 'span' }>", `const icon = first('.icon')`),
+			'c.tsx',
+			new Set(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+		expect(diagnostics).toHaveLength(0)
+	})
+
+	test('the subject compound decides: a role above the subject is a reach-in', () => {
+		const { diagnostics } = compileComponent(
+			tsrx("Children<{ wrap: 'div' }>", `const icon = first('.wrap .icon')`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(1)
+	})
+
+	test('a selector matching the own template is not a reach-in', () => {
+		const { diagnostics } = compileComponent(
+			tsrx('string', `const wrap = first('.wrap')`),
+			'c.tsrx',
+			new Set(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+	})
+
+	test('without a {children} insertion an unmatched optional ref stays LT-123 silent', () => {
+		const source = `export function C({}: {})
+@{
+	const icon = first('.icon')
+	expose({})
+		<c-el>
+			<div class="wrap"></div>
+			${styleTsrx}
+		</c-el>
+}`
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+		expect(diagnostics).toHaveLength(0)
+	})
+
+	test('the fix names the role declaration', () => {
+		const { diagnostics } = compileComponent(
+			tsrx('string', `const icon = first('.icon')`),
+			'c.tsrx',
+			new Set(),
+		)
+		const hit = reachIns({ diagnostics })[0]
+		expect(hit?.message).toContain('`Children<{ … }>`')
+		expect(hit?.message).toContain('belongs to the parent')
+	})
+
+	test('roles and the model are read through a same-file alias', () => {
+		const { component } = compileSource(
+			`type Roles = { icon: 'span'; 'my-item': 'li' }
+export function C({ children = '' }: { children?: Children<Roles, 'non-interactive'> })
+@{
+	expose({})
+		<c-el>
+			<div>{children}</div>
+			${styleTsrx}
+		</c-el>
+}`,
+			'c.tsrx',
+		)
+		expect([...(component?.childrenContract?.roles ?? [])]).toEqual([
+			['icon', 'span'],
+			['my-item', 'li'],
+		])
+		expect(component?.childrenContract?.model).toBe('non-interactive')
+	})
+
+	test('the model defaults to any when the second type argument is absent', () => {
+		const { component } = compileSource(
+			tsrx("Children<{ icon: 'span' }>", ''),
+			'c.tsrx',
+		)
+		expect(component?.childrenContract?.model).toBe('any')
+	})
+
+	test('a component without the annotation runs the check with no roles', () => {
+		const { component } = compileSource(tsrx('string', ''), 'c.tsrx')
+		expect(component?.childrenContract).toBeUndefined()
+	})
+
+	test('the deferred leg reports the reach-in through the compose-registry pass', () => {
+		const source = `export function C({ children = '' }: { children?: Children })
+@{
+	const box = first('form-textbox.filter')
+	expose({})
+		<c-el>
+			{children}
+			${styleTsrx}
+		</c-el>
+}`
+		const { component } = compileSource(source, 'c.tsrx')
+		expect(component?.firstRefs.get('box')?.stage).toBe('deferred')
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+			undefined,
+			new Map(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(1)
+	})
+
+	test('a role-classed custom-tag selector resolves on the deferred leg', () => {
+		const source = `export function C({ children = '' }: { children?: Children<{ box: 'form-textbox' }> })
+@{
+	const box = first('.box')
+	expose({})
+		<c-el>
+			{children}
+			${styleTsrx}
+		</c-el>
+}`
+		const { component } = compileSource(source, 'c.tsrx')
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+			undefined,
+			new Map(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+		expect(diagnostics).toHaveLength(0)
+		expect(component?.firstRefs.get('box')?.stage).toBe('unmatched')
+	})
+})
+
+describe('namesDeclaredRole (the reach-in subject rule, LT-474)', () => {
+	test('a subject role class matches', () => {
+		expect(namesDeclaredRole('.icon', new Set(['icon']))).toBe(true)
+		expect(namesDeclaredRole('span.icon', new Set(['icon']))).toBe(true)
+		expect(namesDeclaredRole('.wrap .icon', new Set(['icon']))).toBe(true)
+	})
+
+	test('a role above the subject does not match', () => {
+		expect(namesDeclaredRole('.wrap .icon', new Set(['wrap']))).toBe(false)
+	})
+
+	test('selector lists are OR semantics', () => {
+		expect(namesDeclaredRole('.a, .icon', new Set(['icon']))).toBe(true)
+		expect(namesDeclaredRole('.a, .b', new Set(['icon']))).toBe(false)
+	})
+
+	test('attributes and ids are not roles', () => {
+		expect(namesDeclaredRole('[data-x]', new Set(['data-x']))).toBe(false)
+		expect(namesDeclaredRole('#icon', new Set(['icon']))).toBe(false)
+	})
+
+	test('an unparsable selector returns null', () => {
+		expect(namesDeclaredRole('a[href', new Set(['href']))).toBeNull()
 	})
 })

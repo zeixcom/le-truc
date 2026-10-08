@@ -198,10 +198,19 @@ forward, or a placement inside a reactive arm, a reactive-list item or a
 server-data loop body; LT-461) takes the next number. It is `LTC`, not
 `TSRX`: the shared front end (`params.ts`, `validate-lowered.ts`) raises it
 on both surfaces, and it has no runtime half.
+`LTC083` (a `first()`/`all()` selector that can only resolve inside the
+content a parent passes as `children` — it matches nothing in the child's
+own template, the child's template inserts `{children}`, and its subject
+compound names no role class declared on the `children` prop's
+`Children<…>` type; ADR 0048 s2, LT-474) skips `LTC082`, which another
+task holds. It is `LTC`, not `TSRX`: both selector-verification sites
+(`template-output.ts`, `analysis/compose-refs.ts`) are shared, and it has
+no runtime half — the region re-include (ADR 0048 s1) still resolves a
+role-addressed query at runtime, which is the sanctioned path.
 `LTC086` (`:host` anywhere in a component stylesheet, fix-it `:where(:scope)`;
 ADR 0033 s6, LT-501) and `LTC089` (a `@scope` form the flat-selector lowering
 cannot express on a lowered CSS target; ADR 0033 s4, LT-501) follow
-`LTC081`; `LTC082`–`LTC085` belong to other tasks. `LTC087` (a scoped rule
+`LTC081`; `LTC082`, `LTC084` and `LTC085` belong to other tasks. `LTC087` (a scoped rule
 that reaches into a composed child's own markup) and `LTC088` (a top-level
 rule neither in `@scope` nor led by the own tag) are LT-502's warnings (ADR
 0033 s5). All four are `LTC`, not `TSRX`: the stylesheet is a string on both

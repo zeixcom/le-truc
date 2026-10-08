@@ -18,8 +18,13 @@
  * entry, and erroring there would make discovery depend on its own output.
  */
 
+import { childrenInsertionsOf } from '../children-region'
 import { diagnostic, type LocalDiagnostic } from '../diagnostics'
-import { inReconcileItem, matchesAuthoredSelectorOn } from '../first-refs'
+import {
+	inReconcileItem,
+	matchesAuthoredSelectorOn,
+	namesDeclaredRole,
+} from '../first-refs'
 import type { ComponentIR, TemplateNode } from '../ir'
 import type { RegistryEntry } from '../registry'
 import { wordingOf } from '../surface'
@@ -97,6 +102,32 @@ export const resolveComposeRefs = (
 			)
 		})
 		if (matches.length === 0) {
+			// The reach-in check (ADR 0048 s2, LTC083) on the deferred leg: the
+			// selector matched no raw element (why it was deferred, LT-127) and
+			// no composed child either, so in a template that inserts
+			// `{children}` it can only resolve inside the content a parent
+			// passes — a reach-in unless its subject names a declared role.
+			const insertions = childrenInsertionsOf(component.root)
+			if (
+				(insertions.holders.size > 0 ||
+					insertions.forwards.size > 0 ||
+					insertions.unmarked) &&
+				namesDeclaredRole(
+					ref.selector,
+					new Set(component.childrenContract?.roles.keys() ?? []),
+				) === false
+			) {
+				diagnostics.push(
+					diagnostic.childrenReachIn(
+						component.source,
+						ref.at,
+						'first',
+						ref.name,
+						ref.selector,
+					),
+				)
+				continue
+			}
 			if (!ref.required) {
 				unmatchedOptional.push({ name: ref.name, selector: ref.selector })
 				continue

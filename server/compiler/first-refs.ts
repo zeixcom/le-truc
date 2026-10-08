@@ -251,6 +251,51 @@ export const namesCustomElementTag = (selectorList: string): boolean =>
 		.some(branch => parseSimpleSelector(branch)?.tag?.includes('-') === true)
 
 /**
+ * Does any branch of an author-written selector list name one of `roles`
+ * in its SUBJECT compound (ADR 0048 s2, LT-474)? The subject compound is
+ * what the query matches — the part after the last combinator — so a role
+ * class anywhere earlier does not address the content through the contract.
+ * Selector lists are OR semantics: one role-naming subject is enough.
+ * Returns `null` — not `false` — when the selector does not parse, so the
+ * caller can distinguish "no declared role" from "cannot read the
+ * subject" and stay silent there.
+ */
+export const namesDeclaredRole = (
+	selectorList: string,
+	roles: ReadonlySet<string>,
+): boolean | null => {
+	if (roles.size === 0) return false
+	let branches
+	try {
+		branches = cssWhat.parse(selectorList.trim())
+	} catch {
+		return null
+	}
+	for (const branch of branches) {
+		// The subject compound starts after the last combinator entry.
+		let start = 0
+		for (const [index, simple] of branch.entries())
+			if (
+				simple.type === 'descendant' ||
+				simple.type === 'child' ||
+				simple.type === 'sibling' ||
+				simple.type === 'adjacent' ||
+				simple.type === 'parent'
+			)
+				start = index + 1
+		for (const simple of branch.slice(start))
+			if (
+				simple.type === 'attribute' &&
+				simple.name === 'class' &&
+				simple.action === 'element' &&
+				roles.has(simple.value)
+			)
+				return true
+	}
+	return false
+}
+
+/**
  * The nearest enclosing `@if` whose branches (`then`/`alternate`) directly
  * contain `target`, searching from `root`.
  */

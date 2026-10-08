@@ -9,6 +9,7 @@
 
 import type { AstNode } from './ast-node'
 import { forEachFreeIdentifier } from './ast-utils'
+import { childrenInsertionsOf } from './children-region'
 import { dedentCss, parseComponentSheet } from './css'
 import { type ContractFinding, checkSheetContract } from './css-scope'
 import type { LocalDiagnostic, Site, StyleBlockRefusal } from './diagnostics'
@@ -20,6 +21,7 @@ import {
 	inReactiveArm,
 	inReconcileItem,
 	namesCustomElementTag,
+	namesDeclaredRole,
 	reportStaticIds,
 	shareExclusiveIf,
 } from './first-refs'
@@ -162,7 +164,13 @@ export const resolveTemplateOutput = (
 		)
 
 	// Resolve `first(selector, required)` element references (LT-055) now
-	// that `root` exists.
+	// that `root` exists. The reach-in check (LTC083) needs the `{children}`
+	// insertions once per template.
+	const insertions = childrenInsertionsOf(root)
+	const insertsChildren =
+		insertions.holders.size > 0 ||
+		insertions.forwards.size > 0 ||
+		insertions.unmarked
 	const firstRefs = new Map<string, FirstRefDecl>()
 	for (const [
 		refName,
@@ -190,6 +198,29 @@ export const resolveTemplateOutput = (
 			continue
 		}
 		if (elements.length === 0) {
+			// The reach-in check (ADR 0048 s2, LTC083): a selector that
+			// matches nothing here, in a template that inserts `{children}`,
+			// can only resolve inside the content a parent passes — unless
+			// its subject names a declared role, the one surface the child
+			// may address that content through. Fires for required and
+			// optional references alike, before LT-123's optional silence.
+			const roles = ctx.childrenContract?.roles
+			if (
+				insertsChildren &&
+				namesDeclaredRole(selectorText, new Set(roles?.keys() ?? [])) === false
+			) {
+				ctx.diagnostics.push(
+					diagnostic.childrenReachIn(
+						source,
+						node,
+						'first',
+						refName,
+						selectorText,
+					),
+				)
+				resolve('rejected')
+				continue
+			}
 			// An OPTIONAL ref is allowed to match nothing here
 			// (LT-123): "may be absent" includes "the page, not
 			// this template, authors it". The structural proof

@@ -1123,6 +1123,29 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   placement with no unique selector is LTC007; a compose-site handler in a
   server-data loop body, or where no mount binds it (a server-rendered
   branch inside an arm), is LTC005.
+- *The children contract* (ADR 0048 s2, LT-474, `HOST_PROFILE.md`'s
+  *Element references*): a `first()`/`all()` selector that matches nothing
+  in the component's own template, in a component whose template inserts
+  `{children}`, whose subject compound — the part the query matches —
+  names no role class declared on the `children` prop's `Children<Roles,
+  Model>` type, is LTC083: such a selector can only resolve inside the
+  content a parent passes, which belongs to the parent, and the child acts
+  on it only through its declared roles. The check runs at both
+  selector-verification sites — the raw no-match in `resolveTemplateOutput`
+  and the deferred no-match in `analysis/compose-refs.ts` — for required
+  and optional references alike; a subject the compiler cannot read
+  (unparsable) stays with the existing handling. The compiler reads the
+  roles and the model from the annotation syntactically (an inline
+  `Children<…>` or a same-file alias, `readChildrenContract` in
+  `params.ts`), carries them on the IR as `childrenContract`, and tsc owns
+  everything it cannot see: the tag constraint
+  (`keyof HTMLElementTagNameMap`) and the model union are type errors, not
+  diagnostics. A role-addressed reference that matches nothing resolves
+  like any other optional `unmatched` ref — the authored selector, queried
+  from the host, resolves inside the content through the region re-include
+  (ADR 0048 s1) — while a role-addressed REQUIRED ref still fails LTC026:
+  the required form stays reserved for markup the component proves it
+  renders.
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and
