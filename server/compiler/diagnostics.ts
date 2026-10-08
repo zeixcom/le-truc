@@ -1655,17 +1655,24 @@ export const diagnostic = {
 								childWrite.helper === 'bindAria'
 							? 'attribute'
 							: 'property'
-		const writes =
-			target.channel === 'text'
+		// Each side is named by its own target: a whole-attribute write
+		// (`class`, `style`, the element's text) meets a partial one.
+		const writesOf = (write: RoleWrite): string => {
+			const t = write.target
+			return t.channel === 'text'
 				? 'the text content'
-				: `\`${target.channel === 'name' ? target.name : target.channel === 'class' ? target.token : target.property}\``
+				: `\`${t.channel === 'name' ? t.name : t.channel === 'class' ? t.token : t.property}\``
+		}
+		const parentWrites = writesOf(parent.write)
+		const childWrites = writesOf(childWrite)
+		const too = parentWrites === childWrites ? ' too' : ''
 		const fix =
 			target.channel === 'text'
 				? "Change what the passed element renders, or change the child's role binding to leave the text to the parent."
 				: `Bind a different ${noun} on the passed element, or change the child's role binding to leave it to the parent.`
 		return error(
 			'LTC084',
-			`\`watch(…, ${parentSpell})\` writes ${writes} on an element passed to \`<${childTag}>\` that carries the \`.${role}\` role class — and \`<${childTag}>\` writes ${writes} on \`.${role}\` elements too, through its \`${childSpell}\` role binding (ADR 0048): two writers would fight over the same ${noun}. The passed content is yours to bind, and the child acts on it only through the roles it declares. ${fix}`,
+			`\`watch(…, ${parentSpell})\` writes ${parentWrites} on an element passed to \`<${childTag}>\` that carries the \`.${role}\` role class — and \`<${childTag}>\` writes ${childWrites} on \`.${role}\` elements${too}, through its \`${childSpell}\` role binding (ADR 0048): two writers would fight over the same ${noun}. The passed content is yours to bind, and the child acts on it only through the roles it declares. ${fix}`,
 			rangeOf(source, at),
 		)
 	},
