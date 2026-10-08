@@ -15,9 +15,6 @@ fails there with 404s until `build:docs` runs. (4) Signed commits in the main ch
 commit signs (2026-10-06). (5) `integrate`'s `git worktree remove` fails on `.git/worktrees/LT-NNN`
 (EPERM) even though the checkout is writable; finish with `git worktree remove --force`,
 `git worktree prune` and `git branch -d` outside the sandbox.
-(6) Every Playwright spec times out in `beforeEach` inside the sandbox, an untouched basic-button
-included, even though `curl` gets the served page; run `test:component` outside it (LT-463
-review, 2026-10-07).
 
 ---
 
