@@ -29,13 +29,18 @@ const fence: Schema = {
 		metaContent.push(new Tag('span', { class: 'language' }, [language]))
 		const metaSection = new Tag('p', { class: 'meta' }, metaContent)
 
-		// Create placeholder for syntax highlighted code that will be processed by file-signals
+		// Create placeholder for syntax highlighted code that will be processed by file-signals.
+		// The wrapper div mirrors the composed template's markup (LT-478): the
+		// compiled client's element queries reach pre/code through the
+		// data-children region only.
 		const codePlaceholder = new Tag(
 			'module-scrollarea',
 			{ orientation: 'horizontal' },
 			[
-				new Tag('pre', { 'data-language': language, 'data-code': code }, [
-					new Tag('code', { class: `language-${language}` }, [code]),
+				new Tag('div', { 'data-children': 'module-codeblock' }, [
+					new Tag('pre', { 'data-language': language, 'data-code': code }, [
+						new Tag('code', { class: `language-${language}` }, [code]),
+					]),
 				]),
 			],
 		)

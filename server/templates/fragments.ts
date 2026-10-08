@@ -68,7 +68,7 @@ export function tabPanel({ name, panel }: TabPanelProps): string {
 				<span class="language">${panel.type}</span>
 			</p>
 			<module-scrollarea orientation="horizontal">
-				${raw(panel.content)}
+				<div data-children="module-codeblock">${raw(panel.content)}</div>
 			</module-scrollarea>
 			<basic-button class="copy">
 				<button type="button" class="secondary small">
