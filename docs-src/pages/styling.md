@@ -99,7 +99,7 @@ This is the 2.x tag-led idiom minus one type selector throughout, so every speci
 - The child's `&.x` variant beats the parent's rule.
 - A page rule led by the bare tag beats the base too.
 
-A bare `:scope` is legal CSS with the specificity of a pseudo-class, so a `:scope { … }` rule outranks all three. Use it only where the host rule must win.
+A bare `:scope` is legal CSS with the specificity of a pseudo-class, so a `:scope { … }` rule outranks both the parent's bare rule and the page's tag rule. Use it only where the host rule must win.
 
 A parent's scoped rules reach the content of a composed child until a limit stops them, the same as they would on the platform. The compiler does not guess limits for you. It warns where a rule can leak.
 

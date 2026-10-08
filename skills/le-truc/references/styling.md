@@ -28,7 +28,7 @@ A compiled sheet means what the same sheet would mean as an inline `<style>` in 
 }
 ```
 
-It is the 2.x tag-led idiom minus one type selector, so the 2.x contests keep their winners: a parent's bare rule on the child's host beats the child's `:where(:scope)` base, the child's `&.x` variant beats the parent's rule, and a page rule led by the bare tag beats the base. A bare `:scope` (0,1,0) outranks all three. It is legal, but use it only where the host rule must win.
+It is the 2.x tag-led idiom minus one type selector, so the 2.x contests keep their winners: a parent's bare rule on the child's host beats the child's `:where(:scope)` base, the child's `&.x` variant beats the parent's rule, and a page rule led by the bare tag beats the base. A bare `:scope` (0,1,0) outranks both the parent's bare rule and the page's tag rule. It is legal, but use it only where the host rule must win.
 
 A rule led by the component's own tag at the top level (`my-tag .x { … }`) stays contained and emits verbatim. Any other top-level rule applies page-wide, as in any `<style>`. A parent's scoped rules reach a composed child's internals until a limit stops them. This is **not** Ripple-style hashed class scoping. No classes are generated or rewritten. Refused forms (compile errors):
 
