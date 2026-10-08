@@ -113,13 +113,13 @@ export function ModuleTabgroup(
 					margin-block-end: var(--space-l);
 				}
 
-				> [role="tablist"] {
+				[role="tablist"] {
 					display: flex;
 					border-bottom: 1px solid var(--color-border);
 					padding: 0;
 					margin-block-end: 0;
 
-					> [role="tab"] {
+					[role="tab"] {
 						border: 0;
 						border-color: transparent;
 						border-width: 2px 1px 0 1px;
@@ -159,7 +159,7 @@ export function ModuleTabgroup(
 					}
 				}
 
-				> [role="tabpanel"] {
+				[role="tabpanel"] {
 					font-size: var(--font-size-m);
 					margin-block-start: var(--space-l);
 				}

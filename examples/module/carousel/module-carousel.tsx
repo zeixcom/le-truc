@@ -355,7 +355,7 @@ export function ModuleCarousel(
 		}
 	}
 
-	> nav {
+	nav {
 		> button {
 			position: absolute;
 			top: 2%;

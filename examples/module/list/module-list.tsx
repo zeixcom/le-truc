@@ -80,7 +80,7 @@ export function ModuleList({}: {}) {
 					gap: var(--space-l);
 				}
 
-				> form {
+				form {
 					display: flex;
 					flex-direction: column;
 					align-items: flex-start;

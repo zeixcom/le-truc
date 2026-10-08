@@ -278,7 +278,7 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 					display: none;
 				}
 
-				> form {
+				form {
 					display: flex;
 					flex-direction: column;
 					align-items: flex-start;
@@ -376,7 +376,7 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 					}
 				}
 
-				> footer {
+				footer {
 					display: grid;
 					grid-template-columns: 1fr 1fr;
 					grid-template-areas: "filter filter" "count clear";

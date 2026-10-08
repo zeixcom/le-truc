@@ -1151,11 +1151,11 @@ const splice = (
  *   scope root there, and where whitespace precedes the combinator it
  *   REPLACES that character, so every parsed loc still resolves against
  *   the authored text;
- * - `':where(:scope)'` for the lowered emission's flattening pass — the
- *   implicit `:scope` of a relative selector, whose specificity is zero.
- *   (lightningcss flattens a top-level `&` into `:scope`, which counts.)
- *
- * The native emission ships the authored text, relative selectors and all.
+ * - `':where(:scope)'` for the lowered emission's flattening pass and for
+ *   the native emission — the implicit `:scope` of a relative selector,
+ *   whose specificity is zero. (lightningcss flattens a top-level `&` into
+ *   `:scope`, which counts.) Native ships it so every lightningcss-based
+ *   bundler accepts the sheet (LT-504).
  */
 export type RelativeAnchor = '&' | ':where(:scope)'
 
@@ -1265,8 +1265,9 @@ const scopeHeadOf = (head: string): ScopeHead => {
 
 /**
  * Walk a canonical sheet's rules, giving every component `@scope` its
- * explicit root (ADR 0033 s3). A conditional group can hold a `@scope`;
- * everything inside a `@scope` — nested blocks included — stays verbatim.
+ * explicit root (ADR 0033 s3) and its relative selectors their implicit
+ * `:where(:scope)` anchor (`RelativeAnchor`). A conditional group can hold
+ * a `@scope`; everything else inside a `@scope` stays verbatim.
  */
 const nativeRules = (
 	text: string,
@@ -1283,8 +1284,11 @@ const nativeRules = (
 		if (name === 'scope') {
 			const head = text.slice(rule.start + '@scope'.length, rule.brace).trim()
 			const body = text.slice(rule.brace, rule.end)
-			if (head === '') out += `@scope (${tag}) ${body}`
-			else if (/^to\s*\(/.test(head)) out += `@scope (${tag}) ${head} ${body}`
+			if (head === '' || /^to\s*\(/.test(head))
+				out += anchorRelativeSelectors(
+					`@scope (${tag})${head === '' ? '' : ` ${head}`} ${body}`,
+					':where(:scope)',
+				)
 			else out += text.slice(rule.start, rule.end)
 		} else if (name !== null && CONDITIONAL_AT_RULES.has(name)) {
 			out += `${text.slice(rule.start, rule.brace + 1)}${nativeRules(

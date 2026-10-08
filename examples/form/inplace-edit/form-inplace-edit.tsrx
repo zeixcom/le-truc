@@ -126,7 +126,7 @@ export function FormInplaceEdit(
 		>{() => (host.editing ? '✓' : '✎')}</button>
 
 		<style>
-		@scope {
+		@scope to (form-textbox > *) {
 			:where(:scope) {
 				display: flex;
 				align-items: center;
@@ -137,7 +137,7 @@ export function FormInplaceEdit(
 				line-height: var(--line-height-s);
 			}
 
-			> button {
+			button {
 				flex: 0;
 				height: var(--input-height);
 				min-inline-size: var(--input-height);
@@ -164,7 +164,7 @@ export function FormInplaceEdit(
 					display: none;
 				}
 
-				> button {
+				button {
 					color: var(--color-primary-text);
 					background-color: var(--color-primary);
 					border-color: var(--color-primary-active);

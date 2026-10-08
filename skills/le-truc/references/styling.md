@@ -14,7 +14,7 @@ Le Truc applies no scoping to this CSS. It reaches the page exactly as written.
 
 A compiled sheet means what the same sheet would mean as an inline `<style>` in the host. Scope it with a prelude-less `@scope { … }`: `:scope` is the host, bare selectors are its descendants, and `to (<limits>)` stops the scope where you write it. The compiler adds no limits of its own. It emits native `@scope` (with the explicit root `@scope (my-tag)`) where the build's CSS targets support it, and a flat lowering otherwise: `:where(my-tag)`-led selectors, a bare `:scope` as the root with the same specificity, and a zero-specificity guard per limit.
 
-**The idiom** (ADR 0033 s1): host rules at `:where(:scope)`, root variants as `&.x` inside it, descendants bare or relative, a state-dependent descendant as `:where(:scope).x .label`, and a limit, `to (child-tag > *)`, for each composed child your rules would otherwise reach (LTC087 names them).
+**The idiom** (ADR 0033 s1): host rules at `:where(:scope)`, root variants as `&.x` inside it, descendants bare (relative, `> p`, only where the bare form would also match deeper markup of your own), a state-dependent descendant as `:where(:scope).x .label`, and a limit, `to (child-tag > *)`, for each composed child your rules would otherwise reach (LTC087 names them).
 
 ```css
 @scope to (basic-button > *) {
