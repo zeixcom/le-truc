@@ -166,36 +166,6 @@ LTC056 is LT-358's).
 
 ### C — children contract
 
-- [ ] LT-505: LTC087 sees the static attributes at a nested compose site, so a parent's `.hue` reaching a grandchild host's `class="hue"` warns.
-  **Area:** compiler
-  **Needs:** LT-504
-  **Gates:** test:server, typecheck, check:corpus
-  **Area:** compiler
-  **Needs:** LT-504
-  **Filed (Architect, 2026-10-08; LT-504 review):** `leakChildrenFor`
-  (`server/compiler/analysis/selectors.ts`) recurses into a child's own composed children, but
-  the nested call passes an empty site map (`build(shape.source, new Map(), inner)`). The
-  `compose` variant of `RenderedShape` (`server/compiler/ir.ts`) records only `source`, so the
-  attributes written at a compose site inside a child's template are lost. Confirmed: with
-  module-coloreditor's limit removed, bare `.hue` reaches form-colorgraph's
-  `<FormSpinbutton class="hue">` and module-colorinfo's `<BasicNumber class="hue">`, and LTC087
-  stays silent. The top-level compose sites already merge their static attributes
-  (`composeStaticAttrs`).
-  **Do:**
-  1. Give the `compose` shape the site's static attributes and its dynamic attribute names,
-     recorded by `renderedShapesOf` the way an `element` shape records them.
-  2. In `leakChildrenFor`, merge them into the nested child's host exactly as the top-level
-     call does (class values concatenate). A dynamic attribute stays a possible match, as for
-     elements.
-  3. Pin it in the selectors or pipeline tests: a parent rule on a class set only at a
-     grandchild's compose site warns, and the authored limit on the intermediate child
-     silences it.
-  **Check:** with module-coloreditor's limit removed, `check:corpus` reports LTC087 for `.hue`,
-  `.lightness` and `.chroma`; restored, the baseline is unchanged. No new tree walk: the shapes
-  are computed once per component in the registry pass, and matching tests the same elements
-  as before, now with complete attributes.
-  **Channel/tier:** compiler, tier 2 (Contained) — the existing LTC087; no new code.
-
 - [ ] LT-506: LTC090 — a scoped rule that provably matches nothing the component renders warns (dead rule).
   **Area:** compiler
   **Needs:** LT-505
@@ -369,36 +339,6 @@ LTC056 is LT-358's).
   workaround.
   **Sequence:** module-todo's fourth edit, after LT-466 → LT-467 → LT-463 (ruling 5).
   **Check:** `test:component form-checkbox module-todo` is unchanged.
-
-- [ ] LT-505: LTC087 sees the static attributes at a nested compose site, so a parent's `.hue` reaching a grandchild host's `class="hue"` warns.
-  **Area:** compiler
-  **Needs:** LT-504
-  **Gates:** test:server, typecheck, check:corpus
-  **Area:** compiler
-  **Needs:** LT-504
-  **Filed (Architect, 2026-10-08; LT-504 review):** `leakChildrenFor`
-  (`server/compiler/analysis/selectors.ts`) recurses into a child's own composed children, but
-  the nested call passes an empty site map (`build(shape.source, new Map(), inner)`). The
-  `compose` variant of `RenderedShape` (`server/compiler/ir.ts`) records only `source`, so the
-  attributes written at a compose site inside a child's template are lost. Confirmed: with
-  module-coloreditor's limit removed, bare `.hue` reaches form-colorgraph's
-  `<FormSpinbutton class="hue">` and module-colorinfo's `<BasicNumber class="hue">`, and LTC087
-  stays silent. The top-level compose sites already merge their static attributes
-  (`composeStaticAttrs`).
-  **Do:**
-  1. Give the `compose` shape the site's static attributes and its dynamic attribute names,
-     recorded by `renderedShapesOf` the way an `element` shape records them.
-  2. In `leakChildrenFor`, merge them into the nested child's host exactly as the top-level
-     call does (class values concatenate). A dynamic attribute stays a possible match, as for
-     elements.
-  3. Pin it in the selectors or pipeline tests: a parent rule on a class set only at a
-     grandchild's compose site warns, and the authored limit on the intermediate child
-     silences it.
-  **Check:** with module-coloreditor's limit removed, `check:corpus` reports LTC087 for `.hue`,
-  `.lightness` and `.chroma`; restored, the baseline is unchanged. No new tree walk: the shapes
-  are computed once per component in the registry pass, and matching tests the same elements
-  as before, now with complete attributes.
-  **Channel/tier:** compiler, tier 2 (Contained) — the existing LTC087; no new code.
 
 - [ ] LT-507: Corpus — remove the dead rules LTC090 names, on every surface.
   **Area:** compiler
