@@ -20,9 +20,8 @@ LT-499, LT-500, LT-405, LT-407, LT-408, LT-409.
 - **LT-473** (approved, not integrated) built the ownership emission. Its measurements are the
   evidence behind ADR 0048's rejected style form. The lowered form cost up to about 13.5 kB raw
   per component, and native owners carried their rules twice. `test:variants` was green under
-  it. **Open obligation:** `task/LT-473` and `.worktrees/LT-473` stay until LT-501's review,
-  for the salvage of `css-probe-child` and its spec cells. The reviewer then removes both
-  (`git worktree remove`, `git branch -D`).
+  it. Its branch and worktree were removed after LT-501's salvage of `css-probe-child`
+  (2026-10-08).
 - **LT-500's owner rulings that survive:** `{children}` directly in a child's root is allowed,
   with no wrapper, and own elements beside it are allowed and count as the parent's region
   (ADR 0048 s1). Components such as card-callout and section-menu are chosen partly for the
@@ -1215,3 +1214,11 @@ Full entry text: `git log -p -- DONE.md`.
   **Area:** compiler
   **Changed:** Compiled sheets are authored platform CSS (ADR 0033 as revised 2026-10-07/08): a prelude-less `@scope { … }` with author-written `to (…)` limits, the host idiom `:where(:scope)`, bare or relative descendants, tag-led and other top-level rules verbatim. Native emission adds the explicit root `@scope (<tag>)`. The lowered emission leads with `:where(<root>)`, pads a bare `:scope` to (0,1,0), and adds one guard per authored limit, re-including an own-tag instance below the limit or matched by it. The derived-boundary emission and `CompiledComponent.scopeBoundaries` are gone, and LTC051 compares authored sheets only. Diagnostics: LTC066 reworded, LTC069 on any `:global`, LTC071 re-scoped to limit-dead rules, LTC086 (`:host`) and LTC089 (unlowerable `@scope` forms, lowered targets only) new, LTC070 retired. All 50 compiled corpus sources moved by `scripts/migrate-scope-css.ts`, keeping the old boundary sets as `to (<tag> > *)` limits. Lowered corpus CSS is 102,044 → 172,605 bytes against `v3`, all of it guard cost; LT-502 removes unneeded limits.
   **Review:** Approved (2026-10-08) after one round (the `:where(:scope)` ruling). Accepted: lightningcss 1.33 refuses a relative selector at the top of `@scope`, so the compiler anchors it before parsing and flattening (`anchorRelativeSelectors`); `> my-tag .x` inside `@scope` is not LTC066. Nit fixed by the reviewer: a bare `:scope` ties the child's own `&.x` variant, so the docs no longer say it "outranks all three".
+
+- [x] LT-502: Leak and unscoped-rule warnings from the compiler's knowledge of composed children (ADR 0033 s5); drop the corpus limits they show are unneeded. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-501
+  **Gates:** test:server, typecheck, check:corpus, test:variants
+  **Area:** compiler
+  **Changed:** Two tier 2 warnings (ADR 0033 s5). LTC087 (downward leak): a rule in the component's `@scope` block whose subject can match an element a composed child renders in its own template, transitively through the registry, with no authored limit excluding the child; passed `children` content never counts (ADR 0048 s5); the fix-it is `to (<child-tag> > *)`. LTC088 (unscoped rule): a top-level rule neither in `@scope` nor led by the component's own tag. Corpus: 30 codemod limits removed, 8 kept; section-menu's docs-shell rules moved to `examples/_global.css`; `check:corpus` counts warnings outside `examples/test/**` only and prints fixture warnings on an uncounted line. The baseline is 1, module-dialog's `body.scroll-lock`. Lowered component CSS is 98,149 bytes (v3 before LT-501: 102,044).
+  **Review:** Approved (2026-10-08). Ruling (owner, 2026-10-08): a page-wide rule goes where its owner is. Page-owned rules move to the page CSS; a component-bound one (a class the component's script sets on `body`) stays in the component and keeps LTC088; `examples/test/**` fixtures stay out of the baseline count. Accepted: LTC087 tests the subject compound alone and treats a dynamic attribute as a possible match, so it errs toward warning (why ticker, todo and codeblock keep `basic-button > *`). The single-guard option is dropped (owner, 2026-10-08): the lowered CSS already comes in under v3. The native bundler rejection of top-level relative selectors is LT-504. Nit fixed by the reviewer: LTC088's copy no longer tells a component-owned page-wide rule to move to the page CSS.

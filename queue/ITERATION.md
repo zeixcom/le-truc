@@ -78,8 +78,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     re-includes and root-insertion exception made the applied rules unpredictable. Scoping is
     now an authored `@scope { … }` with author-written limits. The compiler warns at concrete
     leaks and never emits a limit. Consequences:
-    - LT-473 was approved on its own terms but is not integrated. Its branch stays for
-      LT-501's salvage.
+    - LT-473 was approved on its own terms but is not integrated. LT-501 salvaged
+      `css-probe-child` from its branch, which is now removed.
     - LT-499, LT-500 and LT-475 are struck, and so is the P2b CSS-departures cluster
       (LT-405, LT-407, LT-408, LT-409); the revision answers LT-409's question.
     - LT-501 (emission, errors and the corpus cutover in one commit) → LT-502 (warnings, and

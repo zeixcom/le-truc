@@ -78,8 +78,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     re-includes and root-insertion exception made the applied rules unpredictable. Scoping is
     now an authored `@scope { … }` with author-written limits. The compiler warns at concrete
     leaks and never emits a limit. Consequences:
-    - LT-473 was approved on its own terms but is not integrated. Its branch stays for
-      LT-501's salvage.
+    - LT-473 was approved on its own terms but is not integrated. LT-501 salvaged
+      `css-probe-child` from its branch, which is now removed.
     - LT-499, LT-500 and LT-475 are struck, and so is the P2b CSS-departures cluster
       (LT-405, LT-407, LT-408, LT-409); the revision answers LT-409's question.
     - LT-501 (emission, errors and the corpus cutover in one commit) → LT-502 (warnings, and
@@ -165,57 +165,6 @@ LTC056 is LT-358's).
 <!-- entries -->
 
 ### C — children contract
-
-- [ ] LT-502: Leak and unscoped-rule warnings from the compiler's knowledge of composed children (ADR 0033 s5); drop the corpus limits they show are unneeded.
-  **Area:** compiler
-  **Needs:** LT-501
-  **Gates:** test:server, typecheck, check:corpus, test:variants
-  **Area:** compiler
-  **Needs:** LT-501
-  **Filed (Architect, 2026-10-07; ADR 0033 s5 as revised):** the compiler warns only where a
-  concrete leak exists. It never emits a limit.
-  **Do:**
-  1. **LTC087, downward leak** (compiler, Contained; the CSS ships as authored).
-     - Fires when a rule in a component `@scope` block has a subject that can match a shape that
-       a composed child renders in its own template. Use the registry's `renderedShapes`
-       closure, transitively, and exclude the child's Children Region content.
-     - It does not fire when an authored limit of that block excludes the child (`<child> > *`,
-       or any limit that matches the child's host or an ancestor of the shape inside the child).
-     - Content the component passes as `children` is its own markup, not a leak (ADR 0048 s5).
-     - The message names the rule, the child and the fix-it `to (<child-tag> > *)`.
-     - Raw custom elements in the template have no registry shapes and never warn.
-  2. **LTC088, unscoped rule** (compiler, Contained). Fires on a top-level rule that is neither
-     in `@scope` nor led by the component's own tag, nor `@keyframes`, `@font-face` or
-     `@property`.
-  3. **Corpus.** Remove every `to (…)` limit LT-501's codemod wrote whose removal raises no
-     LTC087. Keep the rest. List both sets in the handoff. Computed styles stay unchanged
-     (LT-397's procedure). Page-wide rules follow the 2026-10-08 ruling below; list each LTC088
-     and its disposition.
-  4. Copy goes to `../writer/references/error-messages.md` and the `skills/le-truc` errors row.
-  **Check:** `test:server` pins the following cases:
-  - a leak through a composed child's internal class;
-  - no leak when a limit excludes it;
-  - no leak into passed children;
-  - a transitive grandchild leak;
-  - LTC088 on an unscoped `.x` and not on `my-el .x`.
-
-  **Ruling (owner, 2026-10-08; resolves the blocked NOTES entry):** a page-wide rule goes where
-  its owner is.
-  - **Page-owned rules move to the page CSS.** section-menu's docs-shell rules (`:root
-    { --header-height }`, `.docs-body`, `.docs-main`, `.quicklinks`, `.docs-header-bar`,
-    `header`, `#sidebar-toggle`) move from both members of the variant set into
-    `examples/_global.css`. They style elements that `docs-src/layouts/*.html` own. Computed
-    styles stay unchanged; a source-order change that moves a value is fixed in `_global.css`,
-    not in the component. The hand-written twin `section-menu.css` stays as it is (2.x
-    artifact). The section-menu parity test stays clean.
-  - **Component-bound page-wide rules stay and warn.** module-dialog's `body.scroll-lock` is
-    part of the component's contract, because its JS toggles the class. It keeps LTC088: that
-    is the case the warning exists for, and the one standing warning in the baseline.
-  - **Test fixtures are excluded from the baseline.** `check:corpus` counts warnings from
-    sources outside `examples/test/**` only, and prints the fixtures' warnings on a separate,
-    uncounted line. css-probe's LTC087/LTC088 stay as the spec pins them.
-  **Option (Architect, 2026-10-08):** One option for LT-502 is folding all of a block's limits into a single guard, but I'd want that proven equivalent before it's adopted.
-  **Channel/tier:** compiler, tier 2 Contained (warnings).
 
 - [ ] LT-504: Corpus — relative `> x` selectors in component `@scope` blocks become bare where limits keep computed styles; the native emission anchors the rest.
   **Area:** compiler

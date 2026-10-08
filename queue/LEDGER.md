@@ -20,9 +20,8 @@ LT-499, LT-500, LT-405, LT-407, LT-408, LT-409.
 - **LT-473** (approved, not integrated) built the ownership emission. Its measurements are the
   evidence behind ADR 0048's rejected style form. The lowered form cost up to about 13.5 kB raw
   per component, and native owners carried their rules twice. `test:variants` was green under
-  it. **Open obligation:** `task/LT-473` and `.worktrees/LT-473` stay until LT-501's review,
-  for the salvage of `css-probe-child` and its spec cells. The reviewer then removes both
-  (`git worktree remove`, `git branch -D`).
+  it. Its branch and worktree were removed after LT-501's salvage of `css-probe-child`
+  (2026-10-08).
 - **LT-500's owner rulings that survive:** `{children}` directly in a child's root is allowed,
   with no wrapper, and own elements beside it are allowed and count as the parent's region
   (ADR 0048 s1). Components such as card-callout and section-menu are chosen partly for the
