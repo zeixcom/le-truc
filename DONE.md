@@ -857,44 +857,6 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** Approved. The marker and the owner channel match ADR 0048 s1. The owner rides as an optional second render parameter. That is additive to the generated-module API (ruling 11), and `check:contract` is green. A page-rendered or page-forwarded instance passes `undefined`, which `attr()` omits, so no marker appears. `excludeUnlessOwned` is the single helper that LT-473 reuses. Elements outside any region keep the old exclusion, so no existing selector moved. The only corpus change is the server-written markers (module-dialog's scrollarea `<div>`, module-lazyload's callouts, live and in their templates). **Reviewer merge:** the branch was based on `5f3fa952`, before LT-495. I merged v3 (`a6252ff9`) and resolved the equivalence-audit conflict by regenerating on the merged state. The diff against v3 is three entries, markers only. Re-run on the merged state: `test:server` 3543/0, `typecheck`, `check:contract`, `check:corpus`, `build:docs`, `check:links` 776/776. Outside the sandbox: `test:component` module-dialog 43/43, module-lazyload 40/40 and module-listnav 14/14 (the order-dependent fixed point the contributor noted passes in the full suite). **Doubts:** (1) mixed-content forward and (3) declared-but-never-inserted children both stay refused, because s1 gives them no region; the message should name the cause, filed as LT-497 (P7). (2) A list-item-setup `first()` emitting the authored selector verbatim is accepted. It follows ADR 0046's item-ref policy, item-root scoped with no composed-child exclusion, and a selector that could match the child's own markup is still dropped by the region-resident check.
 
-- [x] LT-474: Declared roles — the `Children<Roles, Model>` type and the reach-in check (ADR 0048 s2; LTC083). — done, pending review ⏳
-  **Area:** compiler
-  **Needs:** LT-472
-  **Gates:** check:corpus, check:contract
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s2):**
-  1. **The type.** `Children<Roles extends Record<string, keyof HTMLElementTagNameMap> = {},
-     Model extends 'any' | 'non-interactive' = 'any'>` is a phantom-branded `string`. It stays
-     assignable to and from the rendered markup string, so `children = ''` defaults and existing
-     `children?: string` sources keep compiling. Export it type-only beside `FactoryContext`
-     (`types/src/component.d.ts`, re-exported from the package entry), with zero runtime bytes.
-     The compiler reads the roles and the model from the declared parameter type, on both
-     surfaces.
-  2. **Role typing.** A child's `first('.<role>')`/`all('.<role>')` types as the declared tag's
-     element.
-  3. **LTC083, the reach-in.**
-     - Channel: compiler. Tier: Prevented (ADR 0028).
-     - Fires when a child's `first()`/`all()` selector matches nothing in the child's own
-       template, its component inserts `{children}`, and its subject compound names no declared
-       role class.
-     - Such a selector can only resolve inside the content, so it reaches past the contract.
-     - The fix-it names the role declaration.
-     - Write the copy to `../writer/references/error-messages.md`.
-  **Corpus survey first:** list every component that addresses its children today. For each,
-  either declare roles or record it in `NOTES.md` (LT-463's rule for surprises). Do not widen
-  LTC083's condition to pass a site.
-
-  **Changed:** ADR 0048 s2, the children contract's child side. `Children<Roles, Model>` (`src/component.ts`, re-exported from the package entry and the committed `types/` build) is a phantom-branded string — `children = ''` defaults and existing `children?: string` sources keep compiling — with the Roles constraint enforcing `keyof HTMLElementTagNameMap` tags and the `'any' | 'non-interactive'` model union at tsc. `FactoryContext<P>` is role-aware: `first('.tab')`/`all('.tab')` type as the declared tag's element (empty role set = `never` parameter, so the plain selector-string typing applies to everything else). The compiler reads the roles and the model syntactically from the `children` arg's annotation (`readChildrenContract` in `params.ts`: inline `Children<…>` or a same-file alias, string-literal keys included), carries them on the IR as `childrenContract`, and enforces **LTC083** (tier 1 Prevented, no runtime half): a `first()`/`all()` selector that matches nothing in the child's own template, in a child whose template inserts `{children}`, whose subject compound — after the last combinator (`namesDeclaredRole` in `first-refs.ts`, css-what) — names no declared role class, fails the compile at both selector-verification sites (the raw no-match in `resolveTemplateOutput`, the deferred no-match in `analysis/compose-refs.ts`), for required and optional references alike. An unparsable subject stays with the existing handling. A role-addressed reference that matches nothing resolves as today's `unmatched` ref: the authored selector queried from the host, found inside the content through LT-472's region re-include. Docs: HOST_PROFILE § Element references, LE_TRUC_COMPILER diagnostic inventory, VOCABULARY_LEDGER (LTC083 row; LTC082/LTC084/LTC085 stay reserved for their tasks), `skills/le-truc/references/errors.md`, CHANGELOG Unreleased. Diagnostics tests in `diagnostics.test.ts` (both surfaces, the deferred leg, the alias read, subject-compound rule, LT-123 non-regression), type pins in `src/tests/component.test.ts`.
-
-  **How:** The check reads the population the structural verifier already verifies — declared `const x = first(…)` element refs. Inline `first()`/`all()` calls (an `on(first(…))` target, an `all(…)` inside a watch thunk) compile verbatim by the existing policy and are outside structural verification, so they are outside this check. The corpus survey found no declared ref resolving only inside children: form-listbox's option buttons, form-checkbox's input, module-codeblock's `code`/copy/overlay, module-dialog's buttons and `dialog` all match the child's own markup; context-media, section-menu, card-callout, card-blogpost and module-scrollarea declare no refs. The one component that addresses its children — `module-cem-list` (`.tsrx` + `.tsx` twin), whose `first('form-textbox')`/`all('card-collapsible')` resolve only in the page-authored `{% cem-list %}` output — does so through INLINE calls, so it compiles unchanged; recorded in NOTES.md. `types/` was regenerated with `tsc -p tsconfig.build.json` (diff = the addition only).
-
-  **Check:** all green in the worktree — `test:server` 3614 pass / 0 fail (after `build:docs`; the first run's 27 serve/route failures were the fresh-worktree mode, gone once docs were built), `lint:server` + `lint` (biome, own paths only), `typecheck` (it caught two wrong pins in my type tests — fixed), `check:contract`, `check:corpus`, `build:docs`, `check:links` 775/775, `test:src` 520 pass / 0 fail, `check:size` (minimal entry 9131 B, unchanged — the type erases). No Playwright run: no example source or emission changed (client/server goldens and snapshots green inside test:server). Doubts for the review pass:
-  1. A role-classed REQUIRED ref that matches nothing own-template still fails LTC026 (`firstSelectorNotFound`), whose fix copy ("adjust the selector") is wrong for that shape — the content is the parent's to vary, so the optional form is the content idiom (documented in HOST_PROFILE). If required-into-content should throw the authored reason at runtime instead, that is a small follow-up in `plan.ts`'s unmatched handling.
-  2. The roles read is same-file only: a roles literal declared in another module reads as no roles, and LTC083 would fire on a subject that names such a role — the house can't-read-it posture (LTC076's imported item types), flagged here rather than widened.
-  3. LTC083 carries no `related` range to the annotation (the IR keeps no AST nodes for it); the message names the declaration instead.
-  4. `all()` appears in the code's rule statement but only `first()` declarations flow through the verification sites today; the wording anticipates the surface extending without a code change.
-  5. The role-overload intersections sit in `FactoryContext` before `FirstElement`/`AllElements`, so they win resolution order for role selectors; the generated client types role calls too when it re-emits `defineComponent<Props>(…)`.
-
 - [x] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped. — reviewed ✓
   **Area:** examples
   **Needs:** LT-502

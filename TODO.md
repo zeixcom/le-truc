@@ -172,7 +172,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-513.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Next free task ID: LT-514.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -185,6 +185,65 @@ LTC056 is LT-358's).
 <!-- entries -->
 
 ### C — children contract
+
+- [ ] LT-474: Declared roles — the `Children<Roles, Model>` type and the reach-in check (ADR 0048 s2; LTC083). — changes requested ↩
+  **Area:** compiler
+  **Needs:** LT-472
+  **Gates:** check:corpus, check:contract
+  **Area:** compiler
+  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s2):**
+  1. **The type.** `Children<Roles extends Record<string, keyof HTMLElementTagNameMap> = {},
+     Model extends 'any' | 'non-interactive' = 'any'>` is a phantom-branded `string`. It stays
+     assignable to and from the rendered markup string, so `children = ''` defaults and existing
+     `children?: string` sources keep compiling. Export it type-only beside `FactoryContext`
+     (`types/src/component.d.ts`, re-exported from the package entry), with zero runtime bytes.
+     The compiler reads the roles and the model from the declared parameter type, on both
+     surfaces.
+  2. **Role typing.** A child's `first('.<role>')`/`all('.<role>')` types as the declared tag's
+     element.
+  3. **LTC083, the reach-in.**
+     - Channel: compiler. Tier: Prevented (ADR 0028).
+     - Fires when a child's `first()`/`all()` selector matches nothing in the child's own
+       template, its component inserts `{children}`, and its subject compound names no declared
+       role class.
+     - Such a selector can only resolve inside the content, so it reaches past the contract.
+     - The fix-it names the role declaration.
+     - Write the copy to `../writer/references/error-messages.md`.
+  **Corpus survey first:** list every component that addresses its children today. For each,
+  either declare roles or record it in `NOTES.md` (LT-463's rule for surprises). Do not widen
+  LTC083's condition to pass a site.
+
+  **Changed:** ADR 0048 s2, the children contract's child side. `Children<Roles, Model>` (`src/component.ts`, re-exported from the package entry and the committed `types/` build) is a phantom-branded string — `children = ''` defaults and existing `children?: string` sources keep compiling — with the Roles constraint enforcing `keyof HTMLElementTagNameMap` tags and the `'any' | 'non-interactive'` model union at tsc. `FactoryContext<P>` is role-aware: `first('.tab')`/`all('.tab')` type as the declared tag's element (empty role set = `never` parameter, so the plain selector-string typing applies to everything else). The compiler reads the roles and the model syntactically from the `children` arg's annotation (`readChildrenContract` in `params.ts`: inline `Children<…>` or a same-file alias, string-literal keys included), carries them on the IR as `childrenContract`, and enforces **LTC083** (tier 1 Prevented, no runtime half): a `first()`/`all()` selector that matches nothing in the child's own template, in a child whose template inserts `{children}`, whose subject compound — after the last combinator (`namesDeclaredRole` in `first-refs.ts`, css-what) — names no declared role class, fails the compile at both selector-verification sites (the raw no-match in `resolveTemplateOutput`, the deferred no-match in `analysis/compose-refs.ts`), for required and optional references alike. An unparsable subject stays with the existing handling. A role-addressed reference that matches nothing resolves as today's `unmatched` ref: the authored selector queried from the host, found inside the content through LT-472's region re-include. Docs: HOST_PROFILE § Element references, LE_TRUC_COMPILER diagnostic inventory, VOCABULARY_LEDGER (LTC083 row; LTC082/LTC084/LTC085 stay reserved for their tasks), `skills/le-truc/references/errors.md`, CHANGELOG Unreleased. Diagnostics tests in `diagnostics.test.ts` (both surfaces, the deferred leg, the alias read, subject-compound rule, LT-123 non-regression), type pins in `src/tests/component.test.ts`.
+
+  **How:** The check reads the population the structural verifier already verifies — declared `const x = first(…)` element refs. Inline `first()`/`all()` calls (an `on(first(…))` target, an `all(…)` inside a watch thunk) compile verbatim by the existing policy and are outside structural verification, so they are outside this check. The corpus survey found no declared ref resolving only inside children: form-listbox's option buttons, form-checkbox's input, module-codeblock's `code`/copy/overlay, module-dialog's buttons and `dialog` all match the child's own markup; context-media, section-menu, card-callout, card-blogpost and module-scrollarea declare no refs. The one component that addresses its children — `module-cem-list` (`.tsrx` + `.tsx` twin), whose `first('form-textbox')`/`all('card-collapsible')` resolve only in the page-authored `{% cem-list %}` output — does so through INLINE calls, so it compiles unchanged; recorded in NOTES.md. `types/` was regenerated with `tsc -p tsconfig.build.json` (diff = the addition only).
+
+  **Check:** all green in the worktree — `test:server` 3614 pass / 0 fail (after `build:docs`; the first run's 27 serve/route failures were the fresh-worktree mode, gone once docs were built), `lint:server` + `lint` (biome, own paths only), `typecheck` (it caught two wrong pins in my type tests — fixed), `check:contract`, `check:corpus`, `build:docs`, `check:links` 775/775, `test:src` 520 pass / 0 fail, `check:size` (minimal entry 9131 B, unchanged — the type erases). No Playwright run: no example source or emission changed (client/server goldens and snapshots green inside test:server). Doubts for the review pass:
+  1. A role-classed REQUIRED ref that matches nothing own-template still fails LTC026 (`firstSelectorNotFound`), whose fix copy ("adjust the selector") is wrong for that shape — the content is the parent's to vary, so the optional form is the content idiom (documented in HOST_PROFILE). If required-into-content should throw the authored reason at runtime instead, that is a small follow-up in `plan.ts`'s unmatched handling.
+  2. The roles read is same-file only: a roles literal declared in another module reads as no roles, and LTC083 would fire on a subject that names such a role — the house can't-read-it posture (LTC076's imported item types), flagged here rather than widened.
+  3. LTC083 carries no `related` range to the annotation (the IR keeps no AST nodes for it); the message names the declaration instead.
+  4. `all()` appears in the code's rule statement but only `first()` declarations flow through the verification sites today; the wording anticipates the surface extending without a code change.
+  5. The role-overload intersections sit in `FactoryContext` before `FirstElement`/`AllElements`, so they win resolution order for role selectors; the generated client types role calls too when it re-emits `defineComponent<Props>(…)`.
+  **Review:** Changes requested (2026-10-08, owner-confirmed). The type, the roles read and the
+  subject-compound rule stand; three findings inside the task's scope:
+  1. **A required role reference compiles.** `first('.tab', 'reason')` types as the role's element
+     but fails LTC026 today. A required reference whose subject names a declared role and matches
+     nothing in the own template compiles like the optional `unmatched` ref, queried from the host,
+     and throws the existing `MissingElementError` with the authored reason when the parent passes
+     no such element (channel: runtime, the existing check; tier 3 Escalated, as for any required
+     ref). Drop HOST_PROFILE's "write it optional". Pin both surfaces: required compiles and its
+     client throws on absent content, optional stays silent.
+  2. **An unreadable roles declaration gets its own message.** When `Children` or its roles
+     argument is an imported name (or anything but an inline type literal or same-file alias), the
+     roles read empty and LTC083 tells the author to declare a role they declared. Record the
+     declaration as unreadable, and in that case LTC083's message says the roles must be an inline
+     type literal or a same-file alias for the compiler to read them (LTC076's posture for imported
+     item types). Pin it.
+  3. **State the check's population.** HOST_PROFILE and the LTC083 row in
+     `skills/le-truc/references/errors.md` say that LTC083 checks declared `const x = first(…)`
+     references; inline `first()`/`all()` calls and `all()` declarations are not verified, so a
+     reach-in through them is not caught (module-cem-list, LT-513).
+  Accepted as is: no `related` range to the annotation, `all()` named in the copy ahead of the
+  surface, and the role overloads' resolution order. The NOTES.md cem-list entry is ruled into LT-513.
 
 - [ ] LT-477: Content model — `Children<Roles, 'non-interactive'>` refuses interactive content at the compose site (ADR 0048 s4; LTC085).
   **Area:** compiler

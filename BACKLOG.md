@@ -1558,3 +1558,27 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
   **Check:** `build:docs` and `check:links` green; `test:variants` and the component specs pass;
   the served `docs/assets/main.css` is byte-identical to `v3`'s.
   **Channel/tier:** none. Corpus housekeeping.
+
+- [ ] LT-513: module-cem-list addresses its passed content through declared roles, not inline reach-ins.
+  **Area:** examples
+  **Needs:** LT-474
+  **Gates:** test:server, typecheck, check:corpus, test:variants, build:docs, check:links
+  **Area:** examples
+  **Needs:** LT-474
+  **Filed (Architect, 2026-10-08; owner ruling on LT-474's survey):** module-cem-list (`.tsrx` and
+  `.tsx`) reaches into the content the `{% cem-list %}` tag renders (`server/schema/cem-list.markdoc.ts`)
+  through inline calls: `on(first('form-textbox'), …)` and an `all('card-collapsible')` in a watch
+  thunk. LTC083 checks declared references only, so the reach-in compiles. The reference corpus
+  should model ADR 0048 s2's contract rather than its gap. Extending verification to inline
+  literal-selector calls is not part of this task; it waits for a second case.
+  **Do:**
+  1. Declare the roles on cem-list's `children` prop, `Children<{ filter: 'form-textbox'; item:
+     'card-collapsible' }>` or names that read better, on both surfaces, identical.
+  2. Give the matching elements in the `{% cem-list %}` output the role classes.
+  3. Address them through declared references: `const filter = first('.filter', …)` and the items
+     through `all('.item')`, so LTC083 sees them. Required or optional per LT-474's rework.
+  4. Check every other page that authors cem-list content and add the classes there too.
+  **Check:** `check:corpus` clean; the cem-list docs page and its spec behave as before
+  (`test:component module-cem-list`, and the filter narrows the list on the built docs page).
+  Variant sets stay byte-identical.
+  **Channel/tier:** none. Corpus authoring under the existing LTC083.
