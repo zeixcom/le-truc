@@ -1560,6 +1560,23 @@ const FAMILIES: Case[] = [
 		pins: ['Remove the wrapper'],
 	},
 	{
+		// LT-502: a top-level rule the component's tag does not contain is a
+		// warning, the same string on both surfaces.
+		name: 'LTC088 stylesheet: an unscoped top-level rule',
+		code: 'LTC088',
+		sources: {
+			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(
+				'@scope {',
+				'.x {\n\tcolor: blue;\n}\n@scope {',
+			),
+			tsx: tsxSource({ body: '<p>x</p>' }).replace(
+				'@scope {',
+				'.x {\n\tcolor: blue;\n}\n@scope {',
+			),
+		},
+		pins: ['`.x`', 'applies to the whole page'],
+	},
+	{
 		name: 'LTC089 stylesheet: a @scope inside @scope on a lowered target',
 		code: 'LTC089',
 		sources: {

@@ -126,7 +126,7 @@ export function FormInplaceEdit(
 		>{() => (host.editing ? '✓' : '✎')}</button>
 
 		<style>
-		@scope to (form-textbox > *) {
+		@scope {
 			:where(:scope) {
 				display: flex;
 				align-items: center;

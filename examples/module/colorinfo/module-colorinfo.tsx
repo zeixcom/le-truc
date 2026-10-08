@@ -190,7 +190,7 @@ export function ModuleColorinfo(
 			</details>
 
 			<style>{css`
-			@scope to (basic-number > *) {
+			@scope {
 				:where(:scope) {
 					--module-colorinfo-swatch-size: var(--input-height);
 					--module-colorinfo-color-fallback: transparent;

@@ -262,7 +262,7 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 			</footer>
 
 			<style>
-			@scope to (form-textbox > *, basic-button > *, form-checkbox > *, form-inplace-edit > *, form-radiogroup > *) {
+			@scope to (basic-button > *) {
 				:where(:scope) {
 					display: flex;
 					flex-direction: column;

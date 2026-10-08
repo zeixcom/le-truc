@@ -148,7 +148,7 @@ export function ModuleDialog(
 				overflow-y: hidden;
 			}
 
-			@scope to (module-scrollarea > *) {
+			@scope {
 				:where(:scope) {
 					display: inline-block;
 				}

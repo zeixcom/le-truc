@@ -299,7 +299,7 @@ export function ModuleCalctable(
 			</table>
 
 			<style>{css`
-			@scope to (basic-number > *) {
+			@scope {
 				:where(:scope) {
 					display: block;
 				}

@@ -902,9 +902,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				${body}
-				<style>:host {
+				<style>@scope {
+	:where(:scope) {
 	  display: block;
-	}</style>
+	}
+}</style>
 			</basic-parent>
 	}`
 		const childEntry = () =>
@@ -942,9 +944,11 @@ export function BasicParent({ title }: { title: string })
 	@{
 		<basic-card>
 			${inner}
-			<style>:host {
+			<style>@scope {
+	:where(:scope) {
 	  display: block;
-	}</style>
+	}
+}</style>
 		</basic-card>
 	}`,
 			).entry

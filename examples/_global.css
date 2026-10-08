@@ -574,3 +574,117 @@ blockquote {
 	padding: var(--space-s);
 	text-decoration: none;
 }
+
+/* Docs shell (LT-502; moved out of section-menu's sheet, owner ruling
+   2026-10-08). .docs-body/.docs-main are the two-column wrapper that
+   docs-src/layouts/*.html render around <section-menu>; the page owns
+   them, so their rules live here. The sidebar layout only reads as a
+   sidebar once the shell is a flex row. Below 45em section-menu is
+   off-canvas, so the shell stays a single column there. The
+   #sidebar-toggle id is the toggle contract the component's setup reads
+   (TOGGLE_ID). */
+:root {
+	--header-height: 3rem;
+}
+
+.docs-body {
+	display: block;
+}
+
+.quicklinks {
+	display: none;
+}
+
+@media screen and (min-width: 45em) {
+	.docs-body {
+		display: flex;
+		align-items: flex-start;
+	}
+
+	.docs-main {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+}
+
+@media screen and (max-width: 44.999em) {
+	/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID
+	   in the component's setup). Stays above the drawer's fixed,
+	   viewport-covering backdrop (z-index 100) so it remains
+	   clickable to close while open. */
+	#sidebar-toggle {
+		z-index: 101;
+		position: absolute;
+		top: var(--space-m);
+		left: 13rem;
+		border: 1px solid var(--color-border);
+		height: var(--input-height);
+		width: var(--input-height);
+		border-radius: var(--space-xs);
+		background-color: var(--color-secondary);
+		font-size: var(--font-size-s);
+		line-height: var(--line-height-xs);
+
+		&:hover {
+			background-color: var(--color-secondary-hover);
+		}
+
+		.open {
+			display: none;
+		}
+
+		.closed {
+			display: block;
+		}
+
+		&[aria-expanded="true"] {
+			.open {
+				display: block;
+			}
+
+			.closed {
+				display: none;
+			}
+		}
+	}
+}
+
+@media screen and (min-width: 27em) {
+	.docs-header-bar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+	}
+
+	.quicklinks {
+		display: flex;
+		align-items: center;
+		gap: var(--space-m);
+
+		& a {
+			text-decoration: none;
+
+			&:hover {
+				text-decoration: underline;
+			}
+		}
+
+		& img {
+			display: block;
+		}
+	}
+}
+
+@media screen and (min-width: 45em) {
+	/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID
+	   in the component's setup). Hidden above the breakpoint
+	   since the sidebar is always visible there and has nothing
+	   to toggle. */
+	#sidebar-toggle {
+		display: none;
+	}
+
+	header {
+		height: var(--header-height);
+	}
+}

@@ -29,6 +29,7 @@ import {
 	excludeUnlessOwned,
 	isChildrenInsertion,
 } from '../children-region'
+import type { LeakChild } from '../css-scope'
 import type {
 	ComponentIR,
 	ComposedMarkup,
@@ -1150,4 +1151,53 @@ export const composedShapesFor = (
 				owner: root.tag,
 			})
 	return result
+}
+
+/**
+ * Each composed child under `root` as the downward-leak check reads it
+ * (ADR 0033 s5, LTC087): its host — the child's root attributes merged with
+ * the compose site's static ones — the elements its template renders below
+ * the host, and its own composed children, closed over the registry. A
+ * `children` shape is dropped: the content it stands for is its owner's
+ * markup (ADR 0048 s5). Unknown markup (`any`, an unregistered child) adds
+ * nothing — the check warns only where a concrete leak exists. A compose
+ * cycle stops at the repeated source.
+ */
+export const leakChildrenFor = (
+	root: TemplateNode,
+	composeRegistry: ReadonlyMap<string, RegistryEntry>,
+): LeakChild[] => {
+	type Element = RenderedShape & { kind: 'element' }
+	const build = (
+		source: string,
+		site: Map<string, string>,
+		seen: ReadonlySet<string>,
+	): LeakChild | null => {
+		const entry = composeRegistry.get(source)
+		if (!entry) return null
+		const shapes = entry.renderedShapes ?? []
+		const elements = shapes.filter(
+			(shape): shape is Element => shape.kind === 'element',
+		)
+		// The template's root is the host: `renderedShapesOf` walks it first.
+		const own = elements[0]?.tag === entry.tag ? elements[0] : undefined
+		const attrs: Record<string, string | null> = { ...own?.attrs }
+		for (const [name, value] of site)
+			attrs[name] =
+				name === 'class' && attrs.class ? `${attrs.class} ${value}` : value
+		const inner = new Set([...seen, source])
+		return {
+			tag: entry.tag,
+			host: { attrs, dynamic: own?.dynamic ?? [] },
+			shapes: own ? elements.slice(1) : elements,
+			children: shapes.flatMap(shape =>
+				shape.kind === 'compose' && !inner.has(shape.source)
+					? (build(shape.source, new Map(), inner) ?? [])
+					: [],
+			),
+		}
+	}
+	return allComposeNodes(root).flatMap(
+		node => build(node.source, composeStaticAttrs(node), new Set()) ?? [],
+	)
 }

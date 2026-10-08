@@ -48,6 +48,7 @@
 
 import { Features, transform } from 'lightningcss-wasm'
 import type { CssBrowser, CssTargets } from './emit-paths'
+import type { RenderedShape } from './ir'
 
 /* === Types === */
 
@@ -68,6 +69,8 @@ export type ContractFace =
 	| 'global'
 	/** A selector descending past a compound one of its block's limits excludes. */
 	| 'dead-by-limit'
+	/** A top-level rule neither in `@scope` nor led by the component's own tag (warning). */
+	| 'unscoped'
 
 /** One authored-form finding over the sheet (ADR 0033 s6). */
 export type ContractFinding = {
@@ -441,13 +444,9 @@ const checkRules = (
 			let deadLimit: string | undefined
 			for (const selector of selectors) {
 				const first = selector[0] as LcComponent | undefined
-				if (
-					scope &&
-					styleDepth === 0 &&
-					first?.type === 'type' &&
-					first.name?.toLowerCase() === tag
-				)
-					report('own-tag-led', selector)
+				const tagLed =
+					first?.type === 'type' && first.name?.toLowerCase() === tag
+				if (scope && styleDepth === 0 && tagLed) report('own-tag-led', selector)
 				forEachComponent(selector, component => {
 					if (
 						component.type === 'pseudo-element' &&
@@ -467,6 +466,11 @@ const checkRules = (
 						report('host', selector)
 					if (isGlobalPseudo(component)) report('global', selector)
 				})
+				// A top-level rule outside `@scope` that the unique tag does
+				// not contain applies page-wide (ADR 0033 s1/s5, LTC088) —
+				// unless an error above already names the rule.
+				if (!scope && styleDepth === 0 && !tagLed && seen.size === 0)
+					report('unscoped', selector)
 				if (scope) {
 					const alternatives = (parents ?? [null]).map(parent =>
 						resolveAgainst(selector, parent),
@@ -533,7 +537,9 @@ const checkRules = (
  * (ADR 0033 s6): a rule inside `@scope` led by the component's own tag
  * (fix-it: `:where(:scope)`), `:host` anywhere (fix-it: `:where(:scope)`), `::slotted()`
  * in a light-DOM component, `:host-context()` anywhere, `:global` anywhere
- * and a selector an authored limit always excludes. Runs over
+ * and a selector an authored limit always excludes — plus the LTC088
+ * warning (ADR 0033 s5): a top-level rule neither in `@scope` nor led by
+ * the component's own tag, unless one of the errors already names it. Runs over
  * lightningcss's read-only parse — the sheet syntax is already LTC064's, so
  * every shape here parsed clean. Offsets resolve against the sheet text
  * lightningcss parsed.
@@ -554,6 +560,336 @@ export const checkSheetContract = (
 		findings,
 	)
 	return findings.map(finding => withSelectorEnd(sheetText, finding))
+}
+
+/* === Downward leaks into composed children (ADR 0033 s5, LTC087) === */
+
+/**
+ * One composed child as the leak check sees it: the host it renders in the
+ * parent's DOM and the elements of its own template. `host` merges the
+ * child's root attributes with the static ones its compose site adds, so an
+ * authored limit can match either. `shapes` are the elements the child's
+ * template renders below its host, content it passes on to its own children
+ * included (that content is the child's markup); the content a parent
+ * passes as `children` is the parent's and is never here (ADR 0048 s5).
+ * `children` are the child's own composed children, recursively.
+ */
+export type LeakChild = {
+	tag: string
+	host: { attrs: Record<string, string | null>; dynamic: readonly string[] }
+	shapes: readonly (RenderedShape & { kind: 'element' })[]
+	children: readonly LeakChild[]
+}
+
+/** One rule whose subject can match an element a composed child renders. */
+export type LeakFinding = {
+	/** The leaking selectors of the rule, summarized. */
+	selector: string
+	/** The composed children of this component the rule reaches into, in template order. */
+	children: string[]
+	offset?: number | undefined
+	end?: number | undefined
+}
+
+/** The element shape a compound is tested against: a tag and its attributes. */
+type ShapeLike = {
+	tag: string
+	attrs: Record<string, string | null>
+	dynamic: readonly string[]
+}
+
+/**
+ * Could the simple selector `component` match an element of `shape`?
+ * `definite` asks the other question — does it always match? A dynamic
+ * attribute and any pseudo-class answer "may" but never "always".
+ */
+const simpleMatches = (
+	component: LcComponent,
+	shape: ShapeLike,
+	definite: boolean,
+): boolean => {
+	const tokens = (name: string) => (shape.attrs[name] ?? '').split(/\s+/)
+	const dynamic = (name: string) => shape.dynamic.includes(name)
+	switch (component.type) {
+		case 'universal':
+			return true
+		case 'type':
+			return component.name?.toLowerCase() === shape.tag.toLowerCase()
+		case 'class':
+			return dynamic('class')
+				? !definite
+				: tokens('class').includes(component.name ?? '')
+		case 'id':
+			return dynamic('id') ? !definite : shape.attrs.id === component.name
+		case 'attribute': {
+			const attribute = component as LcComponent & {
+				namespace?: unknown
+				operation?: {
+					operator?: string
+					value?: string
+					caseSensitivity?: string
+				} | null
+			}
+			const name = attribute.name ?? ''
+			if (attribute.namespace) return !definite
+			if (dynamic(name)) return !definite
+			const actual = shape.attrs[name]
+			if (actual === undefined) return false
+			const operation = attribute.operation
+			if (!operation) return true
+			if (operation.caseSensitivity === 'ascii-case-insensitive')
+				return !definite
+			if (operation.operator === 'equal')
+				return (actual ?? '') === operation.value
+			if (operation.operator === 'includes')
+				return (actual ?? '').split(/\s+/).includes(operation.value ?? '')
+			return !definite
+		}
+		default:
+			// Pseudo-classes and pseudo-elements: undecidable against one shape.
+			return !definite
+	}
+}
+
+const compoundMatches = (
+	compound: readonly LcComponent[],
+	shape: ShapeLike,
+	definite: boolean,
+): boolean =>
+	compound.every(component => simpleMatches(component, shape, definite))
+
+/** Is the compound the scope root (`:scope`, or `&` at the block's top)? */
+const isRootCompound = (compound: readonly LcComponent[]): boolean =>
+	compound.some(
+		component =>
+			component.type === 'nesting' ||
+			(component.type === 'pseudo-class' && component.kind === 'scope') ||
+			(component.type === 'pseudo-class' &&
+				(component.kind === 'where' || component.kind === 'is') &&
+				Array.isArray(component.selectors) &&
+				(component.selectors as LcSelector[]).every(
+					member => member.length === 1 && isRootCompound(member),
+				)),
+	)
+
+/**
+ * The compound a limit's subject must match on an element for the limit to
+ * exclude that element and everything below it, and — for `<X> > *` — the
+ * compound whose element's subtree it excludes below the element itself.
+ * The limit's ancestor compounds are not checked: a limit that may exclude
+ * the child suppresses the warning, the lenient direction for a warning.
+ */
+const limitHeads = (
+	limit: LcSelector,
+): { self: LcComponent[]; below: LcComponent[] | null } => {
+	const { compounds, combinators } = compoundsOf(limit)
+	const self = compounds[compounds.length - 1] ?? []
+	const universalTail =
+		compounds.length > 1 &&
+		combinators[combinators.length - 1] === 'child' &&
+		self.length === 1 &&
+		self[0]?.type === 'universal'
+	return {
+		self,
+		below: universalTail ? (compounds[compounds.length - 2] ?? null) : null,
+	}
+}
+
+/** Does some limit always exclude `element` itself (and so its subtree)? */
+const excludesSelf = (
+	limits: readonly LcSelector[],
+	element: ShapeLike,
+): boolean =>
+	limits.some(limit => {
+		const heads = limitHeads(limit)
+		return !heads.below && compoundMatches(heads.self, element, true)
+	})
+
+/** Does some limit always exclude everything below `element`? */
+const excludesBelow = (
+	limits: readonly LcSelector[],
+	element: ShapeLike,
+): boolean =>
+	excludesSelf(limits, element) ||
+	limits.some(limit => {
+		const heads = limitHeads(limit)
+		return heads.below !== null && compoundMatches(heads.below, element, true)
+	})
+
+/**
+ * Could `subject` reach an element of `child`'s own markup, or of a
+ * grandchild's, with no limit excluding it? A limit that matches the
+ * child's host excludes the whole child; one of the form `<child> > *`
+ * excludes everything below the host, which stays stylable. A grandchild's
+ * host is an element of the child's markup.
+ */
+const childLeaks = (
+	subject: readonly LcComponent[],
+	child: LeakChild,
+	limits: readonly LcSelector[],
+): boolean => {
+	if (excludesBelow(limits, { tag: child.tag, ...child.host })) return false
+	const reaches = (element: ShapeLike) =>
+		compoundMatches(subject, element, false) && !excludesSelf(limits, element)
+	return (
+		child.shapes.some(reaches) ||
+		child.children.some(
+			grandchild =>
+				reaches({ tag: grandchild.tag, ...grandchild.host }) ||
+				childLeaks(subject, grandchild, limits),
+		)
+	)
+}
+
+/**
+ * The compounds strictly between the scope root and the subject when the
+ * selector reaches the subject from the root through child combinators
+ * only (`:scope > .a > b`), or `null` when it does not. Every ancestor of
+ * such a subject below the host is named, so it lies inside a composed
+ * child only when one of those compounds can match the child's host.
+ */
+const anchoredChain = (
+	compounds: readonly LcComponent[][],
+	combinators: readonly string[],
+): LcComponent[][] | null => {
+	let root = -1
+	for (let index = compounds.length - 2; index >= 0; index--)
+		if (isRootCompound(compounds[index] ?? [])) {
+			root = index
+			break
+		}
+	if (root < 0) return null
+	if (combinators.slice(root).some(combinator => combinator !== 'child'))
+		return null
+	return compounds.slice(root + 1, -1)
+}
+
+const checkLeakRules = (
+	rules: readonly LcRule[],
+	children: readonly LeakChild[],
+	scope: ScopeBlock | null,
+	parents: readonly LcSelector[] | null,
+	lineStarts: readonly number[],
+	findings: LeakFinding[],
+): void => {
+	for (const rule of rules) {
+		if (rule.type === 'style') {
+			const value = rule.value
+			const resolved: LcSelector[] = []
+			const leaking: string[] = []
+			const reached = new Set<string>()
+			for (const selector of value?.selectors ?? []) {
+				if (!scope) continue
+				const alternatives = (parents ?? [null]).map(parent =>
+					resolveAgainst(selector, parent),
+				)
+				resolved.push(...alternatives)
+				let leaks = false
+				for (const flat of alternatives) {
+					const { compounds, combinators } = compoundsOf(flat)
+					const subject = compounds[compounds.length - 1] ?? []
+					// The host is the parent's own element, never a child's.
+					if (isRootCompound(subject)) continue
+					const chain = anchoredChain(compounds, combinators)
+					for (const child of children)
+						if (
+							(chain === null ||
+								chain.some(compound =>
+									compoundMatches(
+										compound,
+										{ tag: child.tag, ...child.host },
+										false,
+									),
+								)) &&
+							childLeaks(subject, child, scope.limits)
+						) {
+							reached.add(child.tag)
+							leaks = true
+						}
+				}
+				if (leaks) leaking.push(selectorTextOf(selector))
+			}
+			if (leaking.length > 0)
+				findings.push({
+					selector: leaking.join(', '),
+					children: children
+						.map(child => child.tag)
+						.filter(
+							(tag, index, all) =>
+								reached.has(tag) && all.indexOf(tag) === index,
+						),
+					offset: value?.loc ? locToOffset(lineStarts, value.loc) : undefined,
+				})
+			checkLeakRules(
+				value?.rules ?? [],
+				children,
+				scope,
+				scope ? resolved : null,
+				lineStarts,
+				findings,
+			)
+			continue
+		}
+		if (rule.type === 'scope') {
+			checkLeakRules(
+				rule.value?.rules ?? [],
+				children,
+				scope ?? { limits: rule.value?.scopeEnd ?? [] },
+				scope ? parents : null,
+				lineStarts,
+				findings,
+			)
+			continue
+		}
+		if (RECURSABLE_AT_RULES.has(rule.type))
+			checkLeakRules(
+				rule.value?.rules ?? [],
+				children,
+				scope,
+				parents,
+				lineStarts,
+				findings,
+			)
+	}
+}
+
+/**
+ * The downward-leak check (ADR 0033 s5): a rule in the component's
+ * `@scope` block whose subject can match an element a composed child
+ * renders in its own template — transitively, through the child's own
+ * composed children — with no authored limit excluding it. The subject is
+ * tested on its own, against each element's static tag and attributes; a
+ * dynamic attribute or a pseudo-class may match. Markup the compiler cannot
+ * know (`truc:html`, an unregistered child, a raw custom element) has no
+ * shapes and never warns. Top-level rules are LTC088's, not this check's.
+ */
+export const checkSheetLeaks = (
+	sheet: unknown,
+	sheetText: string,
+	children: readonly LeakChild[],
+): LeakFinding[] => {
+	if (children.length === 0) return []
+	const findings: LeakFinding[] = []
+	checkLeakRules(
+		(sheet as { rules?: LcRule[] })?.rules ?? [],
+		children,
+		null,
+		null,
+		lineStartsOf(sheetText),
+		findings,
+	)
+	// The message quotes the rule as authored, not the parse's summary.
+	return findings.map(finding => {
+		const located = withSelectorEnd(sheetText, finding)
+		return located.offset !== undefined && located.end !== undefined
+			? {
+					...located,
+					selector: sheetText
+						.slice(located.offset, located.end)
+						.replace(/\s+/g, ' '),
+				}
+			: located
+	})
 }
 
 /* === Forms the lowering cannot express (ADR 0033 s4, LTC089) === */

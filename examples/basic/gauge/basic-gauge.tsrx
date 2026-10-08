@@ -139,7 +139,7 @@ export function BasicGauge(
 			<small class="label">{qualification.get().label}</small>
 
 			<style>
-			@scope to (basic-number > *) {
+			@scope {
 				:where(:scope) {
 					--basic-gauge-background: var(
 						--color-background,

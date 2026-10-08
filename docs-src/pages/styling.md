@@ -84,7 +84,7 @@ A compiled component's stylesheet means what the same sheet would mean as an inl
 }
 ```
 
-A prelude-less `@scope { … }` is scoped to the host. `:scope` is the host, and bare selectors are its descendants. Write a limit with `to (<child-tag> > *)` for each composed child whose inside your rules must not reach. The limit keeps the child's own tag stylable.
+A prelude-less `@scope { … }` is scoped to the host. `:scope` is the host, and bare selectors are its descendants. Write a limit with `to (<child-tag> > *)` for each composed child whose inside your rules would otherwise reach. The limit keeps the child's own tag stylable. The compiler warns where a rule can match an element a composed child renders and no limit stops it (LTC087), so a child your rules cannot reach needs no limit.
 
 ### The Idiom
 

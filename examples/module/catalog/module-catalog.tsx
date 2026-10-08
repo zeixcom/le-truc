@@ -169,7 +169,7 @@ export function ModuleCatalog(
 			</ul>
 
 			<style>{css`
-			@scope to (basic-button > *, form-spinbutton > *) {
+			@scope to (form-spinbutton > *) {
 				:where(:scope) {
 					display: flex;
 					flex-direction: column;

@@ -12,9 +12,11 @@ import { handlerPlacementsOf } from './analysis/handler-args'
 import { analyzeClient } from './analysis/plan'
 import {
 	childrenRegionOfComponent,
+	leakChildrenFor,
 	renderedShapesOf,
 } from './analysis/selectors'
 import {
+	checkSheetLeaks,
 	checkSheetLowering,
 	describeCssTargets,
 	emitScopedSheet,
@@ -149,6 +151,25 @@ export const compileFromIR = (
 					authoredRange(sheetStart, finding),
 					finding.face,
 					describeCssTargets(emitPaths.cssTargets),
+				),
+			)
+	}
+	// A scoped rule that reaches into a composed child's own markup (LTC087,
+	// ADR 0033 s5). It needs each child's rendered shapes, so it runs only
+	// in the registry-aware pass.
+	if (component.sheet && component.sheetText && composeRegistry) {
+		const sheetStart = component.source.lastIndexOf(component.sheetText)
+		for (const finding of checkSheetLeaks(
+			component.sheet,
+			component.sheetText,
+			leakChildrenFor(component.root, composeRegistry),
+		))
+			diagnostics.push(
+				diagnostic.downwardLeak(
+					component.source,
+					authoredRange(sheetStart, finding),
+					finding.selector,
+					finding.children,
 				),
 			)
 	}

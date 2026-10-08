@@ -523,7 +523,7 @@ export function FormColorgraph(
 		/>
 
 		<style>
-		@scope to (form-spinbutton > *) {
+		@scope {
 			:where(:scope) {
 				--color-base: transparent;
 				--step-size: 1.25rem;

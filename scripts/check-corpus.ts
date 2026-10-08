@@ -198,13 +198,25 @@ if (remapped > 0 || unmapped > 0)
 
 // The standing corpus compile warnings, counted (LT-168). Printed even at
 // zero — an absent line is indistinguishable from an uncounted one, and
-// zero is the gate-wave target state.
-const uniqueWarnings = new Set(warningLines)
+// zero is the gate-wave target state. Test fixtures under `examples/test/`
+// pin warned forms on purpose (css-probe's LTC087/LTC088), so their
+// warnings print on a separate line and stay out of the count (owner
+// ruling 2026-10-08, LT-502).
+const FIXTURE_PREFIX = 'examples/test/'
+const isFixtureWarning = (line: string): boolean =>
+	line.startsWith(`⚠️ ${FIXTURE_PREFIX}`)
+const countedLines = warningLines.filter(line => !isFixtureWarning(line))
+const fixtureLines = warningLines.filter(isFixtureWarning)
+const uniqueWarnings = new Set(countedLines)
 console.log(
 	`\nCompile-warning baseline: ${uniqueWarnings.size} unique standing ` +
-		`warning(s) (${warningLines.length} lines across the two compilation ` +
+		`warning(s) (${countedLines.length} lines across the two compilation ` +
 		"passes) — the wave-4 regression signal's first number. Read this " +
 		'count; do not tail-read the ⚠️ lines.',
+)
+console.log(
+	`Test-fixture warnings (${FIXTURE_PREFIX}**, not counted): ` +
+		`${new Set(fixtureLines).size} unique.`,
 )
 
 // The tier census (ADR 0029 sub-design 6, LT-165 step 6): a build-report
