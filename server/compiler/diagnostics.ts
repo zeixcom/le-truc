@@ -2353,7 +2353,7 @@ export const diagnostic = {
 	unscopedRule: (source: string, at: Site, selector: string, tag: string) =>
 		warning(
 			'LTC088',
-			`The rule \`${selector}\` sits outside \`@scope\` and is not led by the component's tag \`${tag}\`, so it applies to the whole page. Move it into the \`@scope { … }\` block, or lead it with the tag (\`${tag} ${selector}\`). If it is meant to apply page-wide, move it to the page's stylesheet.`,
+			`The rule \`${selector}\` sits outside \`@scope\` and is not led by the component's tag \`${tag}\`, so it applies to the whole page. Move it into the \`@scope { … }\` block, or lead it with the tag (\`${tag} ${selector}\`). If the page owns the rule, move it to the page's stylesheet. If the component owns it — a class its own script sets on \`body\`, say — keep it here: the warning marks it as page-wide on purpose.`,
 			rangeOf(source, at),
 		),
 
