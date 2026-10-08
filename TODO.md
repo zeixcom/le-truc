@@ -174,23 +174,6 @@ LTC056 is LT-358's).
 
 ### C — children contract
 
-- [ ] LT-503: Writer pass over the platform-CSS contract — error copy and styling docs (ADR 0033 as revised).
-  **Area:** docs
-  **Needs:** LT-502, LT-504, LT-507
-  **Gates:** build:docs, check:links
-  **Area:** docs
-  **Needs:** LT-502, LT-504, LT-507
-  **Filed (Architect, 2026-10-07):** LT-501 and LT-502 write first-draft copy and update the
-  docs to the contract. This pass makes it one voice:
-  - the messages of LTC066, LTC069, LTC071, LTC086, LTC087, LTC088 and LTC089 per
-    `references/error-messages.md`, plus the `skills/le-truc` errors rows;
-  - `docs-src/pages/styling.md`, which now teaches `@scope { … }`, author-written limits,
-    `:where(:scope)` for page-overridable host rules, and the shadow-mode translation;
-  - the LTC051 copy that LT-473 extended is gone with its boundary face. Confirm that nothing
-    cites it.
-  **Check:** `build:docs` and `check:links` green. No prose describes compiler-derived scope
-  boundaries or `:host` in light-DOM sheets.
-
 - [ ] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped.
   **Area:** examples
   **Needs:** LT-502
