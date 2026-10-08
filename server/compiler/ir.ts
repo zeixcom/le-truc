@@ -182,6 +182,15 @@ export type ChildrenContractIR = {
 	roles: ReadonlyMap<string, string | null>
 	/** `'any'` when the second type argument is absent (the default). */
 	model: 'any' | 'non-interactive' | null
+	/**
+	 * A roles declaration is present but the compiler cannot read it: the
+	 * `Children<…>` reference or its roles argument is an imported name or
+	 * another shape it cannot see through (LTC076's posture — tsc owns what
+	 * the compiler cannot read). The roles then read empty, and LTC083's
+	 * copy says the declaration must be readable instead of naming a role
+	 * the author may have declared (LT-474 review).
+	 */
+	unreadable?: boolean
 }
 
 /** One `const name = first(selector, reason?)` element reference (LT-055). */

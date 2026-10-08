@@ -292,9 +292,7 @@ const rolesLiteralOf = (
 			decl?.type === 'TSTypeAliasDeclaration' && isNode(decl.typeAnnotation)
 				? unwrapType(decl.typeAnnotation)
 				: null
-		return aliased !== null
-			? rolesLiteralOf(ctx, aliased, depth + 1)
-			: null
+		return aliased !== null ? rolesLiteralOf(ctx, aliased, depth + 1) : null
 	}
 	return null
 }
@@ -306,7 +304,16 @@ export const readChildrenContract = (
 ): ChildrenContract | null => {
 	const member = argTypeOf(ctx, paramsNode.typeAnnotation, 'children')
 	const reference = childrenReferenceOf(ctx, member)
-	if (!reference) return null
+	// An annotation the compiler cannot see through — an imported alias of
+	// `Children`, a qualified name, an imported custom type — may still
+	// declare roles the author wrote (LT-474 review): recorded as
+	// `unreadable`, so LTC083's copy does not name a role the author
+	// declared. A readable non-reference (`children?: string`) declares no
+	// roles and keeps the plain read.
+	if (!reference)
+		return member?.type === 'TSTypeReference'
+			? { roles: new Map(), model: 'any', unreadable: true }
+			: null
 	const typeArgs = asArray(
 		isNode(reference.typeArguments)
 			? ((reference.typeArguments as AstNode).params as unknown)
@@ -314,6 +321,11 @@ export const readChildrenContract = (
 	)
 	const roles = new Map<string, string | null>()
 	const rolesLiteral = rolesLiteralOf(ctx, typeArgs[0] as AstNode | undefined)
+	// A roles argument that is present but unreadable — an imported name,
+	// a union, anything but an inline type literal or its same-file alias —
+	// is the same recorded unreadability (LT-474 review). An ABSENT
+	// argument declares no roles and reads plain.
+	const unreadable = rolesLiteral === null && typeArgs[0] !== undefined
 	if (rolesLiteral)
 		for (const memberNode of asArray(rolesLiteral.members)) {
 			if (memberNode.type !== 'TSPropertySignature') continue
@@ -349,7 +361,7 @@ export const readChildrenContract = (
 				? ((modelArg.literal as AstNode).value as 'any' | 'non-interactive')
 				: null
 			: 'any'
-	return { roles, model }
+	return unreadable ? { roles, model, unreadable } : { roles, model }
 }
 
 /**

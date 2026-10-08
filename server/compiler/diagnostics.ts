@@ -1544,7 +1544,12 @@ export const diagnostic = {
 	 * where it can name the subject.
 	 *
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
-	 * first draft (LT-474).
+	 * first draft (LT-474), unreadable variant from the review: when the
+	 * roles declaration is present but unreadable (an imported name or
+	 * another shape the compiler cannot see through, `ChildrenContractIR`'s
+	 * `unreadable`), the fix copy cannot say "declare a role" — the author
+	 * may have declared one — so it names the readable shapes instead
+	 * (LTC076's posture for imported item types).
 	 */
 	childrenReachIn: (
 		source: string,
@@ -1552,10 +1557,13 @@ export const diagnostic = {
 		helper: 'first' | 'all',
 		name: string,
 		selector: string,
+		unreadable = false,
 	) =>
 		error(
 			'LTC083',
-			`\`${helper}('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, and the template inserts children — a selector like this can only resolve inside the content a parent passes, which belongs to the parent (ADR 0048). Declare a role for it on the \`children\` prop's type — \`Children<{ … }>\` — and give the passed element the role's class, or address an element the template renders.`,
+			unreadable
+				? `\`${helper}('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, and the template inserts children — a selector like this can only resolve inside the content a parent passes, which belongs to the parent (ADR 0048). The roles on the \`children\` prop's type are declared in a shape this compiler cannot read — it reads only an inline type literal or a same-file alias: \`Children<{ … }>\`, or a \`type Roles = { … }\` in this file. Write the roles that way so the compiler can check the selector against them, or address an element the template renders.`
+				: `\`${helper}('${selector}', …)\` (bound to \`${name}\`) matches no element in this component's template, and the template inserts children — a selector like this can only resolve inside the content a parent passes, which belongs to the parent (ADR 0048). Declare a role for it on the \`children\` prop's type — \`Children<{ … }>\` — and give the passed element the role's class, or address an element the template renders.`,
 			rangeOf(source, at),
 		),
 

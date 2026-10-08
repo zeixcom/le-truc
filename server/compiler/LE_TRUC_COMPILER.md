@@ -1134,18 +1134,27 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   selector-verification sites — the raw no-match in `resolveTemplateOutput`
   and the deferred no-match in `analysis/compose-refs.ts` — for required
   and optional references alike; a subject the compiler cannot read
-  (unparsable) stays with the existing handling. The compiler reads the
+  (unparsable) stays with the existing handling. Its population is the
+  declared `const x = first(…)` references: inline `first()`/`all()` calls
+  and `all()` declarations are outside structural verification and outside
+  this check. The compiler reads the
   roles and the model from the annotation syntactically (an inline
   `Children<…>` or a same-file alias, `readChildrenContract` in
   `params.ts`), carries them on the IR as `childrenContract`, and tsc owns
   everything it cannot see: the tag constraint
   (`keyof HTMLElementTagNameMap`) and the model union are type errors, not
-  diagnostics. A role-addressed reference that matches nothing resolves
-  like any other optional `unmatched` ref — the authored selector, queried
-  from the host, resolves inside the content through the region re-include
-  (ADR 0048 s1) — while a role-addressed REQUIRED ref still fails LTC026:
-  the required form stays reserved for markup the component proves it
-  renders.
+  diagnostics. A roles declaration present but unreadable — the
+  `Children<…>` type or its roles argument an imported name — is recorded
+  `unreadable` on the contract and changes LTC083's fix copy, which names
+  the readable shapes (an inline type literal or a same-file alias) instead
+  of a role the author may have declared (LT-474 review). A role-addressed
+  reference that matches nothing resolves as an `unmatched` ref — the
+  authored selector, queried from the host, resolves inside the content
+  through the region re-include (ADR 0048 s1) — required included: a
+  required one keeps the throwing query, and the existing runtime check
+  throws its authored reason as `MissingElementError` when the parent
+  passes no such element (channel: runtime, the existing required-ref
+  check, tier 3 Escalated; LT-474 review).
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

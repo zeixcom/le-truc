@@ -733,25 +733,37 @@ export const analyzeClient = (
 	for (const ref of component.firstRefs.values())
 		if (ref.stage === 'deferred') refNames.add(ref.name)
 
-	// Optional refs matching nothing structural (LT-123): the
-	// template never carried a `ref` attr for them, so the walk
+	// Refs matching nothing structural: OPTIONAL ones are LT-123's —
+	// the template never carried a `ref` attr for them, so the walk
 	// above found nothing — but the author declared the const
-	// and setup code may read it. Query them from the AUTHORED
-	// selector under `maybe` cardinality (non-throwing `first()`),
-	// under the authored NAME, which is what setup references.
+	// and setup code may read it. A ROLE-ADDRESSED ref joins them from
+	// both verification sites (ADR 0048 s2, LT-474 review): it resolves
+	// inside the content a parent passes, so a no-match own-template is
+	// expected, required included. Query them from the AUTHORED selector
+	// under the authored NAME, which is what setup references — a
+	// required one at `one` cardinality, so the existing runtime check
+	// throws the authored reason as `MissingElementError` when the
+	// parent passes no such element, an optional one at `maybe`.
 	for (const ref of [
-		...[...component.firstRefs.values()].filter(
-			ref => ref.stage === 'unmatched',
-		),
-		...(composeRefs.mode === 'resolved' ? composeRefs.unmatchedOptional : []),
+		...[...component.firstRefs.values()]
+			.filter(ref => ref.stage === 'unmatched')
+			.map(ref => ({
+				name: ref.name,
+				selector: ref.selector,
+				required: ref.required,
+			})),
+		...(composeRefs.mode === 'resolved' ? composeRefs.unmatched : []),
 	]) {
 		refNames.add(ref.name)
 		usedNames.add(ref.name)
 		queries.push({
 			name: ref.name,
 			selector: ref.selector,
-			cardinality: 'maybe',
-			message: '',
+			cardinality: ref.required ? 'one' : 'maybe',
+			message: ref.required
+				? (component.firstRefs.get(ref.name)?.reason ??
+					`${component.tag}: ${ref.selector} missing`)
+				: '',
 		})
 	}
 

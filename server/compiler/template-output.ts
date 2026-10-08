@@ -204,11 +204,15 @@ export const resolveTemplateOutput = (
 			// its subject names a declared role, the one surface the child
 			// may address that content through. Fires for required and
 			// optional references alike, before LT-123's optional silence.
+			// An unreadable roles declaration changes the fix, not the
+			// verdict (LT-474 review): the compiler cannot claim a role the
+			// author may have declared in it is missing.
 			const roles = ctx.childrenContract?.roles
-			if (
-				insertsChildren &&
-				namesDeclaredRole(selectorText, new Set(roles?.keys() ?? [])) === false
-			) {
+			const declared = namesDeclaredRole(
+				selectorText,
+				new Set(roles?.keys() ?? []),
+			)
+			if (insertsChildren && declared === false) {
 				ctx.diagnostics.push(
 					diagnostic.childrenReachIn(
 						source,
@@ -216,9 +220,22 @@ export const resolveTemplateOutput = (
 						'first',
 						refName,
 						selectorText,
+						ctx.childrenContract?.unreadable === true,
 					),
 				)
 				resolve('rejected')
+				continue
+			}
+			// A role-addressed reference resolves inside the content a
+			// parent passes (ADR 0048 s2), so a no-match here is expected
+			// for it, required or optional (LT-474 review): the client
+			// queries the authored selector from the host — the region
+			// re-include finds the element inside the content (ADR 0048
+			// s1) — and a required one throws the existing
+			// `MissingElementError` with the authored reason when the
+			// parent passes no such element.
+			if (declared === true) {
+				resolve('unmatched')
 				continue
 			}
 			// An OPTIONAL ref is allowed to match nothing here

@@ -204,9 +204,15 @@ own template, the child's template inserts `{children}`, and its subject
 compound names no role class declared on the `children` prop's
 `Children<…>` type; ADR 0048 s2, LT-474) skips `LTC082`, which another
 task holds. It is `LTC`, not `TSRX`: both selector-verification sites
-(`template-output.ts`, `analysis/compose-refs.ts`) are shared, and it has
-no runtime half — the region re-include (ADR 0048 s1) still resolves a
-role-addressed query at runtime, which is the sanctioned path.
+(`template-output.ts`, `analysis/compose-refs.ts`) are shared. The
+diagnostic has no runtime half of its own: a role-addressed ref that
+matched nothing compiles as an `unmatched` ref, required included (LT-474
+review), and its runtime behavior is the existing required-ref channel —
+the throwing query's `MissingElementError` with the authored reason, tier
+3 Escalated — with the region re-include (ADR 0048 s1) resolving a
+role-addressed query inside the content, the sanctioned path. A roles
+declaration present but unreadable (an imported name) keeps the code and
+changes the fix copy, which names the readable shapes (LTC076's posture).
 `LTC086` (`:host` anywhere in a component stylesheet, fix-it `:where(:scope)`;
 ADR 0033 s6, LT-501) and `LTC089` (a `@scope` form the flat-selector lowering
 cannot express on a lowered CSS target; ADR 0033 s4, LT-501) follow

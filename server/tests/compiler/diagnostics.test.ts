@@ -3,14 +3,17 @@
  * 0023) — each rule that cannot be applied must report its diagnostic, and
  * milestone gates must skip files without failing the build.
  */
-import { describe, expect, test } from 'bun:test'
+import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
+import { pathToFileURL } from 'node:url'
 import { namesDeclaredRole } from '../../compiler/first-refs'
 import { assertFoldScopeClosed } from '../../compiler/fold-inputs'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../compiler/registry'
+import { createSimulationRealm } from '../../compiler/sim/realm'
+import { createGeneratedDir } from '../helpers/generated-corpus'
 import { lineAt, textAt } from './located'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -4006,6 +4009,289 @@ export function C({ children = '' }: { children?: Children<Roles, 'non-interacti
 		expect(reachIns({ diagnostics })).toHaveLength(0)
 		expect(diagnostics).toHaveLength(0)
 		expect(component?.firstRefs.get('box')?.stage).toBe('unmatched')
+	})
+
+	test('a required role-addressed ref compiles and keeps its throwing query (.tsrx)', () => {
+		const source = tsrx(
+			"Children<{ icon: 'span' }>",
+			`const icon = first('.icon', 'the icon')`,
+		)
+		const { component } = compileSource(source, 'c.tsrx')
+		const { diagnostics, component: entry } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.firstRefs.get('icon')).toMatchObject({
+			stage: 'unmatched',
+			required: true,
+		})
+		// The authored reason rides the throwing query — the runtime's
+		// existing required-ref check settles it at connect — not the
+		// optional form.
+		expect(entry?.clientCode).toContain("'.icon', 'the icon'")
+	})
+
+	test('a required role-addressed ref compiles and keeps its throwing query (.tsx)', () => {
+		const { diagnostics, component } = compileComponentTsx(
+			tsx(
+				"Children<{ icon: 'span' }>",
+				`const icon = first('.icon', 'the icon')`,
+			),
+			'c.tsx',
+			new Set(),
+		)
+		expect(diagnostics).toEqual([])
+		// The authored reason rides the throwing query, not the optional
+		// form (`first('.icon')` would not carry the comma).
+		expect(component?.clientCode).toContain("'.icon', 'the icon'")
+	})
+
+	test('a required role-classed custom-tag selector resolves on the deferred leg too', () => {
+		const source = `export function C({ children = '' }: { children?: Children<{ box: 'form-textbox' }> })
+@{
+	const box = first('.box', 'the box')
+	expose({})
+		<c-el>
+			{children}
+			${styleTsrx}
+		</c-el>
+}`
+		const { component } = compileSource(source, 'c.tsrx')
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+			undefined,
+			new Map(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+		expect(diagnostics).toHaveLength(0)
+		expect(component?.firstRefs.get('box')).toMatchObject({
+			stage: 'unmatched',
+			required: true,
+		})
+	})
+
+	test('an imported roles argument is recorded unreadable and changes the fix copy', () => {
+		// `Roles` has no declaration in this file — the can't-read-it
+		// posture for an imported name (LTC076's).
+		const source = tsrx('Children<Roles>', `const icon = first('.icon')`)
+		const { component } = compileSource(source, 'c.tsrx')
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(component?.childrenContract?.unreadable).toBe(true)
+		const hit = reachIns({ diagnostics })[0]
+		expect(hit?.message).toContain('cannot read')
+		expect(hit?.message).toContain('inline type literal')
+		expect(hit?.message).not.toContain('Declare a role')
+	})
+
+	test('an imported alias of the Children type is unreadable too', () => {
+		const source = `import type { MyChildren } from './roles'
+export function C({ children = '' }: { children?: MyChildren })
+@{
+	const icon = first('.icon')
+	expose({})
+		<c-el>
+			<div class="wrap">{children}</div>
+			${styleTsrx}
+		</c-el>
+}`
+		const { component } = compileSource(source, 'c.tsrx')
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(component?.childrenContract?.unreadable).toBe(true)
+		const hit = reachIns({ diagnostics })[0]
+		expect(hit?.message).toContain('cannot read')
+	})
+
+	test('a readable roles-less annotation keeps the plain fix copy', () => {
+		// A bare `Children` (no roles argument) and a plain `string` declare
+		// no roles — the plain "declare a role" copy is correct for both,
+		// and neither is recorded unreadable.
+		for (const childrenType of ['Children', 'string'] as const) {
+			const source = tsrx(childrenType, `const icon = first('.icon')`)
+			const { component } = compileSource(source, 'c.tsrx')
+			const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+			expect(component?.childrenContract?.unreadable).toBeUndefined()
+			const hit = reachIns({ diagnostics })[0]
+			expect(hit?.message).toContain('Declare a role')
+		}
+	})
+})
+
+describe('a required role-addressed ref at runtime (LT-474 review)', async () => {
+	const fixture = (call: string): string =>
+		`export function C({ children = '' }: { children?: Children<{ icon: 'span' }> })
+@{
+	const icon = ${call}
+	expose({})
+		<c-el>
+			<div class="wrap">{children}</div>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
+		</c-el>
+}`
+
+	const tsxFixture = (call: string): string =>
+		`import { css } from '@zeix/le-truc-compiler/macros'
+
+export function C({ children = '' }: { children?: Children<{ icon: 'span' }> }, { first }: any) {
+	${call}
+	expose({})
+	return (
+		<c-el>
+			<div class="wrap">{children}</div>
+			<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
+		</c-el>
+	)
+}`
+
+	const required = compileComponent(
+		fixture(`first('.icon', 'the icon')`),
+		'c.tsrx',
+		new Set(),
+	)
+	const optional = compileComponent(
+		fixture(`first('.icon')`),
+		'c.tsrx',
+		new Set(),
+	)
+	if (!required.component || !optional.component)
+		throw new Error(
+			`fixture failed to compile: ${[
+				...required.diagnostics,
+				...optional.diagnostics,
+			]
+				.map(d => d.message)
+				.join('; ')}`,
+		)
+
+	const generated = createGeneratedDir('lt474-role-ref')
+	afterAll(() => generated.cleanup())
+	generated.emit('c-el.server.ts', required.component.serverCode)
+	generated.emit('c-el-opt.server.ts', optional.component.serverCode)
+	const clientPath = generated.emit(
+		'c-el.client.ts',
+		required.component.clientCode,
+	)
+	const optionalClientPath = generated.emit(
+		'c-el-opt.client.ts',
+		optional.component.clientCode,
+	)
+	type Render = { renderC: (args: unknown) => string }
+	const { renderC } = await generated.importModule<Render>('c-el.server.ts')
+	const { renderC: renderOptional } =
+		await generated.importModule<Render>('c-el-opt.server.ts')
+
+	const realm = createSimulationRealm()
+	afterAll(() => realm.dispose())
+	await realm.load(() => import(pathToFileURL(clientPath).href))
+	const optionalRealm = createSimulationRealm()
+	afterAll(() => optionalRealm.dispose())
+	await optionalRealm.load(() => import(pathToFileURL(optionalClientPath).href))
+
+	test('the required ref throws the authored reason when the content lacks the element', async () => {
+		expect(required.diagnostics).toEqual([])
+		// The parent passes content without the role's class: the query
+		// finds nothing and the runtime's existing required-ref check
+		// throws; the containment reports it and the component keeps its
+		// server-rendered markup (ADR 0028 tier 2 reporting a tier 3 error).
+		const { diagnostics } = await realm.render({
+			markup: renderC({ children: '<p>nothing</p>' }),
+			component: 'c-el',
+		})
+		const failure = diagnostics.find(
+			d => d.kind === 'console' && d.message.includes('MissingElementError'),
+		)
+		expect(failure?.message).toContain('the icon')
+	})
+
+	test('an optional role-addressed ref stays silent on the same markup', async () => {
+		expect(optional.diagnostics).toEqual([])
+		const { html, diagnostics } = await optionalRealm.render({
+			markup: renderOptional({ children: '<p>nothing</p>' }),
+			component: 'c-el',
+		})
+		expect(
+			diagnostics.some(d => d.message.includes('MissingElementError')),
+		).toBe(false)
+		expect(html).toContain('<p>nothing</p>')
+	})
+
+	// The same two pins through the `.tsx` front end — the pipeline is
+	// shared, and the emitted query is what both front ends must agree on.
+	const requiredTsx = compileComponentTsx(
+		tsxFixture(`first('.icon', 'the icon')`),
+		'c.tsx',
+		new Set(),
+	)
+	const optionalTsx = compileComponentTsx(
+		tsxFixture(`first('.icon')`),
+		'c.tsx',
+		new Set(),
+	)
+	if (!requiredTsx.component || !optionalTsx.component)
+		throw new Error(
+			`tsx fixture failed to compile: ${[
+				...requiredTsx.diagnostics,
+				...optionalTsx.diagnostics,
+			]
+				.map(d => d.message)
+				.join('; ')}`,
+		)
+	generated.emit('c-el-tsx.server.ts', requiredTsx.component.serverCode)
+	generated.emit('c-el-tsx-opt.server.ts', optionalTsx.component.serverCode)
+	const tsxClientPath = generated.emit(
+		'c-el-tsx.client.ts',
+		requiredTsx.component.clientCode,
+	)
+	const tsxOptionalClientPath = generated.emit(
+		'c-el-tsx-opt.client.ts',
+		optionalTsx.component.clientCode,
+	)
+	const { renderC: renderTsx } =
+		await generated.importModule<Render>('c-el-tsx.server.ts')
+	const { renderC: renderTsxOptional } = await generated.importModule<Render>(
+		'c-el-tsx-opt.server.ts',
+	)
+	const tsxRealm = createSimulationRealm()
+	afterAll(() => tsxRealm.dispose())
+	await tsxRealm.load(() => import(pathToFileURL(tsxClientPath).href))
+	const tsxOptionalRealm = createSimulationRealm()
+	afterAll(() => tsxOptionalRealm.dispose())
+	await tsxOptionalRealm.load(
+		() => import(pathToFileURL(tsxOptionalClientPath).href),
+	)
+
+	test('the required ref throws on the .tsx surface too', async () => {
+		expect(requiredTsx.diagnostics).toEqual([])
+		const { diagnostics } = await tsxRealm.render({
+			markup: renderTsx({ children: '<p>nothing</p>' }),
+			component: 'c-el',
+		})
+		const failure = diagnostics.find(
+			d => d.kind === 'console' && d.message.includes('MissingElementError'),
+		)
+		expect(failure?.message).toContain('the icon')
+	})
+
+	test('an optional role-addressed ref stays silent on the .tsx surface too', async () => {
+		const { html, diagnostics } = await tsxOptionalRealm.render({
+			markup: renderTsxOptional({ children: '<p>nothing</p>' }),
+			component: 'c-el',
+		})
+		expect(
+			diagnostics.some(d => d.message.includes('MissingElementError')),
+		).toBe(false)
+		expect(html).toContain('<p>nothing</p>')
 	})
 })
 
