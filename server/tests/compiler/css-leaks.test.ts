@@ -211,6 +211,42 @@ describe('LTC087 — a scoped rule reaching into a composed child (ADR 0033 s5)'
 		).toEqual([])
 	})
 
+	test("a class set only at a grandchild's compose site leaks, and a limit on the child silences it (LT-505)", () => {
+		const middle = (
+			site: string,
+		) => `import { css } from '@zeix/le-truc-compiler/macros'
+import { ChildEl } from '../child/child-el.tsx'
+
+export function MidEl({ hue = '' }: { hue?: string }) {
+	return (
+		<mid-el>
+			<ChildEl ${site} />
+			<style>{css\`@scope {
+	:where(:scope) {
+		display: block;
+	}
+}\`}</style>
+		</mid-el>
+	)
+}
+`
+		const warn = (site: string, sheet: string) =>
+			parentWarnings('<MidEl />', sheet, {
+				imports: `import { MidEl } from '../mid/mid-el.tsx'`,
+				extra: [['examples/mid/mid-el.tsx', middle(site)]],
+			})
+		const rule = (selector: string, limit = '') =>
+			`@scope${limit} {\n\t${selector} {\n\t\tcolor: red;\n\t}\n}`
+		const warnings = warn('class="hue"', rule('.hue'))
+		expect(codes(warnings)).toEqual(['LTC087'])
+		expect(warnings[0]?.message).toContain('<mid-el>')
+		expect(warn('class="hue"', rule('.hue', ' to (mid-el > *)'))).toEqual([])
+		expect(warn('data-axis="x"', rule('[data-axis="x"]')).length).toBe(1)
+		expect(warn('class="hue"', rule('.other'))).toEqual([])
+		// A dynamic site attribute may match anything, as on an element.
+		expect(codes(warn('class={hue}', rule('.other')))).toEqual(['LTC087'])
+	})
+
 	test('a raw custom element has no registry shapes and never warns', () => {
 		expect(
 			parentWarnings(

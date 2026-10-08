@@ -334,6 +334,29 @@ export const composeStaticAttrs = (node: ComposeNode): Map<string, string> => {
 }
 
 /**
+ * What a compose site adds to the composed child's host (LT-505): its
+ * static attributes (`composeStaticAttrs`) and the names of its dynamic
+ * `class`/`id`/`data-*` ones — the names `emit-server.ts` splices onto the
+ * child's root, the only dynamic args that render as attributes.
+ */
+export const composeSiteAttrs = (
+	node: ComposeNode,
+): { attrs: Record<string, string>; dynamic: string[] } => {
+	const attrs = Object.fromEntries(composeStaticAttrs(node))
+	const dynamic = new Set<string>()
+	for (const attr of node.attrs)
+		if (
+			attr.kind === 'arg' &&
+			!(attr.name in attrs) &&
+			(attr.name === 'class' ||
+				attr.name === 'id' ||
+				attr.name.startsWith('data-'))
+		)
+			dynamic.add(attr.name)
+	return { attrs, dynamic: [...dynamic] }
+}
+
+/**
  * A selector-clause discriminator (`.lightness`, `#foo`, `[data-axis="x"]`)
  * that uniquely picks `node` out among `siblings` (same-source composed
  * elements, LT-089) — `class`/`id`/`data-*` priority, mirroring
@@ -1027,7 +1050,8 @@ export const selectorFor = (
  * a compose site a reference, a `{children}` insertion `children`.
  */
 const shapesOfNode = (node: TemplateNode): RenderedShape[] => {
-	if (node.kind === 'compose') return [{ kind: 'compose', source: node.source }]
+	if (node.kind === 'compose')
+		return [{ kind: 'compose', source: node.source, ...composeSiteAttrs(node) }]
 	if (isChildrenInsertion(node)) return [{ kind: 'children' }]
 	if (node.kind !== 'element') return []
 	const attrs: Record<string, string | null> = {}
@@ -1156,8 +1180,9 @@ export const composedShapesFor = (
 /**
  * Each composed child under `root` as the downward-leak check reads it
  * (ADR 0033 s5, LTC087): its host — the child's root attributes merged with
- * the compose site's static ones — the elements its template renders below
- * the host, and its own composed children, closed over the registry. A
+ * its compose site's, at every level of nesting (LT-505) — the elements its
+ * template renders below the host, and its own composed children, closed
+ * over the registry. A
  * `children` shape is dropped: the content it stands for is its owner's
  * markup (ADR 0048 s5). Unknown markup (`any`, an unregistered child) adds
  * nothing — the check warns only where a concrete leak exists. A compose
@@ -1168,9 +1193,10 @@ export const leakChildrenFor = (
 	composeRegistry: ReadonlyMap<string, RegistryEntry>,
 ): LeakChild[] => {
 	type Element = RenderedShape & { kind: 'element' }
+	type Site = { attrs: Record<string, string>; dynamic: readonly string[] }
 	const build = (
 		source: string,
-		site: Map<string, string>,
+		site: Site,
 		seen: ReadonlySet<string>,
 	): LeakChild | null => {
 		const entry = composeRegistry.get(source)
@@ -1182,22 +1208,25 @@ export const leakChildrenFor = (
 		// The template's root is the host: `renderedShapesOf` walks it first.
 		const own = elements[0]?.tag === entry.tag ? elements[0] : undefined
 		const attrs: Record<string, string | null> = { ...own?.attrs }
-		for (const [name, value] of site)
+		for (const [name, value] of Object.entries(site.attrs))
 			attrs[name] =
 				name === 'class' && attrs.class ? `${attrs.class} ${value}` : value
 		const inner = new Set([...seen, source])
 		return {
 			tag: entry.tag,
-			host: { attrs, dynamic: own?.dynamic ?? [] },
+			host: {
+				attrs,
+				dynamic: [...new Set([...(own?.dynamic ?? []), ...site.dynamic])],
+			},
 			shapes: own ? elements.slice(1) : elements,
 			children: shapes.flatMap(shape =>
 				shape.kind === 'compose' && !inner.has(shape.source)
-					? (build(shape.source, new Map(), inner) ?? [])
+					? (build(shape.source, shape, inner) ?? [])
 					: [],
 			),
 		}
 	}
 	return allComposeNodes(root).flatMap(
-		node => build(node.source, composeStaticAttrs(node), new Set()) ?? [],
+		node => build(node.source, composeSiteAttrs(node), new Set()) ?? [],
 	)
 }
