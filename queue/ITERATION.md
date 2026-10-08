@@ -94,6 +94,12 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     LT-509, LT-510) in P7, out of this iteration, until iteration planning re-prioritizes them.
     Whichever lands first builds the allowlist matcher the other reuses. Known findings don't
     wait for the gates: LT-507 removes the known dead selectors in this iteration.
+16. **Track C's remainder runs in three parallel steps (owner, 2026-10-08).** LT-478 has no
+    stake in the children contract's compiler work, so it moves to track CB and runs beside
+    LT-474. LT-476 moves to track C2 and needs LT-477 as well as LT-474: both extend the compose
+    registry, add a diagnostic and write error copy, and in parallel they would conflict at
+    integration. LT-476 then runs beside LT-479. The steps are LT-478 ∥ LT-474, then LT-477,
+    then LT-479 ∥ LT-476.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0 (deliberate component-bound page-wide rules excepted, `examples/test/**` fixtures uncounted; LT-502 ruling), unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -126,9 +132,14 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   ruling 13). LT-496 (from LT-495's review) made the compose-site reference count raw
   same-tag elements. LT-498 (from LT-496's review) closes the same blind spot in the other
   discriminator callers and in composed children's own templates. Done (2026-10-07).
-- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 (done) → LT-501 → LT-502 →
-  LT-504 → LT-505 → LT-507 → LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-504 move compiled CSS to
-  authored `@scope` (ruling 14); LT-504 retires the corpus's 2.x child chains. LT-505 completes the leak warning, and LT-507 removes the corpus's known dead selectors (ruling 15). LT-478 styles its passed content under that contract.
+- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472, LT-501 → LT-502 →
+  LT-504 → LT-505 → LT-507 → LT-503 are done (2026-10-08): they moved compiled CSS to authored
+  `@scope` (ruling 14), retired the corpus's 2.x child chains, completed the leak warning and
+  removed the corpus's known dead selectors (ruling 15). Remaining: LT-474 → LT-477 → LT-479
+  (ruling 16).
+- **C2 — role writers** — beside track C (ruling 16). LT-476.
+- **CB — module-codeblock** — beside track C (ruling 16). LT-478 styles its passed content
+  under the platform-CSS contract.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. Done
   (2026-10-07). LT-136 closed with a pinning test: LTC005 already refuses the shadowed read.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. Done

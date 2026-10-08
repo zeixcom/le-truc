@@ -94,6 +94,12 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
     LT-509, LT-510) in P7, out of this iteration, until iteration planning re-prioritizes them.
     Whichever lands first builds the allowlist matcher the other reuses. Known findings don't
     wait for the gates: LT-507 removes the known dead selectors in this iteration.
+16. **Track C's remainder runs in three parallel steps (owner, 2026-10-08).** LT-478 has no
+    stake in the children contract's compiler work, so it moves to track CB and runs beside
+    LT-474. LT-476 moves to track C2 and needs LT-477 as well as LT-474: both extend the compose
+    registry, add a diagnostic and write error copy, and in parallel they would conflict at
+    integration. LT-476 then runs beside LT-479. The steps are LT-478 ∥ LT-474, then LT-477,
+    then LT-479 ∥ LT-476.
 8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
    the last iteration still stands). The goals are byte-identical CSS across a variant set, a
    warning baseline of 0 (deliberate component-bound page-wide rules excepted, `examples/test/**` fixtures uncounted; LT-502 ruling), unchanged Playwright specs and unchanged goldens. If a contributor can
@@ -126,9 +132,14 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   ruling 13). LT-496 (from LT-495's review) made the compose-site reference count raw
   same-tag elements. LT-498 (from LT-496's review) closes the same blind spot in the other
   discriminator callers and in composed children's own templates. Done (2026-10-07).
-- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472 (done) → LT-501 → LT-502 →
-  LT-504 → LT-505 → LT-507 → LT-503 → LT-478 → LT-474 → LT-476 → LT-477 → LT-479. LT-501–LT-504 move compiled CSS to
-  authored `@scope` (ruling 14); LT-504 retires the corpus's 2.x child chains. LT-505 completes the leak warning, and LT-507 removes the corpus's known dead selectors (ruling 15). LT-478 styles its passed content under that contract.
+- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472, LT-501 → LT-502 →
+  LT-504 → LT-505 → LT-507 → LT-503 are done (2026-10-08): they moved compiled CSS to authored
+  `@scope` (ruling 14), retired the corpus's 2.x child chains, completed the leak warning and
+  removed the corpus's known dead selectors (ruling 15). Remaining: LT-474 → LT-477 → LT-479
+  (ruling 16).
+- **C2 — role writers** — beside track C (ruling 16). LT-476.
+- **CB — module-codeblock** — beside track C (ruling 16). LT-478 styles its passed content
+  under the platform-CSS contract.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. Done
   (2026-10-07). LT-136 closed with a pinning test: LTC005 already refuses the shadowed read.
 - **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. Done
@@ -174,24 +185,6 @@ LTC056 is LT-358's).
 
 ### C — children contract
 
-- [ ] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped.
-  **Area:** examples
-  **Needs:** LT-502
-  **Gates:** check:corpus, build:docs, test:server, typecheck
-  **Area:** examples
-  **Needs:** LT-502
-  **Filed (Architect, 2026-10-06, split from LT-463; re-scoped 2026-10-07 to ADR 0033 as revised):**
-  1. **The compose site.** Replace the raw `<module-scrollarea orientation="horizontal">` with
-     `<ModuleScrollarea orientation="horizontal">`, passing the `<pre><code>{children}</code></pre>`
-     as children. `first('code', …)` now verifies into the parent's own region (LT-472).
-  2. **The styles.** Move the former `:global` `pre`/`code` rules (top-level after LT-501) into
-     the component's `@scope` block as bare `pre`/`code` rules. The parent's scoped rules reach
-     its passed content as descendants. If the block carries a `to (module-scrollarea > *)`
-     limit, that limit would cut the content, so drop it unless LTC087 then fires on a real
-     leak. If it does, narrow the limit to the leaking scrollarea internals.
-  **Check:** `bun run test:component module-codeblock` is unchanged, and the computed styles of
-  `pre`/`code` are unchanged. Update `module-codeblock.md` if it describes the raw tag.
-
 - [ ] LT-474: Declared roles — the `Children<Roles, Model>` type and the reach-in check (ADR 0048 s2; LTC083).
   **Area:** compiler
   **Needs:** LT-472
@@ -218,24 +211,6 @@ LTC056 is LT-358's).
   **Corpus survey first:** list every component that addresses its children today. For each,
   either declare roles or record it in `NOTES.md` (LT-463's rule for surprises). Do not widen
   LTC083's condition to pass a site.
-
-- [ ] LT-476: One writer per property — parent bindings on a child-written role property conflict (ADR 0048 s3; LTC084).
-  **Area:** compiler
-  **Needs:** LT-474
-  **Gates:** check:corpus, check:contract
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s3):**
-  - **Registry.** The compose registry records, per child, the role properties its client writes:
-    the role-targeted `watch` bindings (`bindProperty`, `bindAttribute`, `bindText`, `bindClass`,
-    `bindVisible`, `bindStyle`, `bindAria`). `on()` return updates write host props, so they are
-    out of scope.
-  - **Check.** A parent binding on an element of its passed children that carries that role's
-    class and binds the same property, attribute, class token or style property is LTC084.
-  - **Channel/tier:** compiler, Prevented (ADR 0028).
-  - **Where it reports:** at the parent's binding. The message names both writers.
-  - **Copy:** to `../writer/references/error-messages.md`.
-  **Check:** both surfaces. Pin a passing fixture where the parent binds a different property on
-  the same role.
 
 - [ ] LT-477: Content model — `Children<Roles, 'non-interactive'>` refuses interactive content at the compose site (ADR 0048 s4; LTC085).
   **Area:** compiler
@@ -273,6 +248,29 @@ LTC056 is LT-358's).
   **Sequence:** module-todo's fourth edit, after LT-466 → LT-467 → LT-463 (ruling 5).
   **Check:** `test:component form-checkbox module-todo` is unchanged.
 
+### C2 — role writers
+
+- [ ] LT-476: One writer per property — parent bindings on a child-written role property conflict (ADR 0048 s3; LTC084).
+  **Area:** compiler
+  **Needs:** LT-474, LT-477
+  **Gates:** check:corpus, check:contract
+  **Area:** compiler
+  **Needs:** LT-474, LT-477
+  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s3):**
+  - **Registry.** The compose registry records, per child, the role properties its client writes:
+    the role-targeted `watch` bindings (`bindProperty`, `bindAttribute`, `bindText`, `bindClass`,
+    `bindVisible`, `bindStyle`, `bindAria`). `on()` return updates write host props, so they are
+    out of scope.
+  - **Check.** A parent binding on an element of its passed children that carries that role's
+    class and binds the same property, attribute, class token or style property is LTC084.
+  - **Channel/tier:** compiler, Prevented (ADR 0028).
+  - **Where it reports:** at the parent's binding. The message names both writers.
+  - **Copy:** to `../writer/references/error-messages.md`.
+  **Check:** both surfaces. Pin a passing fixture where the parent binds a different property on
+  the same role.
+
+### CB — module-codeblock
+
 - [ ] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped.
   **Area:** examples
   **Needs:** LT-502
@@ -283,10 +281,13 @@ LTC056 is LT-358's).
   1. **The compose site.** Replace the raw `<module-scrollarea orientation="horizontal">` with
      `<ModuleScrollarea orientation="horizontal">`, passing the `<pre><code>{children}</code></pre>`
      as children. `first('code', …)` now verifies into the parent's own region (LT-472).
-  2. **The styles.** Move the former `:global` `pre`/`code` rules (top-level after LT-501) into
-     the component's `@scope` block as bare `pre`/`code` rules. The parent's scoped rules reach
-     its passed content as descendants. If the block carries a `to (module-scrollarea > *)`
-     limit, that limit would cut the content, so drop it unless LTC087 then fires on a real
-     leak. If it does, narrow the limit to the leaking scrollarea internals.
+  2. **The styles** (re-worded 2026-10-08 to the sheet as it stands after LT-501–LT-507). The
+     `pre`/`code` rules sit at the top level, led by the component's own tag
+     (`module-codeblock pre`, the 2.x form LT-501 kept). Move them into the `@scope` block as bare
+     `pre`/`code` rules: content the component passes as children is its own markup, and its
+     scoped rules reach it as descendants. The block's limit stays `to (basic-button > *)`. Add
+     no `module-scrollarea > *` limit, because it would cut the passed content. If LTC087 then
+     fires on a real leak into scrollarea's own markup, add a limit that names only the leaking
+     scrollarea internals, never the element that holds the content.
   **Check:** `bun run test:component module-codeblock` is unchanged, and the computed styles of
   `pre`/`code` are unchanged. Update `module-codeblock.md` if it describes the raw tag.
