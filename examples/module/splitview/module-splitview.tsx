@@ -129,12 +129,14 @@ export function ModuleSplitview(
 			</module-scrollarea>
 
 			<style>{css`
-			:host {
-				display: grid;
-				grid-template-columns: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
-				overflow: hidden;
+			@scope to (module-scrollarea > *) {
+				:where(:scope) {
+					display: grid;
+					grid-template-columns: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
+					overflow: hidden;
+				}
 
-				& module-scrollarea {
+				module-scrollarea {
 					min-width: 0;
 					min-height: 0;
 				}
@@ -170,7 +172,7 @@ export function ModuleSplitview(
 					}
 				}
 
-				&[orientation="vertical"] {
+				:where(:scope)[orientation="vertical"] {
 					grid-template-columns: 1fr;
 					grid-template-rows: var(--module-splitview-ratio, 50%) var(--space-xs) 1fr;
 

@@ -39,8 +39,10 @@ export function SyncEl({ mode, items }: { mode: string; items: SyncItem[] })
 				} @else {
 					<span class="zero">0</span>
 				}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</sync-el>
 	}

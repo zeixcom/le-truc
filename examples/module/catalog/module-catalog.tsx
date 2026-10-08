@@ -169,22 +169,24 @@ export function ModuleCatalog(
 			</ul>
 
 			<style>{css`
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
+			@scope to (basic-button > *, form-spinbutton > *) {
+				:where(:scope) {
+					display: flex;
+					flex-direction: column;
+					gap: var(--space-l);
+				}
 
 				> header,
 				p {
 					margin: 0;
 				}
 
-				& ul {
+				ul {
 					padding: 0;
 					margin: 0;
 				}
 
-				& header,
+				header,
 				li {
 					display: flex;
 					gap: var(--space-m);

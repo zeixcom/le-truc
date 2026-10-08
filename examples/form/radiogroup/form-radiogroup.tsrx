@@ -132,8 +132,10 @@ export function FormRadiogroup(
 		</fieldset>
 
 		<style>
-		:host {
-			display: inline-block;
+		@scope {
+			:where(:scope) {
+				display: inline-block;
+			}
 
 			> fieldset {
 				display: flex;
@@ -143,12 +145,12 @@ export function FormRadiogroup(
 				padding: var(--space-xs) 0 var(--space-s);
 			}
 
-			& legend,
-			& label {
+			legend,
+			label {
 				font-size: var(--font-size-s);
 			}
 
-			& label {
+			label {
 				border-radius: var(--space-xs);
 
 				&:has(:focus-visible) {
@@ -161,7 +163,7 @@ export function FormRadiogroup(
 				}
 			}
 
-			&.radio-group {
+			:where(:scope).radio-group {
 				& label {
 					display: flex;
 					align-items: center;
@@ -223,7 +225,7 @@ export function FormRadiogroup(
 				}
 			}
 
-			&.split-button {
+			:where(:scope).split-button {
 				& fieldset {
 					gap: 0;
 					padding: 0;

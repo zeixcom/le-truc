@@ -396,42 +396,20 @@ export const compileCorpus = async (
 			return { rel, component }
 		})
 		// CSS parity across a set's compiled members (ADR 0039, ADR 0033
-		// s10): the AUTHORED sheets must be byte-identical AND the members
-		// must agree on the SCOPE BOUNDARIES — each member computes its own
-		// (every custom element its lowered template renders), and members
-		// with identical sheets can still resolve composed children
-		// differently per surface. Either drift would leave the set's one
-		// served stylesheet wrong for the unserved member. Skipped when a
-		// member failed — its own error already fails the build run.
+		// s10): the AUTHORED sheets must be byte-identical. The emission adds
+		// nothing of its own to a sheet (no derived boundaries), so identical
+		// sheets emit identical CSS. Skipped when a member failed — its own
+		// error already fails the build run.
 		if (results.length > 1) {
 			const compiled = results.filter(r => r.component)
 			const head = compiled[0]
 			if (head?.component && compiled.length > 1) {
 				const headCss = head.component.authoredCss
-				const headBoundaries = JSON.stringify(head.component.scopeBoundaries)
-				const cssDrifted = compiled.filter(
+				const drifted = compiled.filter(
 					r => r.component && r.component.authoredCss !== headCss,
 				)
-				const boundaryDrifted = compiled.filter(
-					r =>
-						r.component &&
-						JSON.stringify(r.component.scopeBoundaries) !== headBoundaries,
-				)
-				// A sheet drift takes the CSS face whether or not the boundaries
-				// also drift; only a boundary-only drift names the boundary sets
-				// (LT-403) — copying styles cannot fix it.
-				const drifted = cssDrifted.length > 0 ? cssDrifted : boundaryDrifted
 				if (drifted.length > 0) {
 					const sources = [head.rel, ...drifted.map(r => r.rel)]
-					const boundaries =
-						cssDrifted.length > 0
-							? undefined
-							: new Map(
-									[head, ...drifted].map(r => [
-										r.rel,
-										r.component?.scopeBoundaries ?? [],
-									]),
-								)
 					for (const rel of sources)
 						report(rel, [
 							diagnostic.variantCssDrift(
@@ -439,7 +417,6 @@ export const compileCorpus = async (
 								sources,
 								locationOf(rel),
 								sources.filter(other => other !== rel).map(locationOf),
-								boundaries,
 							),
 						])
 					// The set serves nothing — LTC048's all-dropped semantics.

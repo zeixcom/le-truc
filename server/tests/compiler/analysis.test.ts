@@ -30,9 +30,11 @@ const source = `export function C({}: {})
 	expose({})
 		<c-el>
 			<span title={() => color.get() + '!'}>ok</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }
 import { createCell } from '@zeix/le-truc'`
@@ -161,9 +163,11 @@ describe('class discriminators are token clauses (LT-124)', () => {
 		<c-el>
 			<span class="${className}">ok</span>
 			<span class="other">x</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 			'c.tsrx',
@@ -237,9 +241,11 @@ describe('id discriminators use the hash form (LT-124)', () => {
 		<c-el>
 			<input id="${idValue}" />
 			<input id="other" />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 			'c.tsrx',
@@ -292,9 +298,11 @@ describe('aria-* discriminators are the last resort (LT-101)', () => {
 		<c-el>
 			<button type="button" ${openerAttrs}>Open</button>
 			<button type="button" class="close" aria-label="Close">x</button>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 			'c.tsrx',
@@ -338,9 +346,11 @@ describe('selectors account for composed children (LT-096)', () => {
 			`export function Child({ size = 'small' }: { size?: string })
 @{
 		<child-el>${body}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</child-el>
 }`,
 			'child.tsrx',
@@ -359,9 +369,11 @@ export function P({}: {})
 			<code>x</code>
 			<Child />
 			<button type="button" class="overlay">Go</button>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</p-el>
 }`,
 			'p.tsrx',
@@ -435,9 +447,11 @@ export function P({}: {})
 			`export function Child({ children }: { children?: string })
 @{
 		<child-el>{children}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</child-el>
 }`,
 			'child.tsrx',
@@ -499,9 +513,11 @@ describe('authored first() selectors are emitted when verifiable (LT-316)', () =
 	expose({})
 		<c-el>
 			${template}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 			'c.tsrx',

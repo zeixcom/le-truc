@@ -229,9 +229,11 @@ export function C(${params})
 	@{
 		${setup}
 			<c-el>${body}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 
@@ -259,9 +261,11 @@ export function C(${params}) {
 	${setup}
 	return (
 			<c-el>${tsx ?? body}
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</c-el>
 	)
 }`
@@ -1054,7 +1058,9 @@ const FRAGMENT_ROOT = {
 	@{
 		<>
 			<c-el><p>x</p></c-el>
-			<style>:host { color: red }</style>
+			<style>@scope {
+	:scope { color: red }
+}</style>
 		</>
 	}`,
 	tsx: `import { css } from '@zeix/le-truc-compiler/macros'
@@ -1062,7 +1068,9 @@ export function C({}: {}) {
 	return (
 		<>
 			<c-el><p>x</p></c-el>
-			<style>{css\`:host { color: red }\`}</style>
+			<style>{css\`@scope {
+	:scope { color: red }
+}\`}</style>
 		</>
 	)
 }`,
@@ -1075,11 +1083,11 @@ export function C({}: {}) {
 const STYLE_EXPRESSION = {
 	tsrx: `export function C({}: {})
 	@{
-		const sheet = ':host { color: red }'
+		const sheet = '@scope { :scope { color: red } }'
 		<c-el><p>x</p><style>{sheet}</style></c-el>
 	}`,
 	tsx: `export function C({}: {}) {
-	const sheet = ':host { color: red }'
+	const sheet = '@scope { :scope { color: red } }'
 	return <c-el><p>x</p><style>{sheet}</style></c-el>
 }`,
 }
@@ -1114,8 +1122,8 @@ const FAMILIES: Case[] = [
 		},
 		spans: [
 			[
-				'<style>:host {\n\t  color: red;\n\t}</style>',
-				'<style>{css`:host {\n\t  color: red;\n\t}`}</style>',
+				'<style>@scope {\n\t:scope {\n\t\t  color: red;\n\t\t}\n}</style>',
+				'<style>{css`@scope {\n\t:scope {\n\t\t  color: red;\n\t\t}\n}`}</style>',
 			],
 		],
 		pins: [
@@ -1501,19 +1509,70 @@ const FAMILIES: Case[] = [
 		pins: ['`width`', '10pxx'],
 	},
 	{
-		// LT-399: the boundary set comes from the template on either
-		// surface — a raw dashed tag is a boundary like a composed child.
-		name: 'LTC071 stylesheet: a selector descending past a boundary',
+		// LT-501: a selector that descends past a compound an authored limit
+		// excludes is dead on either surface.
+		name: 'LTC071 stylesheet: a selector descending past an authored limit',
 		code: 'LTC071',
 		sources: {
 			tsrx: tsrxSource({
 				body: '<p>x</p><other-el><span>y</span></other-el>',
-			}).replace(':host {', 'other-el span {'),
+			})
+				.replace('@scope {', '@scope to (other-el > *) {')
+				.replace(':scope {', 'other-el span {'),
 			tsx: tsxSource({
 				body: '<p>x</p><other-el><span>y</span></other-el>',
-			}).replace(':host {', 'other-el span {'),
+			})
+				.replace('@scope {', '@scope to (other-el > *) {')
+				.replace(':scope {', 'other-el span {'),
 		},
-		pins: ['`<other-el>`', '`:global { … }`'],
+		pins: ['`other-el > *`', 'Remove the limit'],
+	},
+	// LT-501: the platform-CSS stylesheet contract reports identically on
+	// both surfaces — the sheet text is the same string either side of the seam.
+	{
+		name: 'LTC066 stylesheet: a rule in @scope led by the own tag',
+		code: 'LTC066',
+		sources: {
+			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(':scope {', 'c-el {'),
+			tsx: tsxSource({ body: '<p>x</p>' }).replace(':scope {', 'c-el {'),
+		},
+		pins: ['Write `:where(:scope)` for the host'],
+	},
+	{
+		name: 'LTC086 stylesheet: :host',
+		code: 'LTC086',
+		sources: {
+			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(':scope {', ':host {'),
+			tsx: tsxSource({ body: '<p>x</p>' }).replace(':scope {', ':host {'),
+		},
+		pins: ['`:host(.x)` becomes `:where(:scope).x`'],
+	},
+	{
+		name: 'LTC069 stylesheet: :global',
+		code: 'LTC069',
+		sources: {
+			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(
+				':scope {',
+				':global(.x) {',
+			),
+			tsx: tsxSource({ body: '<p>x</p>' }).replace(':scope {', ':global(.x) {'),
+		},
+		pins: ['Remove the wrapper'],
+	},
+	{
+		name: 'LTC089 stylesheet: a @scope inside @scope on a lowered target',
+		code: 'LTC089',
+		sources: {
+			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(
+				'color: red;',
+				'color: red; } @scope (.x) { .y { top: 0; }',
+			),
+			tsx: tsxSource({ body: '<p>x</p>' }).replace(
+				'color: red;',
+				'color: red; } @scope (.x) { .y { top: 0; }',
+			),
+		},
+		pins: ['`cssTargets`', 'no flat-selector form'],
 	},
 	// LTC081 (LT-461): a handler arg the composing parent cannot address.
 	{

@@ -139,23 +139,25 @@ export function BasicBlogmeta({
 				</span>
 			) : null}
 			<style>{css`
-:host {
-	display: flex;
-	align-items: center;
-	gap: var(--space-m);
-	font-size: var(--font-size-s);
-	color: var(--color-text-soft);
-	flex-wrap: wrap;
-	margin-bottom: var(--space-l);
+@scope {
+	:where(:scope) {
+		display: flex;
+		align-items: center;
+		gap: var(--space-m);
+		font-size: var(--font-size-s);
+		color: var(--color-text-soft);
+		flex-wrap: wrap;
+		margin-bottom: var(--space-l);
+	}
 
-	& span {
+	span {
 		display: flex;
 		align-items: center;
 		gap: var(--space-xs);
 	}
 
-	& img,
-	& svg.avatar {
+	img,
+	svg.avatar {
 		width: var(--input-height);
 		height: var(--input-height);
 		border-radius: 50%;
@@ -163,12 +165,12 @@ export function BasicBlogmeta({
 		flex-shrink: 0;
 	}
 
-	& svg.avatar {
+	svg.avatar {
 		color: var(--color-border-soft);
 		background-color: var(--color-background-alt);
 	}
 
-	& time {
+	time {
 		font-variant-numeric: tabular-nums;
 	}
 }`}</style>

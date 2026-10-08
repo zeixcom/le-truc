@@ -143,13 +143,15 @@ export function ModuleDialog(
 
 			<style>{css`
 			/* Exception to scoping rule: class on body for scroll lock */
-			:global(body.scroll-lock) {
+			body.scroll-lock {
 				position: fixed;
 				overflow-y: hidden;
 			}
 
-			:host {
-				display: inline-block;
+			@scope to (module-scrollarea > *) {
+				:where(:scope) {
+					display: inline-block;
+				}
 
 				> button {
 					border: 0;
@@ -159,7 +161,7 @@ export function ModuleDialog(
 					color: var(--color-text);
 				}
 
-				& dialog {
+				dialog {
 					display: none;
 					flex-direction: column;
 					border: 0;
@@ -180,7 +182,7 @@ export function ModuleDialog(
 					}
 				}
 
-				& dialog[open] {
+				dialog[open] {
 					display: flex;
 					opacity: var(--opacity-solid);
 
@@ -230,15 +232,15 @@ export function ModuleDialog(
 						background-color: var(--color-shadow);
 					}
 				}
-			}
 
-			@media (min-width: 48em) {
-				dialog[open] {
-					width: min(var(--content-max-width), calc(100% - 2 * var(--space-l)));
-					max-height: calc(100dvh - 2rem);
-					border-radius: var(--space-s);
-					box-shadow: 0 0 var(--space-s) var(--color-shadow);
-					margin: auto auto;
+				@media (min-width: 48em) {
+					dialog[open] {
+						width: min(var(--content-max-width), calc(100% - 2 * var(--space-l)));
+						max-height: calc(100dvh - 2rem);
+						border-radius: var(--space-s);
+						box-shadow: 0 0 var(--space-s) var(--color-shadow);
+						margin: auto auto;
+					}
 				}
 			}`}</style>
 		</module-dialog>

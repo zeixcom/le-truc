@@ -208,9 +208,11 @@ export function FormCombobox(
 		</p>
 
 		<style>
-		:host {
-			display: block;
-			width: 100%;
+		@scope to (form-listbox > *) {
+			:where(:scope) {
+				display: block;
+				width: 100%;
+			}
 
 			> label,
 			> p,
@@ -250,7 +252,7 @@ export function FormCombobox(
 				}
 			}
 
-			&[clearable] .input {
+			:where(:scope)[clearable] .input {
 				> input {
 					padding-right: var(--input-height);
 				}
@@ -277,7 +279,7 @@ export function FormCombobox(
 			}
 
 			/* Native validity styling — replaces the old aria-invalid attribute hook. */
-			&:user-invalid > .input > input {
+			:where(:scope):user-invalid > .input > input {
 				box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 			}
 
@@ -312,7 +314,7 @@ export function FormCombobox(
 				color: var(--color-text-soft);
 			}
 
-			&:focus-within {
+			:where(:scope):focus-within {
 				> label,
 				> p,
 				> button {

@@ -23,7 +23,7 @@ import { lineAt, textAt } from './located'
 
 /* === Sources === */
 
-const SHEET = `:host {
+const SHEET = `c-el {
 	display: flex;
 
 	& > span {
@@ -32,12 +32,12 @@ const SHEET = `:host {
 }
 
 @media (min-width: 40em) {
-	:host {
+	c-el {
 		top: 0;
 	}
 }`
 
-const SHEET_WITH_BAD_UNIT = `:host {
+const SHEET_WITH_BAD_UNIT = `c-el {
 	> span {
 		width: 10pxx;
 	}
@@ -179,7 +179,7 @@ describe('parseComponentSheet — the LTC064/LTC065 faces', () => {
 	// declarations are checked like the rule's own.
 	test('a conditional group nested in a rule is checked', () => {
 		const css =
-			':host {\n\t@media (width > 1px) {\n\t\twidht: 1px\n\t}\n\t@supports (display: grid) {\n\t\twidth: 10pxx\n\t}\n}'
+			'c-el {\n\t@media (width > 1px) {\n\t\twidht: 1px\n\t}\n\t@supports (display: grid) {\n\t\twidth: 10pxx\n\t}\n}'
 		const { errors } = parseComponentSheet(css)
 		expect(errors.map(e => [e.face, e.property, e.offset])).toEqual([
 			['unknown-property', 'widht', css.indexOf('widht')],
@@ -209,7 +209,7 @@ describe('the IR carries the parsed sheet', () => {
 		const source = tsrxSource(SHEET)
 		const { component, diagnostics } = compileSource(source, 'c-el.tsrx')
 		expect(diagnostics).toEqual([])
-		expect(component?.css.startsWith(':host {')).toBe(true)
+		expect(component?.css.startsWith('c-el {')).toBe(true)
 		expect(component?.css.endsWith('}\n')).toBe(true)
 		expect(component?.sheet?.rules.map(r => r.type)).toEqual(['style', 'media'])
 	})
@@ -218,7 +218,7 @@ describe('the IR carries the parsed sheet', () => {
 		const source = tsxSource(SHEET)
 		const { component, diagnostics } = compileSourceTsx(source, 'c-el.tsx')
 		expect(diagnostics).toEqual([])
-		expect(component?.css.startsWith(':host {')).toBe(true)
+		expect(component?.css.startsWith('c-el {')).toBe(true)
 		expect(component?.sheet?.rules.map(r => r.type)).toEqual(['style', 'media'])
 	})
 
@@ -276,17 +276,17 @@ describe('the tier split: a parse failure errors, grammar findings warn', () => 
 		])
 
 	test.each([
-		[':host { container-type: scroll-state }'],
-		[':host { width: calc-size(auto, size + 1rem) }'],
-		[':host { display: grid-lanes }'],
-		[':host { width: 10pz }'],
-		[':host { colr: red }'],
+		['c-el { container-type: scroll-state }'],
+		['c-el { width: calc-size(auto, size + 1rem) }'],
+		['c-el { display: grid-lanes }'],
+		['c-el { width: 10pz }'],
+		['c-el { colr: red }'],
 	])('%s warns LTC065 and compiles', sheet => {
 		expect(severities(sheet)).toEqual([['LTC065', 'warning']])
 	})
 
 	test('an unparseable sheet still fails with LTC064', () => {
-		expect(severities(':host { color: red }\na >> .b { color: red }')).toEqual([
+		expect(severities('c-el { color: red }\na >> .b { color: red }')).toEqual([
 			['LTC064', 'error'],
 		])
 	})

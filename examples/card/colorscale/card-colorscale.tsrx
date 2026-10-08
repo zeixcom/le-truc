@@ -108,15 +108,17 @@ export function CardColorscale({ label }: { label: string })
 			</ol>
 
 			<style>
-			:host {
-				--card-colorscale-max-size: 18rem;
-				--card-colorscale-padding: 0.5em;
-				--card-colorscale-color-text: white;
+			@scope {
+				:where(:scope) {
+					--card-colorscale-max-size: 18rem;
+					--card-colorscale-padding: 0.5em;
+					--card-colorscale-color-text: white;
 
-				display: inline-flex;
-				margin: 0 auto;
+					display: inline-flex;
+					margin: 0 auto;
+				}
 
-				& ol {
+				ol {
 					display: grid;
 					list-style: none;
 					margin: 0 auto;
@@ -138,7 +140,7 @@ export function CardColorscale({ label }: { label: string })
 					gap: 0;
 				}
 
-				&.tiny {
+				:where(:scope).tiny {
 					& ol {
 						height: 3rem;
 					}
@@ -148,7 +150,7 @@ export function CardColorscale({ label }: { label: string })
 					}
 				}
 
-				&.small {
+				:where(:scope).small {
 					& ol {
 						height: 7.5rem;
 					}
@@ -158,15 +160,15 @@ export function CardColorscale({ label }: { label: string })
 					}
 				}
 
-				&.medium ol {
+				:where(:scope).medium ol {
 					height: 12rem;
 				}
 
-				&.large ol {
+				:where(:scope).large ol {
 					height: 18rem;
 				}
 
-				& li {
+				li {
 					margin: 0;
 				}
 
@@ -174,34 +176,42 @@ export function CardColorscale({ label }: { label: string })
 					grid-area: lighten80;
 					background: var(--card-colorscale-color-lighten80);
 				}
+
 				.lighten60 {
 					grid-area: lighten60;
 					background: var(--card-colorscale-color-lighten60);
 				}
+
 				.lighten40 {
 					grid-area: lighten40;
 					background: var(--card-colorscale-color-lighten40);
 				}
+
 				.lighten20 {
 					grid-area: lighten20;
 					background: var(--card-colorscale-color-lighten20);
 				}
+
 				.base {
 					grid-area: base;
 					background: var(--card-colorscale-color-base);
 				}
+
 				.darken20 {
 					grid-area: darken20;
 					background: var(--card-colorscale-color-darken20);
 				}
+
 				.darken40 {
 					grid-area: darken40;
 					background: var(--card-colorscale-color-darken40);
 				}
+
 				.darken60 {
 					grid-area: darken60;
 					background: var(--card-colorscale-color-darken60);
 				}
+
 				.darken80 {
 					grid-area: darken80;
 					background: var(--card-colorscale-color-darken80);
@@ -216,30 +226,30 @@ export function CardColorscale({ label }: { label: string })
 					line-height: 1;
 				}
 
-				& strong {
+				strong {
 					display: block;
 					color: var(--card-colorscale-color-text);
 					font-size: 15cqi;
 					font-weight: 700;
 				}
 
-				& small {
+				small {
 					display: block;
 					color: var(--card-colorscale-color-text-soft);
 					font-size: 10cqi;
 					font-weight: 400;
 				}
-			}
 
-			@container (width < 5rem) or (height < 7.5rem) {
-				.label {
-					display: none;
+				@container (width < 5rem) or (height < 7.5rem) {
+					.label {
+						display: none;
+					}
 				}
-			}
 
-			@container (width < 8rem) or (height < 12rem) {
-				.label small {
-					display: none;
+				@container (width < 8rem) or (height < 12rem) {
+					.label small {
+						display: none;
+					}
 				}
 			}</style>
 		</card-colorscale>

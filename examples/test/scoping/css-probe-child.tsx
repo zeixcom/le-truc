@@ -1,0 +1,52 @@
+/**
+ * The Children Region probe's child (LT-501, ADR 0033 and ADR 0048 s5): it
+ * inserts `{children}` inside `<code>`, the element the server marks with
+ * the owner's tag, and renders one internal of its own beside the region.
+ * Its sheet limits its scope at its own insertion element, `to (code > *)`
+ * — the way ADR 0048 s5 gives a child its stop at the content — so its
+ * `span` rule styles the internal beside the region and stops at what
+ * `code` holds, under a compiled parent and under a page alike. Its host
+ * rules are the ADR 0033 s1 idiom: the `:where(:scope)` base loses to the
+ * probe's bare rule on this host, and the `&.variant` root variant beats it.
+ * Deliberately not styled for looks; every declaration is an assertion.
+ */
+import { css } from '@zeix/le-truc-compiler/macros'
+
+export type CssProbeChildProps = {}
+
+declare global {
+	interface HTMLElementTagNameMap {
+		'css-probe-child': HTMLElement & CssProbeChildProps
+	}
+}
+
+export function CssProbeChild({ children = '' }: { children?: string }) {
+	return (
+		<css-probe-child class="variant">
+			<pre>
+				<code>{children}</code>
+			</pre>
+			<span class="x">{'Child internal'}</span>
+
+			<style>{css`
+				@scope to (code > *) {
+					:where(:scope) {
+						display: block;
+						padding-left: 1px;
+						padding-right: 1px;
+
+						&.variant {
+							padding-right: 3px;
+						}
+					}
+					span {
+						outline-style: dashed;
+					}
+					code {
+						font-style: italic;
+					}
+				}
+			`}</style>
+		</css-probe-child>
+	)
+}

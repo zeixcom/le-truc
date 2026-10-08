@@ -107,9 +107,11 @@ export function ModuleTabgroup(
 			}
 
 			<style>
-			:host {
-				display: block;
-				margin-block-end: var(--space-l);
+			@scope {
+				:where(:scope) {
+					display: block;
+					margin-block-end: var(--space-l);
+				}
 
 				> [role="tablist"] {
 					display: flex;

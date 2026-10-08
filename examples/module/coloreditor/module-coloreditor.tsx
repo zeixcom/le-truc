@@ -249,17 +249,19 @@ export function ModuleColoreditor(
 				/>
 			</div>
 			<style>{css`
-:host {
-	display: grid;
-	grid-template-areas:
-		"scale name"
-		"graph graph"
-		"lightness lightness"
-		"chroma chroma"
-		"hue hue"
-		"info info";
-	grid-template-columns: auto 1fr;
-	column-gap: var(--space-m);
+@scope to (card-colorscale > *, form-colorgraph > *, form-textbox > *, module-colorinfo > *) {
+	:where(:scope) {
+		display: grid;
+		grid-template-areas:
+			"scale name"
+			"graph graph"
+			"lightness lightness"
+			"chroma chroma"
+			"hue hue"
+			"info info";
+		grid-template-columns: auto 1fr;
+		column-gap: var(--space-m);
+	}
 
 	> form-colorgraph {
 		grid-area: graph;
@@ -292,17 +294,17 @@ export function ModuleColoreditor(
 		flex-direction: column;
 		gap: var(--space-xs);
 	}
-}
 
-@container (width > 45rem) {
-	:host {
-		grid-template-areas:
-			"scale name info"
-			"graph graph info"
-			"lightness lightness info"
-			"chroma chroma info"
-			"hue hue info";
-		grid-template-columns: auto 3fr 2fr;
+	@container (width > 45rem) {
+		:where(:scope) {
+			grid-template-areas:
+				"scale name info"
+				"graph graph info"
+				"lightness lightness info"
+				"chroma chroma info"
+				"hue hue info";
+			grid-template-columns: auto 3fr 2fr;
+		}
 	}
 }`}</style>
 		</module-coloreditor>

@@ -261,13 +261,15 @@ export function ModuleCarousel(
 				</div>
 			</nav>
 			<style>{css`
-:host {
-	display: flex;
-	position: relative;
-	overflow: hidden;
-	margin-block-end: var(--space-l);
-	border-radius: var(--space-s);
-	container: carousel / inline-size;
+@scope {
+	:where(:scope) {
+		display: flex;
+		position: relative;
+		overflow: hidden;
+		margin-block-end: var(--space-l);
+		border-radius: var(--space-s);
+		container: carousel / inline-size;
+	}
 
 	.slides {
 		display: flex;

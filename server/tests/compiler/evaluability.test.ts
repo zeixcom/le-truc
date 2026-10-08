@@ -20,9 +20,11 @@ describe('dependenciesOf', () => {
 				const color = createCell('red')
 				expose({ color: color.get })
 					<c-el title={() => color.get() + String(n)}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -40,9 +42,11 @@ describe('dependenciesOf', () => {
 			@{
 				expose({})
 					<c-el title={() => String(Math.max(1, 2))}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -61,9 +65,11 @@ describe('isServerEvaluable', () => {
 				const color = createCell('red')
 				expose({ color: color.get })
 					<c-el title={() => color.get() + String(n)}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -80,9 +86,11 @@ describe('isServerEvaluable', () => {
 				const color = createCell('red')
 				expose({ color: color.get })
 					<c-el title={() => color.get() + String(n)}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -100,9 +108,11 @@ describe('isServerEvaluable', () => {
 			@{
 				expose({})
 					<c-el title={() => String(Math.max(1, 2))}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 			'c.tsrx',
@@ -132,9 +142,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => new Intl.NumberFormat(lang).format(3)}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)
@@ -148,9 +160,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => new Intl.NumberFormat('en').format(3)}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)
@@ -164,9 +178,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => new Intl.NumberFormat(host.lang).format(3)}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)
@@ -180,9 +196,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => new Intl.NumberFormat().format(3)}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)
@@ -196,9 +214,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => String(Date.now())}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)
@@ -217,9 +237,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => new Date(y, m - 1, d).toLocaleDateString()}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)
@@ -236,9 +258,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => new Intl.DateTimeFormat('en', { timeZone: 'UTC' }).format(Date.UTC(y, m - 1, d))}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)
@@ -252,9 +276,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => String(Date.UTC(2026, 0, Date.now()))}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)
@@ -267,9 +293,11 @@ describe('LT-142: Intl split from Date', () => {
 			@{
 				expose({})
 					<c-el title={() => String(Intl)}>ok
-						<style>:host {
-	  color: red;
-	}</style>
+						<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 					</c-el>
 			}`,
 		)

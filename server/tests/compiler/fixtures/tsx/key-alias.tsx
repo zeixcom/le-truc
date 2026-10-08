@@ -54,8 +54,10 @@ export function KeyAlias(
 				})}
 			</div>
 			<style>{css`
-				:host {
-					display: block;
+				@scope {
+					:scope {
+						display: block;
+					}
 				}
 			`}</style>
 		</div>

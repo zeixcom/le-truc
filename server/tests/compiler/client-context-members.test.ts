@@ -22,9 +22,11 @@ ${setup}
 	expose({})
 		<c-el>
 			<div class="panel">ok</div>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</c-el>
 }
 ${imports}`

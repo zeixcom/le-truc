@@ -22,9 +22,11 @@ const child = `export function BasicChild({ label }: { label: string })
 	@{
 		expose({ value: '' })
 			<basic-child>{label}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-child>
 	}`
 
@@ -58,9 +60,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				<BasicChild label={title} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -94,9 +98,11 @@ export function BasicParent({}: {})
 					<BasicChild label="Hello" />
 					@for (const item of items) { <li>{item}</li> }
 				</ul>
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -121,9 +127,11 @@ export function BasicParent({}: {})
 		expose({})
 			<basic-parent>
 				<BasicChild label="Hello" />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -149,9 +157,11 @@ export function BasicParent({}: {})
 		expose({})
 			<basic-parent>
 				<BasicChild data-testid="hello" />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -178,9 +188,11 @@ export function BasicParent({ rowId }: { rowId: string })
 		expose({})
 			<basic-parent>
 				<BasicChild data-row={rowId} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -206,9 +218,11 @@ export function BasicMid({ label }: { label: string })
 		expose({})
 			<basic-mid>
 				<BasicChild label={label} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-mid>
 	}`
 		const midResult = compileComponent(
@@ -229,9 +243,11 @@ export function BasicRoot({ title }: { title: string })
 		expose({})
 			<basic-root>
 				<BasicMid label={title} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-root>
 	}`
 		const rootResult = compileComponent(
@@ -259,9 +275,11 @@ export function BasicRoot({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				<BasicChild label="Hello" />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -281,9 +299,11 @@ export function BasicParent({}: {})
 		expose({})
 			<basic-parent>
 				<BasicChild label="Hello" />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -303,9 +323,11 @@ export function BasicParent({}: {})
 			<basic-child>
 				<span>{label}</span>
 				{children}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-child>
 	}`
 
@@ -323,9 +345,11 @@ export function BasicParent({ title }: { title: string })
 				<BasicChild label={title}>
 					<span>nope</span>
 				</BasicChild>
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -362,9 +386,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				<BasicChild label={title} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -405,9 +431,11 @@ export function BasicParent({ title }: { title: string })
 				<BasicChild label={title}>
 					<button onClick={() => {}}>nope</button>
 				</BasicChild>
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -433,9 +461,11 @@ export function BasicParent({ title }: { title: string })
 			<basic-parent>
 				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const tsxParent = (
@@ -450,9 +480,11 @@ export function BasicParent({ title }: { title: string }) {
 			<basic-parent>
 				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
-				<style>{css\`:host {
-	  display: block;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>
 			</basic-parent>
 	)
 }`
@@ -533,9 +565,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				${sites(a, b)}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const tsxParent = (
@@ -551,9 +585,11 @@ export function BasicParent({ title }: { title: string }) {
 	return (
 			<basic-parent>
 				${sites(a, b)}
-				<style>{css\`:host {
-	  display: block;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>
 			</basic-parent>
 	)
 }`
@@ -663,9 +699,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				<BasicChild label={title} truc:pass={{ value: () => 'x' }} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -693,9 +731,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				<BasicChild label={title} truc:pass={{ value: () => shout('x') }} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -727,9 +767,11 @@ export function BasicParent({ title }: { title: string })
 			<basic-parent>
 				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild class="b" label={title} truc:pass={{ value: () => 'y' }} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -767,9 +809,11 @@ export function BasicParent({ title }: { title: string })
 			<basic-parent>
 				${raws}
 				${site}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const compileParent = (parent: string) =>
@@ -971,9 +1015,11 @@ export function BasicParent({ title }: { title: string })
 			<basic-parent>
 				<BasicChild class="a" label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild class="b" id="second" label={title} truc:pass={{ value: () => 'y' }} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -1012,9 +1058,11 @@ export function BasicParent({ title }: { title: string })
 		on(host, 'click', () => stray?.focus())
 			<basic-parent>
 				<BasicChild label={title} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -1041,9 +1089,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				<BasicChild label={title} truc:pass={{ value: () => child.value }} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		// No composeRegistry: this is pass 1, which only harvests each file's
@@ -1070,9 +1120,11 @@ export function BasicParent({ title }: { title: string })
 			<basic-parent>
 				<BasicChild label={title} truc:pass={{ value: () => 'x' }} />
 				<BasicChild label={title} truc:pass={{ value: () => 'y' }} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -1099,9 +1151,11 @@ export function BasicParent({ title }: { title: string })
 			<basic-parent>
 				<BasicChild id="dup" label={title} />
 				<BasicChild id="dup" label={title} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -1121,9 +1175,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				<basic-child></basic-child>
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -1151,9 +1207,11 @@ export function BasicParent({ title }: { title: string })
 		expose({})
 			<basic-parent>
 				<BasicChild label={title} />
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 
@@ -1212,9 +1270,11 @@ export function BasicParent({}: {})
 				} @catch (e) {
 					<p class="error">{e.message}</p>
 				}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 
@@ -1290,9 +1350,11 @@ export function BasicParent({}: {})
 				} @catch (e) {
 					${catchArm}
 				}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 
@@ -1556,9 +1618,11 @@ export function BasicParent({}: {})
 				} @else {
 					<div class="closed">closed</div>
 				}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -1629,9 +1693,11 @@ export function BasicParent({ rows }: { rows: string[] })
 						<li><ChildrenChild label={row}><p class="cell">{row}</p></ChildrenChild></li>
 					}
 				</ul>
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -1671,9 +1737,11 @@ export function BasicParent({}: {})
 						<li><ChildrenChild label={'x'}><p class="cell">{item}</p></ChildrenChild></li>
 					}
 				</ul>
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { diagnostics } = compileComponent(
@@ -1699,9 +1767,11 @@ export function BasicParent({}: {})
 				} @catch (e) {
 					<div class="wrapper"><ChildrenChild label={"failed"}><p class="error">{e.message}</p></ChildrenChild></div>
 				}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</basic-parent>
 	}`
 		const { component, diagnostics } = compileComponent(
@@ -1774,9 +1844,11 @@ describe('compose arm roots plan their `truc:pass` entries (LT-481)', () => {
 	@{
 		expose({ value: '' })
 			<value-child>{host.value}
-				<style>:host {
-	  display: block;
-	}</style>
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 			</value-child>
 	}`
 	const valueChildTsx = `export function ValueChild({}: {}) {

@@ -76,10 +76,12 @@ export function ModuleList({}: {})
 			</ul>
 
 			<style>
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
+			@scope to (form-textbox > *, basic-button > *) {
+				:where(:scope) {
+					display: flex;
+					flex-direction: column;
+					gap: var(--space-l);
+				}
 
 				> form {
 					display: flex;
@@ -89,7 +91,7 @@ export function ModuleList({}: {})
 					justify-content: space-between;
 				}
 
-				& ul {
+				ul {
 					display: flex;
 					flex-direction: column;
 					gap: var(--space-m);
@@ -110,11 +112,9 @@ export function ModuleList({}: {})
 						padding: 0;
 					}
 				}
-			}
 
-			@container (width > 27rem) {
-				:host {
-					& form {
+				@container (width > 27rem) {
+					form {
 						flex-direction: row;
 						align-items: flex-end;
 					}

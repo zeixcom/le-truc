@@ -13,9 +13,11 @@ import { compileComponentTsx } from '../../compiler/frontend/tsx'
 const IMPORTS = `import { createList } from '@zeix/le-truc'
 import { setupReorder } from '../../_common/reorder.ts'
 `
-const STYLE = `:host {
+const STYLE = `@scope {
+	:scope {
 	  color: red;
-	}`
+	}
+}`
 
 const tsrx = `${IMPORTS}
 export function ReorderList({ initial }: { initial?: string[] })

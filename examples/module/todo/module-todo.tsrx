@@ -262,17 +262,19 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 			</footer>
 
 			<style>
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
-				container-type: inline-size;
+			@scope to (form-textbox > *, basic-button > *, form-checkbox > *, form-inplace-edit > *, form-radiogroup > *) {
+				:where(:scope) {
+					display: flex;
+					flex-direction: column;
+					gap: var(--space-l);
+					container-type: inline-size;
+				}
 
-				&:state(filter-completed) [data-container] li:not(:has(input:checked)) {
+				:where(:scope):state(filter-completed) [data-container] li:not(:has(input:checked)) {
 					display: none;
 				}
 
-				&:state(filter-active) [data-container] li:has(input:checked) {
+				:where(:scope):state(filter-active) [data-container] li:has(input:checked) {
 					display: none;
 				}
 
@@ -284,7 +286,7 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 					justify-content: space-between;
 				}
 
-				& ol {
+				ol {
 					display: flex;
 					flex-direction: column;
 					gap: var(--space-m);
@@ -345,7 +347,7 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 					}
 				}
 
-				& button.reorder {
+				button.reorder {
 					height: var(--input-height);
 					min-inline-size: var(--input-height);
 					border-radius: var(--space-xs);
@@ -399,16 +401,14 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 						justify-self: end;
 					}
 				}
-			}
 
-			@container (width > 27rem) {
-				:host {
-					& form {
+				@container (width > 27rem) {
+					form {
 						flex-direction: row;
 						align-items: flex-end;
 					}
 
-					& footer {
+					footer {
 						grid-template-columns: 1fr 1fr 1fr;
 						grid-template-areas: "count filter clear";
 					}

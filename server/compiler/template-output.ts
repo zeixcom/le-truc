@@ -10,11 +10,7 @@
 import type { AstNode } from './ast-node'
 import { forEachFreeIdentifier } from './ast-utils'
 import { dedentCss, parseComponentSheet } from './css'
-import {
-	type ContractFinding,
-	checkSheetContract,
-	type GlobalFace,
-} from './css-scope'
+import { type ContractFinding, checkSheetContract } from './css-scope'
 import type { LocalDiagnostic, Site, StyleBlockRefusal } from './diagnostics'
 import { diagnostic } from './diagnostics'
 import type { ExtractContext } from './extract-context'
@@ -353,7 +349,7 @@ export const resolveTemplateOutput = (
 				}
 			}
 			sheet = parsed.sheet
-			// The shadow-root authored form (ADR 0033 s6, LT-304): the checks
+			// The platform-CSS authored form (ADR 0033 s6, LT-501): the checks
 			// run over the parsed sheet only — a sheet lightningcss refused
 			// is already LTC064's — and report against the authored source.
 			if (sheet) {
@@ -396,7 +392,7 @@ export const authoredRange = (
 		: undefined
 
 /**
- * Map one shadow-root contract finding (ADR 0033 s6, LT-304) onto its
+ * Map one stylesheet contract finding (ADR 0033 s6, LT-501) onto its
  * diagnostic: the sheet offset lifts into the authored source when the
  * slice relocated, and each face names its own builder.
  */
@@ -414,13 +410,16 @@ const contractDiagnostic = (
 			return diagnostic.slottedInLightDom(source, authoredOffset)
 		case 'host-context':
 			return diagnostic.hostContextSelector(source, authoredOffset)
-		case 'host-qualifier':
-			return diagnostic.hostQualifier(source, authoredOffset)
+		case 'host':
+			return diagnostic.hostSelector(source, authoredOffset)
 		case 'global':
-			return diagnostic.globalMisuse(
+			return diagnostic.globalSelector(source, authoredOffset)
+		case 'dead-by-limit':
+			return diagnostic.deadByLimit(
 				source,
 				authoredOffset,
-				finding.globalFace ?? 'prefixed',
+				finding.selector,
+				finding.limit ?? '',
 			)
 	}
 }

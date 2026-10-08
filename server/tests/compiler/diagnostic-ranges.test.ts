@@ -41,7 +41,7 @@ type Shape = {
 	async?: boolean
 }
 
-const DEFAULT_CSS = ':host {\n  color: red;\n}'
+const DEFAULT_CSS = '@scope {\n  :scope {\n    color: red;\n  }\n}'
 
 const tsrxSource = ({
 	setup = '\t\texpose({})',
@@ -200,12 +200,16 @@ describe('each producer family covers the offending construct, on both surfaces'
 		expose({})
 		<>
 			<c-el><span>x</span></c-el>
-			<style>:host { color: red }</style>
+			<style>@scope {
+	:scope { color: red }
+}</style>
 		</>
 	}`,
 				`<>
 			<c-el><span>x</span></c-el>
-			<style>:host { color: red }</style>
+			<style>@scope {
+	:scope { color: red }
+}</style>
 		</>`,
 			],
 			[
@@ -216,13 +220,17 @@ export function C({}: {}) {
 	return (
 		<>
 			<c-el><span>x</span></c-el>
-			<style>{css\`:host { color: red }\`}</style>
+			<style>{css\`@scope {
+	:scope { color: red }
+}\`}</style>
 		</>
 	)
 }`,
 				`<>
 			<c-el><span>x</span></c-el>
-			<style>{css\`:host { color: red }\`}</style>
+			<style>{css\`@scope {
+	:scope { color: red }
+}\`}</style>
 		</>`,
 			],
 		]
@@ -316,12 +324,18 @@ export function C({}: {}) {
 
 	test('stylesheet: a declaration (LTC065) and a selector (LTC066, LTC067)', () => {
 		expectCovers(
-			{ template: '<span>x</span>', css: ':host {\n  colr: red;\n}' },
+			{
+				template: '<span>x</span>',
+				css: '@scope {\n  :scope {\n    colr: red;\n  }\n}',
+			},
 			'LTC065',
 			'colr: red',
 		)
 		expectCovers(
-			{ template: '<span>x</span>', css: 'c-el span {\n  color: red;\n}' },
+			{
+				template: '<span>x</span>',
+				css: '@scope {\n  c-el span {\n    color: red;\n  }\n}',
+			},
 			'LTC066',
 			'c-el span',
 		)
@@ -809,9 +823,11 @@ export function C({}: {}) {
 	expose({ w })
 	return (
 			<c-el><input /><span>{w.get()}</span>
-				<style>{css\`:host {
-	  color: red;
-	}\`}</style>
+				<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
 			</c-el>
 	)
 }`

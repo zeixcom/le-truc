@@ -221,24 +221,26 @@ export function FormTokenbox(
 		<p class="status visually-hidden" role="status" aria-live="polite"></p>
 
 		<style>
-		:host {
-			display: block;
-			width: 100%;
+		@scope {
+			:where(:scope) {
+				display: block;
+				width: 100%;
+			}
 
-			& label,
-			& p {
+			label,
+			p {
 				opacity: var(--opacity-dimmed);
 				transition: opacity var(--transition-short) var(--easing-inout);
 			}
 
-			& label {
+			label {
 				display: block;
 				font-size: var(--font-size-s);
 				color: var(--color-text);
 				margin-bottom: var(--space-xxs);
 			}
 
-			& .input {
+			.input {
 				display: flex;
 				flex-wrap: wrap;
 				align-items: center;
@@ -251,7 +253,7 @@ export function FormTokenbox(
 				padding: var(--space-xxs);
 			}
 
-			& input {
+			input {
 				flex: 1 1 8ch;
 				min-width: 8ch;
 				box-sizing: border-box;
@@ -273,16 +275,16 @@ export function FormTokenbox(
 				}
 			}
 
-			& .input:has(input:focus-visible) {
+			.input:has(input:focus-visible) {
 				box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
 			}
 
 			/* Native validity styling — matches form-textbox's :user-invalid hook. */
-			&:invalid .input:has(input:invalid) {
+			:where(:scope):invalid .input:has(input:invalid) {
 				box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 			}
 
-			& .token {
+			.token {
 				display: inline-flex;
 				align-items: center;
 				gap: var(--space-xxs);
@@ -331,7 +333,7 @@ export function FormTokenbox(
 				color: var(--color-text-soft);
 			}
 
-			&:focus-within {
+			:where(:scope):focus-within {
 				& label,
 				& p {
 					opacity: var(--opacity-solid);

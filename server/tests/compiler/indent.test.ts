@@ -71,9 +71,11 @@ export function C({}: {})
 				Please enter more\`
 				seen.set(n)
 			}}>{seen}</button>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())
@@ -92,9 +94,11 @@ export function C({ note }: { note?: string })
 		second line of banner\`
 		expose({ seen: seen.get })
 			<c-el title={banner}>{seen}
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-el>
 	}`
 		const { component } = compileComponent(source, 'c.tsrx', new Set())

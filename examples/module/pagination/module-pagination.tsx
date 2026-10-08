@@ -140,16 +140,18 @@ export function ModulePagination(
 			</div>
 
 			<style>{css`
-			:host {
-				display: inline-flex;
-				align-items: center;
-				gap: var(--space-s);
+			@scope {
+				:where(:scope) {
+					display: inline-flex;
+					align-items: center;
+					gap: var(--space-s);
+				}
 
-				& label {
+				label {
 					display: inline-block;
 				}
 
-				& input {
+				input {
 					display: inline-block;
 					box-sizing: border-box;
 					background: var(--color-input);
@@ -177,7 +179,7 @@ export function ModulePagination(
 					align-items: center;
 				}
 
-				& button {
+				button {
 					flex-grow: 0;
 					box-sizing: border-box;
 					height: var(--input-height);

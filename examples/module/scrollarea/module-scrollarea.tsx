@@ -140,46 +140,46 @@ export function ModuleScrollarea(
 			<div>{children}</div>
 
 			<style>{css`
-			/* @media (prefers-reduced-motion: no-preference) { */
-
-			:host {
-				display: block;
-				position: relative;
-				overflow-y: auto;
-				-webkit-overflow-scrolling: touch;
-
-				&::before,
-				&::after {
-					content: "";
-					position: sticky;
+			@scope {
+				:where(:scope) {
 					display: block;
-					width: 100%;
-					height: var(--space-m);
-					opacity: 0;
-					pointer-events: none;
-					transition: opacity var(--transition-short);
-					z-index: 1;
+					position: relative;
+					overflow-y: auto;
+					-webkit-overflow-scrolling: touch;
+
+					&::before,
+					&::after {
+						content: "";
+						position: sticky;
+						display: block;
+						width: 100%;
+						height: var(--space-m);
+						opacity: 0;
+						pointer-events: none;
+						transition: opacity var(--transition-short);
+						z-index: 1;
+					}
+
+					&::before {
+						top: 0;
+						background: linear-gradient(180deg, var(--color-shadow), transparent);
+					}
+
+					&::after {
+						bottom: 0;
+						background: linear-gradient(0deg, var(--color-shadow), transparent);
+					}
+
+					&:state(overflow-start)::before {
+						opacity: 1;
+					}
+
+					&:state(overflow-end)::after {
+						opacity: 1;
+					}
 				}
 
-				&::before {
-					top: 0;
-					background: linear-gradient(180deg, var(--color-shadow), transparent);
-				}
-
-				&::after {
-					bottom: 0;
-					background: linear-gradient(0deg, var(--color-shadow), transparent);
-				}
-
-				&:state(overflow-start)::before {
-					opacity: 1;
-				}
-
-				&:state(overflow-end)::after {
-					opacity: 1;
-				}
-
-				&[orientation="horizontal"] {
+				:where(:scope)[orientation="horizontal"] {
 					overflow-x: auto;
 					overflow-y: clip;
 

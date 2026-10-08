@@ -190,14 +190,16 @@ export function ModuleColorinfo(
 			</details>
 
 			<style>{css`
-			:host {
-				--module-colorinfo-swatch-size: var(--input-height);
-				--module-colorinfo-color-fallback: transparent;
+			@scope to (basic-number > *) {
+				:where(:scope) {
+					--module-colorinfo-swatch-size: var(--input-height);
+					--module-colorinfo-color-fallback: transparent;
 
-				display: inline-flex;
-				gap: var(--space-l);
+					display: inline-flex;
+					gap: var(--space-l);
+				}
 
-				& summary {
+				summary {
 					cursor: pointer;
 					margin: 0 0 var(--space-s);
 
@@ -206,7 +208,7 @@ export function ModuleColorinfo(
 					}
 				}
 
-				& details[open] summary {
+				details[open] summary {
 					margin-bottom: var(--space-xs);
 				}
 
@@ -244,16 +246,16 @@ export function ModuleColorinfo(
 					line-height: 1;
 				}
 
-				& strong,
-				& small {
+				strong,
+				small {
 					display: block;
 				}
 
-				& strong {
+				strong {
 					font-size: var(--font-size-m);
 				}
 
-				& small {
+				small {
 					color: var(--color-text-soft);
 					font-size: var(--font-size-xs);
 				}
@@ -265,7 +267,7 @@ export function ModuleColorinfo(
 					margin-left: var(--space-l);
 				}
 
-				& dl {
+				dl {
 					margin: 0 0 var(--space-s);
 					display: inline-grid;
 					grid-template-rows: auto auto;

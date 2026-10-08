@@ -12,30 +12,46 @@ Le Truc applies no scoping to this CSS. It reaches the page exactly as written.
 
 ## Compiled components (`<style>{css`…`}</style>`)
 
-Write the sheet as **shadow-root CSS**: `:host` for the host element, bare selectors for its internals. The compiler scopes it in light DOM so the rules stop at every custom element the template renders. That's native `@scope` where the build's CSS targets support it, and a zero-specificity `:where(tag)` lowering with boundary guards otherwise. Page styles still win over `:host` rules.
+A compiled sheet means what the same sheet would mean as an inline `<style>` in the host. Scope it with a prelude-less `@scope { … }`: `:scope` is the host, bare selectors are its descendants, and `to (<limits>)` stops the scope where you write it. The compiler adds no limits of its own. It emits native `@scope` (with the explicit root `@scope (my-tag)`) where the build's CSS targets support it, and a flat lowering otherwise: `:where(my-tag)`-led selectors, a bare `:scope` as the root with the same specificity, and a zero-specificity guard per limit.
 
-This is **not** Ripple-style hashed class scoping. No classes are generated or rewritten. Refused forms (compile errors):
+**The idiom** (ADR 0033 s1): host rules at `:where(:scope)`, root variants as `&.x` inside it, descendants bare or relative, a state-dependent descendant as `:where(:scope).x .label`, and one limit per composed child.
+
+```css
+@scope to (basic-button > *) {
+  :where(:scope) {
+    display: block;
+    &.compact { gap: 0; }
+  }
+  > label { font-weight: bold; }
+  .label { color: var(--color-text); }
+  :where(:scope).compact .label { display: none; }
+}
+```
+
+It is the 2.x tag-led idiom minus one type selector, so the 2.x contests keep their winners: a parent's bare rule on the child's host beats the child's `:where(:scope)` base, the child's `&.x` variant beats the parent's rule, and a page rule led by the bare tag beats the base. A bare `:scope` (0,1,0) outranks both the parent's bare rule and the page's tag rule. It is legal, but use it only where the host rule must win.
+
+A rule led by the component's own tag at the top level (`my-tag .x { … }`) stays contained and emits verbatim. Any other top-level rule applies page-wide, as in any `<style>`. A parent's scoped rules reach a composed child's internals until a limit stops them. This is **not** Ripple-style hashed class scoping. No classes are generated or rewritten. Refused forms (compile errors):
 
 | Write | Not | Code |
 |---|---|---|
-| `:host { … }` | `my-tag { … }` (rule led by the component's own tag) | LTC066 |
-| `:host(.x)`, `:host(:hover)`, `:host([attr])` | `:host.x`, `:host:hover` | LTC070 |
-| a custom property or class on the child host; the child styles its own internals | `child-tag .x`, `child-tag > .x` | LTC071 |
+| `:where(:scope) { … }` | `my-tag { … }` inside `@scope` | LTC066 |
+| `:where(:scope)`, `:where(:scope).x` | `:host`, `:host(.x)` | LTC086 |
+| a top-level rule, with the `:global(…)` wrapper removed | `:global(…)`, `:global { … }` | LTC069 |
+| a custom property or class on the child host; the child styles its own internals | a selector that descends past a compound one of the block's `to (…)` limits excludes (`to (child-tag > *)` with `child-tag .x`) | LTC071 |
 | style composed children by their tag | `::slotted()` | LTC067 |
 | inheritance and custom properties | `:host-context()` | LTC068 |
-| a top-level `:global(<whole selector>) { … }` or a bare `:global { … }` block (put `@media` inside it) | nested, prefixed, trailing or mid-selector `:global` | LTC069 |
+| a flat form: a single `@scope`, limits without `:scope` | a `@scope` inside the component `@scope`, a limit that names `:scope`, on a CSS target without native `@scope` | LTC089 |
 
+- A qualifier after `:scope` (`:scope.x`, `:scope:hover`) is valid CSS.
 - The sheet must parse (LTC064). An unknown property or value **warns** (LTC065) and still ships. The compiler's CSS dictionary lags the platform, so a newer property can trigger it.
-- Every member of a variant set must compile to byte-identical CSS (LTC051).
+- Every member of a variant set must have byte-identical authored CSS (LTC051).
 - Limits of the light-DOM scope:
   - Page CSS can still reach in. Only a real shadow root prevents that.
-  - Content that page authors put inside the component *is* styled by its rules.
-  - Content this template places *inside a composed child* is outside the scope, so style it from a `:global { … }` block.
-  - A custom element inserted at runtime is no boundary, because the boundary set is fixed at compile time.
+  - The lowered form has no scope proximity: a nested instance of the same component is reached by the outer instance's rules too, and a tie native breaks by proximity falls to source order. Page CSS comes first in the aggregate stylesheet; the order between components is unspecified. Break a parent-versus-child tie on passed content with specificity or a limit.
 
 ## Both models
 
-- Prefer custom states for host state: `:host(:state(open))` (compiled) or `my-tag:state(open)` (runtime), driven by `bindState(internals, 'open')`. A consumer rewriting `class` cannot clear a custom state.
-- Express visual variants as classes on the host (`my-button.primary`, `:host(.primary)`), and document them.
+- Prefer custom states for host state: `:where(:scope):state(open)` (compiled) or `my-tag:state(open)` (runtime), driven by `bindState(internals, 'open')`. A consumer rewriting `class` cannot clear a custom state.
+- Express visual variants as classes on the host (`my-button.primary`, `:where(:scope).primary`), and document them.
 - Use design tokens (`var(--…)`) instead of hard-coded colors and spacing. Custom properties are the one styling channel that crosses every component boundary.
 - `bindStyle(el, '--x')` with a `nil` value removes the inline property, and the cascade value comes back.

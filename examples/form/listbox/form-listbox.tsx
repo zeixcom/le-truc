@@ -209,10 +209,12 @@ export function FormListbox(
 			</div>
 
 			<style>{css`
-			:host {
-				display: block;
-				margin: 0;
-				max-width: 16rem;
+			@scope {
+				:where(:scope) {
+					display: block;
+					margin: 0;
+					max-width: 16rem;
+				}
 
 				.input {
 					position: relative;
@@ -258,7 +260,7 @@ export function FormListbox(
 					}
 				}
 
-				& module-scrollarea {
+				module-scrollarea {
 					max-height: 40rem;
 					background-color: var(--color-background);
 

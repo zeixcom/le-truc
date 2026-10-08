@@ -186,57 +186,137 @@ export function SectionMenu(
 			   sidebar-role layout only reads as a sidebar once these are a
 			   flex row. Below 48em section-menu is off-canvas (see the
 			   max-width query below), so the shell stays a single column
-			   there — nothing to coordinate. The page-shell rules ship in the
-			   two whole-rule :global forms (ADR 0033 s6a): a
-			   :global(<selector>) rule, and at-rule-conditioned ones inside
-			   a bare :global block; both hoist out of the scope verbatim. */
-
-			:global(:root) {
+			   there — nothing to coordinate. The page-shell rules are top-level
+			   rules outside the @scope block, so they apply page-wide
+			   (ADR 0033 s1). */
+			:root {
 				--header-height: 3rem;
 			}
 
-			:global(.docs-body) {
+			.docs-body {
 				display: block;
 			}
 
-			:global(.quicklinks) {
+			.quicklinks {
 				display: none;
 			}
 
-			:global {
-				@media screen and (min-width: 45em) {
-					.docs-body {
-						display: flex;
-						align-items: flex-start;
+			@media screen and (min-width: 45em) {
+				.docs-body {
+					display: flex;
+					align-items: flex-start;
+				}
+
+				.docs-main {
+					flex: 1 1 auto;
+					min-width: 0;
+				}
+			}
+
+			@media screen and (max-width: 44.999em) {
+				/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID
+				   in the component's setup). Stays above the drawer's fixed,
+				   viewport-covering backdrop (z-index 100) so it remains
+				   clickable to close while open. */
+				#sidebar-toggle {
+					z-index: 101;
+					position: absolute;
+					top: var(--space-m);
+					left: 13rem;
+					border: 1px solid var(--color-border);
+					height: var(--input-height);
+					width: var(--input-height);
+					border-radius: var(--space-xs);
+					background-color: var(--color-secondary);
+					font-size: var(--font-size-s);
+					line-height: var(--line-height-xs);
+
+					&:hover {
+						background-color: var(--color-secondary-hover);
 					}
 
-					.docs-main {
-						flex: 1 1 auto;
-						min-width: 0;
+					.open {
+						display: none;
+					}
+
+					.closed {
+						display: block;
+					}
+
+					&[aria-expanded="true"] {
+						.open {
+							display: block;
+						}
+
+						.closed {
+							display: none;
+						}
 					}
 				}
 			}
 
-			:host {
-				/* Default (no JS, any width): normal in-flow block, all links
-				   reachable without script — the drawer behavior below is
-				   JS-enhanced only. */
-				display: block;
+			@media screen and (min-width: 27em) {
+				.docs-header-bar {
+					display: flex;
+					align-items: center;
+					justify-content: space-between;
+				}
 
-				& ol,
-				& ul {
+				.quicklinks {
+					display: flex;
+					align-items: center;
+					gap: var(--space-m);
+
+					& a {
+						text-decoration: none;
+
+						&:hover {
+							text-decoration: underline;
+						}
+					}
+
+					& img {
+						display: block;
+					}
+				}
+			}
+
+			@media screen and (min-width: 45em) {
+				/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID
+				   in the component's setup). Hidden above the breakpoint
+				   since the sidebar is always visible there and has nothing
+				   to toggle. */
+				#sidebar-toggle {
+					display: none;
+				}
+
+				header {
+					height: var(--header-height);
+				}
+			}
+
+			@scope {
+				:where(:scope) {
+					/* Default (no JS, any width): normal in-flow block, all links
+					   reachable without script — the drawer behavior below is
+					   JS-enhanced only. */
+					display: block;
+				}
+
+				ol,
+				ul {
 					display: block;
 					list-style: none;
 					margin: 0;
 					padding: 0;
 				}
 
-				& li {
+				li {
 					padding: 0;
 					margin: 0;
 				}
 
-				& li.group {
+				li.group {
 					margin-block-start: var(--space-s);
 					padding: var(--space-xs) var(--space-m);
 					font-size: var(--font-size-xs);
@@ -246,11 +326,11 @@ export function SectionMenu(
 					color: var(--color-text-soft);
 				}
 
-				& li.group:first-child {
+				li.group:first-child {
 					margin-block-start: 0;
 				}
 
-				& a {
+				a {
 					display: flex;
 					align-items: center;
 					gap: var(--space-s);
@@ -300,200 +380,109 @@ export function SectionMenu(
 				.backdrop {
 					display: none;
 				}
-			}
 
-			:global {
+				/* Off-canvas drawer — only once JS has enhanced the component
+				   (.js, added on connect). Without JS, section-menu stays in
+				   normal flow at every width (the root rule above). */
 				@media screen and (max-width: 44.999em) {
-					/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID
-					   in the component's setup). Stays above the drawer's fixed,
-					   viewport-covering backdrop (z-index 100) so it remains
-					   clickable to close while open. */
-					#sidebar-toggle {
-						z-index: 101;
-						position: absolute;
-						top: var(--space-m);
-						left: 13rem;
-						border: 1px solid var(--color-border);
-						height: var(--input-height);
-						width: var(--input-height);
-						border-radius: var(--space-xs);
-						background-color: var(--color-secondary);
-						font-size: var(--font-size-s);
-						line-height: var(--line-height-xs);
+					:where(:scope).js {
+						position: fixed;
+						inset: 0;
+						z-index: 100;
+						/* No visibility/transition-delay hiding trick here: a
+						   transition on a property that also changes the moment .js
+						   is first added (going from the pre-JS default straight to
+						   the closed state) delays that very first application too —
+						   the drawer would sit visibly "open" for one full
+						   --transition-short after every page load. transform +
+						   pointer-events alone close it instantly; only the
+						   *movement* of <nav> (below) animates. */
+						pointer-events: none;
 
-						&:hover {
-							background-color: var(--color-secondary-hover);
+						& module-scrollarea {
+							position: absolute;
+							z-index: 1;
+							inset-block: 0;
+							inset-inline-start: 0;
+							width: 16rem;
+							max-width: 85vw;
+							background-color: var(--color-background);
+							border-inline-end: 1px solid var(--color-border-soft);
+							pointer-events: auto;
+							transform: translateX(-100%);
 						}
 
-						.open {
+						& .backdrop {
+							display: block;
+							position: absolute;
+							z-index: 0;
+							inset: 0;
+							background-color: var(--color-shadow);
+							opacity: var(--opacity-transparent);
+						}
+					}
+
+					/* .ready (added a frame after .js) gates the transitions
+					   themselves — the closed layout above still applies instantly
+					   on connect either way, but without this gate the *first*
+					   application of .js would itself be a transitionable change
+					   (no .js → .js), animating the drawer sliding out on every
+					   page load even though it was never open. */
+					:where(:scope).js.ready {
+						& module-scrollarea {
+							transition: transform var(--transition-short) var(--easing-inout);
+						}
+
+						& .backdrop {
+							transition: opacity var(--transition-short) var(--easing-inout);
+						}
+					}
+
+					:where(:scope).js.open {
+						pointer-events: auto;
+
+						& module-scrollarea {
+							transform: translateX(0);
+						}
+
+						& .backdrop {
+							opacity: var(--opacity-dimmed);
+							pointer-events: auto;
+						}
+					}
+				}
+
+				@media screen and (min-width: 45em) {
+					:where(:scope) {
+						/* Above the breakpoint the sidebar is always visible, sticky,
+						   and independently scrollable — no toggle, no
+						   off-canvas/backdrop. */
+						position: sticky;
+						top: 0;
+						align-self: start;
+						flex: 0 0 16rem;
+						width: 16rem;
+					}
+
+					:where(:scope).js {
+						visibility: visible;
+						pointer-events: auto;
+						transition: none;
+
+						& module-scrollarea {
+							position: static;
+							inset: auto;
+							width: auto;
+							max-width: none;
+							max-height: 100dvh;
+							background-color: transparent;
+							border-inline-end: none;
+							transform: none;
+						}
+
+						& .backdrop {
 							display: none;
 						}
-
-						.closed {
-							display: block;
-						}
-
-						&[aria-expanded="true"] {
-							.open {
-								display: block;
-							}
-
-							.closed {
-								display: none;
-							}
-						}
-					}
-				}
-			}
-
-			/* Off-canvas drawer — only once JS has enhanced the component
-			   (.js, added on connect). Without JS, section-menu stays in
-			   normal flow at every width (the :host rule above). */
-			@media screen and (max-width: 44.999em) {
-				:host(.js) {
-					position: fixed;
-					inset: 0;
-					z-index: 100;
-					/* No visibility/transition-delay hiding trick here: a
-					   transition on a property that also changes the moment .js
-					   is first added (going from the pre-JS default straight to
-					   the closed state) delays that very first application too —
-					   the drawer would sit visibly "open" for one full
-					   --transition-short after every page load. transform +
-					   pointer-events alone close it instantly; only the
-					   *movement* of <nav> (below) animates. */
-					pointer-events: none;
-
-					& module-scrollarea {
-						position: absolute;
-						z-index: 1;
-						inset-block: 0;
-						inset-inline-start: 0;
-						width: 16rem;
-						max-width: 85vw;
-						background-color: var(--color-background);
-						border-inline-end: 1px solid var(--color-border-soft);
-						pointer-events: auto;
-						transform: translateX(-100%);
-					}
-
-					& .backdrop {
-						display: block;
-						position: absolute;
-						z-index: 0;
-						inset: 0;
-						background-color: var(--color-shadow);
-						opacity: var(--opacity-transparent);
-					}
-				}
-
-				/* .ready (added a frame after .js) gates the transitions
-				   themselves — the closed layout above still applies instantly
-				   on connect either way, but without this gate the *first*
-				   application of .js would itself be a transitionable change
-				   (no .js → .js), animating the drawer sliding out on every
-				   page load even though it was never open. The class combos are
-				   spelled as :host(…) arguments: &.ready nesting under
-				   :host(.js) would lower to :host followed by a qualifier,
-				   which matches nothing in a shadow root (ADR 0033 s6). */
-				:host(.js.ready) {
-					& module-scrollarea {
-						transition: transform var(--transition-short) var(--easing-inout);
-					}
-
-					& .backdrop {
-						transition: opacity var(--transition-short) var(--easing-inout);
-					}
-				}
-
-				:host(.js.open) {
-					pointer-events: auto;
-
-					& module-scrollarea {
-						transform: translateX(0);
-					}
-
-					& .backdrop {
-						opacity: var(--opacity-dimmed);
-						pointer-events: auto;
-					}
-				}
-			}
-
-			:global {
-				@media screen and (min-width: 27em) {
-					.docs-header-bar {
-						display: flex;
-						align-items: center;
-						justify-content: space-between;
-					}
-
-					.quicklinks {
-						display: flex;
-						align-items: center;
-						gap: var(--space-m);
-
-						& a {
-							text-decoration: none;
-
-							&:hover {
-								text-decoration: underline;
-							}
-						}
-
-						& img {
-							display: block;
-						}
-					}
-				}
-			}
-
-			:global {
-				@media screen and (min-width: 45em) {
-					/* Toggle button contract: id="sidebar-toggle" (see TOGGLE_ID
-					   in the component's setup). Hidden above the breakpoint
-					   since the sidebar is always visible there and has nothing
-					   to toggle. */
-					#sidebar-toggle {
-						display: none;
-					}
-
-					header {
-						height: var(--header-height);
-					}
-				}
-			}
-
-			@media screen and (min-width: 45em) {
-				:host {
-					/* Above the breakpoint the sidebar is always visible, sticky,
-					   and independently scrollable — no toggle, no
-					   off-canvas/backdrop. */
-					position: sticky;
-					top: 0;
-					align-self: start;
-					flex: 0 0 16rem;
-					width: 16rem;
-				}
-
-				:host(.js) {
-					visibility: visible;
-					pointer-events: auto;
-					transition: none;
-
-					& module-scrollarea {
-						position: static;
-						inset: auto;
-						width: auto;
-						max-width: none;
-						max-height: 100dvh;
-						background-color: transparent;
-						border-inline-end: none;
-						transform: none;
-					}
-
-					& .backdrop {
-						display: none;
 					}
 				}
 			}

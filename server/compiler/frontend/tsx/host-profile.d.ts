@@ -462,6 +462,11 @@ declare namespace JSX {
 	 * not a migrated example: the probe takes no args, so only the common
 	 * set applies. */
 	type CssProbeAttrs = CommonLightDom
+	/** The Children Region probe's child and the raw custom element the
+	 * probe passes it (LT-501, `examples/test/scoping/`): test-fixture
+	 * tags, no args. */
+	type CssProbeChildAttrs = CommonLightDom
+	type XKidWidgetAttrs = CommonLightDom
 	/** A test-fixture tag (LT-423, `examples/test/listitem/`): the Mount
 	 * Scope fixture pair's `.tsx` twin takes no args, so only the common
 	 * set applies. */
@@ -565,6 +570,8 @@ declare namespace JSX {
 		'sync-el': SyncElAttrs
 		'async-el': AsyncElAttrs
 		'css-probe': CssProbeAttrs
+		'css-probe-child': CssProbeChildAttrs
+		'x-kid-widget': XKidWidgetAttrs
 		'test-listitem-tsx': TestListitemTsxAttrs
 		'truc:try': TrucTryAttrs
 	}

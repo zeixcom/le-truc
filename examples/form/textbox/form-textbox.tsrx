@@ -244,26 +244,28 @@ export function FormTextbox(
 		}
 
 		<style>
-			:host {
-				display: block;
-				width: 100%;
+			@scope {
+				:where(:scope) {
+					display: block;
+					width: 100%;
+				}
 
-				& label,
-				& p,
-				& button {
+				label,
+				p,
+				button {
 					opacity: var(--opacity-dimmed);
 					transition: opacity var(--transition-short) var(--easing-inout);
 				}
 
-				& label {
+				label {
 					display: block;
 					font-size: var(--font-size-s);
 					color: var(--color-text);
 					margin-bottom: var(--space-xxs);
 				}
 
-				& input,
-				& textarea {
+				input,
+				textarea {
 					display: inline-block;
 					box-sizing: border-box;
 					background: var(--color-input);
@@ -283,16 +285,16 @@ export function FormTextbox(
 				/* Native validity styling — replaces the old aria-invalid attribute hook.
 				   :user-invalid matches after user interaction (the right UX for required
 				   fields); :invalid would match immediately on page load. */
-				&:user-invalid input,
-				&:user-invalid textarea {
+				:where(:scope):user-invalid input,
+				:where(:scope):user-invalid textarea {
 					box-shadow: 0 0 var(--space-xxs) 2px var(--color-error-invalid);
 				}
 
-				& input {
+				input {
 					height: var(--input-height);
 				}
 
-				&:state(clearable) .input {
+				:where(:scope):state(clearable) .input {
 					position: relative;
 
 					& input {
@@ -339,7 +341,7 @@ export function FormTextbox(
 					color: var(--color-text-soft);
 				}
 
-				&:focus-within {
+				:where(:scope):focus-within {
 					& label,
 					& p,
 					& button {

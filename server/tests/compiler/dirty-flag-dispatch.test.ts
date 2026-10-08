@@ -46,9 +46,11 @@ export function C({ options }: { options: { value: string }[] })
 					/>
 				</label>
 			}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])
@@ -79,9 +81,11 @@ export function C({ options }: { options: { value: string }[] })
 					<input type="radio" value={optValue} title={() => tip.get()} />
 				</label>
 			}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])
@@ -103,9 +107,11 @@ export function C({ options }: { options: { value: string }[] })
 				const optValue = option.value
 				<option value={optValue} selected={() => host.value === optValue}>{optValue}</option>
 			}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])
@@ -127,9 +133,11 @@ export function C({}: {})
 	expose({})
 		<c-el>
 			<input type="checkbox" checked={() => on.get()} />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])
@@ -146,9 +154,11 @@ export function C({}: {})
 	expose({})
 		<c-el>
 			<input type="number" value={() => String(host.value)} />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])
@@ -165,9 +175,11 @@ export function C({}: {})
 	expose({})
 		<c-el>
 			<meter min="0" max="100" value={() => String(host.value)} />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])
@@ -187,9 +199,11 @@ export function C({}: {})
 	expose({})
 		<c-el>
 			<input type="number" value={() => (host.value === '' ? 1 : 2)} />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])
@@ -212,9 +226,11 @@ export function C({}: {})
 	expose({})
 		<c-el>
 			<input type="number" value={() => count.get()} />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])
@@ -234,9 +250,11 @@ export function C({}: {})
 	expose({})
 		<c-el>
 			<input type="text" value={() => label.get()} />
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`)
 		expect(diagnostics).toEqual([])

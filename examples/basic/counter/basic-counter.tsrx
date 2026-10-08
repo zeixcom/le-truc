@@ -48,10 +48,12 @@ export function BasicCounter({ start = 42 }: { start?: number })
 			</button>
 
 			<style>
-			:host {
-				display: inline-block;
+			@scope {
+				:where(:scope) {
+					display: inline-block;
+				}
 
-				& button {
+				button {
 					border: 1px solid var(--color-border);
 					border-radius: var(--space-xs);
 					background-color: var(--color-secondary);

@@ -48,15 +48,17 @@ export function ModuleCemList({ children = '' }: { children?: string })
 		<module-cem-list>{children}
 
 			<style>
-			:host {
-				display: block;
+			@scope {
+				:where(:scope) {
+					display: block;
+				}
 
-				& form-textbox {
+				form-textbox {
 					display: block;
 					margin: 0 0 var(--space-l);
 				}
 
-				& card-collapsible summary {
+				card-collapsible summary {
 					flex-wrap: wrap;
 
 					& .header {
@@ -67,7 +69,7 @@ export function ModuleCemList({ children = '' }: { children?: string })
 					}
 				}
 
-				& .demo-link a {
+				.demo-link a {
 					text-decoration: none;
 
 					&:hover {
@@ -75,7 +77,7 @@ export function ModuleCemList({ children = '' }: { children?: string })
 					}
 				}
 
-				& module-tabgroup {
+				module-tabgroup {
 					display: block;
 					margin: var(--space-s) 0 0;
 				}

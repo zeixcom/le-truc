@@ -66,7 +66,7 @@ export function ContractProbe({ name }: { name: string }) {
 	return (
 		<contract-probe>
 			<span class="label" id={labelId}>Label</span>
-			<style>{css\\\`:host { color: red; }\\\`}</style>
+			<style>{css\\\`@scope { :scope { color: red; } }\\\`}</style>
 		</contract-probe>
 	)
 }\`

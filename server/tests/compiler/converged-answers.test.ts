@@ -124,9 +124,11 @@ const withPropBound = (body: string, registry = new Set<string>()) =>
 		<c-el>
 			<span>x</span>
 			${body}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 		'c.tsrx',
@@ -203,8 +205,10 @@ const withTwoPropBound = (body: string, registry = new Set<string>()) =>
 	<c-el>
 		<span>x</span>
 		${body}
-		<style>:host {
-  color: red;
+		<style>@scope {
+	:scope {
+	  color: red;
+	}
 }</style>
 	</c-el>
 }`,

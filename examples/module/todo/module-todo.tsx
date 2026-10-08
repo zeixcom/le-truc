@@ -275,17 +275,19 @@ export function ModuleTodo(
 			</footer>
 
 			<style>{css`
-			:host {
-				display: flex;
-				flex-direction: column;
-				gap: var(--space-l);
-				container-type: inline-size;
+			@scope to (form-textbox > *, basic-button > *, form-checkbox > *, form-inplace-edit > *, form-radiogroup > *) {
+				:where(:scope) {
+					display: flex;
+					flex-direction: column;
+					gap: var(--space-l);
+					container-type: inline-size;
+				}
 
-				&:state(filter-completed) [data-container] li:not(:has(input:checked)) {
+				:where(:scope):state(filter-completed) [data-container] li:not(:has(input:checked)) {
 					display: none;
 				}
 
-				&:state(filter-active) [data-container] li:has(input:checked) {
+				:where(:scope):state(filter-active) [data-container] li:has(input:checked) {
 					display: none;
 				}
 
@@ -297,7 +299,7 @@ export function ModuleTodo(
 					justify-content: space-between;
 				}
 
-				& ol {
+				ol {
 					display: flex;
 					flex-direction: column;
 					gap: var(--space-m);
@@ -358,7 +360,7 @@ export function ModuleTodo(
 					}
 				}
 
-				& button.reorder {
+				button.reorder {
 					height: var(--input-height);
 					min-inline-size: var(--input-height);
 					border-radius: var(--space-xs);
@@ -412,16 +414,14 @@ export function ModuleTodo(
 						justify-self: end;
 					}
 				}
-			}
 
-			@container (width > 27rem) {
-				:host {
-					& form {
+				@container (width > 27rem) {
+					form {
 						flex-direction: row;
 						align-items: flex-end;
 					}
 
-					& footer {
+					footer {
 						grid-template-columns: 1fr 1fr 1fr;
 						grid-template-areas: "count filter clear";
 					}

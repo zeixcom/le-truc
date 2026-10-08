@@ -22,7 +22,7 @@ export function MyToggle(
     <my-toggle pressed={pressed}>
       <button type="button" aria-pressed={() => String(host.pressed)}
         onClick={() => ({ pressed: !host.pressed })}>{label}</button>
-      <style>{css`:host { display: inline-block; }`}</style>
+      <style>{css`@scope { :where(:scope) { display: inline-block; } }`}</style>
     </my-toggle>
   )
 }

@@ -46,6 +46,7 @@ import {
 } from 'css-tree/dist/csstree.esm.js'
 import type { StyleSheet } from 'lightningcss-wasm'
 import { transform } from 'lightningcss-wasm'
+import { anchorRelativeSelectors } from './css-scope'
 
 /* === Types === */
 
@@ -297,7 +298,11 @@ export const parseComponentSheet = (source: string): ParsedComponentSheet => {
 	let captured: StyleSheet | undefined
 	try {
 		transform({
-			code: new TextEncoder().encode(source) as Buffer,
+			// A relative selector at the top of `@scope` reads anchored, at
+			// the authored locs (`anchorRelativeSelectors`).
+			code: new TextEncoder().encode(
+				anchorRelativeSelectors(source, '&'),
+			) as Buffer,
 			filename: 'stylesheet.css',
 			// Read-only: never return nodes into the parser (see module doc).
 			visitor: {

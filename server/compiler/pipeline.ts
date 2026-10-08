@@ -15,9 +15,10 @@ import {
 	renderedShapesOf,
 } from './analysis/selectors'
 import {
-	checkSheetBoundaries,
-	collectScopeBoundaries,
+	checkSheetLowering,
+	describeCssTargets,
 	emitScopedSheet,
+	scopeModeOf,
 } from './css-scope'
 import {
 	type CompileDiagnostic,
@@ -45,10 +46,10 @@ export type CompiledComponent = {
 	/** Generated client `defineComponent` module source. */
 	clientCode: string
 	/**
-	 * The scoped-emission CSS artifact (ADR 0033 s3–s4, LT-304): the
-	 * authored shadow-root sheet wrapped in native `@scope` or rewritten as
-	 * flat scoped selectors, per the configured `cssTargets`. Empty when the
-	 * component has no stylesheet.
+	 * The scoped-emission CSS artifact (ADR 0033 s3–s4, LT-501): the
+	 * authored `@scope` sheet with its explicit root (native `@scope`) or
+	 * rewritten as flat scoped selectors, per the configured `cssTargets`.
+	 * Empty when the component has no stylesheet.
 	 */
 	css: string
 	/**
@@ -56,14 +57,6 @@ export type CompiledComponent = {
 	 * from; what LTC051 compares across a variant set (ADR 0033 s10).
 	 */
 	authoredCss: string
-	/**
-	 * The boundary tags the emission stopped at — every custom element the
-	 * lowered template renders. Part of LTC051's comparison: members with
-	 * identical authored sheets can still resolve composed children
-	 * differently per surface, and a boundary drift would make the set's
-	 * one served stylesheet wrong for the unserved member.
-	 */
-	scopeBoundaries: readonly string[]
 	/**
 	 * Whether a form-association extension leads `config` — the host type
 	 * (`FormAssociatedElement` vs `HTMLElement`) of the tag-map entry
@@ -136,28 +129,26 @@ export const compileFromIR = (
 	// LT-258: the partial-readiness invariant (ADR 0034 s4) — nothing but
 	// own args and the declared ambient set may reach the fold.
 	checkFoldInputs(component, diagnostics)
-	// The boundary set — every custom element the lowered template renders
-	// (ADR 0033 s3). It needs the compose registry, so the one sheet check
-	// that depends on it runs here rather than with the authored-form checks
-	// in template-output.ts: a selector descending past a boundary tag
-	// matches nothing in either emission mode (LTC071, LT-399).
-	const scopeBoundaries = collectScopeBoundaries(
-		component.root,
-		composeRegistry,
-	)
-	if (component.sheet && component.sheetText) {
+	// A `@scope` form the flat-selector lowering cannot express fails only
+	// on a CSS target without native `@scope` (LTC089, ADR 0033 s4). It
+	// depends on the configured targets, so it runs here rather than with
+	// the authored-form checks in template-output.ts.
+	if (
+		component.sheet &&
+		component.sheetText &&
+		scopeModeOf(emitPaths.cssTargets) === 'lowered'
+	) {
 		const sheetStart = component.source.lastIndexOf(component.sheetText)
-		for (const finding of checkSheetBoundaries(
+		for (const finding of checkSheetLowering(
 			component.sheet,
 			component.sheetText,
-			scopeBoundaries,
 		))
 			diagnostics.push(
-				diagnostic.descendsPastBoundary(
+				diagnostic.scopeNotLowerable(
 					component.source,
 					authoredRange(sheetStart, finding),
-					finding.selector,
-					finding.boundary,
+					finding.face,
+					describeCssTargets(emitPaths.cssTargets),
 				),
 			)
 	}
@@ -268,12 +259,10 @@ export const compileFromIR = (
 							component.sheet,
 							component.sheetText,
 							component.tag,
-							scopeBoundaries,
 							emitPaths.cssTargets,
 						)
 					: component.css,
 			authoredCss: component.css,
-			scopeBoundaries,
 			formAssociated: !!component.config?.form,
 			clientSpans: client.spans,
 			serverSpans: server.spans,

@@ -113,12 +113,14 @@ export function BasicButton(
 			</button>
 
 			<style>
-			:host {
-				position: relative;
-				display: inline-block;
-				flex: 0;
+			@scope {
+				:where(:scope) {
+					position: relative;
+					display: inline-block;
+					flex: 0;
+				}
 
-				& button {
+				button {
 					height: var(--input-height);
 					min-inline-size: var(--input-height);
 					border-radius: var(--space-xs);

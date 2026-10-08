@@ -123,16 +123,31 @@ export function ModuleCodeblock(
 			)}
 
 			<style>{css`
-			:host {
-				--module-codeblock-color-background: #272822;
-				/* Shadow with reduced transparency for dark background used in code blocks */
-				--color-shadow: rgb(0 0 0 / 0.4);
-
-				position: relative;
-				display: block;
-				margin: 0 0 var(--space-l);
-				background: var(--module-codeblock-color-background);
+			module-codeblock pre {
+				font-size: var(--font-size-s);
+				padding-block: var(--space-s);
 				border-radius: var(--space-s);
+			}
+
+			module-codeblock code {
+				padding-inline: var(--space-s);
+				display: block;
+				line-height: var(--line-height-l);
+			}
+
+			@scope to (module-scrollarea > *, basic-button > *) {
+				:where(:scope) {
+					--module-codeblock-color-background: #272822;
+
+					/* Shadow with reduced transparency for dark background used in code blocks */
+					--color-shadow: rgb(0 0 0 / 0.4);
+
+					position: relative;
+					display: block;
+					margin: 0 0 var(--space-l);
+					background: var(--module-codeblock-color-background);
+					border-radius: var(--space-s);
+				}
 
 				.meta {
 					display: flex;
@@ -157,7 +172,7 @@ export function ModuleCodeblock(
 					display: none;
 				}
 
-				&[collapsed] {
+				:where(:scope)[collapsed] {
 					max-height: 12rem;
 					overflow: hidden;
 					border-radius: var(--space-s) var(--space-s) 0 0;
@@ -210,22 +225,6 @@ export function ModuleCodeblock(
 							text-shadow: var(--color-text-inverted) var(--space-xs) 0 var(--space-s);
 						}
 					}
-				}
-			}
-
-			/* The <pre>/<code> are rendered inside the composed module-scrollarea,
-			   past the scope boundary (ADR 0033 s3): a page-level rule (s6a). */
-			:global {
-				module-codeblock pre {
-					font-size: var(--font-size-s);
-					padding-block: var(--space-s);
-					border-radius: var(--space-s);
-				}
-
-				module-codeblock code {
-					padding-inline: var(--space-s);
-					display: block;
-					line-height: var(--line-height-l);
 				}
 			}`}</style>
 		</module-codeblock>

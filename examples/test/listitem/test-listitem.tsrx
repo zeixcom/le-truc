@@ -84,10 +84,12 @@ export function TestListitem({}: {})
 			</button>
 
 			<style>
-			:host {
-				display: block;
+			@scope to (form-checkbox > *, basic-button > *) {
+				:where(:scope) {
+					display: block;
+				}
 
-				& ul {
+				ul {
 					display: flex;
 					flex-direction: column;
 					gap: var(--space-s);

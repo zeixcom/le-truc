@@ -59,17 +59,19 @@ export function CardCollapsible({ open = false }: { open?: boolean })
 			</details>
 
 			<style>
-			:host {
-				display: block;
-				margin: 0 0 var(--space-l);
+			@scope {
+				:where(:scope) {
+					display: block;
+					margin: 0 0 var(--space-l);
+				}
 
-				& details {
+				details {
 					border: 1px solid var(--color-border-soft);
 					border-radius: var(--space-s);
 					overflow: clip;
 				}
 
-				& summary {
+				summary {
 					display: flex;
 					align-items: baseline;
 					gap: var(--space-xs);
@@ -101,7 +103,7 @@ export function CardCollapsible({ open = false }: { open?: boolean })
 					}
 				}
 
-				& details[open] > summary {
+				details[open] > summary {
 					&::before {
 						transform: rotate(90deg);
 					}
@@ -114,7 +116,7 @@ export function CardCollapsible({ open = false }: { open?: boolean })
 					}
 				}
 
-				& .content {
+				.content {
 					padding: var(--space-xs) var(--space-m) var(--space-m);
 
 					> *:last-child {

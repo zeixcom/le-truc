@@ -70,8 +70,10 @@ export function BasicHello(
 			<p>Hello, <output for={subjectId}>{host.subject}</output>!</p>
 
 			<style>
-			:host {
-				display: block;
+			@scope {
+				:where(:scope) {
+					display: block;
+				}
 			}</style>
 		</basic-hello>
 	}

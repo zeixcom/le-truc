@@ -70,26 +70,28 @@ export function CardMediaqueries({ label }: { label?: string })
 			</dl>
 
 			<style>
-			:host {
-				display: block;
-				margin: 0 0 var(--space-l);
+			@scope {
+				:where(:scope) {
+					display: block;
+					margin: 0 0 var(--space-l);
+				}
 
-				& h5 {
+				h5 {
 					margin: 0 0 var(--space-s);
 				}
 
-				& dl {
+				dl {
 					display: grid;
 					grid-template-columns: auto 1fr;
 					gap: var(--space-xs) var(--space-s);
 					margin: 0;
 				}
 
-				& dt {
+				dt {
 					font-weight: var(--font-weight-bold);
 				}
 
-				& dd {
+				dd {
 					margin: 0;
 					color: var(--color-text-soft);
 				}

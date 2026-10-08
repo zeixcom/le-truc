@@ -64,9 +64,11 @@ export function C({ name }: { name: string })
 	expose({ label: asString('') })
 		<c-el>
 			<span class="label" id={labelId}>Label</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 
 }`
@@ -110,9 +112,11 @@ export function C({ name }: { name: string })
 		<c-el>
 			<span class="label" id={labelId}>Label</span>
 			<span class="maybe" hidden={() => Math.random() > 0.5}>maybe</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 
 }`
@@ -277,9 +281,11 @@ export function C({ start = 0 }: { start?: number })
 	expose({ count: count.get })
 		<c-el>
 			<span>{count}</span>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 
 }`
@@ -333,9 +339,11 @@ export function C({}: {})
 					<li><span class="price">{() => String(price.get())}</span></li>
 				}
 			</ul>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 
 }`

@@ -68,8 +68,10 @@ export function BasicNumber(
 		<basic-number {value} {lang} {options}>{() => getNumberFormatter(getLocale(host), host.getAttribute('options')).format(host.value)}
 
 			<style>
-			:host {
-				display: inline;
+			@scope {
+				:where(:scope) {
+					display: inline;
+				}
 			}</style>
 		</basic-number>
 	}

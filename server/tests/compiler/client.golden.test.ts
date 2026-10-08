@@ -64,9 +64,11 @@ export function C({ mode }: { mode: string })
 		const open = createCell(mode === 'wide')
 		expose({ open: open.get })
 			<c-arm-set data-mode={mode}>@if (open.get()) { <p>a</p> } @else { <b>b</b> }
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-arm-set>
 	}`
 
@@ -83,9 +85,11 @@ export function C({ price }: { price: Price })
 		const p = createState(harvest(price, asNumber()))
 			<c-scalar-attr>
 				<data aria-valuenow={() => p.get()}>{p}</data>
-				<style>:host {
-	  color: red;
-	}</style>
+				<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 			</c-scalar-attr>
 	}`
 

@@ -20,12 +20,16 @@ afterAll(() => generated.cleanup())
 
 type Compiled = ReturnType<typeof compileComponent>
 
-const STYLE_TSRX = `<style>:host {
-	  display: block;
-	}</style>`
-const STYLE_TSX = `<style>{css\`:host {
-	  display: block;
-	}\`}</style>`
+const STYLE_TSRX = `<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>`
+const STYLE_TSX = `<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>`
 
 /** A `.tsrx` component around `body`. */
 const tsrx = (

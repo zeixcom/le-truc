@@ -346,23 +346,25 @@ export function FormSpinbutton(
 		<p class="error" role="alert" aria-live="assertive">{host.validationMessage}</p>
 
 		<style>
-		:host {
-			--form-spinbutton-min-width: 8rem;
-			--form-spinbutton-input-min-width: 4rem;
-			--form-spinbutton-input-max-width: 6rem;
+		@scope {
+			:where(:scope) {
+				--form-spinbutton-min-width: 8rem;
+				--form-spinbutton-input-min-width: 4rem;
+				--form-spinbutton-input-max-width: 6rem;
 
-			display: inline-flex;
-			flex-direction: column;
-			align-items: start;
+				display: inline-flex;
+				flex-direction: column;
+				align-items: start;
+			}
 
-			& label,
-			& p,
-			& button {
+			label,
+			p,
+			button {
 				opacity: var(--opacity-dimmed);
 				transition: opacity var(--transition-short) var(--easing-inout);
 			}
 
-			& label {
+			label {
 				display: block;
 				font-size: var(--font-size-s);
 				color: var(--color-text);
@@ -522,7 +524,7 @@ export function FormSpinbutton(
 				}
 			}
 
-			&:focus-within {
+			:where(:scope):focus-within {
 				& label,
 				& p,
 				& button {

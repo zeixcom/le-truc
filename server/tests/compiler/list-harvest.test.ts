@@ -69,9 +69,11 @@ export function C(${params})
 					${list.row}
 				}
 			</ul>
-			<style>:host {
-	  display: block;
-	}</style>
+			<style>@scope {
+	:scope {
+		  display: block;
+		}
+}</style>
 		</${tag}>
 	}
 `
@@ -88,9 +90,11 @@ export function C(${params}, { expose }: FactoryContext<${props}>) {
 					${list.row}
 				))}
 			</ul>
-			<style>{css\`:host {
-	  display: block;
-	}\`}</style>
+			<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>
 		</${tag}>
 	)
 }
@@ -820,9 +824,11 @@ export function C({ tasks = [] }: { tasks?: DueTask[] }, { expose }: FactoryCont
 					return <li><span class="label">{task.get().label}</span><time datetime={() => String(task.get().due)}></time></li>
 				})}
 			</ul>
-			<style>{css\`:host {
-	  display: block;
-	}\`}</style>
+			<style>{css\`@scope {
+	:scope {
+		  display: block;
+		}
+}\`}</style>
 		</${tag}>
 	)
 }

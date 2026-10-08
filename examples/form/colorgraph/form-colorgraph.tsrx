@@ -523,14 +523,16 @@ export function FormColorgraph(
 		/>
 
 		<style>
-		:host {
-			--color-base: transparent;
-			--step-size: 1.25rem;
+		@scope to (form-spinbutton > *) {
+			:where(:scope) {
+				--color-base: transparent;
+				--step-size: 1.25rem;
 
-			display: flex;
-			flex-direction: column;
-			gap: var(--space-s);
-			margin: var(--space-m) 0;
+				display: flex;
+				flex-direction: column;
+				gap: var(--space-s);
+				margin: var(--space-m) 0;
+			}
 
 			.graph {
 				--canvas-size: 400px;
@@ -676,31 +678,35 @@ export function FormColorgraph(
 					calc(var(--input-height) / -2)
 				);
 			}
-		}
 
-		@container (width > 27rem) {
-			:host {
-				display: grid;
-				grid-template-areas:
-					"graph graph graph"
-					"slider slider slider"
-					"lightness chroma hue";
-				grid-template-columns: 1fr 1fr 1fr;
-				gap: var(--space-s) var(--space-m);
-				align-items: start;
+			@container (width > 27rem) {
+				:where(:scope) {
+					display: grid;
+					grid-template-areas:
+						"graph graph graph"
+						"slider slider slider"
+						"lightness chroma hue";
+					grid-template-columns: 1fr 1fr 1fr;
+					gap: var(--space-s) var(--space-m);
+					align-items: start;
+				}
 
 				.graph {
 					grid-area: graph;
 				}
+
 				.slider {
 					grid-area: slider;
 				}
+
 				.lightness {
 					grid-area: lightness;
 				}
+
 				.chroma {
 					grid-area: chroma;
 				}
+
 				.hue {
 					grid-area: hue;
 				}

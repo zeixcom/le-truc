@@ -299,20 +299,22 @@ export function ModuleCalctable(
 			</table>
 
 			<style>{css`
-			:host {
-				display: block;
+			@scope to (basic-number > *) {
+				:where(:scope) {
+					display: block;
+				}
 
-				& .amount,
-				& .price-per-unit,
-				& .price,
-				& .entry-amount,
-				& .entry-price,
-				& .amount-total,
-				& .price-total {
+				.amount,
+				.price-per-unit,
+				.price,
+				.entry-amount,
+				.entry-price,
+				.amount-total,
+				.price-total {
 					text-align: right;
 				}
 
-				& tbody {
+				tbody {
 					& tr:last-child {
 						border-bottom-color: var(--color-border);
 					}
@@ -370,7 +372,7 @@ export function ModuleCalctable(
 					}
 				}
 
-				& tfoot td {
+				tfoot td {
 					font-weight: var(--font-weight-bold);
 					padding-block: var(--space-s);
 				}

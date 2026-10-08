@@ -35,9 +35,11 @@ export function C(${params})
 @{
 ${setup}
 		<c-el ${rootAttrs}>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 		'c.tsrx',
@@ -72,9 +74,11 @@ export function C({ max = '10' }: { max?: string })
 	expose({})
 		<c-el>
 			<meter max={max}></meter>
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 			'c.tsrx',
@@ -137,9 +141,11 @@ export function C({}: {})
 	const greeting = createCell('Hello')
 	expose({})
 		<c-el>{greeting}
-			<style>:host {
-	  color: red;
-	}</style>
+			<style>@scope {
+	:scope {
+		  color: red;
+		}
+}</style>
 		</c-el>
 }`,
 			'c.tsrx',

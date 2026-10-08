@@ -49,7 +49,7 @@ my-component {
 {% /callout %}
 
 {% callout .note title="Compiled components are scoped for you" %}
-A component compiled with the Le Truc compiler scopes its stylesheet automatically. You author shadow-root CSS (`:host` plus bare selectors), not the tag-led nesting above. See [Compiled Component Styles](#compiled-component-styles) below. Hand-written CSS for a runtime-only component keeps the tag-led convention here and ships verbatim.
+A component compiled with the Le Truc compiler scopes its stylesheet with a native `@scope` block that you write, not with the tag-led nesting above. See [Compiled Component Styles](#compiled-component-styles) below. Hand-written CSS for a runtime-only component keeps the tag-led convention here and ships verbatim.
 {% /callout %}
 
 {% /section %}
@@ -57,51 +57,98 @@ A component compiled with the Le Truc compiler scopes its stylesheet automatical
 {% section %}
 ## Compiled Component Styles
 
-A component compiled with the Le Truc compiler ships its stylesheet **scoped**. You author the sheet as **shadow-root CSS**: `:host` rules style the host element, and bare selectors style the component's internals.
+A compiled component's stylesheet means what the same sheet would mean as an inline `<style>` in its host. You scope it with native `@scope`. The compiler emits that meaning for your CSS targets and adds no limits of its own.
 
 ```css
-:host {
-  display: block;
-  padding: var(--spacing);
-}
+@scope to (basic-button > *) {
+  :where(:scope) {
+    display: block;
+    padding: var(--spacing);
 
-.input {
-  /* Styles for the component's own internals */
+    &.compact {
+      padding: 0;
+    }
+  }
+
+  > label {
+    /* A direct child of the host */
+  }
+
+  .input {
+    /* Any descendant of the host, except inside a <basic-button> */
+  }
+
+  :where(:scope).compact .input {
+    /* A descendant, while the host has .compact */
+  }
 }
 ```
 
-The compiler scopes this sheet in light DOM. Its rules stop at every custom element the template renders, so they cannot reach a composed child's internals. You need no defensive `>` chains. Page styles still win over `:host` rules, as they do over a component in a real shadow root.
+A prelude-less `@scope { … }` is scoped to the host. `:scope` is the host, and bare selectors are its descendants. Write a limit with `to (<child-tag> > *)` for each composed child whose inside your rules must not reach. The limit keeps the child's own tag stylable.
+
+### The Idiom
+
+- **Host rules** start at `:where(:scope)`. Root variants nest inside as `&.x`, or sit at the top as `:where(:scope).x`.
+- **Descendants** are bare (`.input`) or relative (`> label`).
+- **A descendant that depends on host state** leads with the variant: `:where(:scope).compact .input`.
+- **Limits**: one per composed child, `to (<child-tag> > *)`.
+
+This is the 2.x tag-led idiom minus one type selector throughout, so every specificity contest it settled keeps its winner:
+
+- A parent's bare rule on a child's host (`basic-button { … }`) beats the child's `:where(:scope)` base.
+- The child's `&.x` variant beats the parent's rule.
+- A page rule led by the bare tag beats the base too.
+
+A bare `:scope` is legal CSS with the specificity of a pseudo-class, so a `:scope { … }` rule outranks both the parent's bare rule and the page's tag rule. Use it only where the host rule must win.
+
+A parent's scoped rules reach the content of a composed child until a limit stops them, the same as they would on the platform. The compiler does not guess limits for you. It warns where a rule can leak.
+
+### Top-Level Rules
+
+Two other forms are legal at the top level of the sheet:
+
+- **A rule led by the component's own tag** (`my-element .x { … }`) is the 2.x convention. It stays contained, because the tag is unique.
+- **Any other rule** applies page-wide, as a top-level rule does in any `<style>`. A scroll lock on `body` is an example. `@keyframes`, `@font-face` and `@property` also sit at the top level.
+
+### How the Sheet Ships
 
 How the sheet ships depends on the build's `cssTargets` configuration (default: the Baseline widely available browsers):
 
-- Targets that support native `@scope` get the sheet wrapped in `@scope (my-element) to (…)`.
-- Older targets get a flat lowering: every selector leads with a zero-specificity `:where(my-element)`, plus a guard per boundary tag.
+- Targets that support native `@scope` get the sheet as you wrote it. A prelude-less `@scope` gains the explicit root `@scope (my-element)`.
+- Older targets get a flat lowering. Every selector leads with a zero-specificity `:where(my-element)`, a bare `:scope` becomes that root with the same specificity as `:scope`, and each of your limits becomes a zero-specificity guard.
 
-The default target set predates wide `@scope` support, so the default build compiles the lowered form. The two forms behave the same except as listed under [Differences from a Real Shadow Root](#differences-from-a-real-shadow-root) below.
+The default target set predates wide `@scope` support, so the default build compiles the lowered form. The two forms behave the same except as listed under [Differences from an Inline Sheet](#differences-from-an-inline-sheet) below. A `@scope` inside the component's `@scope`, and a limit that names `:scope`, have no flat form: they fail the build on a lowered target and name that target.
 
-A page-level rule that ships with the component — a scroll lock on `body`, for example — opts out with `:global`. A top-level `:global(body.scroll-lock) { … }` rule or a bare `:global { … }` block ships outside the scope, unwrapped. A global rule under a condition, such as `@media`, rides in the bare block: `:global { @media … }`. Every other `:global` spelling is a compile error: it would reach past the boundary into composed children.
+### Compile Errors
 
-Forms that have no meaning under the contract are compile errors too: a rule led by the component's own tag (style the host through `:host`), `::slotted()` in light mode, `:host-context()`, and `:host` directly followed by a qualifier (`:host.x` — move the qualifier into the arguments, `:host(.x)`). So is a selector that descends past a composed child (`child-tag .x`): the scope stops at the child's tag, so the rule matches nothing. Style that content from the child's own stylesheet, or as a page-level rule in a top-level `:global { … }` block. The child's own tag and its siblings stay stylable.
+Forms that have no meaning are compile errors:
+
+- `:host`. It matches nothing in light DOM. Write `:where(:scope)`, and `:where(:scope).x` for `:host(.x)`.
+- A rule inside `@scope` led by the component's own tag. It matches only a nested instance. Write `:where(:scope)`.
+- `:global`. A top-level rule is already page-wide, so remove the wrapper.
+- `::slotted()` and `:host-context()`.
+- A selector that descends past a compound one of the block's limits excludes. The limit always excludes its subject, so the rule matches nothing.
 
 {% callout .caution title="Only a real shadow root keeps page styles out" %}
 The compiled scope stops the component's styles from leaking **out**. It does not stop page styles from reaching **in**: page CSS can still reach the component's internals. That is the permanent light-DOM limit — only a real shadow root provides inward encapsulation.
 {% /callout %}
 
-### Differences from a Real Shadow Root
+### Differences from an Inline Sheet
 
-The compiled contract behaves like the same sheet in a shadow root, except where the light-DOM emission cannot match it:
+The compiled sheet behaves like the same sheet inline in the host, except in two places:
 
 - **Page CSS can still reach the component's internals.** Only a real shadow root prevents that.
-- **Page-authored children are styled by the component's rules.** This is intended where nothing is slotted.
-- **Content the component's own template places inside a composed child is outside its scope.** A real shadow root would style it; the light-DOM scope stops at the child's tag. Style such content from a top-level `:global { … }` block.
-- **A custom element inserted at runtime is no boundary.** The rules are live CSS, so a plain element inserted at runtime is styled like any other. But the boundary set is fixed at compile time, so a custom element added after the fact is not one — the component's rules reach its internals, in both emission forms.
-- **Without native `@scope` there is no scope-proximity step.** In the lowered form, a component whose template renders a child that renders the component again loses more than native scoping would take: the outer instance's boundary guard also strips the inner instance's internals and its non-bare `:host` rules. Native `@scope`, which always uses the nearest scope, styles them.
+- **Without native `@scope` there is no scope-proximity step.** In the lowered form, a nested instance of the same component is reached by the outer instance's rules too. The results differ only where a rule depends on the outer instance, such as `:where(:scope).compact .x`. A limit's guard re-includes a nested instance of the component's own tag, below that limit or matched by it, so the lowering gates too little and never too much.
+
+{% callout .caution title="Ties fall to source order in the lowered form" %}
+Native `@scope` breaks a specificity tie by proximity: the closer scope root wins. The lowered form has no proximity step, so the tie falls to source order. That affects two cases: a parent's and a child's rules of equal specificity on content the parent passes, and a component's and the page's rules of equal specificity on a bare element. The aggregate stylesheet puts page CSS first, so the component wins a tie with the page. The order between components is unspecified, because no order is right for every composition. Break such a tie with specificity or with a limit.
+{% /callout %}
 
 ### Switching to a Shadow Root
 
 Shadow mode is the per-component opt-in for inward isolation, and it changes more than the wrapper:
 
-- The same sheet emits verbatim into the shadow root's `<style>`. `::slotted()` becomes legal, and `:global` rules move to the document stylesheet — a global rule cannot live in a shadow root.
+- The `@scope` block unwraps into the shadow root's `<style>`: `:scope` becomes `:host`, and the limits drop, because the shadow root bounds the scope. Top-level rules move to the document stylesheet. `::slotted()` becomes legal.
 - Page-authored content renders only through slots.
 - The component's children-are-data harvest stops at the shadow boundary.
 - `id` references — `<label for>`, `aria-labelledby`, `aria-describedby` — no longer cross the boundary.

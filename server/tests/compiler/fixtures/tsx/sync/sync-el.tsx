@@ -45,9 +45,11 @@ export function SyncEl(
 				</truc:try>
 				{mode === 'list' && <span class="badge">listing</span>}
 				{items.length > 0 ? <span class="count">{items.length}</span> : <span class="zero">0</span>}
-				<style>{css`:host {
-	  display: block;
-	}`}</style>
+				<style>{css`@scope {
+	:scope {
+		  display: block;
+		}
+}`}</style>
 			</sync-el>
 	)
 }

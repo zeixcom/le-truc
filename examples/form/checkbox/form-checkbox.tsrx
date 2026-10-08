@@ -71,25 +71,27 @@ export function FormCheckbox(
 		</label>
 
 		<style>
-		:host {
-			display: inline-block;
-			flex-grow: 1;
+		@scope {
+			:where(:scope) {
+				display: inline-block;
+				flex-grow: 1;
+			}
 
-			& input:focus {
+			input:focus {
 				outline: none;
 				box-shadow: none;
 			}
 
-			& label {
+			label {
 				font-size: var(--font-size-s);
 				border-radius: var(--space-xs);
 			}
 
-			&:has(input:focus-visible) label {
+			:where(:scope):has(input:focus-visible) label {
 				box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
 			}
 
-			&.checkbox label {
+			:where(:scope).checkbox label {
 				display: inline-flex;
 				gap: var(--space-s);
 				line-height: var(--input-height);
@@ -119,7 +121,7 @@ export function FormCheckbox(
 				}
 			}
 
-			&.checkbox:has(input:checked) label {
+			:where(:scope).checkbox:has(input:checked) label {
 				&::before {
 					color: var(--color-text-inverted);
 					background-color: var(--color-selection-selected);
@@ -137,7 +139,7 @@ export function FormCheckbox(
 				}
 			}
 
-			&.todo label {
+			:where(:scope).todo label {
 				display: inline-flex;
 				gap: var(--space-s);
 				line-height: var(--input-height);
@@ -167,7 +169,7 @@ export function FormCheckbox(
 				}
 			}
 
-			&.todo:has(input:checked) label {
+			:where(:scope).todo:has(input:checked) label {
 				opacity: var(--opacity-translucent);
 
 				& span {
@@ -191,7 +193,7 @@ export function FormCheckbox(
 				}
 			}
 
-			&.toggle label {
+			:where(:scope).toggle label {
 				--toggle-knob-size: calc(var(--space-l) * 2);
 
 				display: inline-flex;
@@ -235,7 +237,7 @@ export function FormCheckbox(
 				}
 			}
 
-			&.toggle:has(input:checked) label {
+			:where(:scope).toggle:has(input:checked) label {
 				&::before {
 					background-color: var(--color-selection-selected);
 					border-color: var(--color-selection-active);
