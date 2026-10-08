@@ -562,8 +562,8 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-501)'
 	// A compiled component's authored sheet is an `@scope` block (LT-501):
 	// the IR's `authoredCss` is its dedent, and the emitted artifact (`css`)
 	// is the scoped emission — at the default targets the LOWERED form, the
-	// root as `:where(tag)` (padded to `:scope`'s specificity where the sheet
-	// writes `:scope`) and a zero-specificity guard per authored limit. The
+	// root as `:where(tag)` (the corpus writes the `:where(:scope)` idiom, so
+	// no `:scope` pad) and a zero-specificity guard per authored limit. The
 	// hand-written `.css` files are the `.ts` twins' 2.x artifacts (ADR 0033
 	// s10), no longer the compiled contract.
 	test('basic-counter: authored sheet carried verbatim, emission scoped', () => {
@@ -573,8 +573,9 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-501)'
 			),
 		)
 		const css = counter.component?.css ?? ''
-		expect(css).toContain(`:where(basic-counter)${PAD} {`)
-		expect(css).toContain(`:where(basic-counter)${PAD} button {`)
+		expect(css).toContain(':where(basic-counter) {')
+		expect(css).toContain(':where(basic-counter) button {')
+		expect(css).not.toContain(PAD)
 		expect(css).not.toContain('@scope')
 	})
 	test('module-tabgroup: authored sheet carried verbatim, emission scoped', () => {
@@ -584,7 +585,7 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-501)'
 			),
 		)
 		const css = tabgroup.component?.css ?? ''
-		expect(css).toContain(`:where(module-tabgroup)${PAD} {`)
+		expect(css).toContain(':where(module-tabgroup) {')
 		expect(css).not.toContain('module-tabgroup {')
 	})
 	// The form fixture's sheet is the fuller migration (LT-020 follow-up):
@@ -596,10 +597,11 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-501)'
 			dedentCss(sheetOfSource(read('examples/form/textbox/form-textbox.tsrx'))),
 		)
 		const css = formTextbox.component?.css ?? ''
-		expect(css).toContain(`:where(form-textbox)${PAD} {`)
+		expect(css).toContain(':where(form-textbox) {')
 		expect(css).toContain(
-			`:where(form-textbox)${PAD} input, :where(form-textbox)${PAD} textarea`,
+			':where(form-textbox) input, :where(form-textbox) textarea',
 		)
+		expect(css).toContain(':where(form-textbox):state(clearable) .input {')
 		expect(css).not.toContain(':where(:not(')
 	})
 	// module-list composes form-textbox (ADR 0024 sub-design 10): its
@@ -610,7 +612,7 @@ describe('CSS — the authored sheet and the scoped emission (ADR 0033, LT-501)'
 			dedentCss(sheetOfSource(read('examples/module/list/module-list.tsrx'))),
 		)
 		const css = moduleList.component?.css ?? ''
-		expect(css).toContain(`:where(module-list)${PAD} {`)
+		expect(css).toContain(':where(module-list) {')
 		expect(css).toContain('form-textbox > *')
 	})
 })

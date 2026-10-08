@@ -98,7 +98,7 @@ export type DiagnosticCode =
 	| 'LTC063' // a reactive condition inside a reactive list's reconcile() container (ADR 0037 s5, LT-274) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC064' // the component's stylesheet does not parse (ADR 0033 s9, LT-268) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC065' // a stylesheet declaration names a property the CSS dictionary does not know, or a value outside the property's grammar (ADR 0033 s9, LT-394) — tier 2 Contained: the dictionary (mdn-data, via css-tree) lags the platform, so a finding is evidence, not proof; the sheet ships as authored
-	| 'LTC066' // a rule inside the component's `@scope` led by the component's own tag — it matches only a nested instance, never the host; the fix-it is `:scope` (ADR 0033 s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC066' // a rule inside the component's `@scope` led by the component's own tag — it matches only a nested instance, never the host; the fix-it is `:where(:scope)` (ADR 0033 s1/s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC067' // `::slotted()` in a component stylesheet — slotted content is a shadow-DOM construct, and compiled components are light DOM (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC068' // `:host-context()` in a component stylesheet — removed from the CSS spec, matched by no browser (ADR 0033 s6, LT-304) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC069' // `:global` anywhere in a component stylesheet — an unscoped rule is a top-level rule, so the fix-it removes the wrapper and moves the rule to the top level (ADR 0033 s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
@@ -113,7 +113,7 @@ export type DiagnosticCode =
 	| 'LTC078' // a `<style>` block whose content is not a stylesheet spelling — on `.tsx` anything but the `css` marker's tagged template, a bare template literal or nothing (another tag, a shadowed or unimported `css`, a `${}` substitution, any other expression or text); on `.tsrx` an expression child in place of the CSS body. The sheet would read as empty and ship no CSS (ADR 0034 s1, LT-444) — tier 1 Prevented, statically decidable, no runtime half. Lands out of numeric order: `LTC076` is LT-429's, `LTC077` LT-443's — both reserved before this rule picked
 	| 'LTC080' // a key alias that does not meet ADR 0047 s1 — a host-level list seeded from server args, never rendered by its own `map`, is harvested through `const t = list.byKey(k)` in a reactive list's item setup only when the aliasing list keys each item by itself, the read is that alias statement over the loop key, the list has one alias scope, and every field renders at a site in it (LT-453) — tier 1 Prevented, statically decidable; the render witness is the dynamic half, a server-render error with no client counterpart
 	| 'LTC081' // a handler arg (an `on[A-Z]…` arg, LT-461) the parent cannot address: its declared type is not a function type; or it is read anywhere but as an event attribute on a raw element or forwarded to a composed child's handler arg; or it is placed inside one of the component's reactive arms or list items, whose elements are recreated on a flip or a reconcile — tier 1 Prevented, statically decidable, no runtime half
-	| 'LTC086' // `:host` anywhere in a component stylesheet — it matches nothing in light DOM; the fix-it is `:scope` (`:host(X)` → `:scope:is(X)`) (ADR 0033 s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC086' // `:host` anywhere in a component stylesheet — it matches nothing in light DOM; the fix-it is `:where(:scope)` (`:host(X)` → `:where(:scope)X`) (ADR 0033 s1/s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC089' // a `@scope` form the flat-selector lowering cannot express — a `@scope` inside a component `@scope`, or a limit naming `:scope` — on a CSS target without native `@scope` (ADR 0033 s4, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 
 /**
@@ -2210,7 +2210,7 @@ export const diagnostic = {
 	 * A rule inside the component's `@scope` is led by the component's own
 	 * tag (ADR 0033 s6, LT-501). A rule in `@scope` already starts at the
 	 * host's descendants, so the tag addresses only a nested instance of the
-	 * component — never the host. The host is `:scope`. A tag-led rule at
+	 * component — never the host. The host is `:where(:scope)`. A tag-led rule at
 	 * the sheet's top level is the 2.x form and stays legal. ADR 0028 tier 1
 	 * (Prevented): statically decidable, no runtime half.
 	 *
@@ -2219,14 +2219,15 @@ export const diagnostic = {
 	ownTagLedRule: (source: string, at: Site, tag: string) =>
 		error(
 			'LTC066',
-			`This rule sits inside \`@scope\` and is led by the component's own tag \`${tag}\`. A rule in \`@scope\` starts at the host's descendants, so \`${tag} { … }\` matches only a nested \`<${tag}>\` and never the host. Write \`:scope\` for the host, and drop the tag from selectors that mean the component's own content.`,
+			`This rule sits inside \`@scope\` and is led by the component's own tag \`${tag}\`. A rule in \`@scope\` starts at the host's descendants, so \`${tag} { … }\` matches only a nested \`<${tag}>\` and never the host. Write \`:where(:scope)\` for the host, and drop the tag from selectors that mean the component's own content.`,
 			rangeOf(source, at),
 		),
 
 	/**
 	 * `:host` in a component stylesheet (ADR 0033 s6, LT-501). `:host`
 	 * addresses the root of a shadow tree and matches nothing in light DOM.
-	 * The host is `:scope` inside `@scope`; `:host(X)` is `:scope:is(X)`.
+	 * The host is `:where(:scope)` inside `@scope`, the idiom that keeps a
+	 * parent's rule on the host winning (s1); `:host(X)` is `:where(:scope)X`.
 	 * ADR 0028 tier 1 (Prevented): statically decidable, no runtime half.
 	 *
 	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages).
@@ -2234,7 +2235,7 @@ export const diagnostic = {
 	hostSelector: (source: string, at: Site) =>
 		error(
 			'LTC086',
-			'`:host` matches nothing in a compiled component: it names the root of a shadow tree, and a compiled component renders light DOM. Write `:scope` for the host inside `@scope { … }` — `:host { … }` becomes `:scope { … }`, and `:host(.x)` becomes `:scope:is(.x)`.',
+			'`:host` matches nothing in a compiled component: it names the root of a shadow tree, and a compiled component renders light DOM. Write `:where(:scope)` for the host inside `@scope { … }`: `:host { … }` becomes `:where(:scope) { … }`, and `:host(.x)` becomes `:where(:scope).x`.',
 			rangeOf(source, at),
 		),
 

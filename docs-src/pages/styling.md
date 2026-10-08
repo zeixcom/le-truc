@@ -60,51 +60,74 @@ A component compiled with the Le Truc compiler scopes its stylesheet with a nati
 A compiled component's stylesheet means what the same sheet would mean as an inline `<style>` in its host. You scope it with native `@scope`. The compiler emits that meaning for your CSS targets and adds no limits of its own.
 
 ```css
-@scope {
-  :scope {
+@scope to (basic-button > *) {
+  :where(:scope) {
     display: block;
     padding: var(--spacing);
+
+    &.compact {
+      padding: 0;
+    }
+  }
+
+  > label {
+    /* A direct child of the host */
   }
 
   .input {
-    /* Styles for the component's own internals */
+    /* Any descendant of the host, except inside a <basic-button> */
+  }
+
+  :where(:scope).compact .input {
+    /* A descendant, while the host has .compact */
   }
 }
 ```
 
-A prelude-less `@scope { … }` is scoped to the host. `:scope` is the host, and bare selectors are its descendants. Add limits with `to (…)` where the scope must stop:
+A prelude-less `@scope { … }` is scoped to the host. `:scope` is the host, and bare selectors are its descendants. Write a limit with `to (<child-tag> > *)` for each composed child whose inside your rules must not reach. The limit keeps the child's own tag stylable.
 
-```css
-@scope to (basic-button > *) {
-  /* Reaches everything below the host, except the inside of a <basic-button> */
-}
-```
+### The Idiom
+
+- **Host rules** start at `:where(:scope)`. Root variants nest inside as `&.x`, or sit at the top as `:where(:scope).x`.
+- **Descendants** are bare (`.input`) or relative (`> label`).
+- **A descendant that depends on host state** leads with the variant: `:where(:scope).compact .input`.
+- **Limits**: one per composed child, `to (<child-tag> > *)`.
+
+This is the 2.x tag-led idiom minus one type selector throughout, so every specificity contest it settled keeps its winner:
+
+- A parent's bare rule on a child's host (`basic-button { … }`) beats the child's `:where(:scope)` base.
+- The child's `&.x` variant beats the parent's rule.
+- A page rule led by the bare tag beats the base too.
+
+A bare `:scope` is legal CSS with the specificity of a pseudo-class, so a `:scope { … }` rule outranks all three. Use it only where the host rule must win.
 
 A parent's scoped rules reach the content of a composed child until a limit stops them, the same as they would on the platform. The compiler does not guess limits for you. It warns where a rule can leak.
+
+### Top-Level Rules
 
 Two other forms are legal at the top level of the sheet:
 
 - **A rule led by the component's own tag** (`my-element .x { … }`) is the 2.x convention. It stays contained, because the tag is unique.
 - **Any other rule** applies page-wide, as a top-level rule does in any `<style>`. A scroll lock on `body` is an example. `@keyframes`, `@font-face` and `@property` also sit at the top level.
 
-`:scope` carries the specificity of a pseudo-class, so a scoped host rule beats a page rule led by the bare tag. Write `:where(:scope)` where page styles must win.
+### How the Sheet Ships
 
 How the sheet ships depends on the build's `cssTargets` configuration (default: the Baseline widely available browsers):
 
 - Targets that support native `@scope` get the sheet as you wrote it. A prelude-less `@scope` gains the explicit root `@scope (my-element)`.
-- Older targets get a flat lowering. Every selector leads with a zero-specificity `:where(my-element)`, `:scope` becomes that root with the same specificity, and each of your limits becomes a zero-specificity guard.
+- Older targets get a flat lowering. Every selector leads with a zero-specificity `:where(my-element)`, a bare `:scope` becomes that root with the same specificity as `:scope`, and each of your limits becomes a zero-specificity guard.
 
 The default target set predates wide `@scope` support, so the default build compiles the lowered form. The two forms behave the same except as listed under [Differences from an Inline Sheet](#differences-from-an-inline-sheet) below. A `@scope` inside the component's `@scope`, and a limit that names `:scope`, have no flat form: they fail the build on a lowered target and name that target.
 
+### Compile Errors
+
 Forms that have no meaning are compile errors:
 
-- `:host`. It matches nothing in light DOM. Write `:scope`, and `:scope:is(.x)` for `:host(.x)`.
-- A rule inside `@scope` led by the component's own tag. It matches only a nested instance. Write `:scope`.
+- `:host`. It matches nothing in light DOM. Write `:where(:scope)`, and `:where(:scope).x` for `:host(.x)`.
+- A rule inside `@scope` led by the component's own tag. It matches only a nested instance. Write `:where(:scope)`.
 - `:global`. A top-level rule is already page-wide, so remove the wrapper.
 - `::slotted()` and `:host-context()`.
 - A selector that descends past a compound one of the block's limits excludes. The limit always excludes its subject, so the rule matches nothing.
-
-A qualifier after `:scope` (`:scope.x`, `:scope:hover`) is valid CSS.
 
 {% callout .caution title="Only a real shadow root keeps page styles out" %}
 The compiled scope stops the component's styles from leaking **out**. It does not stop page styles from reaching **in**: page CSS can still reach the component's internals. That is the permanent light-DOM limit — only a real shadow root provides inward encapsulation.
@@ -115,7 +138,11 @@ The compiled scope stops the component's styles from leaking **out**. It does no
 The compiled sheet behaves like the same sheet inline in the host, except in two places:
 
 - **Page CSS can still reach the component's internals.** Only a real shadow root prevents that.
-- **Without native `@scope` there is no scope-proximity step.** In the lowered form, a nested instance of the same component is reached by the outer instance's rules too. The results differ only where a rule depends on the outer instance, such as `:scope.compact .x`. A limit's guard re-includes a nested instance of the component's own tag below that limit, so the lowering gates too little and never too much.
+- **Without native `@scope` there is no scope-proximity step.** In the lowered form, a nested instance of the same component is reached by the outer instance's rules too. The results differ only where a rule depends on the outer instance, such as `:where(:scope).compact .x`. A limit's guard re-includes a nested instance of the component's own tag, below that limit or matched by it, so the lowering gates too little and never too much.
+
+{% callout .caution title="Ties fall to source order in the lowered form" %}
+Native `@scope` breaks a specificity tie by proximity: the closer scope root wins. The lowered form has no proximity step, so the tie falls to source order. That affects two cases: a parent's and a child's rules of equal specificity on content the parent passes, and a component's and the page's rules of equal specificity on a bare element. The aggregate stylesheet puts page CSS first, so the component wins a tie with the page. The order between components is unspecified, because no order is right for every composition. Break such a tie with specificity or with a limit.
+{% /callout %}
 
 ### Switching to a Shadow Root
 

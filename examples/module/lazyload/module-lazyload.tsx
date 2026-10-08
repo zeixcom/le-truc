@@ -142,7 +142,7 @@ export function ModuleLazyload(
 			</truc:try>
 			<style>{css`
 @scope to (card-callout > *) {
-	:scope {
+	:where(:scope) {
 		display: block;
 	}
 }`}</style>

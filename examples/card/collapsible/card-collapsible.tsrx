@@ -60,67 +60,67 @@ export function CardCollapsible({ open = false }: { open?: boolean })
 
 			<style>
 			@scope {
-				:scope {
+				:where(:scope) {
 					display: block;
 					margin: 0 0 var(--space-l);
+				}
 
-					& details {
-						border: 1px solid var(--color-border-soft);
-						border-radius: var(--space-s);
-						overflow: clip;
+				details {
+					border: 1px solid var(--color-border-soft);
+					border-radius: var(--space-s);
+					overflow: clip;
+				}
+
+				summary {
+					display: flex;
+					align-items: baseline;
+					gap: var(--space-xs);
+					padding: var(--space-s) var(--space-m);
+					cursor: pointer;
+					font-weight: var(--font-weight-bold);
+					list-style: none;
+					height: auto;
+
+					&::-webkit-details-marker {
+						display: none;
 					}
 
-					& summary {
-						display: flex;
-						align-items: baseline;
-						gap: var(--space-xs);
-						padding: var(--space-s) var(--space-m);
-						cursor: pointer;
-						font-weight: var(--font-weight-bold);
-						list-style: none;
-						height: auto;
-
-						&::-webkit-details-marker {
-							display: none;
-						}
-
-						&::before {
-							content: "▶";
-							flex: none;
-							font-size: var(--font-size-s);
-							transition: transform var(--transition-short) var(--easing-inout);
-						}
-
-						& .description {
-							flex: 1 1 auto;
-							min-width: 0;
-							overflow: hidden;
-							text-overflow: ellipsis;
-							white-space: nowrap;
-							font-weight: var(--font-weight-regular);
-							color: var(--color-text-soft);
-						}
+					&::before {
+						content: "▶";
+						flex: none;
+						font-size: var(--font-size-s);
+						transition: transform var(--transition-short) var(--easing-inout);
 					}
 
-					& details[open] > summary {
-						&::before {
-							transform: rotate(90deg);
-						}
+					& .description {
+						flex: 1 1 auto;
+						min-width: 0;
+						overflow: hidden;
+						text-overflow: ellipsis;
+						white-space: nowrap;
+						font-weight: var(--font-weight-regular);
+						color: var(--color-text-soft);
+					}
+				}
 
-						& .description {
-							overflow: visible;
-							text-overflow: unset;
-							white-space: normal;
-							line-height: var(--line-height-m);
-						}
+				details[open] > summary {
+					&::before {
+						transform: rotate(90deg);
 					}
 
-					& .content {
-						padding: var(--space-xs) var(--space-m) var(--space-m);
+					& .description {
+						overflow: visible;
+						text-overflow: unset;
+						white-space: normal;
+						line-height: var(--line-height-m);
+					}
+				}
 
-						> *:last-child {
-							margin-bottom: 0;
-						}
+				.content {
+					padding: var(--space-xs) var(--space-m) var(--space-m);
+
+					> *:last-child {
+						margin-bottom: 0;
 					}
 				}
 			}</style>

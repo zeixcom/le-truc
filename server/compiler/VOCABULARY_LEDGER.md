@@ -198,7 +198,7 @@ forward, or a placement inside a reactive arm, a reactive-list item or a
 server-data loop body; LT-461) takes the next number. It is `LTC`, not
 `TSRX`: the shared front end (`params.ts`, `validate-lowered.ts`) raises it
 on both surfaces, and it has no runtime half.
-`LTC086` (`:host` anywhere in a component stylesheet, fix-it `:scope`;
+`LTC086` (`:host` anywhere in a component stylesheet, fix-it `:where(:scope)`;
 ADR 0033 s6, LT-501) and `LTC089` (a `@scope` form the flat-selector lowering
 cannot express on a lowered CSS target; ADR 0033 s4, LT-501) follow
 `LTC081`; `LTC082`–`LTC085` belong to other tasks, and `LTC087`/`LTC088`

@@ -69,7 +69,7 @@ export function BasicNumber(
 
 			<style>
 			@scope {
-				:scope {
+				:where(:scope) {
 					display: inline;
 				}
 			}</style>

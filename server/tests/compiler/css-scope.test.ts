@@ -36,7 +36,7 @@ const NATIVE: Record<string, number> = {
 
 /** The guard one limit adds (ADR 0033 s4), for tag `my-box`. */
 const guardOf = (limit: string, root = 'my-box'): string =>
-	`:where(:not(:is(${root} ${limit}, ${root} ${limit} *):not(${root} ${limit} my-box, ${root} ${limit} my-box *)))`
+	`:where(:not(:is(${root} ${limit}, ${root} ${limit} *):not(${root} ${limit} my-box, ${root} ${limit} my-box *, ${root} ${limit}:is(my-box), ${root} ${limit}:is(my-box) *)))`
 
 const PAD = ':not([data-truc-scope-pad])'
 
@@ -151,6 +151,14 @@ describe('checkSheetContract', () => {
 		expect(findings).toHaveLength(1)
 		expect(findings[0]?.face).toBe('own-tag-led')
 		expect(findings[0]?.offset).toBe(11)
+	})
+
+	test('a relative selector at the top of @scope parses, its finding at the authored offset', () => {
+		const sheetText = '@scope to (b-x > *) {\n\t> b-x .y { top: 0 }\n}'
+		const findings = findingsOf(sheetText)
+		expect(findings.map(f => f.face)).toEqual(['dead-by-limit'])
+		expect(findings[0]?.offset).toBe(sheetText.indexOf('\t>') + 1)
+		expect(findings[0]?.end).toBe(sheetText.indexOf(' { top'))
 	})
 
 	test('a tag-led rule at the top level is the legal 2.x form, in conditional groups too', () => {
@@ -327,6 +335,13 @@ describe('emitScopedSheet — lowered (the default targets)', () => {
 			[':scope.on .x', [0, 3, 0]],
 			[':scope:is(.a, .b) .x', [0, 3, 0]],
 			['p .x', [0, 1, 1]],
+			// The ADR 0033 s1 idiom: the host at zero, a variant at (0,1,0),
+			// a relative descendant under the implicit `:where(:scope)`.
+			[':where(:scope)', [0, 0, 0]],
+			[':where(:scope).x', [0, 1, 0]],
+			[':where(:scope).x .y', [0, 2, 0]],
+			['> p', [0, 0, 1]],
+			['> .a > p', [0, 1, 1]],
 		]
 		for (const [selector, expected] of cases) {
 			const css = emit(`@scope { ${selector} { top: 0 } }`)
@@ -353,6 +368,28 @@ describe('emitScopedSheet — lowered (the default targets)', () => {
 		)
 		// The guard is a zero-specificity addition.
 		expect(specificity(firstSelector(css))).toEqual([0, 1, 0])
+	})
+
+	test('the re-include covers an own-tag instance the limit itself matches', () => {
+		// `<b-x><my-box>` under `to (b-x > *)`: native styles the inner
+		// <my-box> as its own scope root, so the guard must not exclude it.
+		expect(guardOf('b-x > *')).toContain(
+			'my-box b-x > *:is(my-box), my-box b-x > *:is(my-box) *',
+		)
+		expect(emit('@scope to (b-x > *) { .y { top: 0 } }')).toContain(
+			`:where(my-box) .y${guardOf('b-x > *')} {`,
+		)
+	})
+
+	test('a relative selector at the top of @scope leads with the bare root', () => {
+		const css = emit(
+			'@scope to (b-x > *) {\n\t> p,\n\t> .a { top: 0 }\n\t@media (width >= 1px) { + q { top: 1px } }\n}',
+		)
+		expect(css).toContain(
+			`:where(my-box) > p${guardOf('b-x > *')}, :where(my-box) > .a${guardOf('b-x > *')} {`,
+		)
+		expect(css).toContain(`:where(my-box) + q${guardOf('b-x > *')} {`)
+		expect(css).not.toContain(PAD)
 	})
 
 	test('each limit of a list adds its own guard; the compiler adds none', () => {
@@ -411,9 +448,7 @@ describe('emitScopedSheet — lowered (the default targets)', () => {
 
 	test('a preluded @scope roots on its prelude; a list prelude wraps in :is()', () => {
 		const css = emit('@scope (.card) to (.a) { :scope .x { color: red } }')
-		expect(css).toContain(
-			`:where(.card)${PAD} .x:where(:not(:is(.card .a, .card .a *):not(.card .a my-box, .card .a my-box *))) {`,
-		)
+		expect(css).toContain(`:where(.card)${PAD} .x${guardOf('.a', '.card')} {`)
 		const listed = emit('@scope (.card, .box) to (.a) { .x { color: red } }')
 		expect(listed).toContain(
 			':where(.card, .box) .x:where(:not(:is(:is(.card, .box) .a',
@@ -490,6 +525,12 @@ describe('emitScopedSheet — native (@scope-capable targets)', () => {
 			native('@scope { :scope { display: block } .input { color: red } }'),
 		).toBe(
 			'@scope (my-box) { :scope { display: block } .input { color: red } }\n',
+		)
+	})
+
+	test('a relative selector at the top of @scope ships as authored', () => {
+		expect(native('@scope { > p { top: 0 } }')).toBe(
+			'@scope (my-box) { > p { top: 0 } }\n',
 		)
 	})
 

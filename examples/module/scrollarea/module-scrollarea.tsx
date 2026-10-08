@@ -141,9 +141,7 @@ export function ModuleScrollarea(
 
 			<style>{css`
 			@scope {
-				/* @media (prefers-reduced-motion: no-preference) { */
-
-				:scope {
+				:where(:scope) {
 					display: block;
 					position: relative;
 					overflow-y: auto;
@@ -179,27 +177,27 @@ export function ModuleScrollarea(
 					&:state(overflow-end)::after {
 						opacity: 1;
 					}
+				}
 
-					&[orientation="horizontal"] {
-						overflow-x: auto;
-						overflow-y: clip;
+				:where(:scope)[orientation="horizontal"] {
+					overflow-x: auto;
+					overflow-y: clip;
 
-						&::before,
-						&::after {
-							width: var(--space-m);
-							height: 1000vh;
-							margin-block-end: -1000vh;
-						}
+					&::before,
+					&::after {
+						width: var(--space-m);
+						height: 1000vh;
+						margin-block-end: -1000vh;
+					}
 
-						&::before {
-							left: 0;
-							background: linear-gradient(90deg, var(--color-shadow), transparent);
-						}
+					&::before {
+						left: 0;
+						background: linear-gradient(90deg, var(--color-shadow), transparent);
+					}
 
-						&::after {
-							left: calc(100% - var(--space-m));
-							background: linear-gradient(270deg, var(--color-shadow), transparent);
-						}
+					&::after {
+						left: calc(100% - var(--space-m));
+						background: linear-gradient(270deg, var(--color-shadow), transparent);
 					}
 				}
 			}`}</style>

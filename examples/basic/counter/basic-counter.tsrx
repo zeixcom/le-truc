@@ -49,27 +49,27 @@ export function BasicCounter({ start = 42 }: { start?: number })
 
 			<style>
 			@scope {
-				:scope {
+				:where(:scope) {
 					display: inline-block;
+				}
 
-					& button {
-						border: 1px solid var(--color-border);
-						border-radius: var(--space-xs);
-						background-color: var(--color-secondary);
-						padding: var(--space-xs) var(--space-s);
-						cursor: pointer;
-						color: var(--color-text);
-						font-size: var(--font-size-m);
-						line-height: var(--line-height-xs);
-						transition: background-color var(--transition-short) var(--easing-inout);
+				button {
+					border: 1px solid var(--color-border);
+					border-radius: var(--space-xs);
+					background-color: var(--color-secondary);
+					padding: var(--space-xs) var(--space-s);
+					cursor: pointer;
+					color: var(--color-text);
+					font-size: var(--font-size-m);
+					line-height: var(--line-height-xs);
+					transition: background-color var(--transition-short) var(--easing-inout);
 
-						&:hover {
-							background-color: var(--color-secondary-hover);
-						}
+					&:hover {
+						background-color: var(--color-secondary-hover);
+					}
 
-						&:active {
-							background-color: var(--color-secondary-active);
-						}
+					&:active {
+						background-color: var(--color-secondary-active);
 					}
 				}
 			}</style>

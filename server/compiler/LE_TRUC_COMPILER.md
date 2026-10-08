@@ -1130,10 +1130,10 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
 - *Stylesheet* (ADR 0033): a sheet that does not parse (LTC064), the
   unknown-property-or-value warning (LTC065), and the forms with no meaning
   under the platform-CSS contract — a rule inside `@scope` led by the
-  component's own tag (LTC066, fix-it `:scope`), `::slotted()` (LTC067),
+  component's own tag (LTC066, fix-it `:where(:scope)`), `::slotted()` (LTC067),
   `:host-context()` (LTC068), `:global` anywhere (LTC069), a selector that
   descends past a compound one of its block's `to (…)` limits always
-  excludes (LTC071), and `:host` anywhere (LTC086, fix-it `:scope`);
+  excludes (LTC071), and `:host` anywhere (LTC086, fix-it `:where(:scope)`);
   LTC070 is retired (a qualifier after `:scope` is valid CSS). A `@scope`
   form the flat-selector lowering cannot express — a `@scope` inside the
   component `@scope`, a limit that names `:scope` — is LTC089 on a lowered

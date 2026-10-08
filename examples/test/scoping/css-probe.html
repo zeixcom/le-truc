@@ -1,7 +1,8 @@
 <!-- The page context of the platform-CSS contract probe (LT-501): the page
      rules below are the page side of the comparisons — a page TYPE
-     selector that LOSES to the probe's `:scope` host rule (a pseudo-class
-     outweighs a type) and BEATS its `:where(:scope)` one, and a page class
+     selector that BEATS the probe's `:where(:scope)` host rule (the ADR
+     0033 s1 idiom) and LOSES to its bare `:scope` one (a pseudo-class
+     outweighs a type), and a page class
      rule that reaches the light-DOM component's internals (the permanent
      inward-reach difference from a real shadow root, ADR 0033). The
      `<p class="probe-global">` outside the component is the unscoped
@@ -35,7 +36,7 @@
 		<span>Page content</span>
 	</basic-button>
 	<button type="button" class="own">Own</button>
-	<css-probe-child>
+	<css-probe-child class="variant">
 		<pre><code data-children="css-probe"><span class="x">Kid</span><x-kid-widget><button type="button"><span>Kid button</span></button></x-kid-widget></code></pre>
 		<span class="x">Child internal</span>
 	</css-probe-child>
@@ -45,7 +46,7 @@
 <p class="probe-global" id="outside-global">Global, outside the component</p>
 <p class="tag-led" id="outside-tag-led">Tag-led, outside the component</p>
 
-<css-probe-child id="page-probe-child">
+<css-probe-child id="page-probe-child" class="variant">
 	<pre><code><span class="x" id="page-kid">Page kid</span></code></pre>
 	<span class="x">Child internal</span>
 </css-probe-child>

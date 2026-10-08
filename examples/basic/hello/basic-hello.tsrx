@@ -71,7 +71,7 @@ export function BasicHello(
 
 			<style>
 			@scope {
-				:scope {
+				:where(:scope) {
 					display: block;
 				}
 			}</style>

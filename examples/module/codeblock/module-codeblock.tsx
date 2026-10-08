@@ -123,9 +123,6 @@ export function ModuleCodeblock(
 			)}
 
 			<style>{css`
-			/* The <pre>/<code> are rendered inside the composed module-scrollarea,
-			   outside the `@scope` block, which stops at module-scrollarea (ADR 0033):
-			   a tag-led top-level rule. */
 			module-codeblock pre {
 				font-size: var(--font-size-s);
 				padding-block: var(--space-s);
@@ -139,8 +136,9 @@ export function ModuleCodeblock(
 			}
 
 			@scope to (module-scrollarea > *, basic-button > *) {
-				:scope {
+				:where(:scope) {
 					--module-codeblock-color-background: #272822;
+
 					/* Shadow with reduced transparency for dark background used in code blocks */
 					--color-shadow: rgb(0 0 0 / 0.4);
 
@@ -149,82 +147,82 @@ export function ModuleCodeblock(
 					margin: 0 0 var(--space-l);
 					background: var(--module-codeblock-color-background);
 					border-radius: var(--space-s);
+				}
 
-					.meta {
-						display: flex;
-						margin-bottom: 0;
-						padding: var(--space-xs) var(--space-s) 0;
-						font-size: var(--font-size-s);
-						color: var(--color-neutral-20);
-					}
+				.meta {
+					display: flex;
+					margin-bottom: 0;
+					padding: var(--space-xs) var(--space-s) 0;
+					font-size: var(--font-size-s);
+					color: var(--color-neutral-20);
+				}
 
-					.language {
-						margin-left: auto;
-						text-transform: uppercase;
+				.language {
+					margin-left: auto;
+					text-transform: uppercase;
+				}
+
+				.copy {
+					position: absolute;
+					right: var(--space-s);
+					bottom: var(--space-s);
+				}
+
+				.overlay {
+					display: none;
+				}
+
+				:where(:scope)[collapsed] {
+					max-height: 12rem;
+					overflow: hidden;
+					border-radius: var(--space-s) var(--space-s) 0 0;
+
+					&::after {
+						content: "";
+						display: block;
+						position: absolute;
+						bottom: 0;
+						width: 100%;
+						height: var(--space-m);
+						background:
+							linear-gradient(-135deg, var(--color-secondary) 0.5rem, transparent 0) 0
+							0.5rem,
+							linear-gradient(
+								135deg,
+								var(--color-secondary) 0.5rem,
+								var(--color-input) 0
+							)
+							0 0.5rem;
+						background-size: var(--space-m) var(--space-m);
+						background-position: bottom;
 					}
 
 					.copy {
-						position: absolute;
-						right: var(--space-s);
-						bottom: var(--space-s);
-					}
-
-					.overlay {
 						display: none;
 					}
 
-					&[collapsed] {
-						max-height: 12rem;
-						overflow: hidden;
-						border-radius: var(--space-s) var(--space-s) 0 0;
+					.overlay {
+						display: flex;
+						flex-direction: column-reverse;
+						align-items: center;
+						position: absolute;
+						bottom: 0;
+						left: 0;
+						width: 100%;
+						height: 6rem;
+						color: var(--color-text);
+						background: linear-gradient(transparent, var(--color-secondary));
+						border: 0;
+						cursor: pointer;
+						padding: var(--space-xs) var(--space-s);
+						margin-bottom: var(--space-m);
+						font-size: var(--font-size-s);
+						transition: background-color var(--transition-short) var(--easing-inout);
+						text-shadow: var(--color-input) 1px 0 var(--space-xs);
 
-						&::after {
-							content: "";
-							display: block;
-							position: absolute;
-							bottom: 0;
-							width: 100%;
-							height: var(--space-m);
-							background:
-								linear-gradient(-135deg, var(--color-secondary) 0.5rem, transparent 0) 0
-								0.5rem,
-								linear-gradient(
-									135deg,
-									var(--color-secondary) 0.5rem,
-									var(--color-input) 0
-								)
-								0 0.5rem;
-							background-size: var(--space-m) var(--space-m);
-							background-position: bottom;
-						}
-
-						.copy {
-							display: none;
-						}
-
-						.overlay {
-							display: flex;
-							flex-direction: column-reverse;
-							align-items: center;
-							position: absolute;
-							bottom: 0;
-							left: 0;
-							width: 100%;
-							height: 6rem;
-							color: var(--color-text);
-							background: linear-gradient(transparent, var(--color-secondary));
-							border: 0;
-							cursor: pointer;
-							padding: var(--space-xs) var(--space-s);
-							margin-bottom: var(--space-m);
-							font-size: var(--font-size-s);
-							transition: background-color var(--transition-short) var(--easing-inout);
-							text-shadow: var(--color-input) 1px 0 var(--space-xs);
-
-							&:hover,
-							&:active {
-								text-shadow: var(--color-text-inverted) var(--space-xs) 0 var(--space-s);
-							}
+						&:hover,
+						&:active {
+							text-shadow: var(--color-text-inverted) var(--space-xs) 0 var(--space-s);
 						}
 					}
 				}

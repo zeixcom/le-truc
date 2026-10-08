@@ -13,9 +13,10 @@
  *   `@scope (<tag>)`; a preluded one, the block bodies and every other rule
  *   stay verbatim.
  * - **Lowered** (a target without `@scope`): each component `@scope` block
- *   unwraps into flat selectors. The root leads as `:where(<root>)`, an
- *   explicit `:scope` becomes the root compound with its (0,1,0)
- *   specificity, and each authored limit becomes a zero-specificity guard.
+ *   unwraps into flat selectors. The root leads as `:where(<root>)` —
+ *   the idiom's `:where(:scope)` host rule is exactly that lead — a bare
+ *   `:scope` becomes the root compound padded to its (0,1,0) specificity,
+ *   and each authored limit becomes a zero-specificity guard.
  *   Top-level rules outside `@scope` stay verbatim.
  *
  * EMISSION STRATEGY (the LT-268 review hazard): the lightningcss 1.33
@@ -55,13 +56,13 @@ export type ScopeMode = 'native' | 'lowered'
 
 /** The authored forms with no meaning under the platform-CSS contract. */
 export type ContractFace =
-	/** A rule inside `@scope` led by the component's own tag (fix-it: `:scope`). */
+	/** A rule inside `@scope` led by the component's own tag (fix-it: `:where(:scope)`). */
 	| 'own-tag-led'
 	/** `::slotted()` in a light-DOM component. */
 	| 'slotted'
 	/** `:host-context()` anywhere (removed from the spec). */
 	| 'host-context'
-	/** `:host` anywhere — it matches nothing outside a shadow root (fix-it: `:scope`). */
+	/** `:host` anywhere — it matches nothing outside a shadow root (fix-it: `:where(:scope)`). */
 	| 'host'
 	/** `:global` anywhere — an unscoped rule is a top-level rule. */
 	| 'global'
@@ -250,11 +251,15 @@ const withSelectorEnd = <F extends { offset?: number | undefined }>(
 	finding: F,
 ): F & { end?: number | undefined } => {
 	if (finding.offset === undefined) return finding
-	const brace = sheetText.indexOf('{', finding.offset)
+	// A relative selector's parse anchor replaced the whitespace before it
+	// (`anchorRelativeSelectors`), so its loc sits one character early.
+	let offset = finding.offset
+	while (/\s/.test(sheetText[offset] ?? '')) offset++
+	const brace = sheetText.indexOf('{', offset)
 	if (brace < 0) return finding
 	let end = brace
-	while (end > finding.offset && /\s/.test(sheetText[end - 1] ?? '')) end--
-	return { ...finding, end }
+	while (end > offset && /\s/.test(sheetText[end - 1] ?? '')) end--
+	return { ...finding, offset, end }
 }
 
 /** 0-based-line/1-based-column loc → offset within the sheet text. */
@@ -526,7 +531,7 @@ const checkRules = (
 /**
  * Check a parsed component stylesheet against the authored `@scope` form
  * (ADR 0033 s6): a rule inside `@scope` led by the component's own tag
- * (fix-it: `:scope`), `:host` anywhere (fix-it: `:scope`), `::slotted()`
+ * (fix-it: `:where(:scope)`), `:host` anywhere (fix-it: `:where(:scope)`), `::slotted()`
  * in a light-DOM component, `:host-context()` anywhere, `:global` anywhere
  * and a selector an authored limit always excludes. Runs over
  * lightningcss's read-only parse — the sheet syntax is already LTC064's, so
@@ -798,6 +803,91 @@ const splice = (
 	return out
 }
 
+/* === Relative selectors at the top of a `@scope` block === */
+
+/**
+ * The selector anchor written before a relative selector (`> p`) at the
+ * top of a `@scope` block. lightningcss 1.33 refuses a relative selector
+ * there ("Invalid empty selector") although the platform accepts it, so
+ * every parse and transform reads an anchored copy:
+ *
+ * - `'&'` for the read-only parse the checks run over. It stands for the
+ *   scope root there, and where whitespace precedes the combinator it
+ *   REPLACES that character, so every parsed loc still resolves against
+ *   the authored text;
+ * - `':where(:scope)'` for the lowered emission's flattening pass — the
+ *   implicit `:scope` of a relative selector, whose specificity is zero.
+ *   (lightningcss flattens a top-level `&` into `:scope`, which counts.)
+ *
+ * The native emission ships the authored text, relative selectors and all.
+ */
+export type RelativeAnchor = '&' | ':where(:scope)'
+
+/** Edits that anchor each relative member of one selector list. */
+const anchorList = (
+	text: string,
+	start: number,
+	end: number,
+	anchor: RelativeAnchor,
+	edits: Array<{ start: number; end: number; text: string }>,
+): void => {
+	let member = start
+	for (const part of splitTopLevelCommas(text.slice(start, end))) {
+		const at = skipSpaceAndComments(text, member)
+		const c = text[at]
+		if (at < member + part.length && (c === '>' || c === '+' || c === '~')) {
+			const before = text[at - 1]
+			if (anchor === '&' && (before === ' ' || before === '\t'))
+				edits.push({ start: at - 1, end: at, text: '&' })
+			else
+				edits.push({
+					start: at,
+					end: at,
+					text: anchor === '&' ? '&' : `${anchor} `,
+				})
+		}
+		member += part.length + 1
+	}
+}
+
+const anchorRules = (
+	text: string,
+	from: number,
+	to: number,
+	inScope: boolean,
+	anchor: RelativeAnchor,
+	edits: Array<{ start: number; end: number; text: string }>,
+): void => {
+	for (const rule of scanRules(text, from, to)) {
+		const name = atRuleName(text, rule)
+		if (name === null) {
+			if (inScope) anchorList(text, rule.start, rule.brace, anchor, edits)
+		} else if (name === 'scope' || CONDITIONAL_AT_RULES.has(name))
+			anchorRules(
+				text,
+				rule.brace + 1,
+				rule.end - 1,
+				inScope || name === 'scope',
+				anchor,
+				edits,
+			)
+	}
+}
+
+/**
+ * The sheet text with every relative selector at the top of a `@scope`
+ * block anchored (see `RelativeAnchor`). Nested rules need no anchor:
+ * lightningcss reads `> p` inside a style rule as nesting.
+ */
+export const anchorRelativeSelectors = (
+	text: string,
+	anchor: RelativeAnchor,
+): string => {
+	const edits: Array<{ start: number; end: number; text: string }> = []
+	anchorRules(text, 0, text.length, false, anchor, edits)
+	return edits.length === 0 ? text : splice(text, edits)
+}
+
 /* === The scope block's prelude === */
 
 /**
@@ -895,8 +985,11 @@ type LoweringScope = {
 const loweringScopeOf = (head: ScopeHead, tag: string): LoweringScope => {
 	const root = head.root ?? tag
 	const listed = splitTopLevelCommas(root).length > 1 ? `:is(${root})` : root
+	// The re-include (ADR 0033 s4): an own-tag instance below the limit, or
+	// one the limit itself matches, is a scope root of its own, and so is
+	// everything inside it.
 	const guard = (limit: string): string =>
-		`:where(:not(:is(${listed} ${limit}, ${listed} ${limit} *):not(${listed} ${limit} ${tag}, ${listed} ${limit} ${tag} *)))`
+		`:where(:not(:is(${listed} ${limit}, ${listed} ${limit} *):not(${listed} ${limit} ${tag}, ${listed} ${limit} ${tag} *, ${listed} ${limit}:is(${tag}), ${listed} ${limit}:is(${tag}) *)))`
 	return {
 		rootCompound: `:where(${root})${SCOPE_PAD}`,
 		lead: `:where(${root})`,
@@ -1121,9 +1214,12 @@ export const emitScopedSheet = (
 
 	// The remainder: the canonical sheet with every hoisted fragment's span
 	// removed, separators and all — lightningcss reformats what it re-emits.
-	const remainder = splice(
-		canonical,
-		fragments.map(fragment => ({ ...fragment, text: '' })),
+	const remainder = anchorRelativeSelectors(
+		splice(
+			canonical,
+			fragments.map(fragment => ({ ...fragment, text: '' })),
+		),
+		':where(:scope)',
 	)
 	let lowered = ''
 	if (remainder.trim() !== '') {

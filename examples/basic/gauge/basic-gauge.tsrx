@@ -140,7 +140,7 @@ export function BasicGauge(
 
 			<style>
 			@scope to (basic-number > *) {
-				:scope {
+				:where(:scope) {
 					--basic-gauge-background: var(
 						--color-background,
 						light-dark(#ecebef, #242326)
@@ -187,25 +187,25 @@ export function BasicGauge(
 							transparent 240deg
 						);
 					border-radius: 50%;
+				}
 
-					& p {
-						display: inline-block;
-						color: var(--basic-gauge-label-color);
-						font-size: var(--basic-gauge-label-font-size);
-						margin: 0;
-					}
+				p {
+					display: inline-block;
+					color: var(--basic-gauge-label-color);
+					font-size: var(--basic-gauge-label-font-size);
+					margin: 0;
+				}
 
-					& basic-number {
-						display: inline-block;
-						color: var(--basic-gauge-metric-color);
-						font-size: var(--basic-gauge-metric-font-size);
-					}
+				basic-number {
+					display: inline-block;
+					color: var(--basic-gauge-metric-color);
+					font-size: var(--basic-gauge-metric-font-size);
+				}
 
-					.label {
-						display: inline-block;
-						font-size: var(--basic-gauge-label-font-size);
-						color: var(--basic-gauge-label-color);
-					}
+				.label {
+					display: inline-block;
+					font-size: var(--basic-gauge-label-font-size);
+					color: var(--basic-gauge-label-color);
 				}
 			}</style>
 		</basic-gauge>

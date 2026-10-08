@@ -117,13 +117,13 @@ Errors are tier 1. **W** marks a warning: the build continues and the warning te
 |---|---|---|
 | LTC064 | the stylesheet doesn't parse | fix the CSS syntax at the reported line |
 | LTC065 **W** | an unknown property, or a value outside the property's grammar. Custom properties and `var()`/`env()` are not checked. This one is tier 2: the dictionary lags the platform. | fix a typo. If the CSS is just newer than the dictionary, leave it. It ships as written |
-| LTC066 | a rule inside `@scope` led by the component's own tag. It addresses a nested instance, never the host | `:scope { … }`, and drop the tag from selectors for internals |
+| LTC066 | a rule inside `@scope` led by the component's own tag. It addresses a nested instance, never the host | `:where(:scope) { … }`, and drop the tag from selectors for internals |
 | LTC067 | `::slotted()`, but compiled components are light DOM, with no slots | style composed children's hosts by tag |
 | LTC068 | `:host-context()`, which is removed from the spec and matches nothing | inheritance and custom properties |
 | LTC069 | `:global` anywhere. An unscoped rule is a top-level rule, so the wrapper has no meaning | remove the wrapper and move the rule to the top level, outside `@scope` |
 | LTC070 | retired. A qualifier after `:scope` (`:scope.x`, `:scope:hover`) is valid CSS | — |
 | LTC071 | a selector inside a `@scope` block descends past a compound that one of the block's own `to (…)` limits excludes (`to (child-tag > *)` with `child-tag .x`). The limit always excludes the subject, so the rule matches nothing | remove the limit, or move the rule out of the `@scope` block. A top-level rule applies page-wide |
-| LTC086 | `:host` anywhere. It matches nothing in light DOM | `:scope`, and `:scope:is(.x)` for `:host(.x)`, inside `@scope { … }` |
+| LTC086 | `:host` anywhere. It matches nothing in light DOM | `:where(:scope)`, and `:where(:scope).x` for `:host(.x)`, inside `@scope { … }` |
 | LTC089 | a `@scope` form with no flat-selector lowering (a `@scope` inside the component `@scope`, a limit that names `:scope`) on a CSS target without native `@scope`. The message names the target | write the sheet without it, or raise `cssTargets` to browsers with native `@scope` (Chrome 118, Firefox 128, Safari 17.4) |
 | LTC051 | the authored styles of a variant set's members differ, so none of the set's artifacts are written | copy the served member's styles into the others |
 

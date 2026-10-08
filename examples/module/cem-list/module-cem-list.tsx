@@ -65,37 +65,37 @@ export function ModuleCemList(
 
 			<style>{css`
 			@scope {
-				:scope {
+				:where(:scope) {
 					display: block;
+				}
 
-					& form-textbox {
-						display: block;
-						margin: 0 0 var(--space-l);
+				form-textbox {
+					display: block;
+					margin: 0 0 var(--space-l);
+				}
+
+				card-collapsible summary {
+					flex-wrap: wrap;
+
+					& .header {
+						display: flex;
+						align-items: baseline;
+						gap: var(--space-s);
+						flex: none;
 					}
+				}
 
-					& card-collapsible summary {
-						flex-wrap: wrap;
+				.demo-link a {
+					text-decoration: none;
 
-						& .header {
-							display: flex;
-							align-items: baseline;
-							gap: var(--space-s);
-							flex: none;
-						}
+					&:hover {
+						text-decoration: underline;
 					}
+				}
 
-					& .demo-link a {
-						text-decoration: none;
-
-						&:hover {
-							text-decoration: underline;
-						}
-					}
-
-					& module-tabgroup {
-						display: block;
-						margin: var(--space-s) 0 0;
-					}
+				module-tabgroup {
+					display: block;
+					margin: var(--space-s) 0 0;
 				}
 			}`}</style>
 		</module-cem-list>

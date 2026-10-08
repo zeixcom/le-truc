@@ -127,55 +127,55 @@ export function FormInplaceEdit(
 
 		<style>
 		@scope to (form-textbox > *) {
-			:scope {
+			:where(:scope) {
 				display: flex;
 				align-items: center;
+			}
 
+			.text {
+				flex: 1;
+				line-height: var(--line-height-s);
+			}
+
+			> button {
+				flex: 0;
+				height: var(--input-height);
+				min-inline-size: var(--input-height);
+				border-radius: var(--space-xs);
+				line-height: var(--line-height-s);
+				background: transparent;
+				border: none;
+				padding: var(--space-xs);
+				color: var(--color-primary);
+
+				&:hover {
+					background-color: var(--color-overlay-hover);
+					color: var(--color-primary-hover);
+				}
+
+				&:active {
+					background-color: var(--color-overlay-active);
+					color: var(--color-primary-active);
+				}
+			}
+
+			:where(:scope)[editing] {
 				.text {
-					flex: 1;
-					line-height: var(--line-height-s);
+					display: none;
 				}
 
 				> button {
-					flex: 0;
-					height: var(--input-height);
-					min-inline-size: var(--input-height);
-					border-radius: var(--space-xs);
-					line-height: var(--line-height-s);
-					background: transparent;
-					border: none;
-					padding: var(--space-xs);
-					color: var(--color-primary);
+					color: var(--color-primary-text);
+					background-color: var(--color-primary);
+					border-color: var(--color-primary-active);
+					border-radius: 0 var(--space-xs) var(--space-xs) 0;
 
 					&:hover {
-						background-color: var(--color-overlay-hover);
-						color: var(--color-primary-hover);
+						background-color: var(--color-primary-hover);
 					}
 
 					&:active {
-						background-color: var(--color-overlay-active);
-						color: var(--color-primary-active);
-					}
-				}
-
-				&[editing] {
-					.text {
-						display: none;
-					}
-
-					> button {
-						color: var(--color-primary-text);
-						background-color: var(--color-primary);
-						border-color: var(--color-primary-active);
-						border-radius: 0 var(--space-xs) var(--space-xs) 0;
-
-						&:hover {
-							background-color: var(--color-primary-hover);
-						}
-
-						&:active {
-							background-color: var(--color-primary-active);
-						}
+						background-color: var(--color-primary-active);
 					}
 				}
 			}

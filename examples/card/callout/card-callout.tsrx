@@ -7,7 +7,7 @@ export function CardCallout({ kind, children }: {
 
 			<style>
 			@scope {
-				:scope {
+				:where(:scope) {
 					display: block;
 					position: relative;
 					padding: var(--space-s) var(--space-s) var(--space-s) var(--space-xl);
@@ -23,49 +23,49 @@ export function CardCallout({ kind, children }: {
 						content: "ℹ️";
 						left: var(--space-s);
 					}
+				}
 
-					> p {
-						margin-block-end: var(--space-s);
+				> p {
+					margin-block-end: var(--space-s);
+				}
+
+				> *:last-child {
+					margin-block-end: 0;
+				}
+
+				:where(:scope).tip {
+					background: light-dark(var(--color-green-20), var(--color-green-80));
+					border-color: var(--color-green-50);
+
+					&::before {
+						content: "💡";
 					}
+				}
 
-					> *:last-child {
-						margin-block-end: 0;
+				:where(:scope).note {
+					background: light-dark(var(--color-neutral-20), var(--color-neutral-80));
+					border-color: var(--color-neutral-50);
+
+					&::before {
+						content: "💬";
 					}
+				}
 
-					&.tip {
-						background: light-dark(var(--color-green-20), var(--color-green-80));
-						border-color: var(--color-green-50);
+				:where(:scope).caution {
+					background: light-dark(var(--color-orange-20), var(--color-orange-80));
+					border-color: var(--color-orange-50);
 
-						&::before {
-							content: "💡";
-						}
+					&::before {
+						content: "⚠️";
 					}
+				}
 
-					&.note {
-						background: light-dark(var(--color-neutral-20), var(--color-neutral-80));
-						border-color: var(--color-neutral-50);
+				:where(:scope).danger {
+					background: light-dark(var(--color-pink-20), var(--color-pink-80));
+					border-color: var(--color-pink-50);
 
-						&::before {
-							content: "💬";
-						}
-					}
-
-					&.caution {
-						background: light-dark(var(--color-orange-20), var(--color-orange-80));
-						border-color: var(--color-orange-50);
-
-						&::before {
-							content: "⚠️";
-						}
-					}
-
-					&.danger {
-						background: light-dark(var(--color-pink-20), var(--color-pink-80));
-						border-color: var(--color-pink-50);
-
-						&::before {
-							content: "🚨";
-						}
+					&::before {
+						content: "🚨";
 					}
 				}
 			}</style>

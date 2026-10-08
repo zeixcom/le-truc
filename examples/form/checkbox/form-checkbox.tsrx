@@ -72,187 +72,187 @@ export function FormCheckbox(
 
 		<style>
 		@scope {
-			:scope {
+			:where(:scope) {
 				display: inline-block;
 				flex-grow: 1;
+			}
 
-				& input:focus {
-					outline: none;
-					box-shadow: none;
-				}
+			input:focus {
+				outline: none;
+				box-shadow: none;
+			}
 
-				& label {
-					font-size: var(--font-size-s);
+			label {
+				font-size: var(--font-size-s);
+				border-radius: var(--space-xs);
+			}
+
+			:where(:scope):has(input:focus-visible) label {
+				box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+			}
+
+			:where(:scope).checkbox label {
+				display: inline-flex;
+				gap: var(--space-s);
+				line-height: var(--input-height);
+				cursor: pointer;
+				align-items: center;
+
+				&::before {
+					display: inline-block;
+					box-sizing: border-box;
+					content: " ";
+					text-align: center;
+					width: var(--space-l);
+					height: var(--space-l);
+					line-height: 1.5;
+					border: 1px solid var(--color-border);
 					border-radius: var(--space-xs);
+					background-color: var(--color-secondary);
 				}
 
-				&:has(input:focus-visible) label {
-					box-shadow: 0 0 var(--space-xxs) 2px var(--color-selection);
+				&:hover::before {
+					background-color: var(--color-secondary-hover);
+					opacity: var(--opacity-solid);
 				}
 
-				&.checkbox label {
-					display: inline-flex;
-					gap: var(--space-s);
-					line-height: var(--input-height);
-					cursor: pointer;
-					align-items: center;
+				&:active::before {
+					background-color: var(--color-secondary-active);
+				}
+			}
 
-					&::before {
-						display: inline-block;
-						box-sizing: border-box;
-						content: " ";
-						text-align: center;
-						width: var(--space-l);
-						height: var(--space-l);
-						line-height: 1.5;
-						border: 1px solid var(--color-border);
-						border-radius: var(--space-xs);
-						background-color: var(--color-secondary);
-					}
-
-					&:hover::before {
-						background-color: var(--color-secondary-hover);
-						opacity: var(--opacity-solid);
-					}
-
-					&:active::before {
-						background-color: var(--color-secondary-active);
-					}
+			:where(:scope).checkbox:has(input:checked) label {
+				&::before {
+					color: var(--color-text-inverted);
+					background-color: var(--color-selection-selected);
+					border-color: var(--color-selection-active);
+					text-shadow: 0 0 var(--space-xs) var(--color-success-active);
+					content: "✔︎";
 				}
 
-				&.checkbox:has(input:checked) label {
-					&::before {
-						color: var(--color-text-inverted);
-						background-color: var(--color-selection-selected);
-						border-color: var(--color-selection-active);
-						text-shadow: 0 0 var(--space-xs) var(--color-success-active);
-						content: "✔︎";
-					}
-
-					&:hover::before {
-						background-color: var(--color-selection-active);
-					}
-
-					&:active::before {
-						background-color: var(--color-selection-active);
-					}
+				&:hover::before {
+					background-color: var(--color-selection-active);
 				}
 
-				&.todo label {
-					display: inline-flex;
-					gap: var(--space-s);
-					line-height: var(--input-height);
-					cursor: pointer;
-					align-items: center;
+				&:active::before {
+					background-color: var(--color-selection-active);
+				}
+			}
 
-					&::before {
-						display: inline-block;
-						box-sizing: border-box;
-						content: " ";
-						text-align: center;
-						width: var(--space-l);
-						height: var(--space-l);
-						line-height: 1.5;
-						border: 1px solid var(--color-border);
-						border-radius: var(--space-xs);
-						background-color: var(--color-secondary);
-					}
+			:where(:scope).todo label {
+				display: inline-flex;
+				gap: var(--space-s);
+				line-height: var(--input-height);
+				cursor: pointer;
+				align-items: center;
 
-					&:hover::before {
-						background-color: var(--color-secondary-hover);
-						opacity: var(--opacity-solid);
-					}
-
-					&:active::before {
-						background-color: var(--color-secondary-active);
-					}
+				&::before {
+					display: inline-block;
+					box-sizing: border-box;
+					content: " ";
+					text-align: center;
+					width: var(--space-l);
+					height: var(--space-l);
+					line-height: 1.5;
+					border: 1px solid var(--color-border);
+					border-radius: var(--space-xs);
+					background-color: var(--color-secondary);
 				}
 
-				&.todo:has(input:checked) label {
-					opacity: var(--opacity-translucent);
-
-					& span {
-						text-decoration: line-through;
-					}
-
-					&::before {
-						color: var(--color-text-inverted);
-						background-color: var(--color-success);
-						border-color: var(--color-success-active);
-						text-shadow: 0 0 var(--space-xs) var(--color-success-active);
-						content: "✔︎";
-					}
-
-					&:hover::before {
-						background-color: var(--color-success-hover);
-					}
-
-					&:active::before {
-						background-color: var(--color-success-active);
-					}
+				&:hover::before {
+					background-color: var(--color-secondary-hover);
+					opacity: var(--opacity-solid);
 				}
 
-				&.toggle label {
-					--toggle-knob-size: calc(var(--space-l) * 2);
+				&:active::before {
+					background-color: var(--color-secondary-active);
+				}
+			}
 
-					display: inline-flex;
-					gap: var(--space-s);
-					line-height: var(--input-height);
-					cursor: pointer;
-					align-items: center;
+			:where(:scope).todo:has(input:checked) label {
+				opacity: var(--opacity-translucent);
 
-					&::before {
-						display: inline-block;
-						flex-shrink: 0;
-						box-sizing: border-box;
-						content: " ";
-						width: calc(var(--space-l) * 2);
-						height: var(--space-l);
-						line-height: 1.5;
-						padding-left: var(--space-l);
-						border-radius: calc(var(--input-height) / 2);
-						background-color: var(--color-secondary);
-						color: var(--color-text-inverted);
-						border: 1px solid var(--color-border);
-						background-image: radial-gradient(
-							circle,
-							var(--color-input) 35%,
-							transparent 36%
-						);
-						background-position: left calc(-0.5 * var(--space-l)) center;
-						background-repeat: no-repeat;
-						transition:
-							background-color var(--transition-short) var(--easing-inout),
-							border-color var(--transition-short) var(--easing-inout),
-							background-position var(--transition-short) var(--easing-inout);
-					}
-
-					&:hover::before {
-						background-color: var(--color-secondary-hover);
-					}
-
-					&:active::before {
-						background-color: var(--color-secondary-active);
-					}
+				& span {
+					text-decoration: line-through;
 				}
 
-				&.toggle:has(input:checked) label {
-					&::before {
-						background-color: var(--color-selection-selected);
-						border-color: var(--color-selection-active);
-						content: "✔︎";
-						text-shadow: 0 0 var(--space-xs) var(--color-success-active);
-						padding-left: var(--space-s);
-						background-position: left calc(0.5 * var(--space-l)) center;
-					}
+				&::before {
+					color: var(--color-text-inverted);
+					background-color: var(--color-success);
+					border-color: var(--color-success-active);
+					text-shadow: 0 0 var(--space-xs) var(--color-success-active);
+					content: "✔︎";
+				}
 
-					&:hover::before {
-						background-color: var(--color-selection-active);
-					}
+				&:hover::before {
+					background-color: var(--color-success-hover);
+				}
 
-					&:active::before {
-						background-color: var(--color-selection-active);
-					}
+				&:active::before {
+					background-color: var(--color-success-active);
+				}
+			}
+
+			:where(:scope).toggle label {
+				--toggle-knob-size: calc(var(--space-l) * 2);
+
+				display: inline-flex;
+				gap: var(--space-s);
+				line-height: var(--input-height);
+				cursor: pointer;
+				align-items: center;
+
+				&::before {
+					display: inline-block;
+					flex-shrink: 0;
+					box-sizing: border-box;
+					content: " ";
+					width: calc(var(--space-l) * 2);
+					height: var(--space-l);
+					line-height: 1.5;
+					padding-left: var(--space-l);
+					border-radius: calc(var(--input-height) / 2);
+					background-color: var(--color-secondary);
+					color: var(--color-text-inverted);
+					border: 1px solid var(--color-border);
+					background-image: radial-gradient(
+						circle,
+						var(--color-input) 35%,
+						transparent 36%
+					);
+					background-position: left calc(-0.5 * var(--space-l)) center;
+					background-repeat: no-repeat;
+					transition:
+						background-color var(--transition-short) var(--easing-inout),
+						border-color var(--transition-short) var(--easing-inout),
+						background-position var(--transition-short) var(--easing-inout);
+				}
+
+				&:hover::before {
+					background-color: var(--color-secondary-hover);
+				}
+
+				&:active::before {
+					background-color: var(--color-secondary-active);
+				}
+			}
+
+			:where(:scope).toggle:has(input:checked) label {
+				&::before {
+					background-color: var(--color-selection-selected);
+					border-color: var(--color-selection-active);
+					content: "✔︎";
+					text-shadow: 0 0 var(--space-xs) var(--color-success-active);
+					padding-left: var(--space-s);
+					background-position: left calc(0.5 * var(--space-l)) center;
+				}
+
+				&:hover::before {
+					background-color: var(--color-selection-active);
+				}
+
+				&:active::before {
+					background-color: var(--color-selection-active);
 				}
 			}
 		}</style>

@@ -140,8 +140,6 @@ export function ModuleListnav(
 				truc:pass={{ src: () => listbox.value }}
 			/>
 			<style>{css`
-/* The loaded page content is module-lazyload's, outside the `@scope` block, which stops at it:
-   a tag-led top-level rule (ADR 0033). */
 @container (width > 45em) {
 	module-listnav module-lazyload :is(h1, h2, h3, h4, h5, h6) {
 		margin-top: 0;
@@ -154,7 +152,7 @@ export function ModuleListnav(
 	}
 
 	@container (width > 45em) {
-		:scope {
+		:where(:scope) {
 			display: grid;
 			grid-template-columns: 1fr 3fr;
 			gap: var(--space-xl);

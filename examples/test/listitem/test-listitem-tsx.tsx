@@ -83,30 +83,30 @@ export function TestListitemTsx({}: TestListitemTsxProps) {
 				Add
 			</button>
 			<style>{css`@scope to (form-checkbox > *) {
-	:scope {
-					display: block;
+	:where(:scope) {
+		display: block;
+	}
 
-					& ul {
-						display: flex;
-						flex-direction: column;
-						gap: var(--space-s);
-						list-style: none;
-						margin: 0;
-						padding: 0;
+	ul {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-s);
+		list-style: none;
+		margin: 0;
+		padding: 0;
 
-						& li {
-							display: flex;
-							align-items: center;
-							gap: var(--space-s);
-							margin: 0;
-							padding: 0;
+		& li {
+			display: flex;
+			align-items: center;
+			gap: var(--space-s);
+			margin: 0;
+			padding: 0;
 
-							&.done {
-								color: var(--color-text-soft);
-							}
-						}
-					}
-				}
+			&.done {
+				color: var(--color-text-soft);
+			}
+		}
+	}
 }`}</style>
 		</test-listitem-tsx>
 	)

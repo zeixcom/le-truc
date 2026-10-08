@@ -5,7 +5,9 @@
  * Its sheet limits its scope at its own insertion element, `to (code > *)`
  * — the way ADR 0048 s5 gives a child its stop at the content — so its
  * `span` rule styles the internal beside the region and stops at what
- * `code` holds, under a compiled parent and under a page alike.
+ * `code` holds, under a compiled parent and under a page alike. Its host
+ * rules are the ADR 0033 s1 idiom: the `:where(:scope)` base loses to the
+ * probe's bare rule on this host, and the `&.variant` root variant beats it.
  * Deliberately not styled for looks; every declaration is an assertion.
  */
 import { css } from '@zeix/le-truc-compiler/macros'
@@ -20,7 +22,7 @@ declare global {
 
 export function CssProbeChild({ children = '' }: { children?: string }) {
 	return (
-		<css-probe-child>
+		<css-probe-child class="variant">
 			<pre>
 				<code>{children}</code>
 			</pre>
@@ -28,8 +30,14 @@ export function CssProbeChild({ children = '' }: { children?: string }) {
 
 			<style>{css`
 				@scope to (code > *) {
-					:scope {
+					:where(:scope) {
 						display: block;
+						padding-left: 1px;
+						padding-right: 1px;
+
+						&.variant {
+							padding-right: 3px;
+						}
 					}
 					span {
 						outline-style: dashed;

@@ -1,37 +1,40 @@
 /**
- * The shadow-root → authored `@scope` codemod (LT-501, ADR 0033).
+ * The shadow-root → authored `@scope` codemod (LT-501, ADR 0033 s1).
  *
  * Every compiled corpus stylesheet moves from the shadow-root authored form
  * (`:host { … }` plus bare rules, scope boundaries derived from the
- * template) to platform CSS: the scoped rules sit in a prelude-less
- * `@scope { … }` block, `:scope` is the host, and the limits are written
- * out. A sheet means what the same sheet would mean as an inline `<style>`
- * in the host; the compiler derives nothing.
+ * template) to platform CSS in the ADR 0033 s1 idiom: the scoped rules sit
+ * in a prelude-less `@scope { … }` block, host rules root at
+ * `:where(:scope)`, descendants are bare, and the limits are written out.
  *
  * 	bun scripts/migrate-scope-css.ts <boundaries.json> [examples-dir]
  *
  * `<boundaries.json>` maps each component tag to the custom-element tags
- * the retired emission stopped its scope at (every custom element the
- * lowered template rendered). The codemod writes them as the block's
- * limits, `to (<tag> > *, …)`, so the migrated sheet reaches exactly what
- * the old emission reached. The set is read once, before the derived
- * boundaries were removed; the flag-free way to shrink the limits is a
- * leak check on the migrated sheet, not this script.
+ * the retired emission stopped its scope at. The codemod writes them as
+ * the block's limits, `to (<tag> > *, …)`, so the migrated sheet reaches
+ * what the old emission reached; LT-502's leak check shrinks them.
  *
  * Per compiled source (`.tsx` `<style>{css`…`}</style>`, `.tsrx`
  * `<style>…</style>`; the `.ts` twins keep their hand-written `.css`),
- * rewriting rule TEXT only — values, comments and nesting never move:
+ * rewriting rule TEXT only — values and comments never change:
  *
  * 1. `@keyframes`, `@font-face`, `@property` and the other hoisted
  *    at-rules stay at the top level;
  * 2. `:global(<selector>) { … }` and the bare `:global { … }` block unwrap
  *    to top-level rules;
- * 3. everything else moves into one `@scope [to (…)] { … }` block, with
- *    `:host` → `:scope` and `:host(X)` → `:scope:is(X)`.
+ * 3. everything else moves into one `@scope [to (…)] { … }` block:
+ *    - `:host { … }` becomes `:where(:scope) { … }`, holding its
+ *      declarations and the `&`-led root variants that hold only
+ *      declarations;
+ *    - every other rule nested in it moves out, in order: a descendant
+ *      bare or relative (`& p` → `p`, `> p` stays), a state-dependent one
+ *      led by the variant (`&.x .y` → `:where(:scope).x .y`);
+ *    - `:host(X)` becomes `:where(:scope)X` (`:where(:scope):is(X)` for a
+ *      type or a list), and `:host <desc>` becomes `<desc>`.
  *
- * The retired emission placed hoisted and unwrapped rules first, then the
- * scoped remainder. The codemod keeps that order, so the cascade is the
- * one the corpus had.
+ * The rules that move out of the host block follow it, so a root
+ * declaration keeps its place before them; their specificity is the
+ * nested form's, `:where(:scope)` counting zero.
  *
  * Idempotent: a sheet with a top-level `@scope` passes through unchanged.
  */
@@ -99,16 +102,20 @@ const splitCommas = (text: string): string[] => {
 	return parts
 }
 
-/** A top-level rule with the comments and blank lines that lead it. */
-type Piece = {
-	/** Text from the previous rule's end through this rule's end. */
+/** One item of a block: a declaration or a rule, with what led it. */
+type Item = {
+	/** The comments and whitespace before the item. */
+	lead: string
+	/** A blank line separated the item from the one before it. */
+	blank: boolean
+	/** The item through its `;` or `}`, from its first code character. */
 	text: string
-	/** The selector or at-rule prelude, comments removed. */
-	prelude: string
-	/** Where the selector (or at-rule) starts within `text`, past leading comments. */
-	selector: number
-	/** The `{` offset within `text`. */
-	brace: number
+	/** For a rule: the prelude, comments removed. */
+	prelude?: string
+	/** For a rule: the `{` offset within `text`. */
+	brace?: number
+	/** For a rule: the text between its braces. */
+	inner?: string
 }
 
 const stripComments = (text: string): string =>
@@ -123,36 +130,77 @@ const skipTrivia = (text: string, from: number): number => {
 	}
 }
 
-/** The top-level rules of a sheet; blockless statements ride the next rule. */
-const piecesOf = (sheet: string): { pieces: Piece[]; rest: string } => {
-	const pieces: Piece[] = []
-	let cursor = 0
+/** The declarations and rules of one block body, in order. */
+const itemsOf = (body: string): { items: Item[]; rest: string } => {
+	const items: Item[] = []
 	let i = 0
-	while (i < sheet.length) {
-		const brace = indexOfCode(sheet, '{', i)
-		if (brace === -1) break
-		const semicolon = indexOfCode(sheet, ';', i)
-		if (semicolon !== -1 && semicolon < brace) {
-			i = semicolon + 1
+	for (;;) {
+		const at = skipTrivia(body, i)
+		if (at >= body.length) return { items, rest: body.slice(i) }
+		const lead = body.slice(i, at)
+		const blank = /\n[ \t]*\n/.test(lead.replace(/\/\*[\s\S]*?\*\//g, ''))
+		const brace = indexOfCode(body, '{', at)
+		const semicolon = indexOfCode(body, ';', at)
+		if (brace === -1 || (semicolon !== -1 && semicolon < brace)) {
+			const end = semicolon === -1 ? body.length : semicolon + 1
+			items.push({ lead, blank, text: body.slice(at, end) })
+			i = end
 			continue
 		}
-		const close = matching(sheet, brace)
-		if (close === -1) break
-		const raw = sheet.slice(cursor, close + 1)
-		const text = raw.replace(/^\s*\n/, '')
-		pieces.push({
-			text,
-			prelude: stripComments(sheet.slice(i, brace)).trim(),
-			selector: skipTrivia(sheet, cursor) - cursor - (raw.length - text.length),
-			brace: brace - cursor - (raw.length - text.length),
+		const close = matching(body, brace)
+		const end = close === -1 ? body.length : close + 1
+		items.push({
+			lead,
+			blank,
+			text: body.slice(at, end),
+			prelude: stripComments(body.slice(at, brace)).trim(),
+			brace: brace - at,
+			inner: body.slice(brace + 1, end - 1),
 		})
-		cursor = close + 1
-		i = cursor
+		i = end
 	}
-	return { pieces, rest: sheet.slice(cursor) }
 }
 
-/* --- the rewrite --- */
+/** Comments in an item's lead, without the whitespace around them. */
+const commentsOf = (lead: string): string =>
+	(lead.match(/\/\*[\s\S]*?\*\//g) ?? []).join('\n')
+
+/** Strip an item's own indentation from its continuation lines. */
+const dedent = (text: string, indent: string): string =>
+	text
+		.split('\n')
+		.map((line, index) =>
+			index > 0 && line.startsWith(indent) ? line.slice(indent.length) : line,
+		)
+		.join('\n')
+
+const indentBy = (text: string, indent: string): string =>
+	text
+		.split('\n')
+		.map(line => (line.trim() === '' ? '' : `${indent}${line}`))
+		.join('\n')
+
+/** An item as a standalone text: its comments, then the item, dedented. */
+const itemText = (item: Item, text = item.text): string => {
+	const indent = /[ \t]*$/.exec(item.lead)?.[0] ?? ''
+	const comments = dedent(commentsOf(item.lead), indent)
+	return `${comments ? `${comments}\n` : ''}${dedent(text, indent)}`
+}
+
+/** A rule the codemod rebuilt, already indented, after the item's comments. */
+const rebuiltText = (item: Item, text: string): string => {
+	const indent = /[ \t]*$/.exec(item.lead)?.[0] ?? ''
+	const comments = dedent(commentsOf(item.lead), indent)
+	return `${comments ? `${comments}\n` : ''}${text}`
+}
+
+/** Items joined, keeping the authored blank lines between them. */
+const joinItems = (parts: Array<{ text: string; blank: boolean }>): string =>
+	parts
+		.map((part, index) =>
+			index > 0 && part.blank ? `\n${part.text}` : part.text,
+		)
+		.join('\n')
 
 const HOISTED = new Set([
 	'keyframes',
@@ -168,14 +216,39 @@ const HOISTED = new Set([
 	'color-profile',
 ])
 
-/** `:host` → `:scope`, `:host(X)` → `:scope:is(X)`; `:host-context` is left. */
-const hostToScope = (text: string): string => {
+const ROOT = ':where(:scope)'
+
+/** Whether a selector is one compound: no top-level combinator or list. */
+const isCompound = (selector: string): boolean => {
+	let depth = 0
+	for (let i = 0; i < selector.length; i++) {
+		const c = selector[i] as string
+		if (c === '"' || c === "'") i = skipString(selector, i)
+		else if (c === '(' || c === '[') depth++
+		else if (c === ')' || c === ']') depth--
+		else if (depth === 0 && /[\s>+~,]/.test(c)) return false
+	}
+	return true
+}
+
+/** `:host(X)`'s argument as a suffix of the root compound. */
+const rootSuffix = (argument: string): string =>
+	isCompound(argument) && !/^[a-zA-Z*|]/.test(argument)
+		? argument
+		: `:is(${argument})`
+
+/** Every `:host(X)` → `:where(:scope)X`, `:host` → `:where(:scope)`; `:host-context` is left. */
+const hostToRoot = (text: string): string => {
 	let out = ''
 	let i = 0
 	while (i < text.length) {
 		const c = text[i] as string
 		if (c === '"' || c === "'") {
 			const end = skipString(text, i)
+			out += text.slice(i, end + 1)
+			i = end + 1
+		} else if (c === '/' && text[i + 1] === '*') {
+			const end = skipComment(text, i)
 			out += text.slice(i, end + 1)
 			i = end + 1
 		} else if (
@@ -185,12 +258,12 @@ const hostToScope = (text: string): string => {
 			if (text[i + 5] === '(') {
 				const close = matching(text, i + 5)
 				if (close !== -1) {
-					out += `:scope:is(${text.slice(i + 6, close).trim()})`
+					out += `${ROOT}${rootSuffix(text.slice(i + 6, close).trim())}`
 					i = close + 1
 					continue
 				}
 			}
-			out += ':scope'
+			out += ROOT
 			i += 5
 		} else {
 			out += c
@@ -200,35 +273,150 @@ const hostToScope = (text: string): string => {
 	return out
 }
 
-/** The text with the common leading indentation removed. */
-const dedent = (text: string): string => {
-	const lines = text.split('\n')
-	const indents = lines
-		.filter(line => line.trim() !== '')
-		.map(line => line.match(/^[ \t]*/)?.[0] ?? '')
-	const common = indents.reduce(
-		(min, indent) => (indent.length < min.length ? indent : min),
-		indents[0] ?? '',
-	)
-	return lines.map(line => line.slice(common.length)).join('\n')
+/** Where a selector's first compound ends. */
+const firstCompoundEnd = (selector: string): number => {
+	let depth = 0
+	for (let i = 0; i < selector.length; i++) {
+		const c = selector[i] as string
+		if (c === '"' || c === "'") i = skipString(selector, i)
+		else if (c === '(' || c === '[') depth++
+		else if (c === ')' || c === ']') depth--
+		else if (depth === 0 && /[\s>+~]/.test(c)) return i
+	}
+	return selector.length
 }
 
-const indentBy = (text: string, indent: string): string =>
-	text
-		.split('\n')
-		.map(line => (line.trim() === '' ? '' : `${indent}${line}`))
-		.join('\n')
+/** One selector of the scope block, with whether its subject is the root. */
+type Member = { text: string; root: boolean }
+
+/**
+ * A selector whose leading `lead` (`&` nested in the host block, `:host`
+ * at the top) stands for the host: a root compound keeps it as
+ * `:where(:scope)`, a descendant drops it and stays relative (`> p`) or
+ * bare.
+ */
+const memberOf = (selector: string, lead: string, suffix: string): Member => {
+	const rest = selector.slice(lead.length)
+	if (rest === '' && suffix === '') return { text: ROOT, root: true }
+	if (suffix === '' && /^[\s>+~]/.test(rest))
+		return { text: rest.trim(), root: false }
+	const end = firstCompoundEnd(rest)
+	return {
+		text: `${ROOT}${suffix}${hostToRoot(rest)}`,
+		root: end === rest.length,
+	}
+}
+
+/** A selector of a rule nested in the `:host` block. */
+const nestedMember = (selector: string): Member => {
+	const trimmed = selector.trim()
+	return trimmed.startsWith('&')
+		? memberOf(trimmed, '&', '')
+		: { text: hostToRoot(trimmed), root: false }
+}
+
+/** A selector of a top-level rule of the shadow form. */
+const topMember = (selector: string): Member => {
+	const trimmed = selector.trim()
+	if (!trimmed.startsWith(':host') || /^:host[\w-]/.test(trimmed))
+		return { text: hostToRoot(trimmed), root: false }
+	if (trimmed[5] === '(') {
+		const close = matching(trimmed, 5)
+		if (close !== -1)
+			return memberOf(
+				trimmed.slice(close + 1),
+				'',
+				rootSuffix(trimmed.slice(6, close).trim()),
+			)
+	}
+	return memberOf(trimmed, ':host', '')
+}
+
+/** A selector list, one member per line when the authored list was. */
+const joinMembers = (item: Item, members: readonly Member[]): string =>
+	members
+		.map(member => member.text)
+		.join(item.prelude?.includes('\n') ? ',\n' : ', ')
+
+/** A rule with a new prelude, its body as authored. */
+const withPrelude = (item: Item, prelude: string): string =>
+	itemText(item, `${prelude} ${item.text.slice(item.brace)}`)
+
+/** Whether a block holds declarations only (conditional groups of them included). */
+const declarationsOnly = (inner: string): boolean =>
+	itemsOf(inner).items.every(
+		item =>
+			item.prelude === undefined ||
+			(item.prelude.startsWith('@') && declarationsOnly(item.inner ?? '')),
+	)
+
+type Part = { text: string; blank: boolean }
+
+/**
+ * The `:host { … }` block's body: what stays in the root rule (its
+ * declarations and `&`-led root variants that hold only declarations), and
+ * the rules that move out, in order — descendants as bare or relative
+ * rules, state-dependent descendants led by `:where(:scope)X`.
+ */
+const hostBody = (inner: string): { stay: Part[]; out: Part[] } => {
+	const stay: Part[] = []
+	const out: Part[] = []
+	for (const item of itemsOf(inner).items) {
+		if (item.prelude === undefined) {
+			stay.push({
+				text: itemText(item, hostToRoot(item.text)),
+				blank: item.blank,
+			})
+			continue
+		}
+		if (item.prelude.startsWith('@')) {
+			if (declarationsOnly(item.inner ?? '')) {
+				stay.push({ text: itemText(item), blank: item.blank })
+				continue
+			}
+			const nested = hostBody(item.inner ?? '')
+			out.push({
+				text: rebuiltText(
+					item,
+					`${item.prelude} {\n${indentBy(scopeParts(nested), '\t')}\n}`,
+				),
+				blank: true,
+			})
+			continue
+		}
+		const members = splitCommas(item.prelude).map(nestedMember)
+		if (
+			members.every(member => member.root) &&
+			declarationsOnly(item.inner ?? '')
+		)
+			stay.push({ text: itemText(item), blank: item.blank })
+		else
+			out.push({
+				text: withPrelude(item, joinMembers(item, members)),
+				blank: true,
+			})
+	}
+	return { stay, out }
+}
+
+/** The root rule, then the rules that moved out of it. */
+const scopeParts = ({ stay, out }: { stay: Part[]; out: Part[] }): string =>
+	[
+		...(stay.length > 0
+			? [`${ROOT} {\n${indentBy(joinItems(stay), '\t')}\n}`]
+			: []),
+		...out.map(part => part.text),
+	].join('\n\n')
 
 /** `:global(<selector>) { … }` members, unwrapped; null when not a global rule. */
-const unwrapGlobalRule = (piece: Piece): string | null => {
-	if (!piece.prelude.startsWith(':global')) return null
-	// The comments that led the rule stay with it.
-	const comments = piece.text.slice(0, piece.selector)
-	const body = piece.text.slice(piece.brace)
+const unwrapGlobalRule = (item: Item): string | null => {
+	if (!item.prelude?.startsWith(':global')) return null
 	// The bare block: its content is a list of top-level rules.
-	if (piece.prelude === ':global')
-		return `${comments}${dedent(body.slice(1, body.lastIndexOf('}'))).trim()}`.trim()
-	const members = splitCommas(piece.prelude).map(member => {
+	if (item.prelude === ':global')
+		return itemsOf(item.inner ?? '')
+			.items.map(inner => itemText(inner))
+			.join('\n\n')
+	const members = splitCommas(item.prelude).map(member => {
 		const trimmed = member.trim()
 		if (!trimmed.startsWith(':global(')) return trimmed
 		const close = matching(trimmed, ':global'.length)
@@ -236,8 +424,25 @@ const unwrapGlobalRule = (piece: Piece): string | null => {
 			? trimmed
 			: trimmed.slice(':global('.length, close).trim()
 	})
-	return `${comments}${members.join(', ')} ${body}`.trim()
+	return withPrelude(item, members.join(', '))
 }
+
+/** The shadow form's top-level scoped rules as the `@scope` block's content. */
+const scopedRules = (items: readonly Item[]): string[] =>
+	items.map(item => {
+		const prelude = item.prelude ?? ''
+		if (item.prelude === undefined) return itemText(item)
+		if (prelude === ':host') return scopeParts(hostBody(item.inner ?? ''))
+		if (prelude.startsWith('@'))
+			return rebuiltText(
+				item,
+				`${prelude} {\n${indentBy(scopedRules(itemsOf(item.inner ?? '').items).join('\n\n'), '\t')}\n}`,
+			)
+		return withPrelude(
+			item,
+			joinMembers(item, splitCommas(prelude).map(topMember)),
+		)
+	})
 
 /** Migrate one stylesheet's text; `boundaries` become the block's limits. */
 export const migrateSheet = (
@@ -248,33 +453,29 @@ export const migrateSheet = (
 	const prefix = leadMatch ? leadMatch[0] : ''
 	const firstContent = sheet.slice(prefix.length)
 	const base = firstContent.match(/^[ \t]*/)?.[0] ?? ''
-	const trimmedEnd = firstContent.trimEnd()
-	const suffix = firstContent.slice(trimmedEnd.length)
-	const body = dedent(`${base}${firstContent.trimStart()}`.trimEnd())
-	const { pieces, rest } = piecesOf(body)
-	if (pieces.some(piece => piece.prelude.startsWith('@scope'))) return sheet
+	const suffix = firstContent.slice(firstContent.trimEnd().length)
+	const { items, rest } = itemsOf(firstContent.trimEnd())
+	if (items.some(item => item.prelude?.startsWith('@scope'))) return sheet
 	const top: string[] = []
-	const scoped: string[] = []
-	for (const piece of pieces) {
-		const at = /^@([a-zA-Z-]+)/.exec(piece.prelude)?.[1]
-		if (at && HOISTED.has(at)) top.push(piece.text.trim())
+	const scoped: Item[] = []
+	for (const item of items) {
+		const at = /^@([a-zA-Z-]+)/.exec(item.prelude ?? '')?.[1]
+		if (at && HOISTED.has(at)) top.push(itemText(item))
 		else {
-			const unwrapped = unwrapGlobalRule(piece)
+			const unwrapped = unwrapGlobalRule(item)
 			if (unwrapped !== null) top.push(unwrapped)
-			else scoped.push(hostToScope(piece.text.trim()))
+			else scoped.push(item)
 		}
 	}
-	if (rest.trim() !== '') scoped.push(rest.trim())
+	const trailing = commentsOf(rest)
 	const limits = boundaries.length
 		? ` to (${boundaries.map(tag => `${tag} > *`).join(', ')})`
 		: ''
+	const body = [...scopedRules(scoped), ...(trailing ? [trailing] : [])]
 	const parts = [...top]
-	if (scoped.length > 0)
-		parts.push(`@scope${limits} {\n${indentBy(scoped.join('\n\n'), '\t')}\n}`)
-	const reindented = indentBy(parts.join('\n\n'), base)
-	// `indentBy` blanks whitespace-only lines; the first line carries `base`
-	// through the prefix text the template literal kept.
-	return `${prefix}${reindented}${suffix}`
+	if (body.length > 0)
+		parts.push(`@scope${limits} {\n${indentBy(body.join('\n\n'), '\t')}\n}`)
+	return `${prefix}${indentBy(parts.join('\n\n'), base)}${suffix}`
 }
 
 /* --- the walk --- */

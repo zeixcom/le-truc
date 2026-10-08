@@ -11,8 +11,11 @@ import { expect, test } from '@playwright/test'
  * native `@scope` or the flat lowering, whichever the build ran in — must
  * compute the same styles on the same markup:
  *
- * - the host rules: `:scope` outweighs a page type selector, and
- *   `:where(:scope)` loses to it (both are specificity, pinned);
+ * - the host rules and the specificity contests the ADR 0033 s1 idiom
+ *   settles: a page rule led by the bare tag beats the `:where(:scope)`
+ *   base and loses to a bare `:scope`; the probe's bare rule on the
+ *   composed child's host beats the child's `:where(:scope)` base, and the
+ *   child's `&.variant` root variant beats the probe's rule;
  * - the authored limit: `to (basic-button > *)` keeps the probe's rules
  *   out of the composed child's internals, and nothing else;
  * - the compose-with-children cells: the probe's rules reach the content
@@ -22,7 +25,8 @@ import { expect, test } from '@playwright/test'
  *   compiled parent and under a page alike;
  * - live CSS: a plain element or a custom element inserted at runtime is
  *   styled like the rest;
- * - a nested instance of the probe styles its own internals in both forms.
+ * - a nested instance of the probe styles its own internals in both forms,
+ *   below the outer limit and as the element the limit itself matches.
  *
  * Three cells are not twin comparisons, because the inline host cannot
  * share them: the tag-led rule stays contained to `css-probe`, the
@@ -121,6 +125,9 @@ test.describe('platform-CSS contract: compiled emission vs the sheet inline in a
 						'outline-style',
 					),
 					childCodeStyle: read(q('css-probe-child code'), 'font-style'),
+					// The specificity contests on the composed child's host.
+					childHostPaddingLeft: read(q('css-probe-child'), 'padding-left'),
+					childHostPaddingRight: read(q('css-probe-child'), 'padding-right'),
 				}
 				// Live CSS: elements the page inserts after connect.
 				const label = document.createElement('p')
@@ -134,19 +141,31 @@ test.describe('platform-CSS contract: compiled emission vs the sheet inline in a
 					widget.querySelector('button')!,
 					'text-transform',
 				)
-				// A nested instance, inside the composed child, where the
-				// outer instance's limit applies: it styles its own internals.
-				const nested = document.createElement(nestedTag)
-				nested.innerHTML = '<p class="label">Nested label</p>'
-				if (nestedTag !== 'css-probe')
-					nested.append(
-						Object.assign(document.createElement('style'), {
-							textContent: probeSheet,
-						}),
-					)
-				q('basic-button button').append(nested)
-				cells.nestedLabelColor = read(nested.querySelector('p.label')!, 'color')
-				cells.nestedHostBefore = getComputedStyle(nested, '::before').content
+				// A nested instance where the outer instance's limit applies: it
+				// styles its own internals.
+				const nest = (parent: Element): Element => {
+					const nested = document.createElement(nestedTag)
+					nested.innerHTML = '<p class="label">Nested label</p>'
+					if (nestedTag !== 'css-probe')
+						nested.append(
+							Object.assign(document.createElement('style'), {
+								textContent: probeSheet,
+							}),
+						)
+					parent.append(nested)
+					return nested
+				}
+				// Below the limit, inside the composed child's button…
+				const below = nest(q('basic-button button'))
+				cells.nestedLabelColor = read(below.querySelector('p.label')!, 'color')
+				cells.nestedHostBefore = getComputedStyle(below, '::before').content
+				// …and as the element `to (basic-button > *)` itself matches.
+				const atLimit = nest(q('basic-button'))
+				cells.atLimitLabelColor = read(
+					atLimit.querySelector('p.label')!,
+					'color',
+				)
+				cells.atLimitHostBefore = getComputedStyle(atLimit, '::before').content
 				return cells
 			}
 
@@ -190,6 +209,15 @@ test.describe('platform-CSS contract: compiled emission vs the sheet inline in a
 					document.querySelector('#page-probe-child > span.x')!,
 					'outline-style',
 				),
+				// No parent rule on this host: the base and the variant alone.
+				pageChildHostPaddingLeft: read(
+					document.getElementById('page-probe-child')!,
+					'padding-left',
+				),
+				pageChildHostPaddingRight: read(
+					document.getElementById('page-probe-child')!,
+					'padding-right',
+				),
 			}
 
 			// A real shadow root: page CSS does not reach in, which the light
@@ -220,12 +248,23 @@ test.describe('platform-CSS contract: compiled emission vs the sheet inline in a
 		expect(light).toEqual(inline)
 	})
 
-	test('host rules: `:scope` outweighs a page type selector, `:where(:scope)` loses to it', () => {
-		// :scope { border-top: 3px solid RED } vs page css-probe { GREEN }.
-		expect(light.hostBorder).toBe('rgb(255, 0, 0)')
+	test('host rules: a page rule led by the bare tag beats `:where(:scope)`, loses to `:scope`', () => {
 		// :where(:scope) { outline-color: MAGENTA } vs page css-probe { BLUE }.
 		expect(light.hostOutline).toBe('rgb(0, 0, 255)')
+		// :scope { border-top: 3px solid RED } vs page css-probe { GREEN }.
+		expect(light.hostBorder).toBe('rgb(255, 0, 0)')
 		expect(light.hostBefore).toBe('""')
+	})
+
+	test('the s1 idiom: a parent bare rule beats the child base, the child variant beats it', () => {
+		// probe: css-probe-child { padding: 2px } (0,0,1) vs the child's
+		// :where(:scope) { padding-left: 1px } (0,0,0) …
+		expect(light.childHostPaddingLeft).toBe('2px')
+		// … and the child's &.variant { padding-right: 3px } (0,1,0).
+		expect(light.childHostPaddingRight).toBe('3px')
+		// Under a page, the child's own rules alone.
+		expect(page$.pageChildHostPaddingLeft).toBe('1px')
+		expect(page$.pageChildHostPaddingRight).toBe('3px')
 	})
 
 	test('an authored limit keeps the rules out of the composed child, and only there', () => {
@@ -264,6 +303,9 @@ test.describe('platform-CSS contract: compiled emission vs the sheet inline in a
 	test('a nested instance styles its own internals, inside the outer limit too', () => {
 		expect(light.nestedLabelColor).toBe('rgb(0, 0, 255)')
 		expect(light.nestedHostBefore).toBe('""')
+		// The instance the limit itself matches is a scope root of its own.
+		expect(light.atLimitLabelColor).toBe('rgb(0, 0, 255)')
+		expect(light.atLimitHostBefore).toBe('""')
 	})
 
 	test('top-level rules: an unscoped rule is page-wide, a tag-led rule stays contained', () => {

@@ -149,87 +149,87 @@ export function ModuleDialog(
 			}
 
 			@scope to (module-scrollarea > *) {
-				:scope {
+				:where(:scope) {
 					display: inline-block;
+				}
 
-					> button {
-						border: 0;
-						padding: 0;
-						background: none;
-						cursor: pointer;
-						color: var(--color-text);
+				> button {
+					border: 0;
+					padding: 0;
+					background: none;
+					cursor: pointer;
+					color: var(--color-text);
+				}
+
+				dialog {
+					display: none;
+					flex-direction: column;
+					border: 0;
+					padding: 0;
+					margin: auto 0;
+					width: 100vw;
+					max-width: 100%;
+					max-height: 100dvh;
+					color: var(--color-text);
+					background: var(--color-background);
+					opacity: var(--opacity-transparent);
+					transition: opacity var(--transition-medium) var(--easing-inout);
+
+					&::backdrop {
+						backdrop-filter: blur(0);
+						transition: backdrop-filter var(--transition-medium) var(--easing-inout);
+						background-color: transparent;
 					}
+				}
 
-					& dialog {
-						display: none;
-						flex-direction: column;
-						border: 0;
-						padding: 0;
-						margin: auto 0;
-						width: 100vw;
-						max-width: 100%;
-						max-height: 100dvh;
-						color: var(--color-text);
-						background: var(--color-background);
-						opacity: var(--opacity-transparent);
-						transition: opacity var(--transition-medium) var(--easing-inout);
+				dialog[open] {
+					display: flex;
+					opacity: var(--opacity-solid);
 
-						&::backdrop {
-							backdrop-filter: blur(0);
-							transition: backdrop-filter var(--transition-medium) var(--easing-inout);
-							background-color: transparent;
-						}
-					}
-
-					& dialog[open] {
+					> header {
 						display: flex;
-						opacity: var(--opacity-solid);
+						justify-content: space-between;
+						align-items: center;
+						margin: 0;
+						padding: 0 0 0 var(--space-l);
 
-						> header {
-							display: flex;
-							justify-content: space-between;
-							align-items: center;
-							margin: 0;
-							padding: 0 0 0 var(--space-l);
+						> h2 {
+							font-size: var(--font-size-l);
+							font-weight: var(--font-weight-bold);
+							margin: var(--space-s) 0;
+						}
 
-							> h2 {
-								font-size: var(--font-size-l);
-								font-weight: var(--font-weight-bold);
-								margin: var(--space-s) 0;
+						.close {
+							border: 0;
+							background: none;
+							cursor: pointer;
+							font-size: var(--font-size-l);
+							line-height: var(--line-height-xs);
+							margin: var(--space-s) var(--space-s) var(--space-s) var(--space-m);
+							padding: 0 0 var(--space-xxs);
+							color: var(--color-primary);
+							border-radius: var(--space-xxs);
+							box-sizing: border-box;
+							height: var(--input-height);
+							width: var(--input-height);
+
+							&:hover {
+								color: var(--color-primary-hover);
 							}
 
-							.close {
-								border: 0;
-								background: none;
-								cursor: pointer;
-								font-size: var(--font-size-l);
-								line-height: var(--line-height-xs);
-								margin: var(--space-s) var(--space-s) var(--space-s) var(--space-m);
-								padding: 0 0 var(--space-xxs);
-								color: var(--color-primary);
-								border-radius: var(--space-xxs);
-								box-sizing: border-box;
-								height: var(--input-height);
-								width: var(--input-height);
-
-								&:hover {
-									color: var(--color-primary-hover);
-								}
-
-								&:active {
-									color: var(--color-primary-active);
-								}
+							&:active {
+								color: var(--color-primary-active);
 							}
 						}
+					}
 
-						.content {
-							padding: 0 var(--space-l) 0;
-						}
+					.content {
+						padding: 0 var(--space-l) 0;
+					}
 
-						&::backdrop {
-							backdrop-filter: blur(1rem);
-							background-color: var(--color-shadow);
-						}
+					&::backdrop {
+						backdrop-filter: blur(1rem);
+						background-color: var(--color-shadow);
 					}
 				}
 

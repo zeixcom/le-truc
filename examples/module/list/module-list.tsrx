@@ -77,48 +77,46 @@ export function ModuleList({}: {})
 
 			<style>
 			@scope to (form-textbox > *, basic-button > *) {
-				:scope {
+				:where(:scope) {
 					display: flex;
 					flex-direction: column;
 					gap: var(--space-l);
+				}
 
-					> form {
-						display: flex;
-						flex-direction: column;
-						align-items: flex-start;
-						gap: var(--space-m);
-						justify-content: space-between;
+				> form {
+					display: flex;
+					flex-direction: column;
+					align-items: flex-start;
+					gap: var(--space-m);
+					justify-content: space-between;
+				}
+
+				ul {
+					display: flex;
+					flex-direction: column;
+					gap: var(--space-m);
+					list-style: none;
+					margin: 0;
+					padding: 0;
+
+					&:empty {
+						display: none;
 					}
 
-					& ul {
+					& li {
 						display: flex;
-						flex-direction: column;
+						align-items: center;
+						justify-content: space-between;
 						gap: var(--space-m);
-						list-style: none;
 						margin: 0;
 						padding: 0;
-
-						&:empty {
-							display: none;
-						}
-
-						& li {
-							display: flex;
-							align-items: center;
-							justify-content: space-between;
-							gap: var(--space-m);
-							margin: 0;
-							padding: 0;
-						}
 					}
 				}
 
 				@container (width > 27rem) {
-					:scope {
-						& form {
-							flex-direction: row;
-							align-items: flex-end;
-						}
+					form {
+						flex-direction: row;
+						align-items: flex-end;
 					}
 				}
 			}</style>

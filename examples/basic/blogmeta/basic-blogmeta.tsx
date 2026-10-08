@@ -140,7 +140,7 @@ export function BasicBlogmeta({
 			) : null}
 			<style>{css`
 @scope {
-	:scope {
+	:where(:scope) {
 		display: flex;
 		align-items: center;
 		gap: var(--space-m);
@@ -148,30 +148,30 @@ export function BasicBlogmeta({
 		color: var(--color-text-soft);
 		flex-wrap: wrap;
 		margin-bottom: var(--space-l);
+	}
 
-		& span {
-			display: flex;
-			align-items: center;
-			gap: var(--space-xs);
-		}
+	span {
+		display: flex;
+		align-items: center;
+		gap: var(--space-xs);
+	}
 
-		& img,
-		& svg.avatar {
-			width: var(--input-height);
-			height: var(--input-height);
-			border-radius: 50%;
-			object-fit: cover;
-			flex-shrink: 0;
-		}
+	img,
+	svg.avatar {
+		width: var(--input-height);
+		height: var(--input-height);
+		border-radius: 50%;
+		object-fit: cover;
+		flex-shrink: 0;
+	}
 
-		& svg.avatar {
-			color: var(--color-border-soft);
-			background-color: var(--color-background-alt);
-		}
+	svg.avatar {
+		color: var(--color-border-soft);
+		background-color: var(--color-background-alt);
+	}
 
-		& time {
-			font-variant-numeric: tabular-nums;
-		}
+	time {
+		font-variant-numeric: tabular-nums;
 	}
 }`}</style>
 		</basic-blogmeta>

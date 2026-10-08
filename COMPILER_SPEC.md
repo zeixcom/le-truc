@@ -167,7 +167,7 @@ export function MyCounter(
       </button>
       <style>{css`
         @scope {
-          :scope { display: inline-block }
+          :where(:scope) { display: inline-block }
           button { font: inherit }
         }
       `}</style>
@@ -205,7 +205,7 @@ export function MyCounter(
   <template shadowrootmode="open">
     <header>{title}</header>
     {children}
-    <style>{css`:host { display: block }`}</style>
+    <style>{css`@scope { :where(:scope) { display: block } }`}</style>
   </template>
 </my-card>
 ```
@@ -411,7 +411,7 @@ A compiled stylesheet is **platform CSS** (ADR 0033): it means what the same she
 
 - Style content MUST be static: a `css`-tagged template literal without substitutions. Dynamic values go through custom properties set by bindings.
 - The sheet is parsed (`lightningcss`); a parse error is an error.
-- `@scope { … }`, with optional author-written `to (<limits>)`, is scoped to the host: `:scope` is the host, bare selectors are its descendants.
+- `@scope { … }`, with optional author-written `to (<limits>)`, is scoped to the host: `:scope` is the host, bare selectors are its descendants. The idiom roots host rules at `:where(:scope)`, writes descendants bare or relative (`> p`) and lists a limit per composed child (ADR 0033 s1).
 - A top-level rule led by the component's own tag emits verbatim (the 2.x convention). Any other top-level rule emits verbatim and applies page-wide. `@keyframes`, `@font-face` and `@property` emit verbatim.
 
 **Light DOM emission** gives the sheet the meaning it would have inline in the host:
@@ -419,7 +419,7 @@ A compiled stylesheet is **platform CSS** (ADR 0033): it means what the same she
 | Emission | Output |
 | --- | --- |
 | Native | The sheet as authored. A prelude-less `@scope` gains the explicit root, `@scope (my-el) to (<authored limits>) { … }` |
-| Lowered, for CSS targets without `@scope` | Each component `@scope` block unwraps into flat selectors: the root leads as `:where(my-el)`, an explicit `:scope` becomes the root compound with its (0,1,0) specificity, and each authored limit becomes a zero-specificity guard that re-includes a nested own-tag instance |
+| Lowered, for CSS targets without `@scope` | Each component `@scope` block unwraps into flat selectors: the root leads as `:where(my-el)`, `:where(:scope)` is that lead, a bare `:scope` becomes the root compound padded to its (0,1,0) specificity, and each authored limit becomes a zero-specificity guard that re-includes a nested own-tag instance below the limit or matched by it |
 | Top-level rules outside `@scope` | Verbatim in both emissions |
 
 - The CSS target is `cssTargets` (browserslist-style), defaulting to Baseline widely available; it decides native versus lowered emission and feeds `lightningcss`'s own lowering.
@@ -428,8 +428,8 @@ A compiled stylesheet is **platform CSS** (ADR 0033): it means what the same she
 
 **Errors** (compiler, Prevented):
 
-- a rule inside `@scope` led by the component's own tag (fix-it: `:scope`);
-- `:host` anywhere in a light-mode sheet (fix-it: `:scope`; `:host(X)` is `:scope:is(X)`);
+- a rule inside `@scope` led by the component's own tag (fix-it: `:where(:scope)`);
+- `:host` anywhere in a light-mode sheet (fix-it: `:where(:scope)`; `:host(X)` is `:where(:scope)X`);
 - `::slotted()` in light mode;
 - `:host-context()`;
 - `:global` anywhere (fix-it: remove the wrapper, write a top-level rule);

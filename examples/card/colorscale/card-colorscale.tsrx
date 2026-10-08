@@ -109,127 +109,135 @@ export function CardColorscale({ label }: { label: string })
 
 			<style>
 			@scope {
-				:scope {
+				:where(:scope) {
 					--card-colorscale-max-size: 18rem;
 					--card-colorscale-padding: 0.5em;
 					--card-colorscale-color-text: white;
 
 					display: inline-flex;
 					margin: 0 auto;
+				}
 
+				ol {
+					display: grid;
+					list-style: none;
+					margin: 0 auto;
+					border-radius: 6% / 4%;
+					padding: 0;
+					grid-template-areas:
+						"lighten80 lighten60 lighten40 lighten20"
+						"base base base base"
+						"darken20 darken40 darken60 darken80";
+					grid-template-columns: repeat(4, 1fr);
+					grid-template-rows: 1fr 4fr 1fr;
+					aspect-ratio: 2 / 3;
+					min-height: min(100%, 150cqw, 100cqh, var(--card-colorscale-max-size));
+					max-width: calc(2 * var(--card-colorscale-max-size) / 3);
+					overflow: hidden;
+					object-fit: contain;
+					align-self: center;
+					container-type: inline-size;
+					gap: 0;
+				}
+
+				:where(:scope).tiny {
 					& ol {
-						display: grid;
-						list-style: none;
-						margin: 0 auto;
-						border-radius: 6% / 4%;
-						padding: 0;
-						grid-template-areas:
-							"lighten80 lighten60 lighten40 lighten20"
-							"base base base base"
-							"darken20 darken40 darken60 darken80";
-						grid-template-columns: repeat(4, 1fr);
-						grid-template-rows: 1fr 4fr 1fr;
-						aspect-ratio: 2 / 3;
-						min-height: min(100%, 150cqw, 100cqh, var(--card-colorscale-max-size));
-						max-width: calc(2 * var(--card-colorscale-max-size) / 3);
-						overflow: hidden;
-						object-fit: contain;
-						align-self: center;
-						container-type: inline-size;
-						gap: 0;
+						height: 3rem;
 					}
 
-					&.tiny {
-						& ol {
-							height: 3rem;
-						}
-
-						.label {
-							display: none;
-						}
+					.label {
+						display: none;
 					}
+				}
 
-					&.small {
-						& ol {
-							height: 7.5rem;
-						}
-
-						.label small {
-							display: none;
-						}
+				:where(:scope).small {
+					& ol {
+						height: 7.5rem;
 					}
 
-					&.medium ol {
-						height: 12rem;
+					.label small {
+						display: none;
 					}
+				}
 
-					&.large ol {
-						height: 18rem;
-					}
+				:where(:scope).medium ol {
+					height: 12rem;
+				}
 
-					& li {
-						margin: 0;
-					}
+				:where(:scope).large ol {
+					height: 18rem;
+				}
 
-					.lighten80 {
-						grid-area: lighten80;
-						background: var(--card-colorscale-color-lighten80);
-					}
-					.lighten60 {
-						grid-area: lighten60;
-						background: var(--card-colorscale-color-lighten60);
-					}
-					.lighten40 {
-						grid-area: lighten40;
-						background: var(--card-colorscale-color-lighten40);
-					}
-					.lighten20 {
-						grid-area: lighten20;
-						background: var(--card-colorscale-color-lighten20);
-					}
-					.base {
-						grid-area: base;
-						background: var(--card-colorscale-color-base);
-					}
-					.darken20 {
-						grid-area: darken20;
-						background: var(--card-colorscale-color-darken20);
-					}
-					.darken40 {
-						grid-area: darken40;
-						background: var(--card-colorscale-color-darken40);
-					}
-					.darken60 {
-						grid-area: darken60;
-						background: var(--card-colorscale-color-darken60);
-					}
-					.darken80 {
-						grid-area: darken80;
-						background: var(--card-colorscale-color-darken80);
-					}
+				li {
+					margin: 0;
+				}
 
-					.base {
-						display: flex;
-						flex-direction: column;
-						justify-content: flex-end;
-						align-items: flex-start;
-						padding: var(--card-colorscale-padding);
-						line-height: 1;
-					}
+				.lighten80 {
+					grid-area: lighten80;
+					background: var(--card-colorscale-color-lighten80);
+				}
 
-					& strong {
-						display: block;
-						color: var(--card-colorscale-color-text);
-						font-size: 15cqi;
-						font-weight: 700;
-					}
+				.lighten60 {
+					grid-area: lighten60;
+					background: var(--card-colorscale-color-lighten60);
+				}
 
-					& small {
-						display: block;
-						color: var(--card-colorscale-color-text-soft);
-						font-size: 10cqi;
-						font-weight: 400;
-					}
+				.lighten40 {
+					grid-area: lighten40;
+					background: var(--card-colorscale-color-lighten40);
+				}
+
+				.lighten20 {
+					grid-area: lighten20;
+					background: var(--card-colorscale-color-lighten20);
+				}
+
+				.base {
+					grid-area: base;
+					background: var(--card-colorscale-color-base);
+				}
+
+				.darken20 {
+					grid-area: darken20;
+					background: var(--card-colorscale-color-darken20);
+				}
+
+				.darken40 {
+					grid-area: darken40;
+					background: var(--card-colorscale-color-darken40);
+				}
+
+				.darken60 {
+					grid-area: darken60;
+					background: var(--card-colorscale-color-darken60);
+				}
+
+				.darken80 {
+					grid-area: darken80;
+					background: var(--card-colorscale-color-darken80);
+				}
+
+				.base {
+					display: flex;
+					flex-direction: column;
+					justify-content: flex-end;
+					align-items: flex-start;
+					padding: var(--card-colorscale-padding);
+					line-height: 1;
+				}
+
+				strong {
+					display: block;
+					color: var(--card-colorscale-color-text);
+					font-size: 15cqi;
+					font-weight: 700;
+				}
+
+				small {
+					display: block;
+					color: var(--card-colorscale-color-text-soft);
+					font-size: 10cqi;
+					font-weight: 400;
 				}
 
 				@container (width < 5rem) or (height < 7.5rem) {

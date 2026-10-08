@@ -3,6 +3,12 @@
  * compiler's EMITTED stylesheet (ADR 0033 s10, LT-397); runtime-only
  * folders import their hand-written sheet. css-probe stays out (its spec
  * injects the emitted sheet itself).
+ *
+ * Page CSS comes first: `_global.css` before every component sheet. The
+ * lowered emission has no scope proximity, so a tie native `@scope` breaks
+ * by proximity falls to source order here, and page-first lets a component
+ * win a tie with the page (ADR 0033 s4). The order between components is
+ * unspecified — no order is right for every composition.
  */
 @import "./_global.css";
 @import "../server/generated/components/basic-blogmeta.css";

@@ -186,11 +186,9 @@ export function SectionMenu(
 			   sidebar-role layout only reads as a sidebar once these are a
 			   flex row. Below 48em section-menu is off-canvas (see the
 			   max-width query below), so the shell stays a single column
-			   there — nothing to coordinate. The page-shell rules ship in the
-			   two whole-rule :global forms (ADR 0033 s6a): a
-			   :global(<selector>) rule, and at-rule-conditioned ones inside
-			   a bare :global block; both hoist out of the scope verbatim. */
-
+			   there — nothing to coordinate. The page-shell rules are top-level
+			   rules outside the @scope block, so they apply page-wide
+			   (ADR 0033 s1). */
 			:root {
 				--header-height: 3rem;
 			}
@@ -298,96 +296,96 @@ export function SectionMenu(
 			}
 
 			@scope {
-				:scope {
+				:where(:scope) {
 					/* Default (no JS, any width): normal in-flow block, all links
 					   reachable without script — the drawer behavior below is
 					   JS-enhanced only. */
 					display: block;
+				}
 
-					& ol,
-					& ul {
-						display: block;
-						list-style: none;
-						margin: 0;
-						padding: 0;
+				ol,
+				ul {
+					display: block;
+					list-style: none;
+					margin: 0;
+					padding: 0;
+				}
+
+				li {
+					padding: 0;
+					margin: 0;
+				}
+
+				li.group {
+					margin-block-start: var(--space-s);
+					padding: var(--space-xs) var(--space-m);
+					font-size: var(--font-size-xs);
+					font-weight: var(--font-weight-bold);
+					letter-spacing: 0.08em;
+					text-transform: uppercase;
+					color: var(--color-text-soft);
+				}
+
+				li.group:first-child {
+					margin-block-start: 0;
+				}
+
+				a {
+					display: flex;
+					align-items: center;
+					gap: var(--space-s);
+					padding: var(--space-xs) var(--space-m);
+					color: var(--color-text);
+					text-decoration: none;
+					font-size: var(--font-size-s);
+					line-height: var(--line-height-s);
+
+					&:hover,
+					&:focus {
+						background-color: var(--color-secondary-hover);
 					}
 
-					& li {
-						padding: 0;
-						margin: 0;
+					&.active,
+					&[aria-current="page"] {
+						background-color: var(--color-background-alt);
+						color: var(--color-primary);
 					}
 
-					& li.group {
-						margin-block-start: var(--space-s);
-						padding: var(--space-xs) var(--space-m);
-						font-size: var(--font-size-xs);
-						font-weight: var(--font-weight-bold);
-						letter-spacing: 0.08em;
-						text-transform: uppercase;
-						color: var(--color-text-soft);
-					}
-
-					& li.group:first-child {
-						margin-block-start: 0;
-					}
-
-					& a {
+					.icon {
 						display: flex;
+						flex: none;
 						align-items: center;
-						gap: var(--space-s);
-						padding: var(--space-xs) var(--space-m);
-						color: var(--color-text);
-						text-decoration: none;
-						font-size: var(--font-size-s);
+						justify-content: center;
+						font-size: var(--font-size-m);
+						width: var(--space-xl);
+						height: var(--space-xl);
+						border-radius: 50%;
+						background-color: var(--color-background);
+						border: 1px solid var(--color-border-soft);
+					}
+
+					strong {
+						font-size: var(--font-size-m);
+						font-weight: var(--font-weight-regular);
 						line-height: var(--line-height-s);
-
-						&:hover,
-						&:focus {
-							background-color: var(--color-secondary-hover);
-						}
-
-						&.active,
-						&[aria-current="page"] {
-							background-color: var(--color-background-alt);
-							color: var(--color-primary);
-						}
-
-						.icon {
-							display: flex;
-							flex: none;
-							align-items: center;
-							justify-content: center;
-							font-size: var(--font-size-m);
-							width: var(--space-xl);
-							height: var(--space-xl);
-							border-radius: 50%;
-							background-color: var(--color-background);
-							border: 1px solid var(--color-border-soft);
-						}
-
-						strong {
-							font-size: var(--font-size-m);
-							font-weight: var(--font-weight-regular);
-							line-height: var(--line-height-s);
-							margin: 0;
-						}
-
-						&.active,
-						&[aria-current="page"] {
-							font-weight: var(--font-weight-bold);
-						}
+						margin: 0;
 					}
 
-					.backdrop {
-						display: none;
+					&.active,
+					&[aria-current="page"] {
+						font-weight: var(--font-weight-bold);
 					}
+				}
+
+				.backdrop {
+					display: none;
 				}
 
 				/* Off-canvas drawer — only once JS has enhanced the component
 				   (.js, added on connect). Without JS, section-menu stays in
-				   normal flow at every width (the :scope rule above). */
+				   normal flow at every width (the root rule above). */
 				@media screen and (max-width: 44.999em) {
-					:scope:is(.js) {
+					:where(:scope).js {
 						position: fixed;
 						inset: 0;
 						z-index: 100;
@@ -429,11 +427,8 @@ export function SectionMenu(
 					   on connect either way, but without this gate the *first*
 					   application of .js would itself be a transitionable change
 					   (no .js → .js), animating the drawer sliding out on every
-					   page load even though it was never open. The class combos are
-					   spelled as :scope:is(…) arguments: &.ready nesting under
-					   :scope:is(.js) would lower to :scope followed by a qualifier,
-					   which matches nothing in a shadow root (ADR 0033 s6). */
-					:scope:is(.js.ready) {
+					   page load even though it was never open. */
+					:where(:scope).js.ready {
 						& module-scrollarea {
 							transition: transform var(--transition-short) var(--easing-inout);
 						}
@@ -443,7 +438,7 @@ export function SectionMenu(
 						}
 					}
 
-					:scope:is(.js.open) {
+					:where(:scope).js.open {
 						pointer-events: auto;
 
 						& module-scrollarea {
@@ -458,7 +453,7 @@ export function SectionMenu(
 				}
 
 				@media screen and (min-width: 45em) {
-					:scope {
+					:where(:scope) {
 						/* Above the breakpoint the sidebar is always visible, sticky,
 						   and independently scrollable — no toggle, no
 						   off-canvas/backdrop. */
@@ -469,7 +464,7 @@ export function SectionMenu(
 						width: 16rem;
 					}
 
-					:scope:is(.js) {
+					:where(:scope).js {
 						visibility: visible;
 						pointer-events: auto;
 						transition: none;

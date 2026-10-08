@@ -1536,7 +1536,7 @@ const FAMILIES: Case[] = [
 			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(':scope {', 'c-el {'),
 			tsx: tsxSource({ body: '<p>x</p>' }).replace(':scope {', 'c-el {'),
 		},
-		pins: ['Write `:scope` for the host'],
+		pins: ['Write `:where(:scope)` for the host'],
 	},
 	{
 		name: 'LTC086 stylesheet: :host',
@@ -1545,7 +1545,7 @@ const FAMILIES: Case[] = [
 			tsrx: tsrxSource({ body: '<p>x</p>' }).replace(':scope {', ':host {'),
 			tsx: tsxSource({ body: '<p>x</p>' }).replace(':scope {', ':host {'),
 		},
-		pins: ['`:host(.x)` becomes `:scope:is(.x)`'],
+		pins: ['`:host(.x)` becomes `:where(:scope).x`'],
 	},
 	{
 		name: 'LTC069 stylesheet: :global',

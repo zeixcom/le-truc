@@ -2,8 +2,10 @@
  * The platform-CSS contract probe (LT-501, ADR 0033): a minimal composing
  * component whose sheet exercises each authored form `css-probe.spec.ts`
  * pins against the same sheet inline in a plain host — a prelude-less
- * `@scope` with an authored limit, `:scope` and `:where(:scope)` host
- * rules, a tag-led rule and an unscoped rule. Its `CssProbeChild` compose
+ * `@scope` with an authored limit, `:where(:scope)` host rules (the ADR
+ * 0033 s1 idiom) beside a bare `:scope` one, a relative `> p` descendant,
+ * a bare rule on the composed child's host, a tag-led rule and an unscoped
+ * rule. Its `CssProbeChild` compose
  * site passes children (ADR 0048): a span of its own and a custom
  * element, which the probe's rules reach as its descendants, with no limit
  * of its own in the way. (A composed element in content is LTC011; a raw
@@ -60,8 +62,15 @@ export function CssProbe({}: CssProbeProps) {
 					:scope::before {
 						content: '';
 					}
-					.label {
+					> p.label {
 						color: rgb(0, 0, 255);
+					}
+					.label {
+						font-weight: 700;
+					}
+					css-probe-child {
+						padding-left: 2px;
+						padding-right: 2px;
 					}
 					button {
 						text-transform: uppercase;

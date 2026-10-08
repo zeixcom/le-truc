@@ -250,7 +250,7 @@ export function ModuleColoreditor(
 			</div>
 			<style>{css`
 @scope to (card-colorscale > *, form-colorgraph > *, form-textbox > *, module-colorinfo > *) {
-	:scope {
+	:where(:scope) {
 		display: grid;
 		grid-template-areas:
 			"scale name"
@@ -261,42 +261,42 @@ export function ModuleColoreditor(
 			"info info";
 		grid-template-columns: auto 1fr;
 		column-gap: var(--space-m);
+	}
 
-		> form-colorgraph {
-			grid-area: graph;
-		}
+	> form-colorgraph {
+		grid-area: graph;
+	}
 
-		> .hue {
-			grid-area: hue;
-		}
+	> .hue {
+		grid-area: hue;
+	}
 
-		> .lightness {
-			grid-area: lightness;
-		}
+	> .lightness {
+		grid-area: lightness;
+	}
 
-		> .chroma {
-			grid-area: chroma;
-		}
+	> .chroma {
+		grid-area: chroma;
+	}
 
-		> .scale {
-			grid-area: scale;
-		}
+	> .scale {
+		grid-area: scale;
+	}
 
-		> .name {
-			grid-area: name;
-			margin: var(--space-s) 0;
-		}
+	> .name {
+		grid-area: name;
+		margin: var(--space-s) 0;
+	}
 
-		> .info {
-			grid-area: info;
-			display: flex;
-			flex-direction: column;
-			gap: var(--space-xs);
-		}
+	> .info {
+		grid-area: info;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-xs);
 	}
 
 	@container (width > 45rem) {
-		:scope {
+		:where(:scope) {
 			grid-template-areas:
 				"scale name info"
 				"graph graph info"
