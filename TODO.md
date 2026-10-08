@@ -137,7 +137,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   `@scope` (ruling 14), retired the corpus's 2.x child chains, completed the leak warning and
   removed the corpus's known dead selectors (ruling 15). Remaining: LT-474 → LT-477 → LT-479
   (ruling 16).
-- **C2 — role writers** — beside track C (ruling 16). LT-476.
+- **C2 — role writers** — beside track C (ruling 16). LT-476 → LT-512 (owner, 2026-10-08: the
+  reference-precision follow-up from LT-478's review, after LT-474's verifier changes).
 - **CB — module-codeblock** — beside track C (ruling 16). LT-478 styles its passed content
   under the platform-CSS contract.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. Done
@@ -171,7 +172,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-512.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Next free task ID: LT-513.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -184,33 +185,6 @@ LTC056 is LT-358's).
 <!-- entries -->
 
 ### C — children contract
-
-- [ ] LT-474: Declared roles — the `Children<Roles, Model>` type and the reach-in check (ADR 0048 s2; LTC083).
-  **Area:** compiler
-  **Needs:** LT-472
-  **Gates:** check:corpus, check:contract
-  **Area:** compiler
-  **Filed (Architect, 2026-10-06, LT-462 session; ADR 0048 s2):**
-  1. **The type.** `Children<Roles extends Record<string, keyof HTMLElementTagNameMap> = {},
-     Model extends 'any' | 'non-interactive' = 'any'>` is a phantom-branded `string`. It stays
-     assignable to and from the rendered markup string, so `children = ''` defaults and existing
-     `children?: string` sources keep compiling. Export it type-only beside `FactoryContext`
-     (`types/src/component.d.ts`, re-exported from the package entry), with zero runtime bytes.
-     The compiler reads the roles and the model from the declared parameter type, on both
-     surfaces.
-  2. **Role typing.** A child's `first('.<role>')`/`all('.<role>')` types as the declared tag's
-     element.
-  3. **LTC083, the reach-in.**
-     - Channel: compiler. Tier: Prevented (ADR 0028).
-     - Fires when a child's `first()`/`all()` selector matches nothing in the child's own
-       template, its component inserts `{children}`, and its subject compound names no declared
-       role class.
-     - Such a selector can only resolve inside the content, so it reaches past the contract.
-     - The fix-it names the role declaration.
-     - Write the copy to `../writer/references/error-messages.md`.
-  **Corpus survey first:** list every component that addresses its children today. For each,
-  either declare roles or record it in `NOTES.md` (LT-463's rule for surprises). Do not widen
-  LTC083's condition to pass a site.
 
 - [ ] LT-477: Content model — `Children<Roles, 'non-interactive'>` refuses interactive content at the compose site (ADR 0048 s4; LTC085).
   **Area:** compiler
@@ -269,25 +243,43 @@ LTC056 is LT-358's).
   **Check:** both surfaces. Pin a passing fixture where the parent binds a different property on
   the same role.
 
-### CB — module-codeblock
-
-- [ ] LT-478: module-codeblock composes `<ModuleScrollarea>` and styles its own `pre`/`code` scoped.
-  **Area:** examples
-  **Needs:** LT-502
-  **Gates:** check:corpus, build:docs, test:server, typecheck
-  **Area:** examples
-  **Needs:** LT-502
-  **Filed (Architect, 2026-10-06, split from LT-463; re-scoped 2026-10-07 to ADR 0033 as revised):**
-  1. **The compose site.** Replace the raw `<module-scrollarea orientation="horizontal">` with
-     `<ModuleScrollarea orientation="horizontal">`, passing the `<pre><code>{children}</code></pre>`
-     as children. `first('code', …)` now verifies into the parent's own region (LT-472).
-  2. **The styles** (re-worded 2026-10-08 to the sheet as it stands after LT-501–LT-507). The
-     `pre`/`code` rules sit at the top level, led by the component's own tag
-     (`module-codeblock pre`, the 2.x form LT-501 kept). Move them into the `@scope` block as bare
-     `pre`/`code` rules: content the component passes as children is its own markup, and its
-     scoped rules reach it as descendants. The block's limit stays `to (basic-button > *)`. Add
-     no `module-scrollarea > *` limit, because it would cut the passed content. If LTC087 then
-     fires on a real leak into scrollarea's own markup, add a limit that names only the leaking
-     scrollarea internals, never the element that holds the content.
-  **Check:** `bun run test:component module-codeblock` is unchanged, and the computed styles of
-  `pre`/`code` are unchanged. Update `module-codeblock.md` if it describes the raw tag.
+- [ ] LT-512: A composed child's `children` shape is not a clash for a reference into the owner's own region; hand-authored markup mirrors the render.
+  **Area:** compiler
+  **Needs:** LT-474, LT-478
+  **Gates:** test:server, typecheck, check:corpus, check:contract, test:variants
+  **Area:** compiler
+  **Needs:** LT-474, LT-478
+  **Filed (Architect, 2026-10-08; LT-478 review):** after LT-478, module-codeblock's
+  `first('code')` compiles to
+  `code:not(:is(module-scrollarea *):not(:is([data-children="module-codeblock"] *):not(…)))`,
+  so hand-authored codeblock markup must carry scrollarea's `data-children` wrapper or the
+  component loses enhancement (`module-codeblock.html`, `server/schema/fence.markdoc.ts` and
+  `server/templates/fragments.ts` now do). Scrollarea's own markup is one `<div>` and can never
+  match `code`. The exclusion comes from `composedEmitter`
+  (`server/compiler/analysis/selectors.ts`): `mayMatchShape` answers true for every non-element
+  shape, so scrollarea's `children` shape counts as a clash. At a compose site in this
+  component's template, that shape stands for the content this component passes, which is its
+  own markup: the template and region probe already count it, and `regionSafe` already checks
+  the re-include.
+  **Do:**
+  1. In `composedEmitter`'s clash test, a composed child's `children` shape does not count as a
+     clash. Its `element`, `any` and unregistered (`tag === null`) cases stay as they are, and
+     so does `regionSafe`. module-codeblock's `first('code')` then ships as plain `code`, and its
+     `copy`/`overlay` queries drop `module-scrollarea *` from their exclusions. Uniqueness is
+     unchanged: the candidate must still verify over the template plus every compose site's
+     content.
+  2. Pin it: a parent reference into its own region inside a child whose own markup cannot match
+     ships the authored selector, and one inside a child whose own markup can match keeps the
+     region-aware exclusion. Both surfaces.
+  3. **Docs.** HOST_PROFILE § Element references gains one sentence: hand-authored markup for a
+     compiled component mirrors its server render, `data-children` markers and a composed
+     child's wrapper elements included. The query no longer depends on the marker where no
+     clash exists, but the child's own client may still depend on its wrapper (scrollarea
+     observes its `<div>`). Keep LT-478's wrappers in the fixture, the fence schema and the
+     fragment template.
+  **Check:** the generated module-codeblock client queries `code` with no exclusion, and the
+  `module-codeblock` component spec passes against the fixture with and without the
+  `data-children` attribute on the wrapper (a temporary edit, not committed). Report every corpus
+  query whose emitted form changes; each must be a dropped exclusion of a child that renders
+  `{children}`, and nothing else.
+  **Channel/tier:** none. A precision fix to emitted reference selectors; no new check.

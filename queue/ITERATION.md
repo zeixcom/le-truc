@@ -137,7 +137,8 @@ multiply, so they run first. Section-menu (LT-469) closes the last uncompiled ex
   `@scope` (ruling 14), retired the corpus's 2.x child chains, completed the leak warning and
   removed the corpus's known dead selectors (ruling 15). Remaining: LT-474 → LT-477 → LT-479
   (ruling 16).
-- **C2 — role writers** — beside track C (ruling 16). LT-476.
+- **C2 — role writers** — beside track C (ruling 16). LT-476 → LT-512 (owner, 2026-10-08: the
+  reference-precision follow-up from LT-478's review, after LT-474's verifier changes).
 - **CB — module-codeblock** — beside track C (ruling 16). LT-478 styles its passed content
   under the platform-CSS contract.
 - **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. Done
@@ -171,7 +172,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-512.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Next free task ID: LT-513.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
