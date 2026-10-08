@@ -1417,8 +1417,9 @@ member.
   component passes as `children` sits in the child's Children Region (ADR
   0048 s1, LT-472): it counts over the region probe (every compose site's
   content serialized in place), its exclusion re-includes the component's
-  own regions (`excludeUnlessOwned` in `children-region.ts`), and a candidate is dropped when what a child renders
-  inside its region besides the content — the entry's `childrenRegion`,
+  own regions (`excludeUnlessOwned` in `children-region.ts`), and a
+  candidate is dropped when what a child renders inside its region besides
+  the content — the entry's `childrenRegion`,
   closed over forwards and grandchildren — could match it.
 - **The template proves what a component RENDERS, never what it will FIND**
   (ADR 0024 s11): `first()` cardinality is the weaker of author claim and
