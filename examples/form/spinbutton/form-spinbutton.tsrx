@@ -495,23 +495,6 @@ export function FormSpinbutton(
 				}
 			}
 
-			.buttons {
-				display: inline-flex;
-				flex-direction: column-reverse;
-				margin-block-start: calc(-0.5 * var(--input-height));
-
-				& button {
-					&:first-of-type {
-						border-radius: 0 0 var(--space-xl) var(--space-xl);
-					}
-
-					&:last-of-type {
-						border-radius: var(--space-xl) var(--space-xl) 0 0;
-						border-bottom-width: 0;
-					}
-				}
-			}
-
 			.error {
 				flex-basis: 100%;
 				margin: var(--space-xs) 0 0;
