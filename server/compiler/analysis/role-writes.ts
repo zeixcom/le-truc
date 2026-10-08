@@ -48,10 +48,13 @@ export type RoleBindHelper =
 
 /**
  * One property a client writes on role elements, read off a `watch`
- * binding. `name` is the property/attribute family — both dispatch to the
- * same underlying state for a given name, so one family — with ARIA
- * spellings normalized (`ariaSelected` reflects `aria-selected`, the
- * spelling a `bindAttribute` call or a template attribute uses);
+ * binding. For the property/attribute family, `name` is the match key —
+ * the ATTRIBUTE spelling the write lands on, with IDL divergences
+ * reconciled (`className` → `class`, `htmlFor` → `for`, `tabIndex` →
+ * `tabindex`, `ariaValueNow` → `aria-valuenow`) — and `authored` keeps the
+ * spelling the author wrote for the message. A whole-attribute write
+ * (`class`, `style`, or the element's text) subsumes the partial kind: it
+ * erases any class token, style property or bound text on the element.
  * `bindVisible` writes the `hidden` property. Unreadable arguments (a
  * computed name) are skipped: the check fires only where it can name what
  * is written.
@@ -87,16 +90,22 @@ export type RoleWriterConflict = {
 /* === Internal Functions === */
 
 /**
- * The attribute spelling an ARIA IDL property reflects to (`ariaSelected`
- * → `aria-selected`); anything else is returned unchanged — `role` and the
- * ordinary property names are compared as authored, their channel
- * divergence being LT-116's dispatch detail, not a spelling difference the
- * check second-guesses.
+ * The attribute spelling a written name lands on — the match key for the
+ * property/attribute family, since both dispatch to the same underlying
+ * state for a given name. An ARIA IDL property reflects to its lowercase
+ * attribute (`ariaSelected` → `aria-selected`, `ariaValueNow` →
+ * `aria-valuenow` — attribute names carry no inner capitals); the two IDL
+ * spellings that diverge otherwise map to their attributes (`className` →
+ * `class`, `htmlFor` → `for`); everything else lowercases (`tabIndex` →
+ * `tabindex`, `readOnly` → `readonly`). `authored` keeps the spelling the
+ * author wrote for the message.
  */
-const normalizeWriteName = (name: string): string =>
-	/^aria[A-Z]/.test(name)
-		? name.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-		: name
+const normalizeWriteName = (name: string): string => {
+	if (/^aria[A-Z]/.test(name)) return `aria-${name.slice(4).toLowerCase()}`
+	if (name === 'className') return 'class'
+	if (name === 'htmlFor') return 'for'
+	return name.toLowerCase()
+}
 
 const stringLiterals = (node: unknown): string[] =>
 	isNode(node) && nodeType(node) === 'ArrayExpression'
@@ -160,9 +169,9 @@ const writeTargetsOf = (
  * a `firstRefs` entry; anything else — a prop-key watch (`watch('value',
  * …)`), a custom handler, a helper over `host` or a non-ref name, a
  * computed name argument — is skipped: both halves record only what the
- * compiler can name. `bindAria` names are stored normalized (the ARIA
- * reflection's attribute spelling), so a `bindAria(tab, 'ariaSelected')`
- * collides with a parent `bindAttribute(el, 'aria-expanded')`.
+ * compiler can name. Names are stored under their attribute spelling (the
+ * match key, `normalizeWriteName`), so a `bindAria(tab, 'ariaSelected')`
+ * collides with a parent `bindAttribute(el, 'aria-selected')`.
  */
 export const watchBindingsOf = (component: ComponentIR): WatchBinding[] => {
 	const helpers: ReadonlySet<string> = new Set<RoleBindHelper>([
@@ -371,19 +380,56 @@ const classTokensOf = (
 }
 
 /**
- * Do a parent's and a child's write hit the same property? Same family and
- * same normalized name: property/attribute writes compare by name (the
- * channels converge for a given name — the divergence the dirty-flag rule
- * handles is LT-116's, a dispatch detail neither writer's intent changes);
- * class tokens, style properties and text compare within their family.
+ * The names whose write replaces the element's WHOLE text — the name-channel
+ * writes that subsume a `bindText` (the channels converge on `textContent`).
+ */
+const WHOLE_TEXT_NAMES: ReadonlySet<string> = new Set([
+	'textcontent',
+	'innertext',
+	'innerhtml',
+])
+
+/**
+ * Do a parent's and a child's write hit the same property? Property and
+ * attribute writes compare by their attribute spelling (the channels
+ * converge for a given name — the divergence the dirty-flag rule handles is
+ * LT-116's, a dispatch detail neither writer's intent changes). A
+ * whole-attribute write subsumes the partial kind in BOTH directions:
+ * replacing `class` erases a `bindClass` token, replacing `style` erases a
+ * `bindStyle` property, and writing the element's text (`textContent`,
+ * `innerText`, `innerHTML`) erases bound text — so the whole write
+ * conflicts with any token, style property or text write of its kind.
+ * Class tokens, style properties and text compare within their family.
  */
 const conflictsWith = (parent: RoleWrite, child: RoleWrite): boolean => {
 	const a = parent.target
 	const b = child.target
-	if (a.channel !== b.channel) return false
 	if (a.channel === 'name' && b.channel === 'name') return a.name === b.name
-	if (a.channel === 'class' && b.channel === 'class') return a.token === b.token
-	if (a.channel === 'style' && b.channel === 'style')
-		return a.property === b.property
-	return a.channel === 'text'
+	type NameTarget = Extract<RoleWrite['target'], { channel: 'name' }>
+	const whole: NameTarget | null =
+		a.channel === 'name' ? a : b.channel === 'name' ? b : null
+	if (!whole) {
+		// Same-family partials: token vs token, property vs property, text.
+		// Mismatched partial channels (a token against a style property, a
+		// class token against bound text) share no state.
+		if (a.channel !== b.channel) return false
+		if (a.channel === 'text') return true
+		if (a.channel === 'class' && b.channel === 'class')
+			return a.token === b.token
+		if (a.channel === 'style' && b.channel === 'style')
+			return a.property === b.property
+		return false
+	}
+	// One side is the whole-attribute write; the other is the partial kind.
+	const partial: RoleWrite['target'] = a.channel === 'name' ? b : a
+	switch (partial.channel) {
+		case 'class':
+			return whole.name === 'class'
+		case 'style':
+			return whole.name === 'style'
+		case 'text':
+			return WHOLE_TEXT_NAMES.has(whole.name)
+		default:
+			return false
+	}
 }

@@ -4898,6 +4898,153 @@ export function MyTabs({ children = '' }: { children?: Children<{ tab: 'button' 
 		expect(hits[0]?.message).toContain('`display`')
 		expect(hits[0]?.message).toContain('style property')
 	})
+
+	test('a multi-word ARIA name meets its lowercase attribute (.tsrx)', () => {
+		// ARIA attribute names carry no inner capitals: `ariaValueNow`
+		// reflects `aria-valuenow`, not `aria-value-now` (LT-476 review 1).
+		const child = compileChildTsrx(
+			childBind(`bindAria(tab, 'ariaValueNow')`, 'bindAria'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'aria-valuenow')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc084({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`aria-valuenow`')
+	})
+
+	test('an IDL property meets its attribute spelling (.tsrx)', () => {
+		// `bindProperty(el, 'tabIndex')` and `bindAttribute(el, 'tabindex')`
+		// write the same state under different spellings (LT-476 review 2).
+		const child = compileChildTsrx(
+			childBind(`bindProperty(tab, 'tabIndex')`, 'bindProperty'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'tabindex')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc084({ diagnostics })).toHaveLength(1)
+	})
+
+	test('a whole class write conflicts with a bound token, both directions (.tsrx)', () => {
+		// Replacing the whole `class` attribute erases the child's token
+		// (LT-476 review 3) — the parent's whole write first.
+		const child = compileChildTsrx(
+			childBind(`bindClass(tab, 'active')`, 'bindClass'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'class')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc084({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`active`')
+		// And the child's whole write against the parent's token.
+		const wholeChildSource = `import { createCell, bindAttribute } from '@zeix/le-truc'
+
+export function MyTabs({ children = '' }: { children?: Children<{ tab: 'button' }> })
+@{
+	const tab = first('.tab', 'the active tab')
+	const selected = createCell(false)
+	watch(() => String(selected.get()), bindAttribute(tab, 'class'))
+	expose({})
+		<my-tabs>
+			<div class="wrap">{children}</div>
+			${styleTsrx}
+		</my-tabs>
+}`
+		const { component } = compileComponent(
+			wholeChildSource,
+			'examples/child/my-tabs.tsrx',
+			new Set(),
+		)
+		if (!component) throw new Error('child must compile')
+		const { diagnostics: reversed } = compileComponent(
+			parentTsrx(`bindClass(tab, 'active')`, undefined, undefined, 'bindClass'),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[component.entry.source, component.entry]]),
+		)
+		expect(ltc084({ diagnostics: reversed })).toHaveLength(1)
+	})
+
+	test('a whole write of a different attribute does not conflict (.tsrx)', () => {
+		// The whole-attribute rule matches by kind: `title` is neither the
+		// class attribute nor the element's text — and a class token shares
+		// no state with bound text.
+		const child = compileChildTsrx(
+			childBind(`bindClass(tab, 'active')`, 'bindClass'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'title')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc084({ diagnostics })).toHaveLength(0)
+		// Mismatched partial channels: a bound token against bound text.
+		const textChild = compileChildTsrx(childBind(`bindText(tab)`, 'bindText'))
+		const { diagnostics: partials } = compileComponent(
+			parentTsrx(`bindClass(tab, 'active')`, undefined, undefined, 'bindClass'),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[textChild.entry.source, textChild.entry]]),
+		)
+		expect(ltc084({ diagnostics: partials })).toHaveLength(0)
+	})
+
+	test('a className write conflicts with a bound class token (.tsrx)', () => {
+		// `className` maps to `class`, so the whole-write rule reaches it.
+		const child = compileChildTsrx(
+			childBind(`bindClass(tab, 'active')`, 'bindClass'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindProperty(tab, 'className')`,
+				undefined,
+				undefined,
+				'bindProperty',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc084({ diagnostics })).toHaveLength(1)
+	})
 })
 
 describe('a required role-addressed ref at runtime (LT-474 review)', async () => {
