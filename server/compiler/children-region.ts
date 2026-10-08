@@ -8,8 +8,7 @@
  * One module for the three consumers of that fact: the server emitter
  * (which element carries the marker, and whose tag it names), the registry
  * (what a child renders inside its region besides the content), and the
- * selector algebra (the runtime query's re-include clause, which the
- * lowered style guard shares — LT-473).
+ * selector algebra (the runtime query's re-include clause).
  */
 
 import type { RenderedShape, TemplateNode } from './ir'
@@ -80,8 +79,7 @@ export const ownRegion = (tag: string): string =>
  *
  * `terms(prefix)` spells the excluded set below an anchor written as
  * `prefix` (`''` for none, `'<sel> '` otherwise). The runtime query passes
- * one `<child-tag> *` term per composed child; the lowered style guard
- * passes its boundary terms (LT-473). Same algebra, one spelling.
+ * one `<child-tag> *` term per composed child.
  */
 export const excludeUnlessOwned = (
 	owner: string,

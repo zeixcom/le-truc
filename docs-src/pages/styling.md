@@ -7,7 +7,7 @@ description: 'Scoped styles, CSS custom properties'
 {% hero %}
 # Styling
 
-**Keep your components' styles self-contained and support shared design tokens.** Scope styles with the custom element name and expose customization via CSS custom properties. Le Truc toggles classes and attributes for you when state changes.
+**Keep your components' styles self-contained and support shared design tokens.** Scope styles with the custom element name, or with a native `@scope` block in a compiled component, and expose customization via CSS custom properties. Le Truc toggles classes and attributes for you when state changes.
 {% /hero %}
 
 {% section %}
@@ -127,7 +127,12 @@ Forms that have no meaning are compile errors:
 - A rule inside `@scope` led by the component's own tag. It matches only a nested instance. Write `:where(:scope)`.
 - `:global`. A top-level rule is already page-wide, so remove the wrapper.
 - `::slotted()` and `:host-context()`.
-- A selector that descends past a compound one of the block's limits excludes. The limit always excludes its subject, so the rule matches nothing.
+- A selector that descends past a compound one of the block's limits excludes. The limit always excludes its subject, so the rule matches nothing. Style an element above the limit, and pass values inward with custom properties.
+
+Two forms compile with a warning and ship as written:
+
+- A scoped rule that can match an element a composed child renders, with no limit to stop it. Add the limit `to (<child-tag> > *)`, or keep the rule if it styles the child's internals on purpose.
+- A top-level rule that is neither in `@scope` nor led by the component's own tag. It applies to the whole page. Move it into `@scope`, lead it with the tag, or move a rule the page owns to the page's stylesheet.
 
 {% callout .caution title="Only a real shadow root keeps page styles out" %}
 The compiled scope stops the component's styles from leaking **out**. It does not stop page styles from reaching **in**: page CSS can still reach the component's internals. That is the permanent light-DOM limit — only a real shadow root provides inward encapsulation.
