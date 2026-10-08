@@ -35,7 +35,6 @@ Emulating a shadow root with that knowledge made the emitted CSS diverge from wh
 5. **Warnings come from the compiler's knowledge.** Channel: compiler. Tier: Contained ([ADR 0028](0028-tiered-error-surfacing.md) s1), so the CSS ships as authored.
    - **Downward leak.** A scoped rule whose subject can match an element a composed child renders in its own template, with no authored limit excluding it. The warning names the child and the fix, `to (<child-tag> > *)`, which keeps the child's own tag stylable. Content the component passes as `children` is its own markup, not a leak ([ADR 0048](0048-the-children-contract-parent-owned-content-child-declared-roles.md)).
    - **Unscoped rule.** A top-level rule that is not led by the component's own tag and does not sit in `@scope`.
-   - **Dead rule.** A scoped rule that matches nothing the component or an unexcluded child renders. Passed content and markup the compiler cannot see keep a rule alive, so it fires only on a provably dead rule.
 
    No warning fires for a missing limit as such.
 

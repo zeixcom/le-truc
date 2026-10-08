@@ -102,4 +102,7 @@ front end (ADR 0034 s1) — so this band holds only what has an entry. The fetch
 family waits here as owner-gated design sessions: LT-448 (partials bringing new components —
 script admission, loading, `allow-scripts`) beside LT-450 (HTML partials on demand).
 Gated-on-need items (LT-214, LT-269, LT-270, LT-357) wake when a consumer appears; everything
-else moves up only by owner direction.
+else moves up only by owner direction. The corpus gates are parked here pending iteration
+planning (ITERATION ruling 15): `check:dead-css` (LT-506) and `check:html` (LT-508 → LT-509,
+LT-510). `check:html` runs html-validate and axe-core over every component's server render, held
+to the REQUIREMENTS §4 Accessibility bar for the corpus.

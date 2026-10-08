@@ -964,7 +964,10 @@ front end (ADR 0034 s1) — so this band holds only what has an entry. The fetch
 family waits here as owner-gated design sessions: LT-448 (partials bringing new components —
 script admission, loading, `allow-scripts`) beside LT-450 (HTML partials on demand).
 Gated-on-need items (LT-214, LT-269, LT-270, LT-357) wake when a consumer appears; everything
-else moves up only by owner direction.
+else moves up only by owner direction. The corpus gates are parked here pending iteration
+planning (ITERATION ruling 15): `check:dead-css` (LT-506) and `check:html` (LT-508 → LT-509,
+LT-510). `check:html` runs html-validate and axe-core over every component's server render, held
+to the REQUIREMENTS §4 Accessibility bar for the corpus.
 
 - [ ] LT-076: Establish a dev-mode signal for generated `.tsrx` client code, then implement the hydration assertion (CHECKLIST §6).
   **Area:** compiler
@@ -1373,3 +1376,164 @@ else moves up only by owner direction.
   Final copy goes through `../writer/references/error-messages.md`.
   **Check:** `test:server` pins both messages, on both surfaces.
   **Channel/tier:** compiler, tier 1 Prevented (unchanged). No new code.
+
+- [ ] LT-506: check:dead-css — a corpus gate listing component selectors that match nothing their template renders.
+  **Area:** compiler
+  **Needs:** LT-507
+  **Gates:** test:server, typecheck, check:corpus
+  **Area:** compiler
+  **Needs:** LT-507
+  **Filed (Architect, 2026-10-08; reframed by owner ruling the same day):** dead-CSS detection is
+  a corpus-level check, not a compiler diagnostic. The compiler knows only the template, and the
+  template is not the only source of a component's markup: page-authored content inside the host
+  is a descendant like any other (ADR 0033 s2; form-listbox's grouped declarative example), and a
+  client script may add classes and elements (module-todo's `.dragging` and `.drop-marker` from
+  `examples/_common/reorder.ts`). So the compiler can show that a selector matches nothing in the
+  template, but it cannot prove the rule dead. A gate over the reference corpus, with an allowlist
+  that records why each surviving selector is alive, can. Same posture as `check:html` (LT-508):
+  stand-alone, never part of the compile step or `bun test`, no `LTC` code.
+  **Start from:** branch `task/LT-506` (`a34da93c`, unreviewed WIP from the diagnostic attempt)
+  holds the matcher: `checkSheetDeadRules` in `css-scope.ts`, `renderedTreeOf`/`leakChildOf` in
+  `analysis/selectors.ts`. Drop its `diagnostic.deadRule` and pipeline wiring. Rebase the branch
+  onto `v3` when the task starts.
+  **Do:**
+  1. **The matcher.** Per selector-list member of each style rule in a component's `@scope`
+     block: can the full selector, combinators included, match an element of the rendered tree?
+     The tree is the component's own template (every arm, every list item template, the host as
+     `:scope`) plus each composed child's shapes that no authored limit excludes, with
+     compose-site attributes (LT-505). A `children` region or `any` shape in reach, a dynamic
+     attribute or class, a state or structural pseudo-class, or a combinator into a child's
+     subtree keeps the selector alive.
+  2. **The gate.** `scripts/check-dead-css.ts`, wired as `check:dead-css`. It prints one line per
+     template-dead selector, at its authored location in `check:corpus`'s `path(line,col)`
+     format, naming the tag.
+  3. **Allowlist.** `scripts/check-dead-css.allow.json`, entries `{ tag, selector, reason }`. A
+     reason states the markup's source: `script` (naming the module) or `page` (naming the
+     page). An unmatched finding fails, and so does a stale entry. If LT-508 has landed, share
+     its allowlist matcher; otherwise build one LT-508 can reuse.
+  **Check:** on `v3` after LT-507, the gate passes with exactly five allowlist entries:
+  module-todo `&.dragging` and `&.drop-marker` (script), and form-listbox `module-scrollarea`,
+  `[role="group"]` and `[role="presentation"]` (page). Reverting LT-507 makes the gate fail on
+  the seven removed selectors. Unit tests cover the matcher (a combinator chain the template
+  lacks is dead; a `children` region, a dynamic class or `:hover` keeps it alive) and the
+  allowlist (unmatched fails, stale fails). Report the gate's wall time.
+  **Channel/tier:** none. A corpus gate over authored sheets and templates; its verdict depends on
+  page markup and scripts the compiler never sees, so no `LTC` code.
+
+- [ ] LT-508: check:html — validate and axe-check every corpus component's server render.
+  **Area:** compiler
+  **Gates:** test:server, typecheck, check:corpus
+  **Area:** compiler
+  **Filed (Architect, 2026-10-08):** traces to REQUIREMENTS §4 Accessibility (the corpus's
+  server-rendered markup is valid HTML and passes the fragment-applicable axe-core rules; the
+  no-JS accessibility tree, ADR 0026). A probe run on 2026-10-08 rendered all 43 corpus tags and
+  found real defects (form-colorgraph's slider labelled by an id the render does not contain,
+  duplicate ids, `<meter>` without `value`), so the gate has something to catch.
+  **Context:**
+  1. **Shared render args.** Move the `ARGS` table out of
+     `server/tests/compiler/server-render-smoke.test.ts` into
+     `server/tests/compiler/corpus-args.ts` as an exported `CORPUS_RENDER_ARGS`; the smoke gate
+     imports it. One table feeds both gates. A tag absent from the table renders from `{}`.
+  2. **The gate.** `scripts/check-html.ts`, wired as `check:html` in `package.json`. It compiles
+     the corpus with `compileCorpus` into a per-run temporary directory (never `config.outDir`,
+     the LT-140 posture) and removes it on exit. Then it calls each tag's `render<Name>()` with
+     its args and wraps the markup as
+     `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>TAG</title></head><body><main>MARKUP</main></body></html>`.
+  3. **HTML conformance:** add `html-validate` as an exact-pinned devDependency and use its
+     programmatic API with the preset that checks conformance to the HTML standard only
+     (`html-validate:standard`; confirm the name against the pinned version). No stylistic rules.
+     Declare every registry tag as a custom element that accepts flow content, so a corpus tag
+     is never reported as unknown.
+  4. **Accessibility:** run axe-core (already a devDependency) inside a `jsdom` window
+     (`runScripts: 'outside-only'`, evaluate `node_modules/axe-core/axe.min.js`), with
+     `axe.run(document)`. Disable the rules that need real layout or a whole page:
+     `color-contrast`, `landmark-one-main`, `page-has-heading-one`, `region`. Count only
+     `violations`; `incomplete` is not a finding.
+  5. **Allowlist:** `scripts/check-html.allow.json`, an array of `{ tag, tool, rule, reason }`.
+     A finding the list doesn't match fails the gate, and so does an entry that matches no
+     finding (a stale allowance never lingers). Seed it with every finding HEAD produces, each
+     with the reason `untriaged at gate landing (LT-508)`. The Architect triages them at review
+     into corpus follow-ups.
+  6. **Output:** one line per finding, `TAG: <html-validate|axe>/<rule>: <message> (<selector>)`,
+     using html-validate's `selector` and axe's `node.target`. Exit non-zero on any failure.
+     Authored-source locations are LT-509's job.
+
+  Out of scope: the inert `<template data-arms|data-list>` content (LT-510) and hydrated or
+  interacted states (Playwright, the `runAxe()` fixture in `examples/test/fixtures/aria.ts`).
+  Not part of the compile step or `bun test`: like `check:corpus`, the gate stands alone.
+  **Check:** `bun run check:html` passes on HEAD with the seeded allowlist. A unit test under
+  `server/tests/` covers the allowlist matcher: an unmatched finding fails, a stale entry fails,
+  a matched finding passes. The handoff lists the seeded findings.
+  **Channel/tier:** none. A corpus gate over rendered output, not a runtime check. Its result
+  depends on render args the compiler never sees, so no `LTC` code.
+
+- [ ] LT-509: check:html reports findings at the authored source location (data-lt-src render annotation).
+  **Area:** compiler
+  **Needs:** LT-508
+  **Gates:** test:server, typecheck, check:corpus, check:contract
+  **Area:** compiler
+  **Needs:** LT-508
+  **Filed (Architect, 2026-10-08):** LT-508 reports a finding by tag and selector. Composed
+  children render inline, so a finding's element may belong to another component's source. The
+  author needs `path(line,col)`, the format `check:corpus` prints.
+  **Context:**
+  1. **Annotation option.** Add an internal server-emit option, `sourceAnnotations` (default
+     off), reached through `compileCorpus`. It isn't exposed through `contract.ts` or
+     `le-truc.config.json`. When on, `emit-server.ts` adds
+     `data-lt-src="<root-relative path>:<line>:<col>"` to every element open tag the render
+     emits. That covers the host root, template elements, the content of arm and list
+     templates, and a composed child's elements, each with its own module's authored file. The
+     position is the authored element's start, from its IR `SourceRange`, mapped to a line and
+     column the same way `check:corpus` does. `data-*` attributes are valid HTML and inert to
+     axe, so neither tool reacts to them.
+  2. **Off means byte-identical.** With the option off, every generated module is byte-identical
+     to HEAD's: the goldens don't move.
+  3. **Gate mapping.** `check:html` compiles with the option on. For each finding it resolves the
+     selector (html-validate's `selector`, axe's `node.target`) in a jsdom of the checked
+     document and takes the nearest ancestor-or-self `data-lt-src`. It prints
+     `path(line,col): error <tool>/<rule>: <message> [TAG]`. A finding with no annotated
+     ancestor keeps LT-508's line format. Allowlist matching stays on `{ tag, tool, rule }`.
+  4. **Annotations change no finding.** The finding set is identical with and without
+     annotations; a test asserts this over the corpus.
+  **Check:** a server test compiles one `.tsx` and one `.tsrx` component that composes a child,
+  with the option on, and asserts the host's, an inner element's and the composed child's
+  `data-lt-src` values. The goldens are unchanged with the option off. `check:html` output
+  names authored files. On review the Architect adds a Key Decisions entry to `ARCHITECTURE.md`
+  (an internal render annotation, not an ADR).
+  **Channel/tier:** none. Tooling for a corpus gate; no runtime check and no `LTC` code.
+
+- [ ] LT-510: check:html covers every arm and list template, checked in its container.
+  **Area:** compiler
+  **Needs:** LT-508
+  **Gates:** test:server, typecheck, check:corpus
+  **Area:** compiler
+  **Needs:** LT-508
+  **Filed (Architect, 2026-10-08):** LT-508 checks only what the server render shows live. A
+  losing arm (ADR 0037) and a list item (ADR 0046) exist only as inert `<template>` content.
+  axe skips template content, and validating it standalone misjudges the content model: an
+  `<li>` checked outside its `<ul>` is flagged. List templates also sit at the host's end,
+  outside their container. Each template has to be checked where the client puts it.
+  **Context:**
+  1. **Base document.** LT-508's checked document has every `template[data-arms]` and
+     `template[data-list]` removed before both tools run. The live markup is checked once, with
+     no template content.
+  2. **Arm variants.** For each arm set (`template[data-arms="N"]` siblings under one parent),
+     the live root is the nearest preceding sibling element that is neither a `<template>` nor a
+     `[data-arms]` carrier. This is the adjacency the client's `reconcile` uses
+     (`src/helpers/reactive.ts`). For each arm key except the live root's `data-key`, build one
+     variant document: the live root replaced by that template's single root element, then the
+     base-document stripping. Build variants one arm at a time, never a cartesian product; a
+     nested arm set inside a variant arm is handled recursively with its own winner live.
+  3. **List variants.** For each `template[data-list="N"]`, build one variant with one item, the
+     template's root, appended to list N's container, then stripped. The container is the one
+     the client's `reconcile` call for list N queries. If the per-component compile result
+     doesn't expose that container's selector, add it as an internal field on that result (not
+     `contract.ts`). One item only, so per-item ids can't collide as an artifact.
+  4. **Reporting.** A variant's finding carries `[TAG arm N=K]` or `[TAG list N]`. A finding
+     identical (tool, rule, selector) to one in the base document is dropped. Allowlist entries
+     gain an optional `variant` field matched against that label.
+  **Check:** `check:html` covers `form-inplace-edit`'s `then`/`else` arms, `module-lazyload`'s
+  `ok`/`nil`/`err` arms and `module-list`'s item, and reports the variant count per tag. A server
+  test injects a list template whose item is valid only inside its container and asserts no
+  finding, then one invalid in its container and asserts the finding.
+  **Channel/tier:** none. A corpus gate; no runtime check and no `LTC` code.

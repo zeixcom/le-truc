@@ -301,6 +301,7 @@ _Conditional._ A docs-site playground compiling components entirely in the visit
 - Example components must demonstrate correct ARIA patterns (roles, states, properties) as the reference implementation for component authors
 - `MissingElementError` hints must reference accessibility implications where relevant
 - _(v3)_ ARIA on a compiled component's host defaults to the internals channel with the content attribute as the consumer-facing override channel ([ADR 0026](adr/0026-aria-reflection-via-elementinternals-and-bindaria.md)); in environments without a reflection surface the content attribute is the served channel, so the no-JS accessibility tree is never blank by mechanism
+- _(v3)_ The example corpus's server-rendered markup — every arm and list template included — is valid HTML and passes axe-core's rules that apply to a component fragment. A corpus gate checks this and reports each finding at its authored source location. It is the reference implementation's own bar, not a check the compiler imposes on consumer components
 
 ### Browser support
 
