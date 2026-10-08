@@ -4118,6 +4118,92 @@ export function C({ children = '' }: { children?: MyChildren })
 			expect(hit?.message).toContain('Declare a role')
 		}
 	})
+
+	test('a required role ref without a {children} insertion stays LTC026 (.tsrx)', () => {
+		// Without an insertion the content can never arrive — statically
+		// decidable, so the compiler owns it (review 2): the role bypass
+		// does not apply and the required reference falls through to
+		// LTC026.
+		const source = `export function C({ children = '' }: { children?: Children<{ icon: 'span' }> })
+@{
+	const icon = first('.icon', 'the icon')
+	expose({})
+		<c-el>
+			<div class="wrap"></div>
+			${styleTsrx}
+		</c-el>
+}`
+		const { component } = compileSource(source, 'c.tsrx')
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+		expect(diagnostics.filter(d => d.code === 'LTC026')).toHaveLength(1)
+		expect(component?.firstRefs.get('icon')?.stage).toBe('rejected')
+	})
+
+	test('a required role ref without a {children} insertion stays LTC026 (.tsx)', () => {
+		const source = `import { css } from '@zeix/le-truc-compiler/macros'
+
+export function C({ children = '' }: { children?: Children<{ icon: 'span' }> }, { first }: any) {
+	const icon = first('.icon', 'the icon')
+	expose({})
+	return (
+		<c-el>
+			<div class="wrap"></div>
+			<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
+		</c-el>
+	)
+}`
+		const { diagnostics } = compileComponentTsx(source, 'c.tsx', new Set())
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+		expect(diagnostics.filter(d => d.code === 'LTC026')).toHaveLength(1)
+	})
+
+	test('an optional role ref without a {children} insertion stays LT-123 silent', () => {
+		const source = `export function C({ children = '' }: { children?: Children<{ icon: 'span' }> })
+@{
+	const icon = first('.icon')
+	expose({})
+		<c-el>
+			<div class="wrap"></div>
+			${styleTsrx}
+		</c-el>
+}`
+		const { component } = compileSource(source, 'c.tsrx')
+		const { diagnostics } = compileComponent(source, 'c.tsrx', new Set())
+		expect(diagnostics).toEqual([])
+		expect(component?.firstRefs.get('icon')).toMatchObject({
+			stage: 'unmatched',
+			required: false,
+		})
+	})
+
+	test('a required deferred role ref without a {children} insertion stays LTC026 too', () => {
+		// The compose-registry leg carries the same insertion gate (review 2).
+		const source = `export function C({ children = '' }: { children?: Children<{ box: 'form-textbox' }> })
+@{
+	const box = first('.box', 'the box')
+	expose({})
+		<c-el>
+			<div class="wrap"></div>
+			${styleTsrx}
+		</c-el>
+}`
+		const { component } = compileSource(source, 'c.tsrx')
+		const { diagnostics } = compileComponent(
+			source,
+			'c.tsrx',
+			new Set(),
+			undefined,
+			new Map(),
+		)
+		expect(reachIns({ diagnostics })).toHaveLength(0)
+		expect(diagnostics.filter(d => d.code === 'LTC026')).toHaveLength(1)
+		expect(component?.firstRefs.get('box')?.stage).toBe('rejected')
+	})
 })
 
 describe('a required role-addressed ref at runtime (LT-474 review)', async () => {

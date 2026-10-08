@@ -1148,13 +1148,16 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   `unreadable` on the contract and changes LTC083's fix copy, which names
   the readable shapes (an inline type literal or a same-file alias) instead
   of a role the author may have declared (LT-474 review). A role-addressed
-  reference that matches nothing resolves as an `unmatched` ref — the
+  reference that matches nothing in a template that inserts `{children}`
+  resolves as an `unmatched` ref — the
   authored selector, queried from the host, resolves inside the content
   through the region re-include (ADR 0048 s1) — required included: a
   required one keeps the throwing query, and the existing runtime check
   throws its authored reason as `MissingElementError` when the parent
   passes no such element (channel: runtime, the existing required-ref
-  check, tier 3 Escalated; LT-474 review).
+  check, tier 3 Escalated; LT-474 review). Without an insertion the
+  content can never arrive — statically decidable, so the plain handling
+  applies (required → LTC026, optional → LT-123's silence; review 2).
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

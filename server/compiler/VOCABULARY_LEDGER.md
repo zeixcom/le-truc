@@ -206,11 +206,15 @@ compound names no role class declared on the `children` prop's
 task holds. It is `LTC`, not `TSRX`: both selector-verification sites
 (`template-output.ts`, `analysis/compose-refs.ts`) are shared. The
 diagnostic has no runtime half of its own: a role-addressed ref that
-matched nothing compiles as an `unmatched` ref, required included (LT-474
-review), and its runtime behavior is the existing required-ref channel —
-the throwing query's `MissingElementError` with the authored reason, tier
-3 Escalated — with the region re-include (ADR 0048 s1) resolving a
-role-addressed query inside the content, the sanctioned path. A roles
+matched nothing — in a template that inserts `{children}`, the only place
+a no-match is expected of it — compiles as an `unmatched` ref, required
+included (LT-474 review), and its runtime behavior is the existing
+required-ref channel — the throwing query's `MissingElementError` with the
+authored reason, tier 3 Escalated — with the region re-include (ADR 0048
+s1) resolving a role-addressed query inside the content, the sanctioned
+path. Without an insertion the content can never arrive, so the bypass
+does not apply and the plain handling stands (required → LTC026, optional
+→ LT-123's silence; review 2). A roles
 declaration present but unreadable (an imported name) keeps the code and
 changes the fix copy, which names the readable shapes (LTC076's posture).
 `LTC086` (`:host` anywhere in a component stylesheet, fix-it `:where(:scope)`;

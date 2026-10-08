@@ -227,14 +227,18 @@ export const resolveTemplateOutput = (
 				continue
 			}
 			// A role-addressed reference resolves inside the content a
-			// parent passes (ADR 0048 s2), so a no-match here is expected
-			// for it, required or optional (LT-474 review): the client
-			// queries the authored selector from the host — the region
-			// re-include finds the element inside the content (ADR 0048
-			// s1) — and a required one throws the existing
-			// `MissingElementError` with the authored reason when the
-			// parent passes no such element.
-			if (declared === true) {
+			// parent passes (ADR 0048 s2), so — in a template that inserts
+			// `{children}` — a no-match here is expected for it, required
+			// or optional (LT-474 review): the client queries the authored
+			// selector from the host — the region re-include finds the
+			// element inside the content (ADR 0048 s1) — and a required
+			// one throws the existing `MissingElementError` with the
+			// authored reason when the parent passes no such element.
+			// Without an insertion the content can never arrive, so the
+			// bypass does not apply (review 2): a required reference
+			// falls through to LTC026, an optional one to LT-123's
+			// silence.
+			if (insertsChildren && declared === true) {
 				resolve('unmatched')
 				continue
 			}
