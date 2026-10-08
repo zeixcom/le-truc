@@ -14,6 +14,7 @@ import {
 } from './analysis/content-model'
 import { handlerPlacementsOf } from './analysis/handler-args'
 import { analyzeClient } from './analysis/plan'
+import { findRoleWriterConflicts, roleWritesOf } from './analysis/role-writes'
 import {
 	childrenRegionOfComponent,
 	leakChildrenFor,
@@ -141,7 +142,27 @@ export const compileFromIR = (
 	// recorded either way (the discovery pass knows no composed child, so
 	// its value carries the direct half only).
 	const interactive = templateInteractiveOf(component.root, composeRegistry)
+	// The one-writer check (ADR 0048 s3, LT-476): the child half records
+	// what its client writes on role elements in the passed content — own-IR
+	// only, so it runs in both passes and rides the entry like `interactive`
+	// and `handlerArgs`. The parent half refuses a compose-site binding that
+	// writes the same property on a role element the child's entry records;
+	// it reads each child's entry, so it runs only in the registry-aware
+	// pass. `analyzeClient` has run, so a deferred reference a compose site
+	// claimed carries its `ref` attr and is excluded from the recording.
+	const roleWrites = roleWritesOf(component)
 	if (composeRegistry) {
+		for (const finding of findRoleWriterConflicts(component, composeRegistry))
+			diagnostics.push(
+				diagnostic.roleWriterConflict(
+					component.source,
+					finding.parent.at,
+					finding.parent,
+					finding.childTag,
+					finding.role,
+					finding.childWrite,
+				),
+			)
 		for (const node of composeNodes) {
 			if (node.children.length === 0) continue
 			const child = composeRegistry.get(node.source)
@@ -284,6 +305,7 @@ export const compileFromIR = (
 				i18nMessages: component.i18nMessages,
 				clientMessageKeys: plan.clientMessageKeys,
 				...(handlerArgs ? { handlerArgs } : {}),
+				...(roleWrites ? { roleWrites } : {}),
 				renderedShapes: renderedShapesOf(component),
 				interactive,
 				...(component.childrenContract

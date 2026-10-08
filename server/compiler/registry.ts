@@ -22,6 +22,7 @@
  *   functions and stylesheets through this file.
  */
 
+import type { RoleWrite } from './analysis/role-writes'
 import type { ChildrenRegion } from './children-region'
 import type { ExposeKind, RenderedShape } from './ir'
 import type { SuppressedSite } from './simulation/contract.ts'
@@ -200,6 +201,21 @@ export type RegistryEntry = {
 	 * Optional: absent on entries that declare no handler arg.
 	 */
 	handlerArgs?: Record<string, HandlerPlacement[]>
+	/**
+	 * Per declared role class, what this component's client writes on the
+	 * role's elements inside the content a parent passes (ADR 0048 s3,
+	 * LT-476): the role-targeted `watch` bindings — `bindProperty`,
+	 * `bindAttribute`, `bindText`, `bindClass`, `bindVisible`, `bindStyle`,
+	 * `bindAria` over a `first()` reference whose selector's subject names
+	 * the role and that resolved to no own-template element. `on()` return
+	 * updates write host props and are not recorded. A composing parent
+	 * reads this at its compose site: a binding of its own on a passed
+	 * element carrying the role's class that writes the same property is
+	 * LTC084 (`analysis/role-writes.ts`). Absent when the component declares
+	 * no roles contract, inserts no `{children}`, or binds nothing through
+	 * a role.
+	 */
+	roleWrites?: Record<string, RoleWrite[]>
 }
 
 /**

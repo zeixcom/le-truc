@@ -1175,7 +1175,31 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   like the roles do; a model argument the compiler cannot read keeps the
   check off (tsc's `Model` union constraint owns it). Page-authored HTML is
   unchecked, and TypeScript cannot carry the check (JSX element types are
-  opaque).
+  opaque). One writer per property is the runtime-write half (ADR 0048 s3,
+  LT-476, `analysis/role-writes.ts`): the registry records, per child, what
+  its client writes on role elements in the passed content — the
+  role-targeted `watch` bindings (`bindProperty`, `bindAttribute`,
+  `bindText`, `bindClass`, `bindVisible`, `bindStyle`, `bindAria` over a
+  `first()` reference whose selector's subject names a declared role and
+  that resolved to no own-template element; `on()` return updates write
+  host props and are not recorded) — as `roleWrites` on the entry, and a
+  parent `watch` binding on a `first()` reference into its compose site's
+  content — the one client construct the content admits (LTC011) — that
+  writes the same property, attribute, class token, style property or text
+  on an element carrying that role's class is LTC084, reported at the
+  parent's binding and naming both writers. Property/attribute writes
+  compare by their attribute spellings — lowercased, IDL divergences
+  reconciled (`className` → `class`, `htmlFor` → `for`), ARIA names
+  reflecting lowercase (`bindAria(tab, 'ariaSelected')` meets `bindAttribute(el,
+  'aria-selected')`, `bindProperty(el, 'tabIndex')` meets
+  `bindAttribute(el, 'tabindex')`) — and a whole-attribute write (`class`,
+  `style`, `textContent`/`innerText`/`innerHTML`) subsumes the partial
+  kind in both directions, erasing any class token, style property or
+  bound text. A binding the compiler cannot name (a computed argument) is
+  skipped, and a reference that matched the child's own markup records
+  nothing — the child writing its own element cannot conflict with the
+  parent's content. Hand-authored (no-build) pairings have no registry and
+  stay with the DOM's last-write-wins ([M15]).
 - *i18n*: literal prose in a component that declares
   `export const i18n` (LTC047) — author-fixable, so a genuine warning that
   converges to zero; a missing *translation* is the translator's work and

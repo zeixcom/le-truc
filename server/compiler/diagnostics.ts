@@ -18,6 +18,7 @@
  */
 
 import type { InteractiveFinding } from './analysis/content-model'
+import type { RoleWrite, WatchBinding } from './analysis/role-writes'
 import type { MarkerName } from './imports'
 import type { SourceRange } from './ir'
 import type { SurfaceWording } from './surface'
@@ -116,6 +117,7 @@ export type DiagnosticCode =
 	| 'LTC081' // a handler arg (an `on[A-Z]…` arg, LT-461) the parent cannot address: its declared type is not a function type; or it is read anywhere but as an event attribute on a raw element or forwarded to a composed child's handler arg; or it is placed inside one of the component's reactive arms or list items, whose elements are recreated on a flip or a reconcile — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC083' // a first()/all() selector that can only resolve inside the content a parent passes as `children` — it matches nothing in the component's own template, the template inserts `{children}`, and its subject compound names no role class declared on the `children` prop's `Children<…>` type (ADR 0048 s2, LT-474) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC085' // a compose site of a child whose `children` prop declares `Children<…, 'non-interactive'>` passes interactive content — `a[href]`, `button`, `input` (except `type="hidden"`), `select`, `textarea`, `label`, `details`, `iframe`, any `[tabindex]`, `audio`/`video` with `controls` — among its literal children, or a composed child whose own template renders any, transitively (ADR 0048 s4, LT-477) — tier 1 Prevented, statically decidable, no runtime half
+	| 'LTC084' // a parent `watch` binding on a `first()` reference into a compose site's content writes the same property, attribute, class token, style property or text on an element carrying a role class the child's client also writes through its role-targeted `watch` bindings (ADR 0048 s3, LT-476) — tier 1 Prevented, statically decidable on both sides, no runtime half
 	| 'LTC086' // `:host` anywhere in a component stylesheet — it matches nothing in light DOM; the fix-it is `:where(:scope)` (`:host(X)` → `:where(:scope)X`) (ADR 0033 s1/s6, LT-501) — tier 1 Prevented, statically decidable, no runtime half
 	| 'LTC087' // a rule in the component's `@scope` block whose subject can match an element a composed child renders in its own template (transitively through the registry), with no authored limit excluding the child; passed `children` content is the parent's own markup and never counts (ADR 0033 s5, ADR 0048 s5, LT-502) — tier 2 Contained: the CSS ships as authored
 	| 'LTC088' // a top-level stylesheet rule that is neither in `@scope` nor led by the component's own tag — it applies page-wide; `@keyframes`, `@font-face` and `@property` are exempt (ADR 0033 s1/s5, LT-502) — tier 2 Contained: the CSS ships as authored
@@ -1598,6 +1600,82 @@ export const diagnostic = {
 				: `\`<${childTag}>\` declares its children \`Children<…, 'non-interactive'>\`, but this compose site passes \`<${finding.tag}>\`, whose template renders interactive content (ADR 0048). Remove \`<${finding.tag}>\` from the passed content, or drop the \`'non-interactive'\` model argument from \`<${childTag}>\`'s \`Children<…>\` type if the content may be interactive.`,
 			rangeOf(source, at),
 		),
+
+	/**
+	 * A parent `watch` binding writes the same property, attribute, class
+	 * token, style property or text on an element of its passed content that
+	 * the child's client writes through its role-targeted `watch` bindings
+	 * (ADR 0048 s3, LT-476): two runtime writers on one property of one
+	 * element — the child's binding fires on its signals, the parent's on
+	 * its own, and neither can win. The registry records, per child, the
+	 * role properties its client writes (`RegistryEntry.roleWrites`,
+	 * `analysis/role-writes.ts`); the check runs in the registry-aware pass
+	 * where the parent's compose site can read the child's entry, and
+	 * reports at the parent's binding, naming both writers.
+	 *
+	 * Channel: compiler. Tier: Prevented (ADR 0028 s1) — statically
+	 * decidable on both sides; the registry carries the child's half, the
+	 * parent's authored `watch` statements carry the other. No runtime half:
+	 * a hand-authored (no-build) pairing has no registry to read and stays
+	 * with the DOM's last-write-wins, which is [M15]'s posture for foreign
+	 * markup.
+	 *
+	 * Message copy follows ADR 0028's lifecycle (`writer` → error-messages);
+	 * first draft (LT-476).
+	 */
+	roleWriterConflict: (
+		source: string,
+		at: Site,
+		parent: WatchBinding,
+		childTag: string,
+		role: string,
+		childWrite: RoleWrite,
+	) => {
+		const argOf = (write: RoleWrite): string | null => {
+			const target = write.target
+			if (target.channel === 'name') return `'${target.authored}'`
+			if (target.channel === 'class') return `'${target.token}'`
+			if (target.channel === 'style') return `'${target.property}'`
+			return null
+		}
+		const parentSpell = `${parent.write.helper}(${parent.ref}${
+			argOf(parent.write) ? `, ${argOf(parent.write)}` : ''
+		})`
+		const childArg = argOf(childWrite)
+		const childSpell = `${childWrite.helper}(…${childArg ? `, ${childArg}` : ''})`
+		const target = childWrite.target
+		const noun =
+			target.channel === 'class'
+				? 'class token'
+				: target.channel === 'style'
+					? 'style property'
+					: target.channel === 'text'
+						? 'text content'
+						: childWrite.helper === 'bindAttribute' ||
+								childWrite.helper === 'bindAria'
+							? 'attribute'
+							: 'property'
+		// Each side is named by its own target: a whole-attribute write
+		// (`class`, `style`, the element's text) meets a partial one.
+		const writesOf = (write: RoleWrite): string => {
+			const t = write.target
+			return t.channel === 'text'
+				? 'the text content'
+				: `\`${t.channel === 'name' ? t.name : t.channel === 'class' ? t.token : t.property}\``
+		}
+		const parentWrites = writesOf(parent.write)
+		const childWrites = writesOf(childWrite)
+		const too = parentWrites === childWrites ? ' too' : ''
+		const fix =
+			target.channel === 'text'
+				? "Change what the passed element renders, or change the child's role binding to leave the text to the parent."
+				: `Bind a different ${noun} on the passed element, or change the child's role binding to leave it to the parent.`
+		return error(
+			'LTC084',
+			`\`watch(…, ${parentSpell})\` writes ${parentWrites} on an element passed to \`<${childTag}>\` that carries the \`.${role}\` role class — and \`<${childTag}>\` writes ${childWrites} on \`.${role}\` elements${too}, through its \`${childSpell}\` role binding (ADR 0048): two writers would fight over the same ${noun}. The passed content is yours to bind, and the child acts on it only through the roles it declares. ${fix}`,
+			rangeOf(source, at),
+		)
+	},
 
 	// --- formAssociated surface ---
 	/**

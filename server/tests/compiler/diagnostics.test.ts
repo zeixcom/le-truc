@@ -4557,6 +4557,496 @@ export function FormCheck({ children = '' }: { children?: Children<{}, Model> })
 	})
 })
 
+describe('the one-writer check (LTC084, ADR 0048 s3, LT-476)', () => {
+	const styleTsrx = `<style>@scope {
+:scope {
+	  color: red;
+	}
+}</style>`
+
+	// The canonical tabs shape: the child declares the `tab` role and writes
+	// `aria-selected` on `.tab` elements through a role-addressed reference.
+	const childTsrx = (bindCall: { child: string; imports: string }): string =>
+		`import { createCell, ${bindCall.imports}} from '@zeix/le-truc'
+
+export function MyTabs({ children = '' }: { children?: Children<{ tab: 'button' }> })
+@{
+	const tab = first('.tab', 'the active tab')
+	const selected = createCell(false)
+	watch(() => String(selected.get()), ${bindCall.child})
+	expose({})
+		<my-tabs>
+			<div class="wrap">{children}</div>
+			${styleTsrx}
+		</my-tabs>
+}`
+	const childTsx = (bindCall: { child: string; imports: string }): string =>
+		`import { createCell, ${bindCall.imports} } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
+
+export function MyTabs({ children = '' }: { children?: Children<{ tab: 'button' }> }, { first, watch }: any) {
+	const tab = first('.tab', 'the active tab')
+	const selected = createCell(false)
+	watch(() => String(selected.get()), ${bindCall.child})
+	expose({})
+	return (
+		<my-tabs>
+			<div class="wrap">{children}</div>
+			<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
+		</my-tabs>
+	)
+}`
+
+	const parentTsrx = (
+		bindCall: string,
+		content = '<button type="button" class="tab">One</button>',
+		specifier = '../child/my-tabs.tsrx',
+		helper = 'bindProperty',
+	): string =>
+		`import { createCell, ${helper} } from '@zeix/le-truc'
+import { MyTabs } from '${specifier}'
+
+export function TabsDemo({}: {})
+@{
+	const active = createCell(true)
+	const tab = first('.tab', 'the tab this demo drives')
+	watch(() => String(active.get()), ${bindCall})
+	expose({})
+		<tabs-demo>
+			<MyTabs>${content}</MyTabs>
+			${styleTsrx}
+		</tabs-demo>
+}`
+	const parentTsx = (
+		bindCall: string,
+		content = '<button type="button" class="tab">One</button>',
+		specifier = '../child/my-tabs.tsx',
+		helper = 'bindProperty',
+	): string =>
+		`import { createCell, ${helper} } from '@zeix/le-truc'
+import { css } from '@zeix/le-truc-compiler/macros'
+import { MyTabs } from '${specifier}'
+
+export function TabsDemo({}: {}, { first, watch }: any) {
+	const active = createCell(true)
+	const tab = first('.tab', 'the tab this demo drives')
+	watch(() => String(active.get()), ${bindCall})
+	expose({})
+	return (
+		<tabs-demo>
+			<MyTabs>${content}</MyTabs>
+			<style>{css\`@scope {
+	:scope {
+		  color: red;
+		}
+}\`}</style>
+		</tabs-demo>
+	)
+}`
+
+	const childBind = (call: string, imports: string) => ({
+		child: call,
+		imports,
+	})
+	const compileChildTsrx = (
+		bindCall = childBind(`bindProperty(tab, 'aria-selected')`, 'bindProperty'),
+	) => {
+		const { component, diagnostics } = compileComponent(
+			childTsrx(bindCall),
+			'examples/child/my-tabs.tsrx',
+			new Set(),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		return component
+	}
+
+	const ltc084 = (result: {
+		diagnostics: Array<Record<string, unknown>>
+	}): {
+		code: string
+		message: string
+		location: { start: number; end: number }
+	}[] =>
+		result.diagnostics.filter(
+			(
+				d,
+			): d is {
+				code: string
+				message: string
+				location: { start: number; end: number }
+			} => d.code === 'LTC084',
+		)
+
+	test('a role-targeted watch binding records roleWrites on the entry (.tsrx)', () => {
+		const child = compileChildTsrx()
+		expect(child.entry.roleWrites).toEqual({
+			tab: [
+				{
+					helper: 'bindProperty',
+					target: {
+						channel: 'name',
+						name: 'aria-selected',
+						authored: 'aria-selected',
+					},
+				},
+			],
+		})
+	})
+
+	test('a role-targeted watch binding records roleWrites on the entry (.tsx)', () => {
+		const { component, diagnostics } = compileComponentTsx(
+			childTsx(childBind(`bindProperty(tab, 'aria-selected')`, 'bindProperty')),
+			'examples/child/my-tabs.tsx',
+			new Set(),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.entry.roleWrites).toEqual({
+			tab: [
+				{
+					helper: 'bindProperty',
+					target: {
+						channel: 'name',
+						name: 'aria-selected',
+						authored: 'aria-selected',
+					},
+				},
+			],
+		})
+	})
+
+	test('a parent binding the same property on the role element is LTC084 (.tsrx)', () => {
+		const child = compileChildTsrx()
+		const { diagnostics } = compileComponent(
+			parentTsrx(`bindProperty(tab, 'aria-selected')`),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc084({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain(
+			"`watch(…, bindProperty(tab, 'aria-selected'))`",
+		)
+		expect(hits[0]?.message).toContain("`bindProperty(…, 'aria-selected')`")
+		expect(hits[0]?.message).toContain('`<my-tabs>`')
+		expect(hits[0]?.message).toContain('`.tab`')
+		expect(hits[0]?.message).toContain('`aria-selected`')
+		// The report sits at the parent's binding (ADR 0044): the authored
+		// text under the range is the binding helper call itself.
+		const parentSource = parentTsrx(`bindProperty(tab, 'aria-selected')`)
+		expect(textAt(parentSource, hits[0])).toBe(
+			`bindProperty(tab, 'aria-selected')`,
+		)
+	})
+
+	test('a parent binding the same property on the role element is LTC084 (.tsx)', () => {
+		const { component } = compileComponentTsx(
+			childTsx(childBind(`bindProperty(tab, 'aria-selected')`, 'bindProperty')),
+			'examples/child/my-tabs.tsx',
+			new Set(),
+		)
+		if (!component) throw new Error('child must compile')
+		const { diagnostics: parentDiags } = compileComponentTsx(
+			parentTsx(`bindProperty(tab, 'aria-selected')`),
+			'examples/parent/tabs-demo.tsx',
+			new Set(),
+			undefined,
+			new Map([[component.entry.source, component.entry]]),
+		)
+		const hits = ltc084({ diagnostics: parentDiags })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain(
+			"`watch(…, bindProperty(tab, 'aria-selected'))`",
+		)
+		expect(hits[0]?.message).toContain("`bindProperty(…, 'aria-selected')`")
+	})
+
+	test('a parent binding a different property on the same role passes (.tsrx)', () => {
+		// The pinned passing shape: the parent drives `title`, the child owns
+		// `aria-selected` — one writer per property.
+		const child = compileChildTsrx()
+		const { component, diagnostics } = compileComponent(
+			parentTsrx(`bindProperty(tab, 'title')`),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component).not.toBeNull()
+	})
+
+	test('a parent binding on an element without the role class passes (.tsrx)', () => {
+		const child = compileChildTsrx()
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindProperty(lead, 'aria-selected')`,
+				'<button type="button" class="tab">One</button><p class="lead">Intro</p>',
+			).replace(
+				`const tab = first('.tab', 'the tab this demo drives')`,
+				`const lead = first('.lead')`,
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc084({ diagnostics })).toHaveLength(0)
+	})
+
+	test('an ARIA spelling difference still conflicts (.tsrx)', () => {
+		// The child's `bindAria(tab, 'ariaSelected')` reflects the
+		// `aria-selected` attribute — the same state a parent
+		// `bindAttribute(lead, 'aria-expanded')`-style binding writes.
+		const child = compileChildTsrx(
+			childBind(`bindAria(tab, 'ariaSelected')`, 'bindAria'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'aria-selected')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc084({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`aria-selected`')
+	})
+
+	test('a child reference that matched its own template records nothing (.tsrx)', () => {
+		// The child's `.tab` reference resolved to its OWN markup, so its
+		// binding never touches the passed content — the parent may bind
+		// freely.
+		const source = `import { createCell, bindProperty } from '@zeix/le-truc'
+
+export function MyTabs({ children = '' }: { children?: Children<{ tab: 'button' }> })
+@{
+	const tab = first('.tab', 'the active tab')
+	const selected = createCell(false)
+	watch(() => String(selected.get()), bindProperty(tab, 'aria-selected'))
+	expose({})
+		<my-tabs>
+			<button type="button" class="tab">{children}</button>
+			${styleTsrx}
+		</my-tabs>
+}`
+		const { component, diagnostics } = compileComponent(
+			source,
+			'examples/child/my-tabs.tsrx',
+			new Set(),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		expect(component.entry.roleWrites).toBeUndefined()
+		const { diagnostics: parentDiags } = compileComponent(
+			parentTsrx(`bindProperty(tab, 'aria-selected')`),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[component.entry.source, component.entry]]),
+		)
+		expect(ltc084({ diagnostics: parentDiags })).toHaveLength(0)
+	})
+
+	test('a class token conflict is LTC084 (.tsrx)', () => {
+		const child = compileChildTsrx(
+			childBind(`bindClass(tab, 'active')`, 'bindClass'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(`bindClass(tab, 'active')`, undefined, undefined, 'bindClass'),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc084({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`active`')
+		expect(hits[0]?.message).toContain('class token')
+	})
+
+	test('a style property conflict is LTC084 (.tsrx)', () => {
+		const child = compileChildTsrx(
+			childBind(`bindStyle(tab, 'display')`, 'bindStyle'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindStyle(tab, 'display')`,
+				undefined,
+				undefined,
+				'bindStyle',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc084({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`display`')
+		expect(hits[0]?.message).toContain('style property')
+	})
+
+	test('a multi-word ARIA name meets its lowercase attribute (.tsrx)', () => {
+		// ARIA attribute names carry no inner capitals: `ariaValueNow`
+		// reflects `aria-valuenow`, not `aria-value-now` (LT-476 review 1).
+		const child = compileChildTsrx(
+			childBind(`bindAria(tab, 'ariaValueNow')`, 'bindAria'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'aria-valuenow')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc084({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`aria-valuenow`')
+	})
+
+	test('an IDL property meets its attribute spelling (.tsrx)', () => {
+		// `bindProperty(el, 'tabIndex')` and `bindAttribute(el, 'tabindex')`
+		// write the same state under different spellings (LT-476 review 2).
+		const child = compileChildTsrx(
+			childBind(`bindProperty(tab, 'tabIndex')`, 'bindProperty'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'tabindex')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc084({ diagnostics })).toHaveLength(1)
+	})
+
+	test('a whole class write conflicts with a bound token, both directions (.tsrx)', () => {
+		// Replacing the whole `class` attribute erases the child's token
+		// (LT-476 review 3) — the parent's whole write first.
+		const child = compileChildTsrx(
+			childBind(`bindClass(tab, 'active')`, 'bindClass'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'class')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		const hits = ltc084({ diagnostics })
+		expect(hits).toHaveLength(1)
+		expect(hits[0]?.message).toContain('`active`')
+		// And the child's whole write against the parent's token.
+		const wholeChildSource = `import { createCell, bindAttribute } from '@zeix/le-truc'
+
+export function MyTabs({ children = '' }: { children?: Children<{ tab: 'button' }> })
+@{
+	const tab = first('.tab', 'the active tab')
+	const selected = createCell(false)
+	watch(() => String(selected.get()), bindAttribute(tab, 'class'))
+	expose({})
+		<my-tabs>
+			<div class="wrap">{children}</div>
+			${styleTsrx}
+		</my-tabs>
+}`
+		const { component } = compileComponent(
+			wholeChildSource,
+			'examples/child/my-tabs.tsrx',
+			new Set(),
+		)
+		if (!component) throw new Error('child must compile')
+		const { diagnostics: reversed } = compileComponent(
+			parentTsrx(`bindClass(tab, 'active')`, undefined, undefined, 'bindClass'),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[component.entry.source, component.entry]]),
+		)
+		expect(ltc084({ diagnostics: reversed })).toHaveLength(1)
+	})
+
+	test('a whole write of a different attribute does not conflict (.tsrx)', () => {
+		// The whole-attribute rule matches by kind: `title` is neither the
+		// class attribute nor the element's text — and a class token shares
+		// no state with bound text.
+		const child = compileChildTsrx(
+			childBind(`bindClass(tab, 'active')`, 'bindClass'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindAttribute(tab, 'title')`,
+				undefined,
+				undefined,
+				'bindAttribute',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc084({ diagnostics })).toHaveLength(0)
+		// Mismatched partial channels: a bound token against bound text.
+		const textChild = compileChildTsrx(childBind(`bindText(tab)`, 'bindText'))
+		const { diagnostics: partials } = compileComponent(
+			parentTsrx(`bindClass(tab, 'active')`, undefined, undefined, 'bindClass'),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[textChild.entry.source, textChild.entry]]),
+		)
+		expect(ltc084({ diagnostics: partials })).toHaveLength(0)
+	})
+
+	test('a className write conflicts with a bound class token (.tsrx)', () => {
+		// `className` maps to `class`, so the whole-write rule reaches it.
+		const child = compileChildTsrx(
+			childBind(`bindClass(tab, 'active')`, 'bindClass'),
+		)
+		const { diagnostics } = compileComponent(
+			parentTsrx(
+				`bindProperty(tab, 'className')`,
+				undefined,
+				undefined,
+				'bindProperty',
+			),
+			'examples/parent/tabs-demo.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(ltc084({ diagnostics })).toHaveLength(1)
+	})
+})
+
 describe('a required role-addressed ref at runtime (LT-474 review)', async () => {
 	const fixture = (call: string): string =>
 		`export function C({ children = '' }: { children?: Children<{ icon: 'span' }> })
