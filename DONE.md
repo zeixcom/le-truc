@@ -1207,3 +1207,11 @@ Full entry text: `git log -p -- DONE.md`.
   - (2) `composeSiteAddress` takes an excluded clause before a later clean one, unlike
     `selectorCandidates`. Both are proven unique, so it stays.
   - (3) The reworded arm and item refusals go to `writer` with the next copy pass.
+
+- [x] LT-501: Authored `@scope` emission — native and lowered, the revised style errors, and the corpus cutover in one commit (ADR 0033 as revised 2026-10-07). — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-472
+  **Gates:** test:server, typecheck, check:corpus, check:contract, build:docs, check:links, test:variants
+  **Area:** compiler
+  **Changed:** Compiled sheets are authored platform CSS (ADR 0033 as revised 2026-10-07/08): a prelude-less `@scope { … }` with author-written `to (…)` limits, the host idiom `:where(:scope)`, bare or relative descendants, tag-led and other top-level rules verbatim. Native emission adds the explicit root `@scope (<tag>)`. The lowered emission leads with `:where(<root>)`, pads a bare `:scope` to (0,1,0), and adds one guard per authored limit, re-including an own-tag instance below the limit or matched by it. The derived-boundary emission and `CompiledComponent.scopeBoundaries` are gone, and LTC051 compares authored sheets only. Diagnostics: LTC066 reworded, LTC069 on any `:global`, LTC071 re-scoped to limit-dead rules, LTC086 (`:host`) and LTC089 (unlowerable `@scope` forms, lowered targets only) new, LTC070 retired. All 50 compiled corpus sources moved by `scripts/migrate-scope-css.ts`, keeping the old boundary sets as `to (<tag> > *)` limits. Lowered corpus CSS is 102,044 → 172,605 bytes against `v3`, all of it guard cost; LT-502 removes unneeded limits.
+  **Review:** Approved (2026-10-08) after one round (the `:where(:scope)` ruling). Accepted: lightningcss 1.33 refuses a relative selector at the top of `@scope`, so the compiler anchors it before parsing and flattening (`anchorRelativeSelectors`); `> my-tag .x` inside `@scope` is not LTC066. Nit fixed by the reviewer: a bare `:scope` ties the child's own `&.x` variant, so the docs no longer say it "outranks all three".
