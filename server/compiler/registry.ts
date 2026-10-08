@@ -101,14 +101,16 @@ export type RegistryEntry = {
 	 * any `[tabindex]`, or `audio`/`video` with `controls` — transitively
 	 * through its own composed children, which the registry-aware pass
 	 * closes over the entries' `renderedShapes` the way
-	 * `composedShapesFor` does. Content a parent passes at a compose site
-	 * is the parent's markup (ADR 0048 s1), not part of the template, and
-	 * never counts. The consumer of the flag is a composing parent: a
-	 * compose site of a child that declares `'non-interactive'` refuses
-	 * literal interactive content and a composed child this flag is set
-	 * through (LTC085, `analysis/content-model.ts`). The discovery pass
-	 * knows no composed child, so its entries carry the direct half only;
-	 * the entry that reaches `registry.json` is the registry-aware one.
+	 * `composedShapesFor` does. Direction matters (ADR 0048 s1): markup the
+	 * component passes at its own compose sites is its own markup and
+	 * counts toward the flag; content a parent passes TO it is the parent's,
+	 * never part of its template, and never counts. The consumer of the
+	 * flag is a composing parent: a compose site of a child that declares
+	 * `'non-interactive'` refuses literal interactive content and a
+	 * composed child this flag is set through (LTC085,
+	 * `analysis/content-model.ts`). The discovery pass knows no composed
+	 * child, so its entries carry the direct half only; the entry that
+	 * reaches `registry.json` is the registry-aware one.
 	 */
 	interactive: boolean
 	/**

@@ -72,7 +72,12 @@ export const interactiveDescribeOf = (element: ElementNode): string | null => {
 	)
 		return `<${tag}>`
 	if (tag === 'a' && hasAttr(element, 'href')) return '<a href>'
-	if (tag === 'input' && staticAttr(element, 'type') !== 'hidden')
+	// Input `type` keywords are ASCII case-insensitive (the HTML enumeration
+	// rule), so the exemption lowercases before comparing.
+	if (
+		tag === 'input' &&
+		staticAttr(element, 'type')?.toLowerCase() !== 'hidden'
+	)
 		return '<input>'
 	if (hasAttr(element, 'tabindex')) return `<${tag} tabindex>`
 	if ((tag === 'audio' || tag === 'video') && hasAttr(element, 'controls'))
@@ -107,28 +112,27 @@ export const interactiveBySource = (
 
 /**
  * Whether the component's own template renders interactive content (ADR
- * 0048 s4) — the value of its registry entry's `interactive` flag. What a
- * parent passes at a compose site is the parent's markup (ADR 0048 s1),
- * not part of the template, so the walk stops at every compose site and
- * takes the child's entry instead. Without the registry (the discovery
- * pass) composed children contribute nothing; their entries' flags close
- * the transitive half in the registry-aware pass, where the entry that
- * reaches `registry.json` is built.
+ * 0048 s4) — the value of its registry entry's `interactive` flag. The walk
+ * enters compose content: markup the component passes at its own compose
+ * sites is its own markup (ADR 0048 s1), rendered in its output. At the
+ * compose node itself the child's entry is consulted first — the child's
+ * own template, transitively — and the walk then continues into the passed
+ * content. What a parent passes TO this component is never part of its
+ * template and never reaches this walk. Without the registry (the
+ * discovery pass) composed children contribute nothing at the node; their
+ * entries' flags close the transitive half in the registry-aware pass,
+ * where the entry that reaches `registry.json` is built.
  */
 export const templateInteractiveOf = (
 	root: TemplateNode,
 	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
 ): boolean =>
-	someNode(
-		root,
-		node => {
-			if (node.kind === 'element') return interactiveDescribeOf(node) !== null
-			if (node.kind === 'compose' && composeRegistry)
-				return interactiveBySource(node.source, composeRegistry, new Set())
-			return false
-		},
-		{ intoCompose: false },
-	)
+	someNode(root, node => {
+		if (node.kind === 'element') return interactiveDescribeOf(node) !== null
+		if (node.kind === 'compose' && composeRegistry)
+			return interactiveBySource(node.source, composeRegistry, new Set())
+		return false
+	})
 
 /**
  * The first interactive finding among a compose site's literal children

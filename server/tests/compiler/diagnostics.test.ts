@@ -4295,6 +4295,25 @@ export function FormRow({}: {}, {}) {
 		expect(component.entry.interactive).toBe(false)
 	})
 
+	test('markup a component passes at its own compose site counts toward its flag', () => {
+		// FormRow renders <FormCheck><button>x</button></FormCheck>: the
+		// button is FormRow's own markup (ADR 0048 s1), rendered in its
+		// output, so FormRow's entry is interactive — while the receiving
+		// child's flag is untouched, the button never being part of its
+		// template. (The child declares no model, so the site compiles.)
+		const child = compileChildTsrx('string')
+		const { component, diagnostics } = compileComponent(
+			parentTsrx('<button type="button">x</button>'),
+			'examples/parent/form-row.tsrx',
+			new Set(),
+			undefined,
+			new Map([[child.entry.source, child.entry]]),
+		)
+		expect(diagnostics).toEqual([])
+		expect(component?.entry.interactive).toBe(true)
+		expect(child.entry.interactive).toBe(false)
+	})
+
 	test('a button in the literal children is refused (.tsrx)', () => {
 		const child = compileChildTsrx()
 		const { diagnostics } = compileComponent(
@@ -4356,11 +4375,13 @@ export function FormRow({}: {}, {}) {
 			const hits = ltc085(compile(content))
 			expect(hits, content).toHaveLength(1)
 		}
-		// Not interactive: a bare anchor, a hidden input, inert media, and
-		// ordinary markup — and the whole site compiles clean.
+		// Not interactive: a bare anchor, a hidden input (the `type` keyword
+		// is ASCII case-insensitive), inert media, and ordinary markup — and
+		// the whole site compiles clean.
 		for (const content of [
 			'<a>x</a>',
 			'<input type="hidden" name="q" />',
+			'<input type="HIDDEN" name="q" />',
 			'<video></video>',
 			'<span>x</span>',
 		]) {
