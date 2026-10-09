@@ -656,7 +656,7 @@ export const I18N_LOCALES = ${JSON.stringify(locales)} as const
 /** The source locale: the language the inline \`.tsrx\` strings are written in. */
 export const I18N_SOURCE_LOCALE = ${JSON.stringify(SOURCE_LOCALE)}
 
-/** Formatting configuration folded into every record (see effects/i18n.ts). */
+/** Formatting configuration folded into every record (see compiler/i18n-catalog.ts). */
 export const I18N_TIME_ZONE = ${JSON.stringify(build.timeZone)}
 export const I18N_CURRENCY = ${JSON.stringify(build.currency)}
 
