@@ -711,7 +711,7 @@ Translations are additive per-locale
 override files, component-namespaced (`i18n/de.json`, keys `<tag>.<key>`),
 with **no tiering and no override stack**: a key resolves in exactly one
 place. The compiler resolves `t` at render time — the generated `i18n`
-module (`server/effects/i18n.ts` folds the corpus catalogs into it) exposes
+module (`compiler/i18n-catalog.ts` folds the corpus catalogs into it) exposes
 `i18nRecord(tag, lang?)`, which every render call boundary uses to supply
 the reserved record — and the catalog never reaches the client. A missing
 key renders the source-locale string and is recorded in the build report's
