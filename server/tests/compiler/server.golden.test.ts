@@ -287,7 +287,7 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 	// no @else, LT-008's DOM-existence-guarded addressing).
 	const formTextboxHtml = ({
 		name,
-		label,
+		children,
 		value = '',
 		required = false,
 		maxlength,
@@ -296,7 +296,7 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 		description = '',
 	}: {
 		name: string
-		label: string
+		children: string
 		value?: string
 		required?: boolean
 		maxlength?: number
@@ -319,7 +319,7 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 				: description
 		return (
 			`<form-textbox name="${name}" value="${value}">` +
-			`<label for="${name}-input">${label}</label>` +
+			`<label for="${name}-input">${children}</label>` +
 			'<div class="input">' +
 			(multiline
 				? `<textarea id="${name}-input" value="${value}" autocomplete="off"${required ? ' required' : ''}${maxlength !== undefined ? ` maxlength="${maxlength}"` : ''} rows="3"${describedBy}>${value}</textarea>`
@@ -341,60 +341,64 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 	test('default: empty value, optional field, no clear button, no error paragraph', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'name',
-			label: 'Name',
+			children: 'Name',
 		})
-		expect(html).toBe(formTextboxHtml({ name: 'name', label: 'Name' }))
+		expect(html).toBe(formTextboxHtml({ name: 'name', children: 'Name' }))
 	})
 
 	test('required: boolean arg renders the bare attribute and the error paragraph', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'name',
-			label: 'Name',
+			children: 'Name',
 			required: true,
 		})
 		expect(html).toBe(
-			formTextboxHtml({ name: 'name', label: 'Name', required: true }),
+			formTextboxHtml({ name: 'name', children: 'Name', required: true }),
 		)
 	})
 
 	test('seeded value reaches the host attribute AND the mirrored input value', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'nick',
-			label: 'Nickname',
+			children: 'Nickname',
 			value: 'Ada',
 		})
 		expect(html).toBe(
-			formTextboxHtml({ name: 'nick', label: 'Nickname', value: 'Ada' }),
+			formTextboxHtml({ name: 'nick', children: 'Nickname', value: 'Ada' }),
 		)
 	})
 
 	test('multiline: @if renders the textarea branch with the same constructs', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'notes',
-			label: 'Notes',
+			children: 'Notes',
 			multiline: true,
 			required: true,
 		})
 		expect(html).toBe(
 			formTextboxHtml({
 				name: 'notes',
-				label: 'Notes',
+				children: 'Notes',
 				multiline: true,
 				required: true,
 			}),
 		)
 	})
 
-	test('special characters escape in both the root attribute and the mirror', async () => {
+	test('special characters escape in the root attribute and the mirror; children render trusted', async () => {
+		// The `value` arg escapes through the attribute channel; the passed
+		// children do NOT escape — they are the parent's trusted markup,
+		// spliced raw (String(children), ADR 0048 s1, the card-callout
+		// semantics), which is why the helper call passes the raw string.
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'x',
-			label: 'A & B <test>',
+			children: 'A & B <test>',
 			value: 'q"uote',
 		})
 		expect(html).toBe(
 			formTextboxHtml({
 				name: 'x',
-				label: 'A &amp; B &lt;test&gt;',
+				children: 'A & B <test>',
 				value: 'q&quot;uote',
 			}),
 		)
@@ -403,7 +407,7 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 	test('clearable: false by default, the clear button and its @if branch simply do not render', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'q',
-			label: 'Search',
+			children: 'Search',
 		})
 		expect(html).not.toContain('class="clear"')
 	})
@@ -411,25 +415,25 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 	test('clearable: true renders the clear button, hidden while the value is empty', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'q',
-			label: 'Search',
+			children: 'Search',
 			clearable: true,
 		})
 		expect(html).toBe(
-			formTextboxHtml({ name: 'q', label: 'Search', clearable: true }),
+			formTextboxHtml({ name: 'q', children: 'Search', clearable: true }),
 		)
 	})
 
 	test('clearable: true with a seeded value renders the clear button visible', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'q',
-			label: 'Search',
+			children: 'Search',
 			clearable: true,
 			value: 'abc',
 		})
 		expect(html).toBe(
 			formTextboxHtml({
 				name: 'q',
-				label: 'Search',
+				children: 'Search',
 				clearable: true,
 				value: 'abc',
 			}),
@@ -439,14 +443,14 @@ describe('server golden — form-textbox variants (extensions, Parser-expose, @i
 	test('maxlength alone makes the field validatable (error paragraph) and describes the description paragraph', async () => {
 		const html = await render('FormTextbox', 'form-textbox', {
 			name: 'q',
-			label: 'Search',
+			children: 'Search',
 			maxlength: 10,
 			description: 'Max 10 characters',
 		})
 		expect(html).toBe(
 			formTextboxHtml({
 				name: 'q',
-				label: 'Search',
+				children: 'Search',
 				maxlength: 10,
 				description: 'Max 10 characters',
 			}),
@@ -467,13 +471,13 @@ describe('server golden — module-list (reactive @for → template extraction)'
 			'<module-list><form action="#">' +
 				// FormTextbox is composed (ADR 0024 sub-design 10, LT-020): this
 				// is form-textbox.tsrx's OWN render output for
-				// { name: 'new-item', label: 'New item', clearable: true } —
+				// { name: 'new-item', children: 'New item', clearable: true } —
 				// value="" (unauthored default, now real, not hand-copied), the
 				// clear button (module-list passes bare `clearable`), and no
 				// error paragraph (no `required`/`maxlength` — nothing to
 				// validate, so the branch simply doesn't render at all).
 				'<form-textbox name="new-item" value="">' +
-				'<label for="new-item-input">New item</label>' +
+				'<label for="new-item-input" data-children="module-list">New item</label>' +
 				'<div class="input">' +
 				'<input type="text" id="new-item-input" value="" autocomplete="off">' +
 				'<button type="button" aria-label="Clear input" hidden class="clear">✕</button>' +

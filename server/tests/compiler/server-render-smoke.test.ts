@@ -54,7 +54,7 @@ const ARGS: Record<string, Record<string, unknown>> = {
 	'form-checkbox': { name: 'agree', label: 'I agree' },
 	'form-radiogroup': {
 		name: 'choice',
-		label: 'Pick one',
+		children: 'Pick one',
 		options: [
 			{ value: 'a', label: 'A' },
 			{ value: 'b', label: 'B' },
@@ -62,12 +62,12 @@ const ARGS: Record<string, Record<string, unknown>> = {
 	},
 	'form-textbox': {
 		name: 'title',
-		label: 'Title',
+		children: 'Title',
 		i18n: inlineI18n({ clearInput: 'Clear input' }),
 	},
 	'form-combobox': {
 		name: 'fruit',
-		label: 'Fruit',
+		children: 'Fruit',
 		options: [
 			{ value: 'a', label: 'Apple' },
 			{ value: 'b', label: 'Banana' },
@@ -76,11 +76,16 @@ const ARGS: Record<string, Record<string, unknown>> = {
 	},
 	'form-tokenbox': {
 		name: 'tags',
-		label: 'Tags',
+		children: 'Tags',
 		i18n: inlineI18n({ remove: 'Remove' }),
 	},
 	'form-colorgraph': {
-		i18n: inlineI18n({ drag: 'Drag' }),
+		i18n: inlineI18n({
+			drag: 'Drag',
+			lightness: 'Lightness',
+			chroma: 'Chroma',
+			hue: 'Hue',
+		}),
 	},
 	'form-listbox': {
 		name: 'fruit',

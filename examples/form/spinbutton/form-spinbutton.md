@@ -67,6 +67,8 @@ A quantity spinbutton with increment/decrement buttons, clamped values, and keyb
 - Increments `value` by `step` (or `big-step` if `big` is `true`), clamped to `max`
 {% /table %}
 
+A composed parent passes the visible label as children (`<FormSpinbutton>Quantity</FormSpinbutton>`); the label is optional, and the children must be non-interactive — the compiler refuses interactive content at the compose site. Page-authored markup labels the spinbutton directly, with a `<label for>` pointing at the inner input.
+
 {% partial file="form-associated.md" /%}
 
 #### Keyboard Support

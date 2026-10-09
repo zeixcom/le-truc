@@ -562,7 +562,7 @@ describe('the generated i18n module', () => {
 		if (!render) throw new Error('renderFormTextbox missing')
 		const html = render({
 			name: 'title',
-			label: 'Title',
+			children: 'Title',
 			clearable: true,
 			i18n: i18nModule.i18nRecord('form-textbox', 'de'),
 		})
@@ -581,7 +581,7 @@ describe('the generated i18n module', () => {
 		if (!render) throw new Error('renderFormTokenbox missing')
 		const html = render({
 			name: 'tags',
-			label: 'Tags',
+			children: 'Tags',
 			value: 'one, two',
 			i18n: i18nModule.i18nRecord('form-tokenbox', 'de'),
 		})
@@ -621,7 +621,7 @@ describe('the generated i18n module', () => {
 			return JSON.parse(raw.replace(/&quot;/g, '"').replace(/&amp;/g, '&'))
 		}
 		expect(
-			await attributeOf('form-tokenbox', { name: 'tags', label: 'Tags' }),
+			await attributeOf('form-tokenbox', { name: 'tags', children: 'Tags' }),
 		).toEqual({
 			added: ['Token hinzugefügt: ', { t: 'arg', a: 'token' }],
 			duplicate: [{ t: 'arg', a: 'token' }, ' ist bereits in der Liste'],

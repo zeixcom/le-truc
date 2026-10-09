@@ -27,6 +27,7 @@
  * classes on the label, which a string-valued class thunk would wipe.
  */
 
+import type { Children } from '@zeix/le-truc'
 import { asString } from '@zeix/le-truc'
 
 export const config = { formAssociated: true }
@@ -59,13 +60,19 @@ declare global {
 export function FormRadiogroup(
 	{
 		name,
-		legend,
+		children,
 		options,
 		value = '',
 	}:
 		{
 			name: string
-			legend: string
+			/**
+			 * Visible legend of the radio group, passed as children. Non-
+			 * interactive: the compiler refuses interactive content at a
+			 * compose site (LTC085, ADR 0048 s4). The options' own
+			 * `option.label` is list-item data and stays a string.
+			 */
+			children: Children<{}, 'non-interactive'>
 			options: FormRadiogroupOption[]
 			value?: string
 		},
@@ -111,7 +118,7 @@ export function FormRadiogroup(
 
 	<form-radiogroup {name} value={value || options[0]?.value || ''}>
 		<fieldset>
-			<legend>{legend}</legend>
+			<legend>{children}</legend>
 			@for (const option of options; index i) {
 				const optValue = option.value;
 				<label

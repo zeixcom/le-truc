@@ -60,6 +60,7 @@ declare global {
 // label a key too (LTC047); those fold server-side.
 export const i18n = {
 	addTodo: 'Add Todo',
+	addTodoLabel: 'What needs to be done?',
 	filter: 'Filter',
 	all: 'All',
 	active: 'Active',
@@ -137,7 +138,7 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 
 		<module-todo>
 			<form action="#" onSubmit={submitNewTodo}>
-				<FormTextbox name="add-todo" label="What needs to be done?" clearable />
+				<FormTextbox name="add-todo" clearable>{t.addTodoLabel}</FormTextbox>
 				<BasicButton
 					class="submit"
 					type="submit"
@@ -214,18 +215,18 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 				<p class="remaining">{() => t.remaining({ count: activeCount.get() })}</p>
 				{/* Composed since LT-494: the `.split-button` variant owns the
 				    visually-hidden legend and radios, so no presentation
-				    rides the compose site — only the discriminator class. */}
+				    rides the compose site — only the discriminator class.
+				    The legend is passed children (LT-514). */}
 				<FormRadiogroup
 					class="split-button"
 					name="filter"
-					legend={t.filter}
 					options={[
 						{ value: 'all', label: t.all },
 						{ value: 'active', label: t.active },
 						{ value: 'completed', label: t.completed },
 					]}
 					value="all"
-				/>
+				>{t.filter}</FormRadiogroup>
 				{/* Stays raw: LT-489 ruled the modifier args and moved the
 				    remove button to the composed spelling; this one stays
 				    raw. */}

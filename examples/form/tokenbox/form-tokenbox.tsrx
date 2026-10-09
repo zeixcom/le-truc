@@ -21,6 +21,7 @@
  * that one initial read; `tokens.add()`'s own `DuplicateKeyError` guard
  * still catches duplicates from then on, same as the hand-written version.
  */
+import type { Children } from '@zeix/le-truc'
 import { createList, defineMethod } from '@zeix/le-truc'
 import { DuplicateKeyError } from '@zeix/le-truc'
 
@@ -75,7 +76,7 @@ declare global {
 export function FormTokenbox(
 	{
 		name,
-		label,
+		children,
 		value = '',
 		type = 'text',
 		description = '',
@@ -83,7 +84,12 @@ export function FormTokenbox(
 	}:
 		{
 			name: string
-			label: string
+			/**
+			 * Visible label of the tokenbox, passed as children. Non-interactive:
+			 * the compiler refuses interactive content at a compose site
+			 * (LTC085, ADR 0048 s4).
+			 */
+			children: Children<{}, 'non-interactive'>
 			value?: string
 			type?: string
 			description?: string
@@ -133,7 +139,7 @@ export function FormTokenbox(
 	})
 
 	<form-tokenbox {name} value={value}>
-		<label for={inputId}>{label}</label>
+		<label for={inputId}>{children}</label>
 		<div class="input" data-container>
 			@for (const token of tokens; key k) {
 				<span class="token" data-key>

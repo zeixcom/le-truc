@@ -24,6 +24,11 @@ Values a composing parent passes at the compose site (`<BasicButton … />`). Ea
 - Default
 - Description
 ---
+- `children`
+- content
+- –
+- Static rich label content (an icon plus text), rendered by `span.label` in place of the `label` text. Non-interactive: the compiler refuses interactive content at the compose site. Writing the `label` property at runtime replaces rich children with that text
+---
 - `variant`
 - `'primary' | 'secondary' | 'tertiary'`
 - `'secondary'`
@@ -76,7 +81,7 @@ Values a composing parent passes at the compose site (`<BasicButton … />`). Ea
 - `label`
 - `string`
 - Text content of `span.label` or `button`
-- Accessible name of button
+- Visible label text; may be passed as a static arg instead. Writing it at runtime replaces rich `children` content with that text
 {% /table %}
 
 #### Descendant Elements

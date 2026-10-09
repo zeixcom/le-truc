@@ -11,7 +11,7 @@
  * generated client must carry it.
  */
 
-import type { FormFactoryContext } from '@zeix/le-truc'
+import type { Children, FormFactoryContext } from '@zeix/le-truc'
 import {
 	asString,
 	bindAttribute,
@@ -69,7 +69,7 @@ declare global {
 export function FormCombobox(
 	{
 		name,
-		label,
+		children,
 		options,
 		value = '',
 		description = '',
@@ -77,7 +77,12 @@ export function FormCombobox(
 		i18n: { t },
 	}: {
 		name: string
-		label: string
+		/**
+		 * Visible label of the combobox, passed as children. Non-interactive:
+		 * the compiler refuses interactive content at a compose site
+		 * (LTC085, ADR 0048 s4).
+		 */
+		children: Children<{}, 'non-interactive'>
 		options: FormComboboxOption[]
 		value?: string
 		description?: string
@@ -120,7 +125,7 @@ export function FormCombobox(
 
 	return (
 		<form-combobox name={name} value={value}>
-			<label for={inputId}>{label}</label>
+			<label for={inputId}>{children}</label>
 			<div class="input">
 				<input
 					type="text"

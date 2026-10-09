@@ -144,7 +144,6 @@ export function ModuleColoreditor(
 			<FormTextbox
 				class="name"
 				name="name"
-				label="Color name"
 				value={label}
 				required
 				description={`Nearest named CSS color: ${nearestNamedColor(color)[0] ?? ''}`}
@@ -156,7 +155,9 @@ export function ModuleColoreditor(
 						},
 					},
 				}}
-			/>
+			>
+				Color name
+			</FormTextbox>
 			<div class="info">
 				<ModuleColorinfo
 					class="lighten80"

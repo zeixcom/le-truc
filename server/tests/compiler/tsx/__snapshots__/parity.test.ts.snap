@@ -595,10 +595,10 @@ declare global {
 export default defineComponent(
 	'module-list',
 	({ first, host, on, pass, watch }) => {
-		const container = first('ul', 'module-list: ul missing')
-		const form = first('form', 'module-list: form missing')
-		const textbox = first('form-textbox', 'the new-item textbox')
-		const basicButton = first('basic-button.submit', 'module-list: basic-button.submit missing')
+		const container = first('ul:not(form-textbox *, basic-button *)', 'module-list: ul:not(form-textbox *, basic-button *) missing')
+		const form = first('form:not(form-textbox *, basic-button *)', 'module-list: form:not(form-textbox *, basic-button *) missing')
+		const textbox = first('form-textbox:not(basic-button *)', 'the new-item textbox')
+		const basicButton = first('basic-button.submit:not(form-textbox *)', 'module-list: basic-button.submit:not(form-textbox *) missing')
 		const items = createList<string>([], {
 			keyConfig: 'item',
 		})
@@ -653,7 +653,7 @@ declare global {
 export default defineComponent<ModuleTickerProps>(
 	'module-ticker',
 	({ expose, first, host, on, pass, watch }) => {
-		const container = first('table', 'module-ticker: table missing')
+		const container = first('table:not(basic-button *)', 'module-ticker: table:not(basic-button *) missing')
 		const basicButton = first('basic-button.toggle', 'module-ticker: basic-button.toggle missing')
 		const button = first('basic-button.toggle button', 'module-ticker: basic-button.toggle button missing')
 		const button2 = first('basic-button.add-rows button', 'module-ticker: basic-button.add-rows button missing')
@@ -886,14 +886,14 @@ export default defineComponent(
 				}
 			},
 		}
-		const container = first('ol', 'Add a container element for items.')
-		const form = first('form', 'module-todo: form missing')
-		const textbox = first('form-textbox:not(form-inplace-edit *)', 'Add <form-textbox> component to enter a new todo item.')
-		const basicButton = first('basic-button.submit', 'module-todo: basic-button.submit missing')
-		const liveRegion = first('[role="status"]', 'Add a live region for status messages.')
-		const p = first('p.remaining', 'module-todo: p.remaining missing')
-		const filter = first('form-radiogroup', 'Add <form-radiogroup> component to filter todo items.')
-		const clearCompleted = first('basic-button.clear-completed', 'Add <basic-button.clear-completed> component to clear completed todo items.')
+		const container = first('ol:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)', 'Add a container element for items.')
+		const form = first('form:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)', 'module-todo: form:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *) missing')
+		const textbox = first('form-textbox:not(basic-button *, form-inplace-edit *, form-radiogroup *)', 'Add <form-textbox> component to enter a new todo item.')
+		const basicButton = first('basic-button.submit:not(form-textbox *, form-inplace-edit *, form-radiogroup *)', 'module-todo: basic-button.submit:not(form-textbox *, form-inplace-edit *, form-radiogroup *) missing')
+		const liveRegion = first('[role="status"]:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)', 'Add a live region for status messages.')
+		const p = first('p:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)', 'module-todo: p:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *) missing')
+		const filter = first('form-radiogroup:not(form-textbox *, basic-button *, form-inplace-edit *)', 'Add <form-radiogroup> component to filter todo items.')
+		const clearCompleted = first('basic-button.clear-completed:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)', 'Add <basic-button.clear-completed> component to clear completed todo items.')
 		const items = createList<TodoItem, MutableStore<TodoItem>>([], {
 			keyConfig: item => item.id,
 			createItem: createStore,
@@ -931,13 +931,13 @@ export default defineComponent(
 		})
 		pass(basicButton, { disabled: { get: () => !textbox.length } })
 		reconcile(container, host.querySelector<HTMLTemplateElement>(':scope > template[data-list="0"]')!, items, (_element, item, k, first) => {
-			const button = first('button[aria-pressed="false"]', 'module-todo: button[aria-pressed="false"] missing')
-			const formCheckbox = first('form-checkbox', 'module-todo: form-checkbox missing')
-			const span = first('span.visually-hidden', 'module-todo: span.visually-hidden missing')
-			const formInplaceEdit = first('form-inplace-edit', 'module-todo: form-inplace-edit missing')
-			const button2 = first('basic-button button', 'module-todo: basic-button button missing')
-			const input = first('input[type="checkbox"]', 'module-todo: input[type="checkbox"] missing')
-			const label = first('label.label', 'module-todo: label.label missing')
+			const button = first('button:not(form-inplace-edit *, basic-button *)', 'module-todo: button:not(form-inplace-edit *, basic-button *) missing')
+			const formCheckbox = first('form-checkbox:not(form-inplace-edit *, basic-button *)', 'module-todo: form-checkbox:not(form-inplace-edit *, basic-button *) missing')
+			const span = first('span:not(form-inplace-edit *, basic-button *)', 'module-todo: span:not(form-inplace-edit *, basic-button *) missing')
+			const formInplaceEdit = first('form-inplace-edit:not(basic-button *)', 'module-todo: form-inplace-edit:not(basic-button *) missing')
+			const button2 = first('basic-button:not(form-inplace-edit *) button', 'module-todo: basic-button:not(form-inplace-edit *) button missing')
+			const input = first('input:not(form-inplace-edit *, basic-button *)', 'module-todo: input:not(form-inplace-edit *, basic-button *) missing')
+			const label = first('label:not(form-inplace-edit *, basic-button *)', 'module-todo: label:not(form-inplace-edit *, basic-button *) missing')
 			input.setAttribute('id', \`\${k}-checkbox\`)
 			label.setAttribute('for', \`\${k}-checkbox\`)
 			watch(() => items.length === 1, bindAttribute(button, 'disabled'))

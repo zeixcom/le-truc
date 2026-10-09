@@ -38,6 +38,8 @@ An advanced form control that coordinates a text input with a popup `form-listbo
 - Assistive/help text shown in `.description`
 {% /table %}
 
+A composed parent passes the visible label as children (`<FormCombobox>Fruit</FormCombobox>`); the children must be non-interactive — the compiler refuses interactive content at the compose site. Page-authored markup labels the combobox directly, with a `<label for>` pointing at the inner input.
+
 {% partial file="form-associated.md" /%}
 
 #### Methods

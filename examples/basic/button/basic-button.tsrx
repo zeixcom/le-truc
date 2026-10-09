@@ -31,6 +31,15 @@
  * `on()` against `basic-button button` in the parent's own client. A
  * page-authored instance carries no handler.
  *
+ * The visible label takes BOTH channels (LT-514): the reactive `label`
+ * prop stays the runtime channel (module-ticker `pass()`es it), and
+ * non-interactive `children` are the static rich channel (an icon plus
+ * text). `span.label` renders the children when present, otherwise the
+ * `label` text. The ternary folds server-side (children is a server arg),
+ * so no auto watch-text plans for the span — the authored guarded watch
+ * below is the label's one runtime writer, and a runtime `label` write
+ * replaces rich children with that text.
+ *
  * `variant`, `kind` and `size` drive the button's own classes — three
  * orthogonal server args (LT-489), each a closed literal union whose
  * default carries no styles of its own, so a parent asks for exactly
@@ -41,10 +50,15 @@
  * host instead, where it passes through to the served DOM untouched.
  */
 
+import type { Children } from '@zeix/le-truc'
+
 export type BasicButtonProps = {
 	/** Whether the button is disabled. */
 	disabled: boolean
-	/** Visible label text of the button. */
+	/**
+	 * Visible label text of the button. Writing it at runtime replaces rich
+	 * `children` content with that text.
+	 */
 	label: string
 	/** Optional badge text displayed alongside the label. */
 	badge: string
@@ -66,6 +80,7 @@ declare global {
 export function BasicButton(
 	{
 		label,
+		children = '',
 		badge = '',
 		disabled = false,
 		variant = 'secondary',
@@ -75,7 +90,21 @@ export function BasicButton(
 		ariaLabel,
 		onClick,
 	}: {
-		label: string
+		/**
+		 * Reactive label text — the RUNTIME channel (a parent may `pass()` or
+		 * write it). Optional at the compose site: rich static content is
+		 * passed as `children` instead, which `span.label` renders in place
+		 * of this text; a runtime `label` write replaces that rich content
+		 * with the written text.
+		 */
+		label?: string
+		/**
+		 * Static rich label content (an icon plus text), rendered by
+		 * `span.label` in place of the `label` text. Non-interactive: the
+		 * compiler refuses interactive content at a compose site (LTC085,
+		 * ADR 0048 s4).
+		 */
+		children?: Children<{}, 'non-interactive'>
 		badge?: string
 		disabled?: boolean
 		/** The weight: `primary`, `secondary`, or `tertiary`. */
@@ -103,6 +132,16 @@ export function BasicButton(
 			badge: badgeSpan?.textContent ?? '',
 		})
 
+		// The label's one runtime writer: the children/label choice folds
+		// server-side, so no auto watch-text plans for the span. The equality
+		// guard keeps the connect run — whose value IS the span's own text —
+		// from flattening rich children markup to text; a runtime write (a
+		// parent's `truc:pass`) has a different value and replaces it.
+		watch('label', v => {
+			if (labelSpan && labelSpan.textContent !== v)
+				labelSpan.textContent = v
+		})
+
 		<basic-button>
 			<button
 				{type}
@@ -119,7 +158,12 @@ export function BasicButton(
 				aria-label={ariaLabel}
 				{onClick}
 			>
-				<span class="label">{label}</span>
+				@if (children) {
+					<span class="label">{children}</span>
+				}
+				@else {
+					<span class="label">{label}</span>
+				}
 				<span class="badge">{badge}</span>
 			</button>
 

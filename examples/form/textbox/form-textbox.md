@@ -38,6 +38,8 @@ A general-purpose wrapper for `input` and `textarea` elements, with built-in val
 - Description/help text (or remaining characters when `data-remaining` is set)
 {% /table %}
 
+A composed parent passes the visible label as children (`<FormTextbox>Name</FormTextbox>`); the children must be non-interactive — the compiler refuses interactive content at the compose site. Page-authored markup labels the textbox directly, with a `<label for>` pointing at the inner control.
+
 {% partial file="form-associated.md" /%}
 
 #### Methods
