@@ -878,3 +878,20 @@ Full entry text: `git log -p -- DONE.md`.
   **Check:** Gates: `typecheck` exit 0 with zero errors (this branch carries the upstream residue fix 2d86f25e — the corpus-config.test.ts:83 TS2769 LT-377's handoff flagged is fixed); `test:server` 3743 pass / 0 fail; biome clean on the changed file; `build:docs` + `check:links` exit 0 (782 links). `i18n-catalog.ts:3`'s module doc still names `server/effects/i18n.ts` deliberately — it is the move's history reference, not a provenance claim.
 
   **Review (Architect, 2026-10-10): reviewed ✓ — every claim re-verified independently; no nits.** The byte proof was rebuilt from scratch: corpus rebuilt on both sides and the generated trees diffed — exactly one line differs (`i18n.ts:36`, the comment), with the only extras being the main checkout's known stale `basic-pluralize.*` artifacts and a stray `.claude` dir, both pre-existing and outside this task. The vacuous re-pin confirmed by a repo-wide sweep: no test, snapshot or golden carries `see effects/i18n.ts` (`server.golden.test.ts` asserts renders, not bytes). The declared doc line (LE_TRUC_COMPILER.md naming the moved module) is the same stale-provenance fact — in scope by the same reasoning. Gates in the worktree: `test:server` 3743/0 (89 snapshots), `typecheck` 0 errors (the residue fix holds through the branch), biome clean.
+
+- [x] LT-522: Writer copy pass — the compiler package's user-facing copy (README, §2 install passage, experimental label). — done ✓
+  **Area:** docs
+  **Needs:** LT-254
+  **Gates:** check:links
+  **Area:** docs (`writer`)
+  **Filed (Architect, 2026-10-10, from LT-254's review):** the entry's Docs line says "Hand the user-facing copy to `writer`". The contributor's copy is accurate and review-verified, but it is implementer prose; this pass gives it the `writer` register (`../writer/references/tone-guide.md`).
+  **Do:**
+  1. **`compiler/README.md`** — the package's npm face: install/use copy, the peer story (`@zeix/le-truc` + optional `jsdom` + `typescript`), and the experimental `.tsx`/`.tsrx` labels. Keep the code sample a hand-built `CorpusConfig` with no `runtimeImport` (that omission is the point of the flipped default).
+  2. **`LE_TRUC_COMPILER.md` §2's installation/peer passage** — consistency with the README, one spelling per fact.
+  3. **The experimental label, everywhere it appears** (`compiler/README.md`, `contract.ts`'s stability-policy header, `LE_TRUC_COMPILER.md`, `VOCABULARY_LEDGER.md`): one wording — "it compiles and ships, and it may change or be removed in any minor release while so labeled".
+
+  **Not in scope:** manifest fields, the exports map, check scripts, and the repo README (no install claims to update).
+  **Check:** `check:links` green; the diff changes prose only.
+  **Channel/tier:** none (copy).
+
+  **Changed:** `compiler/README.md` (npm-face register: intro split, peer paragraph — census string fixed to `unavailable-substrate`, typescript/jsdom facts one spelling with §2) and `server/compiler/LE_TRUC_COMPILER.md` §2 (the one divergent label wording folded into the canonical clause; "jsdom stays" → "is"); `contract.ts` and `VOCABULARY_LEDGER.md` verified already canonical, untouched.
