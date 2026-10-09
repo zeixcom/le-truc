@@ -931,11 +931,11 @@ export default defineComponent(
 		})
 		pass(basicButton, { disabled: { get: () => !textbox.length } })
 		reconcile(container, host.querySelector<HTMLTemplateElement>(':scope > template[data-list="0"]')!, items, (_element, item, k, first) => {
-			const button = first('button.reorder', 'module-todo: button.reorder missing')
+			const button = first('button[aria-pressed="false"]', 'module-todo: button[aria-pressed="false"] missing')
 			const formCheckbox = first('form-checkbox', 'module-todo: form-checkbox missing')
 			const span = first('span.visually-hidden', 'module-todo: span.visually-hidden missing')
 			const formInplaceEdit = first('form-inplace-edit', 'module-todo: form-inplace-edit missing')
-			const button2 = first('button.tertiary', 'module-todo: button.tertiary missing')
+			const button2 = first('basic-button button', 'module-todo: basic-button button missing')
 			const input = first('input[type="checkbox"]', 'module-todo: input[type="checkbox"] missing')
 			const label = first('label.label', 'module-todo: label.label missing')
 			input.setAttribute('id', \`\${k}-checkbox\`)

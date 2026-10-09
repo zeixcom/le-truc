@@ -31,11 +31,14 @@
  * `on()` against `basic-button button` in the parent's own client. A
  * page-authored instance carries no handler.
  *
- * `variant`/`size` drive the button's own classes. Per the ownership
- * rule, classes on INNER elements belong to this component and reach
- * it through server args; a parent styling one INSTANCE puts its
- * class on the `basic-button` host instead, where it passes through
- * to the served DOM untouched.
+ * `variant`, `kind` and `size` drive the button's own classes — three
+ * orthogonal server args (LT-489), each a closed literal union whose
+ * default carries no styles of its own, so a parent asks for exactly
+ * the modifiers it wants and the inner button's class is the
+ * non-default tokens only. Per the ownership rule, classes on INNER
+ * elements belong to this component and reach it through server args;
+ * a parent styling one INSTANCE puts its class on the `basic-button`
+ * host instead, where it passes through to the served DOM untouched.
  */
 
 export type BasicButtonProps = {
@@ -66,6 +69,7 @@ export function BasicButton(
 		badge = '',
 		disabled = false,
 		variant = 'secondary',
+		kind = 'normal',
 		size = 'medium',
 		type = 'button',
 		ariaLabel,
@@ -74,12 +78,11 @@ export function BasicButton(
 		label: string
 		badge?: string
 		disabled?: boolean
-		variant?:
-			| 'primary'
-			| 'secondary'
-			| 'tertiary'
-			| 'constructive'
-			| 'destructive'
+		/** The weight: `primary`, `secondary`, or `tertiary`. */
+		variant?: 'primary' | 'secondary' | 'tertiary'
+		/** The color family: `constructive`, `normal`, or `destructive`. */
+		kind?: 'constructive' | 'normal' | 'destructive'
+		/** The size: `small`, `medium`, or `large`. */
 		size?: 'small' | 'medium' | 'large'
 		/** The native button's `type`. */
 		type?: 'button' | 'submit'
@@ -103,7 +106,15 @@ export function BasicButton(
 		<basic-button>
 			<button
 				{type}
-				class={`${variant} ${size}`}
+				class={
+					[
+						variant !== 'secondary' && variant,
+						kind !== 'normal' && kind,
+						size !== 'medium' && size,
+					]
+						.filter(Boolean)
+						.join(' ') || undefined
+				}
 				{disabled}
 				aria-label={ariaLabel}
 				{onClick}

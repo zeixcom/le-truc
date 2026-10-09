@@ -14,6 +14,47 @@ A reusable button component controlled entirely by a parent through reactive pro
 
 `basic-button`
 
+#### Server Args
+
+Values a composing parent passes at the compose site (`<BasicButton … />`). Each modifier arg is a closed literal union whose default carries no styles of its own — the inner button's `class` is the non-default tokens only, so all defaults render no class at all. Page-authored markup keeps styling its button through the `class` attribute instead (see Classes).
+
+{% table %}
+- Name
+- Type
+- Default
+- Description
+---
+- `variant`
+- `'primary' | 'secondary' | 'tertiary'`
+- `'secondary'`
+- The weight: which hierarchy level the action sits at
+---
+- `kind`
+- `'constructive' | 'normal' | 'destructive'`
+- `'normal'`
+- The color family: what the action does to the user's data
+---
+- `size`
+- `'small' | 'medium' | 'large'`
+- `'medium'`
+- The button's size
+---
+- `type`
+- `'button' \| 'submit'`
+- `'button'`
+- The native button's `type`
+---
+- `ariaLabel`
+- `string`
+- –
+- Accessible name, for a button whose label is a symbol
+---
+- `onClick`
+- `(e: MouseEvent) => void`
+- –
+- Click handler, bound by the composing parent on the native button (a handler arg, LT-461 — never rendered or serialized)
+{% /table %}
+
 #### Reactive Properties
 
 {% table %}

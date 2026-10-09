@@ -170,6 +170,8 @@ The parent's compose site `<BasicButton class="remove" onClick={e => items.remov
 
 On `.tsx`, compose-site handler args typecheck as ordinary props, so an undeclared `onX` is the usual excess-property error, and the profile's event attributes accept `undefined`, so an optional handler arg places without a guard.
 
+The same ownership logic answers a parent that needs a CLASS on the child's inner button: it does not reach in — it asks through a server arg of the child's own. `basic-button` is the worked example: its single `variant` enum mixed weight and color, so a parent that wanted the `tertiary destructive small` inner-button class triple had to author the child raw (LT-463). Since LT-489 three orthogonal args cover the modifiers — `variant` (`primary`/`secondary`/`tertiary`, the weight), `kind` (`constructive`/`normal`/`destructive`, the color family) and `size` (`small`/`medium`/`large`) — each a closed literal union whose default carries no styles and emits no class token, so the inner button's class is the non-default tokens only and a parent asks for exactly the modifiers it wants.
+
 ## Locale and translations arrive as server data, through the reserved `i18n` parameter
 
 The client is the wrong layer to answer "what language is this page in" — by the time a component runs, the answer is already in the DOM, put there by whoever rendered the page. So locale is **build-time server data** ([ADR 0030](../../adr/0030-internationalization-as-build-time-server-data.md)), and it reaches a component the way all server data does: as a server arg.

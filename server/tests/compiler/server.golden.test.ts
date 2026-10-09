@@ -480,9 +480,10 @@ describe('server golden — module-list (reactive @for → template extraction)'
 				'</div>' +
 				'</form-textbox>' +
 				// BasicButton is composed (LT-463): basic-button.tsrx's own
-				// render output — its default `medium` size, the label span and
+				// render output — the `constructive` kind token (LT-489's
+				// orthogonal args; defaults emit no token), the label span and
 				// the empty badge span.
-				'<basic-button class="submit"><button type="submit" class="constructive medium">' +
+				'<basic-button class="submit"><button type="submit" class="constructive">' +
 				'<span class="label">Add</span><span class="badge"></span>' +
 				'</button></basic-button>' +
 				'</form>' +

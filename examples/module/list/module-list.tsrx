@@ -50,7 +50,7 @@ export function ModuleList({}: {})
 				<BasicButton
 					class="submit"
 					type="submit"
-					variant="constructive"
+					kind="constructive"
 					label="Add"
 					truc:pass={{ disabled: () => !textbox.length }}
 				/>
@@ -59,9 +59,9 @@ export function ModuleList({}: {})
 				@for (const item of items; key k) {
 					<li>
 						<span>{item}</span>
-						{/* Raw, not composed (LT-463): the `tertiary destructive small`
-						    class triple is not expressible through BasicButton's props —
-						    the modifier shape is ruled in LT-489. */}
+						{/* Stays raw: LT-489 ruled the modifier args and composed
+						    module-todo's remove button; this one keeps the raw
+						    spelling. */}
 						<basic-button class="remove">
 							<button
 								type="button"

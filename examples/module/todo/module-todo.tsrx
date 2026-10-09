@@ -15,19 +15,21 @@
  * - key-derived `id`/`for` pairing the checkbox input with its label
  *   (clone-time attributes over the key binding, ADR 0046 s2);
  * - a reactive `disabled` from `items.length` on the reorder handle;
- * - remove through the key: the item's own `onClick` calls
- *   `items.remove(k)`, replacing the twin's host-delegated handler.
+ * - remove through the key: the composed remove button's `onClick`
+ *   handler arg (LT-461) calls `items.remove(k)` — the handler binds
+ *   per item in the `@for`'s bindItem scope, replacing the twin's
+ *   host-delegated handler.
  *
  * Drag-and-drop, keyboard reordering and the live region live in ONE
  * shared client-only helper (`examples/_common/reorder.ts`, LT-427) called
  * from setup — the statement stays out of the server module. `nextTodoId()`
  * replaces the twin's module-level `idCounter`.
  *
- * The submit button is a composed `BasicButton` (LT-463) with the existing
- * `disabled` pass and `t.addTodo` as the label arg. The remove and
- * clear-completed buttons and the filter radiogroup stay raw: the
- * `tertiary destructive` modifier combos have no prop shape yet (LT-489)
- * and the composed radiogroup render cannot carry the page-level
+ * The submit and remove buttons are composed `BasicButton`s (LT-463; the
+ * remove since LT-489's orthogonal `variant`/`kind`/`size` args, its
+ * `onClick` a per-item handler arg). The clear-completed button and the
+ * filter radiogroup stay raw: LT-489 moved the remove button only, and
+ * the composed radiogroup render cannot carry the page-level
  * `visually-hidden` presentation on its legend and radios.
  */
 import {
@@ -137,7 +139,7 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 				<BasicButton
 					class="submit"
 					type="submit"
-					variant="constructive"
+					kind="constructive"
 					disabled
 					label={t.addTodo}
 					truc:pass={{ disabled: () => !textbox.length }}
@@ -190,19 +192,19 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 								},
 							}}
 						/>
-						{/* Raw, not composed (LT-463): the `tertiary destructive small`
-						    class triple is not expressible through BasicButton's props —
-						    the modifier shape is ruled in LT-489. */}
-						<basic-button class="remove">
-							<button
-								type="button"
-								class="tertiary destructive small"
-								aria-label="Remove"
-								onClick={() => items.remove(k)}
-							>
-								<span class="label">✕</span>
-							</button>
-						</basic-button>
+						{/* Composed since LT-489: the orthogonal args express the
+						    `tertiary destructive small` triple, and the onClick
+						    handler arg (LT-461) binds per item in the @for's
+						    bindItem scope. */}
+						<BasicButton
+							class="remove"
+							variant="tertiary"
+							kind="destructive"
+							size="small"
+							label="✕"
+							ariaLabel="Remove"
+							onClick={() => items.remove(k)}
+						/>
 					</li>
 				}
 			</ol>
@@ -244,9 +246,9 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 						</label>
 					</fieldset>
 				</form-radiogroup>
-				{/* Raw, not composed (LT-463): the `tertiary destructive` class pair
-				    is not expressible through BasicButton's props — the modifier
-				    shape is ruled in LT-489. */}
+				{/* Stays raw: LT-489 ruled the modifier args and moved the
+				    remove button to the composed spelling; this one stays
+				    raw. */}
 				<basic-button
 					class="clear-completed"
 					truc:pass={{
