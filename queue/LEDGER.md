@@ -14,6 +14,17 @@ into this prose.
 
 ---
 
+Pruned 2026-10-09 (Architect, next-iteration preparation, owner-approved). Deleted: LT-134,
+LT-135, LT-311, LT-297.
+- **LT-134**: nothing to do. LTC035 retired at LT-275, LTC038's fix names no per-arm shape, and
+  LTC042's advice stands on its own `errors.md` row.
+- **LT-135** was merged into LT-093 at planning (2026-10-06, ITERATION ruling 6); LT-093 is reviewed.
+- **LT-311** was absorbed by LT-461's handler args: a compose-site `onClick={…}` maps to the
+  child's declared `on[A-Z]` arg (LT-461 rule 8).
+- **LT-297** is merged into LT-336: both are `argsFromAttrs`' page-occurrence attribute name.
+
+---
+
 Struck 2026-10-07 (Architect, owner ruling: compiled CSS is platform CSS, ADR 0033 rewritten
 and ADR 0048 s5 cut back; ITERATION ruling 14). Deleted without integration: LT-473, LT-475,
 LT-499, LT-500, LT-405, LT-407, LT-408, LT-409.

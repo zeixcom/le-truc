@@ -35,81 +35,44 @@ or after LT-254's declaration build. The D-32 design session (LT-471, the public
 and runs during the P6 round, so the band opens unblocked.
 
 
-- [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) and discharge the LT-206 packaging deferrals. **Gated on LT-370, LT-371 and LT-375** (the pre-publish reshapes of what stays public: the IR leaves the contract, the diagnostic record takes its published shape, the root-is-host dialect is enforced) **and on the D-32 design session** (which compiler entry points and result types are public, `COMPILER_SPEC.md` §12). *Re-gated 2026-10-01:* the IR is internal (ADR 0034 s8, D-25), so the ADR 0040 reshapes (LT-288, LT-274, LT-276) no longer gate the publish.
+- [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) — manifest, `exports`, the `.tsrx`-excluding build, the runtime peer and the `runtimeImport` default.
   **Area:** compiler
-  **Needs:** LT-370, LT-371, LT-375, LT-471, LT-480
-  **Re-scoped by D-32 (LT-471 design session, owner 2026-10-06; `COMPILER_SPEC.md` §12):** the
-  package's one entry point is the **corpus pass**. It writes the artifacts to `outDir` and
-  returns the diagnostics and a summary. `compileComponentTsx` is not published. LT-480 does the
-  reshape first: it moves `compileCorpus` into the compiler, narrows `RegistryEntry` and
-  rewrites the stability policy. This task then publishes whatever `contract.ts` names. The
-  D-32 rider below is discharged as follows:
-  - the generated-module API is under semver (ADR 0034 s8 stands; LT-480 rewrites the policy);
-  - `RegistryEntry` is narrowed (LT-480);
-  - Appendix B is refreshed.
+  **Needs:** LT-471, LT-480
+  **Gates:** typecheck, test:server, check:contract, check:corpus
+  **Area:** compiler
+  **Rewritten (Architect, 2026-10-09, owner-approved consolidation).** The earlier riders are settled elsewhere:
+  - LT-370, LT-371 and LT-375 landed the pre-publish reshapes.
+  - LT-271 carried out the LT-206 vocabulary sweep (the old deliverable (c)).
+  - D-32 (LT-471) ruled the entry point, and LT-480 reshapes `contract.ts` to match.
+  - The `./macros` module exists (`server/compiler/macros.ts`, LT-442).
 
-  The `typescript-estree` rider stays here: its answer does not depend on the entry-point
-  shape, since the converter leaf is the same under every option.
-  The `./macros` subpath, the peer floor and the `runtimeImport` default stand as written.
-  **Check, amended:** the tarball installs into an empty project and builds a two-component
-  corpus through the published entry point, one component composing the other, with no
-  `@tsrx/core` in the dependency tree.
-  **Rider (LT-429 design session, 2026-10-05):** the package exports a `./macros` subpath (ADR 0034
-  s1): the compile-time markers, types plus throwing stubs, built in-repo by LT-442 as
-  `server/compiler/macros.ts` behind a `tsconfig.json` `paths` entry. It must resolve without
-  loading the compiler's dependencies (typescript, jsdom).
-  **Rider for the D-32 session (LT-370 copy review, 2026-10-02):** ADR 0034 s8 counts the
-  generated-module API as public (a change is a major), but `contract.ts` and
-  `LE_TRUC_COMPILER.md` §2 say semver applies to the designated set "and to nothing else", and the
-  generated-module API is not in it. D-32 rules which way it goes: add it to the policy, or amend
-  the ADR. Also there: `RegistryEntry` names `RenderedShape` and `SuppressedSite`, and neither is
-  exported. `COMPILER_SPEC.md` Appendix B ("as of 2026-09-29") is stale beyond the two cells
-  LT-370 fixed; refresh it in the same session.
-  **Rider (LT-243 review, 2026-10-01):** `@typescript-eslint/typescript-estree` becomes a runtime dependency of the package. Weigh it under M28 with its closure: semver, debug, minimatch, ts-api-utils and the `@typescript-eslint/{types,visitor-keys,tsconfig-utils,project-service}` siblings. Record the `typescript` peer range the package inherits (`<6.1.0` at 8.71.0). Weigh it against D-33's stated goal (TypeScript 7.1 or a native parser behind the converter, ADR 0032 s4): the peer range must be able to follow TypeScript, and LT-377 pins that no TypeScript type reaches the published declarations.
-  **Context:** ADR 0034 s1–s2. The compiler ships separate from the browser-only
-  `@zeix/le-truc`, named for its function rather than its input format. **v3.0 publishes the
-  `.tsx` front end only** — `.tsrx` stays a first-class repo-internal surface under ADR 0032's
-  parity contract and publishes in a later 3.x gated on `@tsrx/core` 1.0, so the published tree
-  must not carry the pinned pre-1.0 parser as a runtime dependency.
-  **Deliverable:** (a) register `@zeix/le-truc-compiler` on npm **before the first pre-release**
-  — verified available 2026-09-19, and a package name is the one decision that cannot be revised
-  after first publish; (b) the package manifest, entry points, and a build that excludes the
-  `.tsrx` front end from the published artifact without deleting it from the repo; (c) the
-  LT-206 deferrals, now scheduled rather than parked: the `check:tsrx`/`build:tsrx` script names,
-  `server/effects/tsrx.ts`, the `server/generated/tsrx/` output directory, the `@tsrx/core`
-  package names in internal APIs, and the `TSRX###` diagnostic codes — each either renamed to
-  surface-neutral vocabulary or consciously kept, with the reason recorded. **Diagnostic codes
-  become public API on first publish**: a code that keeps the `TSRX` prefix while the published
-  surface is `.tsx` needs a stated rationale, and the copy of anything
-  renamed follows `writer` → error-messages (channel: compiler; the error-message-lifecycle sweep applies).
-  **Check:** `npm pack` on a clean checkout produces a tarball that installs into an empty
-  project and compiles a single `.tsx` component, with no `@tsrx/core` in the dependency tree.
-  **Added 2026-09-24 (ADR 0034 s8):** declare `@zeix/le-truc` as a peer dependency with a
-  floor, and add a build check that every runtime export the emitted client modules import
-  exists at that floor (resolve the imports against the floor version's published export
-  list). ~~State in `contract.ts`'s stability policy that adding a member to an IR union is a
-  minor~~ — obsolete 2026-10-01: the IR is not public (ADR 0034 s8; LT-370 removes it from `contract.ts`).
-  **Re-scoped 2026-09-19 (owner):** deliverable **(c) — the LT-206 deferral sweep — is carved out
-  as LT-271** and runs now, because stripping TSRX-only vocabulary from a compiler whose published
-  surface is `.tsx` is a shape problem, not a distribution problem, and it should not wait on a
-  publish date. What remains here is (a) and (b): the npm registration and the package manifest,
-  entry points and `.tsrx`-excluding build. **Gated behind the P6 cleanup round** — the namespace
-  is owned, so the name cannot be taken, and there is no value in publishing a package an outside
-  consumer could not yet use. LT-259, LT-260 and LT-261 inherit that gate.
-  **Carried in from the LT-255 review (2026-09-19):** LT-255 shipped the corpus configuration
-  surface without waiting for this task ([ADR 0036](adr/0036-corpus-configuration-surface.md)),
-  so "where the config lives" is settled and no longer gates it. One line comes back here:
-  **`runtimeImport`'s default must flip** from this repo's relative
-  `'../../compiler/runtime'` to the published package specifier
-  (`DEFAULT_RUNTIME_IMPORT` in `server/compiler/emit-paths.ts`), at which point consumers stop
-  having to set the field at all. Until then every installing project must set it by hand —
-  which is the single most visible "this is not published yet" seam in the config surface, and
-  a reason the first pre-release should not be demoed without it.
+  This task publishes whatever `contract.ts` names after LT-480, and nothing more.
+  **Context:** ADR 0034 s1–s2, s8. The compiler ships separate from the browser-only `@zeix/le-truc`, named for its function rather than its input format. v3.0 publishes the `.tsx` front end only. `.tsrx` stays a first-class repo-internal surface under ADR 0032's parity contract, and publishes in a later 3.x gated on `@tsrx/core` 1.0. The published tree must not carry the pinned pre-1.0 parser as a runtime dependency. The `@zeix` scope is owned, so the name cannot be taken, and the first pre-release claims it.
+  **Deliverable:**
+  1. **Manifest and `exports` map.**
+     - The root entry is the corpus pass and its types, exactly the set `contract.test.ts` pins after LT-480.
+     - The `./macros` subpath carries the compile-time markers as types plus throwing stubs (ADR 0034 s1). It must resolve without loading the compiler's dependencies (`typescript`, `jsdom`).
+     - Nothing else is exported, and no deep imports are allowed.
+  2. **Build.** It emits JS plus declarations and leaves out the `.tsrx` front end and `@tsrx/core` without deleting them from the repo. The `.d.ts` output is what LT-377 checks.
+  3. **Runtime peer (ADR 0034 s8).** Declare `@zeix/le-truc` as a peer dependency with a minimum version. Add a build check that every runtime export the emitted client modules import exists at that version, resolved against that version's published export list.
+  4. **`runtimeImport` default.** Switch `DEFAULT_RUNTIME_IMPORT` in `server/compiler/emit-paths.ts` from the repo-relative `'../../compiler/runtime'` to the published package specifier. Keep this repo working by setting the field explicitly in its own `le-truc.config.json` (ADR 0036). Consumers then never set it.
+  5. **Diagnostic codes become public API on first publish.** List any code that still carries a surface-specific prefix while the published surface is `.tsx`, with the reason it is kept (LT-271's record is the source). Renamed copy follows `writer` → error-messages.
+  **Rider (LT-243 review, 2026-10-01): `@typescript-eslint/typescript-estree` becomes a runtime dependency.**
+  - Weigh it under M28 with its closure: `semver`, `debug`, `minimatch`, `ts-api-utils` and the `@typescript-eslint/{types,visitor-keys,tsconfig-utils,project-service}` siblings.
+  - Record the `typescript` peer range the package inherits (`<6.1.0` at 8.71.0).
+  - Weigh it against D-33's goal (TypeScript 7.1 or a native parser behind the converter, ADR 0032 s4): the peer range must be able to follow TypeScript.
+  - Record the outcome in the manifest's comments or `LE_TRUC_COMPILER.md` §2.
 
+  **Docs:** `LE_TRUC_COMPILER.md` §2 (installation, entry point, peer) and `COMPILER_SPEC.md` Appendix B (refresh it as of the publish). Hand the user-facing copy to `writer`.
+  **Channel/tier:** none (packaging and a build check).
+  **Check:**
+  - `npm pack` on a clean checkout produces a tarball that installs into an empty project. That project builds a two-component corpus, one component composing the other, through the published entry point, with no `@tsrx/core` in its dependency tree and no `runtimeImport` set.
+  - The runtime-peer check fails on a planted import of a symbol the minimum version lacks.
+  - Full gates.
 
 - [ ] LT-257: Template emission — **build the target-emitter interface ([ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md)) with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
   **Area:** compiler
-  **Needs:** LT-254, LT-274, LT-373
+  **Needs:** LT-254, LT-516
   **Re-scoped (Architect, 2026-10-01):** the interface was designed in LT-360 and is ADR 0043.
   This entry is the build half. Read the ADR first; this text only names the deliverables.
   **Context:** ADR 0034 s3. For a CMS, a folded HTML partial and a template are the same
@@ -161,6 +124,7 @@ and runs during the P6 round, so the band opens unblocked.
   not emittable to a target: classify it as a census routing outcome (ADR 0043 s2), because a
   backend template cannot carry the render witness. `key-alias.ts`'s `isAliasHarvestable` and
   `aliasScopeOf` identify the lists.
+  **Gated on LT-516 (Architect, 2026-10-09):** ADR 0043 predates ADR 0046 (reactive lists), ADR 0048 (passed children) and the D-28 ruling for `Try`. The LT-516 design session amends it and splits this entry into buildable tasks. Do not start from this text. LT-274 and LT-373 have landed.
 
 - [ ] LT-259: The 2.x → 3.0 codemod, and the drift-cost measurement it instruments.
   **Area:** compiler
@@ -285,6 +249,19 @@ and runs during the P6 round, so the band opens unblocked.
   **Verification:** `contract.test.ts` pins the new set. The corpus builds byte-identically
   before and after (the goldens are unchanged). `registry.json` carries only the public fields.
   Full gates.
+  **Ruling 4 (owner, 2026-10-09): compose-validation fields are internal in 3.0.** The public projection in ruling 2 stands as listed. Every other field moves to the internal type, including those added after the D-32 session: `childrenRegion`, `interactive`, `childrenModel` (ADR 0048), `handlerArgs` (LT-461), `roleWrites` (LT-476), plus `declaresI18n`, `langArgDefault`, `i18nMessages` and `clientMessageKeys` (ADR 0030). One corpus pass composes only its own sources in 3.0, so no consumer reads them. Composing across corpora (for example an installed component library) would add them back as a minor. `registry.json` serializes the public projection only; check its in-repo readers (ruling 2's check) against this longer list.
+
+- [ ] LT-516: Design session — amend ADR 0043 for the corpus template emission must now carry (the `Try` boundary, reactive lists, passed children), and split LT-257.
+  **Area:** design
+  **Area:** design
+  **Filed (Architect, 2026-10-09, next-iteration preparation; owner: the session joins the next iteration, with no implementation work):** ADR 0043 (2026-10-01) ruled the target-emitter interface before three later decisions changed what a component's server render contains. LT-257 cannot be built against it as written. The session amends ADR 0043, editing it in place while Proposed or superseding it per `references/adr.md`, and leaves LT-257 buildable.
+  **Questions to rule:**
+  1. **`Try` in template targets (D-28, deferred since the 2026-10-01 team review).** ADR 0041's boundary has three arms (`ok`, `pending`, `catch`; no `stale`). `COMPILER_SPEC.md` §9.2's draft renders `catch` from a CMS-supplied error shape (`{ error: { code, message } }`). Rule what a backend template renders for each arm, where the error shape comes from, and how the inert arm templates (ADR 0037) sit beside the backend conditional. Otherwise rule `Try` non-emittable, as a census routing outcome (ADR 0043 s2).
+  2. **Reactive lists (ADR 0046).** A reactive list renders its initial items in place plus an extracted `<template data-list="N">`, and nests recursively through Mount Scopes. ADR 0043's operation vocabulary has a server-data loop and an arm template, but no list template. Rule the operation, the hole scope of a list item, and how a nested list inside an arm or an item emits.
+  3. **Passed children (ADR 0048).** Compose content is the parent's own markup, wrapped in a `data-children` region marker. Under LT-492 it may hold a sanitized `truc:html`. ADR 0043 s5 still calls "markup passed as children" "a separate security question". Rule how an include passes children, for example a Twig `embed`/block or a pre-rendered argument in the HTML escaping context through the sanitizer hook. Rule what escaping context each part takes, and where the region marker is written.
+  4. **The key-alias harvest** (ADR 0047 s4; already recorded on LT-257) is a census routing outcome. Confirm it in the amended text.
+  **Output:** the amended ADR, `COMPILER_SPEC.md` §9 and D-28 updated, and LT-257 split into buildable tasks. A likely split: the shared walk plus the test-only second target; the Twig target; the census per target; the PHP CI job. Each split task names its `needs:`, gates and the diagnostics it owns (LTC057/LTC058 are reserved). New refusals name their channel and tier (ADR 0028).
+  **Not in scope:** any implementation. Pioneer 2 (LT-261) stays after the build.
 ## P2 — Internationalization follow-ups (ADR 0030)
 
 Residue of the ICU MessageFormat switch: LT-352 pins the examples' hand-copied `i18n`
@@ -341,15 +318,6 @@ above its P6 consumers on purpose: a compose site in an async-boundary arm is an
 gap, and the composition batch below is about to multiply compose-site call sites. LT-381
 changes the tier census and warning baseline by design and needs the owner's sign-off; LT-246
 waits for the corpus-port migrations to settle the census.
-
-
-- [ ] LT-134: LTC035 and LTC042 give opposite advice on the same construct (LT-131 review finding). — closed as moot (Architect, 2026-10-02)
-  **Area:** compiler
-  **Ruling:** LTC035 retired at LT-275 — template-cloned arms keep every non-winning arm
-  out of the document, so the diagnostic loop this task described cannot arise. LTC038
-  (duplicate compose-site ids) never had the loop: its fix ("distinct ids, or address the
-  instances by class") names no per-arm shape. Nothing to do; the residual LTC042 advice
-  stands on its own row in `errors.md`.
 
 
 - [ ] LT-246: Make tier contamination legible at the compose edge — the census names the re-routing edge.
@@ -610,19 +578,6 @@ found them, and they are cheap to pick when a band above stalls.
   `bun test server/tests` stays green.
 
 
-- [ ] LT-297: `argsFromAttrs` keys attributes by the arg's camelCase name (LT-290 close-out; latent).
-  **Area:** compiler
-  **Context:** the page-occurrence helper reads `attrs["bigStep"]`, but HTML attribute
-  names are case-insensitive and serialize lowercase, so an authored `big-step`/`bigstep`
-  occurrence never matches. A camelCase string or Parser arg would silently lose its
-  channel and render the default. Not live today: LT-290 removed spinbutton's only
-  camelCase channel, and no other corpus arg is camelCase. Key by the attribute name the
-  client parser reads (the same mapping `expose()`'s Parser reads at connect), and pin
-  it with a camelCase fixture.
-  **Check:** a fixture with a camelCase Parser arg renders its authored attribute value;
-  goldens unchanged.
-
-
 - [ ] LT-340: LTC033 sees only the expression written at the site, so an impure read through a setup const, helper or loop const folds (LT-326 review).
   **Area:** compiler
   **Context:** confirmed at review on `.tsx` (`.tsrx` is the same code path). All of these
@@ -739,58 +694,14 @@ handler-args design in P6 and carries only its tombstone.
   new diagnostics' copy follows `writer` → error-messages.
 
 
-- [ ] LT-311: Event handlers on compose sites — closed as absorbed — LT-461's ruled handler-args design owns this ground (2026-10-06)
-  **Area:** design
-  **Closed as absorbed (Architect, 2026-10-06):** LT-461's owner-ruled handler-args design
-  covers this task end to end — the compose-site `onClick={…}` spelling maps to the child's
-  declared `on[A-Z]` function arg and lowers to a parent-side `on()` on the placed element,
-  typed as an ordinary prop (LT-461 rule 8), so the `ComposeSiteAttrs` typing question is
-  answered there too. The module-codeblock copy-wiring case this task came from is one of
-  LT-461's verification legs. The context below records the pre-ruling proposal.
-
-  **Context:** A PascalCase compose site has no event-attribute kind (only arg/pass/ref), so a
-  parent's reaction to a composed child's event must be a setup `on(childRef, …)` or a raw
-  `EffectDescriptor`. module-codeblock's copy wiring is the case: a guarded
-  `watch(() => true, copy ? copyToClipboard(…) : () => {})`, because `if` is LTC005 and
-  `watch()` in a const-call is LTC045. Proposal: `onClick={…}` on `<BasicButton>` lowers to
-  `on(<compose-ref>, 'click', …)` on the child's host. The listener attaches to the child's
-  public element, not its internals, so it respects the boundary; the compiler's optional-ref
-  guard replaces the hand-written ternary. `copyToClipboard` then becomes a plain click-handler
-  factory. Decide the typing: the `.tsx` host profile needs `on*` in `ComposeSiteAttrs`, and
-  `.tsrx` needs the same classification. Depends on LT-309(b) for the message channel.
-
-
-- [ ] LT-331: Compose-site JSX children must type-check against the child's `children` server arg (LT-303 review).
+- [ ] LT-331: Pin the last compose-site children typing leg — JSX children passed to a child with no `children` arg fail tsc (residue of LT-303's review, design landed in LT-495).
   **Area:** compiler
-  **Context:** To make `<truc:try>`'s `children: JSX.Element` a `tsc` fact, LT-303 declared
-  `JSX.ElementChildrenAttribute` in `server/compiler/frontend/tsx/host-profile.d.ts`. That
-  declaration is global, so `tsc` now also checks a compose site's JSX children against the
-  child's args. But a content-substituting child declares `children?: string`: the server
-  renders the markup to a string and forwards it (ADR 0024 s10, `validateComposedChildren`).
-  The result, verified 2026-09-25: `<ModuleScrollarea><p>…</p></ModuleScrollarea>` in a `.tsx`
-  parent now fails with TS2322 "Type 'Element' is not assignable to type 'string'", although it
-  type-checked under the old profile. module-dialog and module-codeblock have the same shape.
-  No `.tsx` parent composes one yet. The declaration also fixed a bug that was there before
-  LT-303: a child with a *required* `children` arg could not be composed with JSX children at
-  all, because `tsc` reported the prop as missing.
-  **Design (Architect):** keep `ElementChildrenAttribute`, and have `LibraryManagedAttributes`
-  map the child's string `children` arg to JSX content:
-  `Omit<P, 'i18n' | 'children'> & ComposeChildren<P> & ComposeSiteAttrs`. `ComposeChildren<P>`
-  is `{}` when `P` has no `children`, `{ children?: JSX.Element }` when it is optional, and
-  `{ children: JSX.Element }` when it is required. That makes JSX content the authored
-  spelling and keeps the markup string out of it. It also keeps the new `tsc` error for JSX
-  children passed to a child that declares no `children` arg. That error is correct: the
-  compiler has no `{children}` site to substitute them into. Rejected alternative: dropping
-  `ElementChildrenAttribute` and making `TrucTryAttrs.children` optional. That brings back
-  the required-children bug and gains nothing, because the compiler already enforces the
-  async boundary's single-root rule.
-  **Channel/tier:** TypeScript, tier 1 Prevented. No runtime or compiler check changes.
-  **Check:** a positive fixture composing `ModuleScrollarea` with JSX children and a negative
-  one (JSX children passed to a child with no `children` arg), both in
-  `server/tests/compiler/fixtures/tsx/` and asserted in `tsx/typecheck.test.ts`. The fixtures,
-  negative-fixtures and examples `tsc` programs stay clean apart from the expected new
-  negative errors.
-
+  **Gates:** typecheck, test:server
+  **Area:** compiler
+  **Re-scoped (Architect, 2026-10-09):** LT-495 built this task's design. `LibraryManagedAttributes` in `server/compiler/frontend/tsx/host-profile.d.ts` maps a string `children` arg to `ComposeChildren`. `string-children-compose.tsx` pins the positive case, and `string-children-bad.tsx` pins two negatives: a function child, and a missing required `children`. One leg of the original check is still unpinned: JSX children passed to a child that declares no `children` arg must fail tsc, because the compiler has no `{children}` site to substitute them into.
+  **Do:** add that case to `server/tests/compiler/fixtures/tsx/string-children-bad.tsx`, and assert its TS error in `tsx/typecheck.test.ts` beside the LT-495 legs. If tsc accepts it today, stop and write a `NOTES.md` entry: that would be a typing gap, not a fixture.
+  **Channel/tier:** TypeScript, tier 1 Prevented. No compiler or runtime change.
+  **Check:** `typecheck` and `test:server` green; the negative fixture program fails with exactly the expected errors.
 
 - [ ] LT-333: Extend LT-323's client-only credit to plain setup consts (LTC013/LTC043 over-routing).
   **Area:** compiler
@@ -810,8 +721,9 @@ handler-args design in P6 and carries only its tombstone.
   32/3/0 if both fold. carousel's inline `all()` in its `index` initializer stays, since that
   is an `expose()` read.
 
+  **Cluster (Architect, 2026-10-09):** this task, LT-458 and LT-459 all decide how a setup const is classified: whether it is client-only, a render read, or substitutable into a verbatim derivation. Schedule them together for one contributor, in the order LT-459 → LT-333 → LT-458 (placement, then routing credit, then substitution), so the three rules land on one classifier, not three.
 
-- [ ] LT-336: `argsFromAttrs` attribute lookup — the kebab-case convention's fallback and its documentation (LT-095 review).
+- [ ] LT-336: `argsFromAttrs` attribute lookup — the kebab-case convention, its case-insensitive fallback, and its documentation (LT-095 review; absorbs LT-297).
   **Area:** compiler
   **Context:** **Ruling (Architect, 2026-09-25):** a server arg's page-occurrence attribute is
   its **kebab-case** name (`readingTime` ← `reading-time`), the HTML convention every Parser
@@ -828,6 +740,7 @@ handler-args design in P6 and carries only its tombstone.
   **Check:** a page-render test for the chosen spinbutton spelling; corpus output
   byte-identical.
 
+  **Absorbs LT-297 (Architect, 2026-10-09):** the page-occurrence helper keyed a camelCase arg by its camelCase name (`attrs["bigStep"]`), so an authored occurrence never matched, because HTML attribute names serialize lowercase. That is the same lookup this task rules. Key by the kebab-case attribute the client Parser reads at connect, apply the chosen fallback, and pin both with a camelCase-arg fixture: it renders its authored attribute value, and the goldens are unchanged. Check first whether form-spinbutton's markup already writes `big-step`; if it does, the residue above is only the fallback decision. `argsFromAttrs` stays internal under D-32 (LT-480 ruling 3), so the helper's signature is free to change.
 
 - [ ] LT-337: A destructuring setup const is diagnosed at its reader, not at itself (LT-104 review).
   **Area:** compiler
@@ -856,30 +769,29 @@ enablers before the corpus conversion, while the cleanup items interleave freely
 of them touches the compose machinery.
 
 
-- [ ] LT-135: Follow plain-const indirection when crediting client-only setup reads (LT-119 sharp edge). — merged into LT-093 (owner, 2026-10-06)
-  **Area:** compiler
-  **Merged into LT-093 (owner, planning 2026-10-06).** Same wall, one pass through the
-  client-needed fixpoint; LT-093's entry carries this task's fix and its test flip.
+- [ ] LT-489: BasicButton's modifiers become three orthogonal server args (`variant`, `kind`, `size`); module-todo's remove button composes `<BasicButton>`.
+  **Area:** examples
+  **Needs:** LT-461
+  **Gates:** check:corpus, test:server, typecheck, test:variants, build:docs
+  **Area:** examples
+  **Filed (Architect, 2026-10-07, from LT-461's review). Ruled (owner, 2026-10-09: option 2', orthogonal server args):** module-todo's remove button stays raw (`<basic-button class="remove">` with an inner `<button class="tertiary destructive small">`). BasicButton's single `variant` enum mixes weight and color, so a parent cannot ask for that class triple.
+  **Ruling.** Three optional server args, each a closed literal union; the default is in italics:
+  - `variant`: `primary` | *`secondary`* | `tertiary`. The weight.
+  - `kind`: `constructive` | *`normal`* | `destructive`. The color family.
+  - `size`: `small` | *`medium`* | `large`.
 
-- [ ] LT-487: module-todo's ar/cy/lv strings need a translator pass — six empty labels per locale and a doubtful `remaining` plural.
-  **Area:** docs
-  **Needs:** LT-467
-  **Gates:** check:corpus
-  **Area:** docs
-  **Needs:** LT-467
-  **Filed (Architect, 2026-10-07, from LT-467's doubt 2):** LT-467 added seven `module-todo.*`
-  keys to every locale. de, pl and zh are translated. In ar, cy and lv the six labels (`addTodo`,
-  `filter`, `all`, `active`, `completed`, `clearCompleted`) are empty `i18n:sync` placeholders,
-  which fall back to the source string by design (HOST_PROFILE.md, "A missing translation is
-  not your problem to fix"). The `remaining` patterns reuse the retired example's noun forms.
-  lv `other {Atlikuši # uzdevumu}` uses the genitive plural where Latvian likely wants the
-  nominative (`uzdevumi`), and cy `other {# tasgiau ar ôl}` may want the singular after a
-  numeral.
-  **Do:** a native or careful reviewer fills the ar/cy/lv labels and corrects each `remaining`
-  arm per locale. Keep every plural category the locale's CLDR rules name, plus the `=0` arm.
-  No code change.
-  **Check:** `check:corpus` translation census stays at 0 gaps. The `pl` leg in
-  `module-todo.spec.ts` is the model if a locale leg is wanted.
+  A default value has no special styles and is omitted from the emitted class. The inner button's class is the non-default tokens only, joined by spaces, so all defaults give an empty class. Drop the class attribute or emit `class=""`, whichever keeps the existing specs unchanged. `constructive`/`destructive` leave `variant` and move to `kind`. **Rejected:** a `variant` array and a cross-product enum (`tertiary-destructive`).
+  **Change:**
+  1. **BasicButton** (`basic-button.tsrx`, and the hand-written `basic-button.css` if it diverges): the three args with JSDoc, typed as above, and the class computed from the non-default tokens.
+     - **CSS:** class names stay the same, so the stylesheet needs no new token. Existing usages must render as before: `tertiary destructive small`, `constructive`, `destructive`, `primary medium` and the rest.
+     - **New combinations:** `primary` with a non-normal kind renders the kind's colors through the existing cascade order (the kind rules follow `primary`), so no new rule is needed. If a combination renders visibly wrong, write it in `NOTES.md` instead of designing a fix.
+     - Keep the CSS byte-identical between the `.tsrx` source and its served artifact (ADR 0039).
+  2. **Compose sites.** `variant="constructive"` becomes `kind="constructive"` in module-todo and module-list (both `.tsx` and `.tsrx`). Page-authored `.html` markup keeps its classes. A leftover default token such as `secondary` or `medium` is harmless there.
+  3. **module-todo's remove button** composes `<BasicButton class="remove" variant="tertiary" kind="destructive" size="small" label="✕" ariaLabel="Remove" onClick={() => items.remove(k)} />` in both surfaces, and drops the LT-463 "raw, not composed" comment.
+     - The compose site sits in a reactive-list item. If LT-461's handler-arg lowering refuses the parent-side `onClick` there, keep the button raw with the new class spelling and write a `NOTES.md` entry. Don't work around it.
+  4. **Docs.** HOST_PROFILE § Handler args' note that a parent needing classes on the child's inner button uses the ownership rule gets BasicButton's three args as its worked example. The BasicButton `.md` lists the args.
+  **Check:** `test:component basic-button module-todo module-list` unchanged on all surfaces, except mechanical rewrites of the sim-driver snapshot. `check:corpus`, `test:server`, `typecheck`, `test:variants` and `build:docs` green.
+  **Channel/tier:** none. Example-corpus API shape; TypeScript already refuses a value outside each union.
 
 - [ ] LT-492: Lift LTC011 for `truc:html` in a composed element's content — the parent's own sanitized binding (ADR 0048 s1).
   **Area:** compiler
@@ -1296,6 +1208,8 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
   **Verification:** test:server with a unit leg (literal const inlined; a call-initialized const
   still LTC004); check:corpus; the ticker's tier-corpus entry unchanged.
 
+  **Cluster (Architect, 2026-10-09):** this task, LT-333 and LT-459 all decide how a setup const is classified: whether it is client-only, a render read, or substitutable into a verbatim derivation. Schedule them together for one contributor, in the order LT-459 → LT-333 → LT-458 (placement, then routing credit, then substitution), so the three rules land on one classifier, not three.
+
 - [ ] LT-459: A setup const referenced only from client positions stays out of the server module.
   **Area:** compiler
   **Area:** compiler
@@ -1318,39 +1232,28 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
   **Verification:** test:server with a unit leg (handler-only const absent from the server
   module; a const also read in a rendered thunk still present); check:corpus.
 
-- [ ] LT-489: BasicButton's modifier shape — how a parent asks for `tertiary destructive small` — then convert module-todo's remove button to a handler arg.
-  **Area:** design
-  **Needs:** LT-461
-  **Gates:** check:corpus, test:server, test:variants
-  **Area:** design
-  **Needs:** LT-461
-  **Filed (Architect, 2026-10-07, from LT-461's review):** module-todo's remove button composes
-  `<basic-button class="remove">` with the classes `tertiary destructive small` (pinned in the
-  sim-driver snapshot). LT-461 gave BasicButton `onClick`, but a parent cannot express that
-  class triple through the current props: `variant` is one enum (`secondary` | `primary` |
-  `constructive` | `destructive`) and `size` another, and `tertiary` is not a `variant` value —
-  the remove button gets its classes today because module-todo's template hard-codes them into
-  the child's inner button through the class-ownership channel, not through any prop. Until a
-  shape exists, module-todo's remove click stays on a hand-written `first('basic-button.remove
-  button')` query instead of LT-461's handler arg.
-  **Ruling needed (owner):** one of —
-  1. `variant` widens to accept an array (`variant?: X | X[]`), with `tertiary` joining the
-     vocabulary; `class={`${variant.join(' ')} ${size}`}`.
-  2. Boolean modifier props (`destructive?: boolean`, `small?: boolean`, …), composing with
-     `variant`; the combinatorics live in BasicButton alone.
-  3. Leave the class-ownership channel as the documented answer for modifier combinations and
-     drop the conversion idea.
-  Recommendation: 2 — the modifiers are orthogonal (color × weight × size), the enum would
-  otherwise grow `tertiary-destructive`-style cross products, and the props render as ordinary
-  server args. Whichever wins, the CLAUDE-facing copy is HOST_PROFILE § Handler args' note that
-  a parent needing classes on the child's INNER button uses the ownership rule.
-  **Change (after the ruling):** BasicButton carries the ruled props; module-todo's remove
-  button passes `onClick={e => …}` (or the equivalent) as a handler arg and drops its
-  hand-written remove-button query; the sim-driver snapshot and any other pin re-write
-  mechanically.
-  **Check:** `bun run test:variants module-todo` green on all three surfaces; `test:server`
-  and `check:corpus` green.
-  **Channel/tier:** none — example-corpus API shape; no runtime check.
+  **Cluster (Architect, 2026-10-09):** this task, LT-333 and LT-458 all decide how a setup const is classified: whether it is client-only, a render read, or substitutable into a verbatim derivation. Schedule them together for one contributor, in the order LT-459 → LT-333 → LT-458 (placement, then routing credit, then substitution), so the three rules land on one classifier, not three.
+
+- [ ] LT-487: module-todo's ar/cy/lv strings need a translator pass — six empty labels per locale and a doubtful `remaining` plural.
+  **Area:** docs
+  **Needs:** LT-467
+  **Gates:** check:corpus
+  **Area:** docs
+  **Needs:** LT-467
+  **Filed (Architect, 2026-10-07, from LT-467's doubt 2):** LT-467 added seven `module-todo.*`
+  keys to every locale. de, pl and zh are translated. In ar, cy and lv the six labels (`addTodo`,
+  `filter`, `all`, `active`, `completed`, `clearCompleted`) are empty `i18n:sync` placeholders,
+  which fall back to the source string by design (HOST_PROFILE.md, "A missing translation is
+  not your problem to fix"). The `remaining` patterns reuse the retired example's noun forms.
+  lv `other {Atlikuši # uzdevumu}` uses the genitive plural where Latvian likely wants the
+  nominative (`uzdevumi`), and cy `other {# tasgiau ar ôl}` may want the singular after a
+  numeral.
+  **Do:** a native or careful reviewer fills the ar/cy/lv labels and corrects each `remaining`
+  arm per locale. Keep every plural category the locale's CLDR rules name, plus the `=0` arm.
+  No code change.
+  **Check:** `check:corpus` translation census stays at 0 gaps. The `pl` leg in
+  `module-todo.spec.ts` is the model if a locale leg is wanted.
+  **Parked (owner, 2026-10-09):** dropped from iteration planning and moved to P7. The team does not plan documentation in languages no member speaks natively. The ar, cy and lv locales exist as stress tests for the i18n design (plural categories, script direction, CLDR rules), not as shipped translations. This task wakes only if a native reviewer is found. The `i18n:sync` fallback to the source string remains the designed behavior meanwhile.
 
 - [ ] LT-497: Name the cause when a parent's reference into its content is unaddressable because no region marks it.
   **Area:** compiler
@@ -1585,7 +1488,7 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
 
 - [ ] LT-514: Form components and BasicButton take their visible label as non-interactive children.
   **Area:** examples
-  **Needs:** LT-477, LT-479
+  **Needs:** LT-477, LT-479, LT-489, LT-494
   **Gates:** check:corpus, test:variants, typecheck, build:docs
   **Area:** examples
   **Filed (Architect, 2026-10-09; owner ruling on BasicButton, this session):** LT-479 lets FormCheckbox take its label as children. This task does the same for the other corpus components whose visible label is a `string` arg rendered as a text node, where the raw HTML element would accept phrasing content. The pattern is ADR 0048 s4: `children?: Children<{}, 'non-interactive'>`. LT-479 keeps a reactive `label` beside the children for FormCheckbox; here only BasicButton keeps one (item 2), because no form component in item 1 exposes its label. Change every member of each variant set (ADR 0039) and keep the CSS byte-identical.
@@ -1600,6 +1503,7 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
 
   **Channel/tier:** no new check. LTC085 (LT-477) already refuses interactive content at these compose sites. Any remaining interactive site is a `NOTES.md` entry, not a workaround.
   **Check:** `test:component` for each changed component and its composers is unchanged. `check:corpus` and `test:variants` stay green.
+  **Sequence (Architect, 2026-10-09):** LT-514 runs after LT-494, which first composes module-todo's `<FormRadiogroup legend={t.filter} …>`; item 3 then moves that site's `legend` to children. It also runs after LT-489, which reshapes BasicButton's props (`variant`/`kind`/`size`), so BasicButton's API changes in one order.
 
 - [ ] LT-515: Lazy children in composed content — the reactive half of ADR 0048 s1's grant.
   **Area:** design
