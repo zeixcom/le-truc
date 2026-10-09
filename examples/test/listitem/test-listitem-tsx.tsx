@@ -55,14 +55,15 @@ export function TestListitemTsx({}: TestListitemTsxProps) {
 						/>
 						<FormCheckbox
 							name="task"
-							label="Done"
 							truc:pass={{
 								checked: {
 									get: () => task.done.get(),
 									set: v => task.done.set(Boolean(v)),
 								},
 							}}
-						/>
+						>
+							Done
+						</FormCheckbox>
 						<button type="button" onClick={() => console.log(task.done.get())}>
 							Log
 						</button>

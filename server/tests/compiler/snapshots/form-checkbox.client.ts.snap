@@ -13,8 +13,13 @@ export type FormCheckboxProps = {
 	 * inner native input — and restored to that default on `<form>.reset()`.
 	 */
 	checked: boolean
-	/** Visible label text of the checkbox. */
-	label: string
+	/**
+	 * Visible label text of the checkbox. Optional: a composed parent
+	 * passes rich static content as `children` instead, which `.label`
+	 * renders in place of this text. Writing the reactive `label` at
+	 * runtime replaces that rich content with text.
+	 */
+	label?: string
 }
 
 declare global {
@@ -39,9 +44,15 @@ export default defineComponent<FormCheckboxProps>(
 	'form-checkbox',
 	({ expose, first, host, on, watch }) => {
 		const checkbox = first('input', 'checkbox input')
+		const labelSpan = first('span.label')
 		expose({
 			checked: asBoolean(false),
+			label: labelSpan?.textContent ?? '',
 		})
+		watch('label', v => {
+			if (labelSpan && v != null && labelSpan.textContent !== v)
+				labelSpan.textContent = v
+		});
 		watch(() => host.checked, bindProperty(checkbox, 'checked'))
 		watch(() => host.disabled, bindProperty(checkbox, 'disabled'))
 		on(checkbox, 'change', () => ({ checked: checkbox.checked }))

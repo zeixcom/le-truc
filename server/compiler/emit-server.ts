@@ -2267,6 +2267,11 @@ export const emitServerModule = (
 		body.line(
 			`import { ${importSpecifier('i18nRecord', ctx.h('i18nRecord'))} } from './i18n'`,
 		)
+	// The `Children<…>` args annotation (ADR 0048 s2) rides the verbatim
+	// params slice below; authored type-only imports are dropped (LT-082),
+	// so the reference is re-imported here.
+	if (component.childrenContract)
+		body.line(`import type { Children } from '@zeix/le-truc'`)
 	// Authored text and declarations are pre-formatted: appended as written.
 	body.append([...component.imports.server, ''])
 	for (const decl of component.typeDecls) body.append([decl, ''])

@@ -57,14 +57,13 @@ export function TestListitem({}: {})
 						/>
 						<FormCheckbox
 							name="task"
-							label="Done"
 							truc:pass={{
 								checked: {
 									get: () => task.done.get(),
 									set: (v: boolean) => task.done.set(v),
 								},
 							}}
-						/>
+						>Done</FormCheckbox>
 						<BasicButton label="Remove" onClick={() => items.remove(k)} />
 					</li>
 				}

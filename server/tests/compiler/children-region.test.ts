@@ -477,3 +477,46 @@ describe('extracted arm and list templates carry the marker (ADR 0048 s1)', () =
 		)
 	})
 })
+
+/* === The args annotation's type import (LT-479) === */
+
+describe('a `Children<…>` args annotation re-imports its type (LT-479)', () => {
+	for (const surface of SURFACES)
+		test(`${surface}: the emitted server module imports Children from the runtime package`, () => {
+			const params = `{ children = '' }: { children?: Children<{}, 'non-interactive'> }`
+			const child = mustCompile(
+				compile(
+					surface,
+					(surface === 'tsrx' ? tsrx : tsx)(
+						"import type { Children } from '@zeix/le-truc'",
+						'ChildLabel',
+						'child-label',
+						'expose({})',
+						'<span class="label">{children}</span>',
+						params,
+					),
+					'examples/child/child-label',
+				),
+				'child-label',
+			)
+			expect(child.serverCode).toContain(
+				`import type { Children } from '@zeix/le-truc'`,
+			)
+			// A plain-string children arg imports nothing.
+			const plain = mustCompile(
+				compile(
+					surface,
+					(surface === 'tsrx' ? tsrx : tsx)(
+						'',
+						'ChildPlain',
+						'child-plain',
+						'expose({})',
+						'<span class="label">{children}</span>',
+					),
+					'examples/child/child-plain',
+				),
+				'child-plain',
+			)
+			expect(plain.serverCode).not.toContain(`from '@zeix/le-truc'`)
+		})
+})

@@ -84,25 +84,23 @@ test.describe('form-checkbox component', () => {
 		expect(await isHostChecked(checkboxComponent)).toBe(false)
 	})
 
-	test('label is render-time only — programmatic writes do not update it', async ({
+	test('label is a reactive prop — programmatic writes update the text (LT-479)', async ({
 		page,
 	}) => {
 		const checkboxComponent = page.locator('form-checkbox').first()
 		const label = checkboxComponent.locator('.label')
 
-		// Initial label (the compiled component renders label as a static
-		// template child from the render arg; the hand-written twin's
-		// writable label prop is gone)
 		await expect(label).toHaveText('Checkbox')
 
-		// Writing .label lands as a plain expando — no reactive prop, no
-		// DOM update
+		// LT-479 re-scoped `label` to the reactive text prop beside the
+		// children arg: a runtime write replaces the rendered text (and
+		// rich children content, if any, with that text).
 		await page.evaluate(() => {
 			const element = document.querySelector('form-checkbox') as any
 			element.label = 'Updated Label'
 		})
 
-		await expect(label).toHaveText('Checkbox')
+		await expect(label).toHaveText('Updated Label')
 	})
 
 	test('reads initial label from DOM content', async ({ page }) => {
@@ -201,8 +199,8 @@ test.describe('form-checkbox component', () => {
 		await expect(checkbox).toBeChecked()
 		expect(await isHostChecked(checkboxComponent)).toBe(true)
 
-		// A label write is inert in the compiled component (render-time
-		// arg) — checked state is unaffected, label text unchanged
+		// The runtime label write updates the text (LT-479) and leaves the
+		// checked state alone.
 		await page.evaluate(() => {
 			const element = document.querySelector('form-checkbox') as any
 			element.label = 'Modified Label'
@@ -210,7 +208,7 @@ test.describe('form-checkbox component', () => {
 
 		await expect(checkbox).toBeChecked()
 		expect(await isHostChecked(checkboxComponent)).toBe(true)
-		await expect(label).toHaveText('Checkbox')
+		await expect(label).toHaveText('Modified Label')
 	})
 
 	test('fires change events on checkbox interaction', async ({ page }) => {
