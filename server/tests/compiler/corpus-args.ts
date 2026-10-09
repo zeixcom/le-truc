@@ -89,6 +89,7 @@ export const MODULE_TODO_REMAINING =
 
 export const MODULE_TODO_I18N = inlineI18n({
 	addTodo: 'Add Todo',
+	addTodoLabel: 'What needs to be done?',
 	filter: 'Filter',
 	all: 'All',
 	active: 'Active',
@@ -100,12 +101,13 @@ export const MODULE_TODO_I18N = inlineI18n({
 /**
  * Same posture as `server-render-smoke.test.ts`: components whose args are
  * genuinely required get a value, everything else renders from `{}`.
- * Diverges from the smoke test's copy in three entries (LT-167): the smoke
- * passes `label` where form-radiogroup's prop is `legend`, and title/href
+ * Diverges from the smoke test's copy in two entries (LT-167): title/href
  * (card-blogpost) / title (card-callout) where the cards' prop is
  * `children` — copied verbatim, those rendered literal `undefined` into the
  * goldens; here the authored props are bound so the goldens pin authored
- * behavior.
+ * behavior. (The third divergence, the smoke's `label` where
+ * form-radiogroup's prop was `legend`, ended when LT-514 moved both tables
+ * to `children`.)
  */
 export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	'form-spinbutton': {
@@ -115,7 +117,7 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	'form-checkbox': { name: 'agree', label: 'I agree' },
 	'form-radiogroup': {
 		name: 'choice',
-		legend: 'Pick one',
+		children: 'Pick one',
 		options: [
 			{ value: 'a', label: 'A' },
 			{ value: 'b', label: 'B' },
@@ -123,12 +125,12 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	},
 	'form-textbox': {
 		name: 'title',
-		label: 'Title',
+		children: 'Title',
 		i18n: inlineI18n({ clearInput: 'Clear input' }),
 	},
 	'form-combobox': {
 		name: 'fruit',
-		label: 'Fruit',
+		children: 'Fruit',
 		options: [
 			{ value: 'a', label: 'Apple' },
 			{ value: 'b', label: 'Banana' },
@@ -137,7 +139,7 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	},
 	'form-tokenbox': {
 		name: 'tags',
-		label: 'Tags',
+		children: 'Tags',
 		i18n: inlineI18n({
 			remove: 'Remove',
 			added: argMessage('Added token: {token}'),
@@ -157,7 +159,13 @@ export const CORPUS_ARGS: Record<string, Record<string, unknown>> = {
 	// declaration existed — keep its phase-1 output unchanged except for the
 	// record the render signature now requires.
 	'form-colorgraph': {
-		i18n: inlineI18n({ drag: 'Drag', outOfGamut: 'Color out of gamut' }),
+		i18n: inlineI18n({
+			drag: 'Drag',
+			outOfGamut: 'Color out of gamut',
+			lightness: 'Lightness',
+			chroma: 'Chroma',
+			hue: 'Hue',
+		}),
 	},
 	'module-tabgroup': {
 		tabs: [

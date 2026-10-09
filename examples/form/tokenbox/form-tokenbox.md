@@ -33,6 +33,8 @@ A tokenized text input where typed text becomes a removable pill on `,`, `Enter`
 - Helper text shown below the input
 {% /table %}
 
+A composed parent passes the visible label as children (`<FormTokenbox>Tags</FormTokenbox>`); the children must be non-interactive — the compiler refuses interactive content at the compose site. Page-authored markup labels the tokenbox directly, with a `<label for>` pointing at the inner input.
+
 {% partial file="form-associated.md" /%}
 
 #### Methods

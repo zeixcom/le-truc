@@ -46,7 +46,7 @@ export function ModuleList({}: {})
 					textbox.clear()
 				}}
 			>
-				<FormTextbox name="new-item" label="New item" clearable />
+				<FormTextbox name="new-item" clearable>New item</FormTextbox>
 				<BasicButton
 					class="submit"
 					type="submit"

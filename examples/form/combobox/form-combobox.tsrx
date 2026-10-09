@@ -28,6 +28,7 @@
  * attribute.
  */
 import { bindAttribute, createCell, createState, asString, defineMethod } from '@zeix/le-truc'
+import type { Children } from '@zeix/le-truc'
 import { FormListbox } from '../listbox/form-listbox.tsrx'
 
 /**
@@ -77,7 +78,7 @@ declare global {
 export function FormCombobox(
 	{
 		name,
-		label,
+		children,
 		options,
 		value = '',
 		description = '',
@@ -86,7 +87,12 @@ export function FormCombobox(
 	}:
 		{
 			name: string
-			label: string
+			/**
+			 * Visible label of the combobox, passed as children. Non-interactive:
+			 * the compiler refuses interactive content at a compose site
+			 * (LTC085, ADR 0048 s4).
+			 */
+			children: Children<{}, 'non-interactive'>
 			options: FormComboboxOption[]
 			value?: string
 			description?: string
@@ -140,7 +146,7 @@ export function FormCombobox(
 	watch(() => !isOpen(), bindAttribute(popup, 'hidden'));
 
 	<form-combobox {name} {value}>
-		<label for={inputId}>{label}</label>
+		<label for={inputId}>{children}</label>
 		<div class="input">
 			<input
 				type="text"

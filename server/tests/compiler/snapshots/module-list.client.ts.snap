@@ -16,10 +16,10 @@ declare global {
 export default defineComponent(
 	'module-list',
 	({ first, host, on, pass, watch }) => {
-		const container = first('ul', 'module-list: ul missing')
-		const form = first('form', 'module-list: form missing')
-		const textbox = first('form-textbox', 'the new-item textbox')
-		const basicButton = first('basic-button.submit', 'module-list: basic-button.submit missing')
+		const container = first('ul:not(form-textbox *, basic-button *)', 'module-list: ul:not(form-textbox *, basic-button *) missing')
+		const form = first('form:not(form-textbox *, basic-button *)', 'module-list: form:not(form-textbox *, basic-button *) missing')
+		const textbox = first('form-textbox:not(basic-button *)', 'the new-item textbox')
+		const basicButton = first('basic-button.submit:not(form-textbox *)', 'module-list: basic-button.submit:not(form-textbox *) missing')
 		const items = createList<string>([], {
 			keyConfig: 'item',
 		})

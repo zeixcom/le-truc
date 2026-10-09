@@ -92,7 +92,7 @@ export function C({}: {})
 	@{
 		FormTextbox(host)
 			<c-el>
-				<FormTextbox name="n" label="N" />
+				<FormTextbox name="n">N</FormTextbox>
 				<style>${STYLE}</style>
 			</c-el>
 	}`

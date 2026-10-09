@@ -564,7 +564,7 @@ describe('LT-145 — a Parser-exposed prop with no server arg renders its fallba
 		const { html } = await listboxRealm.render({
 			markup: await serverMarkupOf(comboboxInfo, {
 				name: 'fruit',
-				label: 'Fruit',
+				children: 'Fruit',
 				options,
 				i18n: inlineI18n({ clearInput: 'Clear input' }),
 			}),

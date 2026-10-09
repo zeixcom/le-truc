@@ -28,6 +28,8 @@ A roving-tabindex radio group that works both controlled and uncontrolled. It de
 - Value of the currently checked radio input; settable for controlled use
 {% /table %}
 
+A composed parent passes the visible legend as children (`<FormRadiogroup>Pick one</FormRadiogroup>`); the children must be non-interactive — the compiler refuses interactive content at the compose site. Page-authored markup writes the `<legend>` directly. The options' own `option.label` is list-item data and stays a string.
+
 {% partial file="form-associated.md" /%}
 
 #### Classes

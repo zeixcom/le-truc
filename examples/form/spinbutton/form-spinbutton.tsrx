@@ -70,6 +70,7 @@
  * `value` ATTRIBUTE stays at the server-rendered default — the reset
  * baseline (LT-057), not a live-value channel.
  */
+import type { Children } from '@zeix/le-truc'
 import { asNumber, defineMethod, relayValidity } from '@zeix/le-truc'
 
 /**
@@ -128,7 +129,7 @@ declare global {
 export function FormSpinbutton(
 	{
 		name,
-		label,
+		children = '',
 		value = 0,
 		min = 0,
 		max = 100,
@@ -140,7 +141,13 @@ export function FormSpinbutton(
 	}:
 		{
 			name: string
-			label?: string
+			/**
+			 * Visible label of the spinbutton, passed as children. Optional —
+			 * the control works unlabelled under a page that names it through
+			 * its own markup. Non-interactive: the compiler refuses interactive
+			 * content at a compose site (LTC085, ADR 0048 s4).
+			 */
+			children?: Children<{}, 'non-interactive'>
 			value?: number
 			min?: number
 			max?: number
@@ -270,8 +277,8 @@ export function FormSpinbutton(
 		{step}
 		bigStep={bigStep ?? step * 10}
 	>
-		@if (label) {
-			<label for={inputId}>{label}</label>
+		@if (children) {
+			<label for={inputId}>{children}</label>
 		}
 		<fieldset
 			disabled={() => host.disabled}

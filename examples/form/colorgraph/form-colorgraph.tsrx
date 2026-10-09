@@ -58,20 +58,25 @@ import { FormSpinbutton } from '../spinbutton/form-spinbutton.tsrx'
 export const config = { formAssociated: true }
 
 /**
- * The knob's visually-hidden drag hint is component-owned text assistive
- * tech announces, so it routes through the reserved `i18n` parameter
- * (ADR 0030): the compiler resolves `t` per locale at render time; this
- * inline record is the source-locale fallback every catalog resolves
- * against. The out-of-gamut validity message is set at event time in the
- * browser, so it reaches it through the client message channel (ADR 0030
- * s9, the root `i18n` attribute). Deliberately NOT here: the `first()`
- * guidance messages below address the PAGE AUTHOR in their console —
- * developer-facing English, a different audience than the end user the
- * catalog serves.
+ * The knob's visually-hidden drag hint and the three axis labels (LT-514:
+ * they moved from `label` args to passed children, and literal prose in an
+ * i18n-declaring component routes through the catalog, LTC047) are
+ * component-owned text, so they route through the reserved `i18n`
+ * parameter (ADR 0030): the compiler resolves `t` per locale at render
+ * time; this inline record is the source-locale fallback every catalog
+ * resolves against. The out-of-gamut validity message is set at event time
+ * in the browser, so it reaches it through the client message channel
+ * (ADR 0030 s9, the root `i18n` attribute). Deliberately NOT here: the
+ * `first()` guidance messages below address the PAGE AUTHOR in their
+ * console — developer-facing English, a different audience than the end
+ * user the catalog serves.
  */
 export const i18n = {
 	drag: 'Drag',
 	outOfGamut: 'Color out of gamut',
+	lightness: 'Lightness',
+	chroma: 'Chroma',
+	hue: 'Hue',
 } as const
 
 export type FormColorgraphAxis = 'l' | 'c' | 'h'
@@ -495,32 +500,29 @@ export function FormColorgraph(
 		<FormSpinbutton
 			class="lightness"
 			name=""
-			label="Lightness"
 			unit="%"
 			min={0}
 			max={100}
 			step={0.25}
 			bigStep={5}
-		/>
+		>{t.lightness}</FormSpinbutton>
 		<FormSpinbutton
 			class="chroma"
 			name=""
-			label="Chroma"
 			min={0}
 			max={0.4}
 			step={0.001}
 			bigStep={0.02}
-		/>
+		>{t.chroma}</FormSpinbutton>
 		<FormSpinbutton
 			class="hue"
 			name=""
-			label="Hue"
 			unit="°"
 			min={0}
 			max={360}
 			step={0.01}
 			bigStep={15}
-		/>
+		>{t.hue}</FormSpinbutton>
 
 		<style>
 		@scope to (form-spinbutton > *) {

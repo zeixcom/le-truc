@@ -46,6 +46,7 @@
  *   whether the clear button actually exists
  */
 
+import type { Children } from '@zeix/le-truc'
 import { createCell, deriveCell, asString, defineMethod } from '@zeix/le-truc'
 
 /**
@@ -109,7 +110,7 @@ declare global {
 export function FormTextbox(
 	{
 		name,
-		label,
+		children,
 		id = name,
 		value = '',
 		required = false,
@@ -121,7 +122,12 @@ export function FormTextbox(
 	}:
 		{
 			name: string
-			label: string
+			/**
+			 * Visible label of the textbox, passed as children. Non-interactive:
+			 * the compiler refuses interactive content at a compose site
+			 * (LTC085, ADR 0048 s4).
+			 */
+			children: Children<{}, 'non-interactive'>
 			id?: string
 			value?: string
 			required?: boolean
@@ -195,7 +201,7 @@ export function FormTextbox(
 	};
 
 	<form-textbox {name} {value}>
-		<label for={inputId}>{label}</label>
+		<label for={inputId}>{children}</label>
 		<div class="input">
 			@if (multiline) {
 				<textarea
