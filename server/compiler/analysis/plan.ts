@@ -828,11 +828,13 @@ export const analyzeClient = (
 		})
 
 	/**
-	 * `badFreeNames` for a list body (`each()`/`reconcile()` scopes, LT-349),
-	 * plus the setup consts and authored imports the body reads. Those are
-	 * client bindings, but `computeClientNeededNames` walks no list-body
-	 * position, so a const or import read only there is never emitted
-	 * client-side — admitting it would compile a ReferenceError.
+	 * `badFreeNames` for a list body (`each()`/`reconcile()` scopes, LT-349)
+	 * plus the setup consts and authored imports the body reads — a uniform
+	 * authoring rule, not an emission guard: item content stays in the
+	 * template tree (ADR 0046), so `computeClientNeededNames` does reach a
+	 * list body and the binding would be emitted (LT-483 probed a boundary
+	 * arm reading a setup const — clean compile, const declared client-side,
+	 * watch emitted beside it).
 	 */
 	const badListBodyNames = (node: AstNode): string[] => {
 		const bad = new Set(badFreeNames(node))

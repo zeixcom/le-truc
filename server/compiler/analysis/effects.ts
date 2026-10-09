@@ -1514,7 +1514,12 @@ const handleAsyncBoundary = (
 		source,
 		diagnostics,
 		usedNames,
-		badFreeNames: badNames,
+		// The same scope rule as every other arm-set handler (LT-483): inside
+		// a reactive-list item this is `badListBodyNames`, so a setup-const or
+		// import read in an arm's client positions — the ok arm's constructs
+		// and a compose arm root's pass entries — is LTC005 like on any other
+		// list-body position.
+		scopeBadNames: badNames,
 	} = fx
 	const wording = wordingOf(component)
 	const okRoot = node.children.find(isBoundaryArmRoot) as BoundaryArmRoot

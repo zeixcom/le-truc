@@ -17,7 +17,10 @@
  * - a server-data loop inside a scope lowers to a static query against the
  *   scope root, never `all()`;
  * - the `@empty` arm binds its reactive attributes in the scope that holds
- *   its list.
+ *   its list;
+ * - an async boundary in a list item refuses setup-const reads in its arm
+ *   mounts, like every other list-body position (LTC005, LT-483), while a
+ *   host-level boundary still admits them.
  *
  * The remaining refusals and the lifted ones are pinned for parity in
  * `tsx/diagnostic-parity.test.ts`.
@@ -1643,6 +1646,100 @@ describe('an async boundary inside a list item', () => {
 		const template = server.slice(server.indexOf('<template data-list="0">'))
 		expect(template).not.toContain('isPending')
 		expect(template).toContain('data-arms')
+	})
+})
+
+describe('an item-nested boundary refuses setup-const reads in its arm mounts (LT-483)', () => {
+	// `handleAsyncBoundary` checked its client positions against
+	// `badFreeNames`, the host-level rule, where every other arm-set handler
+	// reads `fx.scopeBadNames` — inside a reactive-list item, the
+	// `badListBodyNames` rule refusing the setup consts and authored imports
+	// a list body cannot read (LTC005's server-only face). The probes (task
+	// entry) compiled clean BEFORE the alignment: the client-need walk does
+	// reach these positions and emitted the const, so the defect was
+	// consistency, not a latent ReferenceError — the same read was LTC005 on
+	// a plain item element and silently admitted inside a boundary arm.
+	const pre = "import { createList, deriveCell } from '@zeix/le-truc'"
+	const setup = `const items = createList<string>(['a'], { keyConfig: s => s })
+		const data = deriveCell(async () => 'ok')
+		const tone = 'hot'`
+	const sources = (okRoot: string, okRootTsx: string) => ({
+		tsrx: tsrx(
+			pre,
+			`${setup}
+		expose({})`,
+			`
+				<ul class="list">
+					@for (const item of items) {
+						<li>
+							@try {
+								${okRoot}
+							} @pending { <i class="wait">…</i> } @catch (e) { <i class="error">{e.message}</i> }
+						</li>
+					}
+				</ul>`,
+		),
+		tsx: tsx(
+			pre,
+			'{}',
+			`${setup}
+	expose({})`,
+			`
+				<ul class="list">
+					{items.map(item => (
+						<li><truc:try pending={<i class="wait">…</i>} catch={e => <i class="error">{e.message}</i>}>${okRootTsx}</truc:try></li>
+					))}
+				</ul>`,
+		),
+	})
+
+	test('a setup const read in the ok arm’s construct via the `truc:html` channel is LTC005, on both surfaces', () => {
+		const { fromTsrx, fromTsx } = compileBoth(
+			sources(
+				'<b class="value" data-tone={() => tone} truc:html={() => data.get()}></b>',
+				'<b class="value" data-tone={() => tone} truc:html={() => data.get()}></b>',
+			),
+		)
+		for (const from of [fromTsrx, fromTsx]) {
+			expect(from.component).toBeNull()
+			expect(from.diagnostics.map(d => d.code)).toEqual(['LTC005'])
+			expect(from.diagnostics[0]?.message).toContain(
+				'Reactive attribute `data-tone` references `tone`, which a list body cannot read',
+			)
+		}
+	})
+
+	test('a host-level boundary still admits the same read — `scopeBadNames` is `badFreeNames` there', () => {
+		const hostLevel = (okRoot: string) => ({
+			tsrx: tsrx(
+				pre,
+				`${setup}
+		expose({})`,
+				`
+					@try {
+						${okRoot}
+					} @pending { <i class="wait">…</i> } @catch (e) { <i class="error">{e.message}</i> }`,
+			),
+			tsx: tsx(
+				pre,
+				'{}',
+				`${setup}
+	expose({})`,
+				`
+					<truc:try pending={<i class="wait">…</i>} catch={e => <i class="error">{e.message}</i>}>${okRoot}</truc:try>`,
+			),
+		})
+		const { fromTsrx, fromTsx } = compileBoth(
+			hostLevel(
+				'<b class="value" data-tone={() => tone} truc:html={() => data.get()}></b>',
+			),
+		)
+		expect(fromTsrx.diagnostics).toEqual([])
+		expect(fromTsx.diagnostics).toEqual([])
+		for (const from of [fromTsrx, fromTsx])
+			expect(from.component?.clientCode).toContain(
+				"watch(() => tone, bindAttribute(b, 'data-tone'))",
+			)
 	})
 })
 
