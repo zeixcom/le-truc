@@ -2716,6 +2716,30 @@ const serverBranchFix = (
 }
 
 /**
+ * The LT-519 fix clause per enclosure, for a content element a `first()`
+ * reference addresses. The reference plans where the host walk reaches the
+ * site; in an arm or a list item its elements are recreated besides, so the
+ * clause names the staleness the author would hit there too.
+ */
+const contentRefFix = (
+	inArm: boolean,
+	loop: ForIR | null,
+	inServerBranch: ServerBranch,
+): string => {
+	if (inArm)
+		return 'The arm is recreated from its template on every switch, so a reference taken at connect goes stale — move the composed child out of the arm.'
+	if (loop?.kind === 'reconcile')
+		return 'The item’s elements exist once per item and are recreated on every reconcile, so a reference taken at connect binds the first item’s — move the composed child out of the loop.'
+	if (loop?.kind === 'each')
+		return 'The content renders once per item, so a reference taken at connect could only ever bind one item’s markup — move the composed child out of the loop.'
+	if (inServerBranch === 'try-body')
+		return 'The `try` renders its body once per render, and its body cannot hold the reference — move the composed child out of the `try`.'
+	if (inServerBranch === 'try-catch')
+		return 'The catch arm folds once per render, so the reference would address markup that never re-renders — move the composed child out of the catch arm.'
+	return 'The branch folds once per render, so the reference would address markup that never re-renders — move the composed child out of the branch.'
+}
+
+/**
  * Every arm set (ADR 0037: a reactive conditional, an async boundary) and
  * every nested reactive list must sit where a mount reaches it: directly in
  * an element of the host or of a Mount Scope — an arm, a list item (ADR
@@ -2803,23 +2827,29 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 					serverBranchFix(inServerBranch),
 				),
 			)
-		// A reactive `truc:html` in composed content is the parent's own
-		// binding (ADR 0048 s1, LT-492), planned by the HOST walk
+		// A client construct in composed content is planned by the HOST walk
 		// (`planContentConstructs`) — which never reaches a site inside an
 		// arm, a loop body or a server-rendered branch. Refusing here, at the
 		// one whole-template checkpoint, keeps those positions from compiling
-		// as silently inert watches. The data-reference form needs no client
-		// half, so it stays legal in every scope.
+		// with a silently inert binding (LT-492) or a dropped declaration the
+		// authored statements still read (LT-519). The data-reference
+		// `truc:html` form needs no client half, so it stays legal in every
+		// scope.
 		if (node.kind === 'compose' && (inArm || loop !== null || inServerBranch))
 			for (const child of node.children)
 				walkTemplate(
 					child,
 					inner => {
-						if (
-							!isElement(inner) ||
-							!inner.attrs.some(a => a.kind === 'html' && a.reactive)
+						if (!isElement(inner)) return
+						const reactiveHtml = inner.attrs.some(
+							a => a.kind === 'html' && a.reactive,
 						)
-							return
+						// The synthetic ref the authored `first()` attaches —
+						// absent where the raw resolution refused the reference
+						// already (a reactive arm or list item), so the two
+						// faces never report one mistake twice.
+						const refAttr = refOf(inner)
+						if (!reactiveHtml && !refAttr) return
 						const enclosure = inArm
 							? 'an arm'
 							: loop?.kind === 'reconcile'
@@ -2827,21 +2857,32 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 								: loop?.kind === 'each'
 									? 'a server-data loop body'
 									: 'a server-rendered branch'
-						const fix = inArm
-							? 'The arm is recreated from its template on every switch, and the content renders server-side into each clone, so the binding goes stale on the first flip — move the composed child out of the arm.'
-							: loop !== null
-								? 'The content renders per item and its elements are recreated on every pass, so a host-level binding addresses stale markup — move the composed child out of the loop.'
-								: inServerBranch === 'try-body'
-									? 'The `try` renders its body once per render, and its body cannot hold the binding — move the composed child out of the `try`.'
-									: inServerBranch === 'try-catch'
-										? 'The catch arm folds once per render, so the binding would address markup that never re-renders — move the composed child out of the catch arm.'
-										: 'The branch folds once per render, so the binding would address markup that never re-renders — move the composed child out of the branch.'
+						if (reactiveHtml) {
+							const fix = inArm
+								? 'The arm is recreated from its template on every switch, and the content renders server-side into each clone, so the binding goes stale on the first flip — move the composed child out of the arm.'
+								: loop !== null
+									? 'The content renders per item and its elements are recreated on every pass, so a host-level binding addresses stale markup — move the composed child out of the loop.'
+									: inServerBranch === 'try-body'
+										? 'The `try` renders its body once per render, and its body cannot hold the binding — move the composed child out of the `try`.'
+										: inServerBranch === 'try-catch'
+											? 'The catch arm folds once per render, so the binding would address markup that never re-renders — move the composed child out of the catch arm.'
+											: 'The branch folds once per render, so the binding would address markup that never re-renders — move the composed child out of the branch.'
+							diagnostics.push(
+								diagnostic.unsupported(
+									source,
+									inner.node,
+									`A reactive \`truc:html\` in the content of a composed element inside ${enclosure}`,
+									fix,
+								),
+							)
+							return
+						}
 						diagnostics.push(
 							diagnostic.unsupported(
 								source,
 								inner.node,
-								`A reactive \`truc:html\` in the content of a composed element inside ${enclosure}`,
-								fix,
+								`A \`first()\` reference to <${inner.tag}> in the content of a composed element inside ${enclosure}`,
+								contentRefFix(inArm, loop, inServerBranch),
 							),
 						)
 					},

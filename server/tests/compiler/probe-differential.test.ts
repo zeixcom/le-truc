@@ -255,40 +255,55 @@ const refBuildSelector = (
 	return null
 }
 
-const refDiscriminatorCandidates = (element: ElementNode): string[] => {
+/**
+ * Precision of a synthesized base among exclusion-decorated candidates
+ * (LT-520, the mirror of `PRECISION`): a `role` clause keeps its first
+ * place as the element's semantic contract, an `id` names one element
+ * outright, a `class`/`data-*` clause is the author's addressing hook, and
+ * the bare tag — with `type` and `aria-*`, which keep their candidate-order
+ * places — narrows nothing.
+ */
+const REF_PRECISION = { role: 3, id: 2, hook: 1, bare: 0 } as const
+
+type RefRankedBase = { base: string; rank: number }
+
+const refDiscriminatorCandidates = (element: ElementNode): RefRankedBase[] => {
 	const attrs = staticAttrs(element)
 	const prefix = element.tag === 'div' ? '' : element.tag
 	const exact = (name: string, value: string): string =>
 		`${prefix}[${name}="${value}"]`
-	const candidates = new Set<string>()
+	const candidates = new Map<string, number>()
 	const type = attrs.get('type')
-	if (typeof type === 'string') candidates.add(exact('type', type))
+	if (typeof type === 'string')
+		candidates.set(exact('type', type), REF_PRECISION.bare)
 	const className = attrs.get('class')
 	if (typeof className === 'string') {
 		const tokens = className.split(/\s+/).filter(Boolean)
 		for (const token of tokens)
-			candidates.add(
+			candidates.set(
 				PLAIN_SELECTOR_TOKEN.test(token)
 					? `${prefix}.${token}`
 					: exact('class', className),
+				REF_PRECISION.hook,
 			)
 	}
 	const id = attrs.get('id')
 	if (typeof id === 'string')
-		candidates.add(
+		candidates.set(
 			PLAIN_SELECTOR_TOKEN.test(id) ? `${prefix}#${id}` : exact('id', id),
+			REF_PRECISION.id,
 		)
 	for (const [name, value] of attrs)
 		if (name.startsWith('data-') && typeof value === 'string')
-			candidates.add(exact(name, value))
+			candidates.set(exact(name, value), REF_PRECISION.hook)
 	for (const [name, value] of attrs)
 		if (
 			name.startsWith('aria-') &&
 			typeof value === 'string' &&
 			!/["\\]/.test(value)
 		)
-			candidates.add(exact(name, value))
-	return [...candidates]
+			candidates.set(exact(name, value), REF_PRECISION.bare)
+	return [...candidates].map(([base, rank]) => ({ base, rank }))
 }
 
 const refAuthoredSelectorOf = (element: ElementNode): string | null => {
@@ -333,19 +348,26 @@ const refSelectorCandidates = (
 	tree: TemplateNode,
 	element: ElementNode,
 	composed: ReadonlyMap<string, ComposedMarkupRef> | undefined,
-): Array<{ base: string; emit: string }> => {
-	const bases = [
-		refBuildSelector(element, 'role'),
-		refBuildSelector(element, 'bare'),
+): {
+	list: Array<{ base: string; emit: string }>
+	excluded: Array<{ base: string; emit: string; rank: number }>
+} => {
+	const role = refBuildSelector(element, 'role')
+	const bases: RefRankedBase[] = [
+		...(role !== null ? [{ base: role, rank: REF_PRECISION.role }] : []),
+		{ base: element.tag, rank: REF_PRECISION.bare },
 		...refDiscriminatorCandidates(element),
-	].filter((s): s is string => s !== null)
+	]
 	const authored = refAuthoredSelectorOf(element)
 	const region = refEnclosingComposeOf(tree, element)
 	if (!composed) {
-		const synthesized = bases.map(base => ({ base, emit: base }))
-		return authored
-			? [{ base: authored, emit: authored }, ...synthesized]
-			: synthesized
+		const synthesized = bases.map(({ base }) => ({ base, emit: base }))
+		return {
+			list: authored
+				? [{ base: authored, emit: authored }, ...synthesized]
+				: synthesized,
+			excluded: [],
+		}
 	}
 	const sites = refAllComposeNodes(tree)
 	const children = sites.map(
@@ -403,18 +425,21 @@ const refSelectorCandidates = (
 		}
 	}
 	const clean: Array<{ base: string; emit: string }> = []
-	const excluded: Array<{ base: string; emit: string }> = []
-	for (const base of bases) {
+	const excluded: Array<{ base: string; emit: string; rank: number }> = []
+	for (const { base, rank } of bases) {
 		const resolved = emitFor(base)
 		if (!resolved) continue
-		;(resolved.clean ? clean : excluded).push({ base, emit: resolved.emit })
+		if (resolved.clean) clean.push({ base, emit: resolved.emit })
+		else excluded.push({ base, emit: resolved.emit, rank })
 	}
 	const own = authored ? emitFor(authored) : null
-	return [
-		...(authored && own ? [{ base: authored, emit: own.emit }] : []),
-		...clean,
-		...excluded,
-	]
+	return {
+		list: [
+			...(authored && own ? [{ base: authored, emit: own.emit }] : []),
+			...clean.map(({ base, emit }) => ({ base, emit })),
+		],
+		excluded,
+	}
 }
 
 type ComposedMarkupRef = {
@@ -426,22 +451,33 @@ type ComposedMarkupRef = {
 	owner: string
 }
 
+/** Mirror of `byPrecision`: most precise decorated base first, ties stable. */
+const refByPrecision = <T extends { rank: number }>(
+	excluded: readonly T[],
+): T[] => [...excluded].sort((a, b) => b.rank - a.rank)
+
 const refResolveSelectorIn = (
 	tree: ElementNode,
 	element: ElementNode,
 	composed?: ReadonlyMap<string, ComposedMarkupRef>,
 ): { selector: string; unique: boolean } => {
-	const candidates = refSelectorCandidates(tree, element, composed)
+	const { list, excluded } = refSelectorCandidates(tree, element, composed)
 	// A region-content target's count is the region probe: compose-site
 	// content is materialized at the site (LT-517, mirror of
 	// `selectorCandidates`' `probeCountWithRegions` branch).
 	const countOf = refEnclosingComposeOf(tree, element)
 		? refCountWithRegions
 		: refCountForSelector
-	for (const { base, emit } of candidates) {
+	for (const { base, emit } of list) {
 		if (countOf(tree, base) === 1) return { selector: emit, unique: true }
 	}
-	return { selector: candidates[0]?.emit ?? element.tag, unique: false }
+	for (const { base, emit } of refByPrecision(excluded)) {
+		if (countOf(tree, base) === 1) return { selector: emit, unique: true }
+	}
+	return {
+		selector: list[0]?.emit ?? excluded[0]?.emit ?? element.tag,
+		unique: false,
+	}
 }
 
 const refResolveExclusiveSelectorIn = (
@@ -450,16 +486,24 @@ const refResolveExclusiveSelectorIn = (
 	clash: readonly TemplateNode[],
 	composed?: ReadonlyMap<string, ComposedMarkupRef>,
 ): { selector: string; unique: boolean } => {
-	const candidates = refSelectorCandidates(tree, element, composed)
+	const { list, excluded } = refSelectorCandidates(tree, element, composed)
 	const countOf = refEnclosingComposeOf(tree, element)
 		? refCountWithRegions
 		: refCountForSelector
-	for (const { base, emit } of candidates) {
+	for (const { base, emit } of list) {
 		if (countOf(tree, base) !== 1) continue
 		if (refMatchesUnder(clash, base)) continue
 		return { selector: emit, unique: true }
 	}
-	return { selector: candidates[0]?.emit ?? element.tag, unique: false }
+	for (const { base, emit } of refByPrecision(excluded)) {
+		if (countOf(tree, base) !== 1) continue
+		if (refMatchesUnder(clash, base)) continue
+		return { selector: emit, unique: true }
+	}
+	return {
+		selector: list[0]?.emit ?? excluded[0]?.emit ?? element.tag,
+		unique: false,
+	}
 }
 
 const refEnclosingIfOf = (

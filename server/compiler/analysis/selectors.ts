@@ -16,7 +16,9 @@
  * exactly or fail silently. What remains HERE is the POLICY the ADR keeps
  * in house: candidate order (role → bare tag → discriminator), the
  * authored-selector gate and its one-clause grammar, clean-before-excluded
- * emission, the compose clause algebra, and the element-chain searches.
+ * emission, precision-first base choice among the exclusion-decorated
+ * candidates (LT-520), the compose clause algebra, and the element-chain
+ * searches.
  * The differential harness in `server/tests/compiler/
  * probe-differential.test.ts` permanently pins the probe's answers to the
  * hand cascades' record.
@@ -129,13 +131,36 @@ const buildSelector = (
 const PLAIN_SELECTOR_TOKEN = /^[A-Za-z_-][\w-]*$/
 
 /**
+ * How precise a synthesized base is, among exclusion-decorated candidates
+ * (LT-520): there every candidate pays the same exclusion cost, so the base
+ * decides. A `role` clause is the element's semantic contract and keeps its
+ * first place; an `id` names one element outright; a `class`/`data-*` clause
+ * is the author's addressing hook; the bare tag — and with it `type` and
+ * `aria-*`, which are boilerplate and a last resort rather than hooks, and
+ * keep their candidate-order places — narrows nothing and is the first form
+ * to break when the template grows a same-tag sibling. Among equal ranks
+ * candidate order stands.
+ */
+const PRECISION = { role: 3, id: 2, hook: 1, bare: 0 } as const
+
+type Precision = (typeof PRECISION)[keyof typeof PRECISION]
+
+type RankedBase = {
+	base: string
+	rank: Precision
+}
+
+/**
  * All discriminator candidates in priority order (`type`, each `class`
  * token, `id`, every `data-*` — the `class`-then-`id`-then-`data-*` tail
  * mirroring `composeDiscriminatorClause`'s — then every `aria-*` as a last
  * resort) — plural, because two sibling
  * `<button type="button">`s that only differ by `class` (decrement /
  * increment) share the same `type` clause: `resolveSelectorIn` needs every
- * candidate to fall through to, not just the first present one.
+ * candidate to fall through to, not just the first present one. Each rides
+ * with its precision rank (`PRECISION`): among exclusion-decorated
+ * candidates the `id` clause outranks the `class`/`data-*` hooks, which
+ * outrank the bare tag, `type` and `aria-*`.
  *
  * Two clauses are spelled canonically rather than as attribute selectors.
  * `class` discriminates by TOKEN MEMBERSHIP (`span.label`), not by exact
@@ -156,34 +181,37 @@ const PLAIN_SELECTOR_TOKEN = /^[A-Za-z_-][\w-]*$/
  * authored selector in `basic-button.tsrx` is `span.label` — rather than
  * inventing a looser one.
  */
-const discriminatorCandidates = (element: ElementNode): string[] => {
+const discriminatorCandidates = (element: ElementNode): RankedBase[] => {
 	const attrs = staticAttrs(element)
 	const prefix = element.tag === 'div' ? '' : element.tag
 	const exact = (name: string, value: string): string =>
 		`${prefix}[${name}="${value}"]`
-	// A Set, not an array: two unsafe tokens in one `class` value would
+	// A Map, not an array: two unsafe tokens in one `class` value would
 	// otherwise push the same exact-match fallback twice.
-	const candidates = new Set<string>()
+	const candidates = new Map<string, Precision>()
 	const type = attrs.get('type')
-	if (typeof type === 'string') candidates.add(exact('type', type))
+	if (typeof type === 'string')
+		candidates.set(exact('type', type), PRECISION.bare)
 	const className = attrs.get('class')
 	if (typeof className === 'string') {
 		const tokens = className.split(/\s+/).filter(Boolean)
 		for (const token of tokens)
-			candidates.add(
+			candidates.set(
 				PLAIN_SELECTOR_TOKEN.test(token)
 					? `${prefix}.${token}`
 					: exact('class', className),
+				PRECISION.hook,
 			)
 	}
 	const id = attrs.get('id')
 	if (typeof id === 'string')
-		candidates.add(
+		candidates.set(
 			PLAIN_SELECTOR_TOKEN.test(id) ? `${prefix}#${id}` : exact('id', id),
+			PRECISION.id,
 		)
 	for (const [name, value] of attrs)
 		if (name.startsWith('data-') && typeof value === 'string')
-			candidates.add(exact(name, value))
+			candidates.set(exact(name, value), PRECISION.hook)
 	// Last resort (LT-101): a static `aria-*` value, for an element whose
 	// authored contract addresses it by ARIA semantics alone —
 	// module-dialog's opener is `button[aria-haspopup="dialog"]`, and
@@ -197,8 +225,8 @@ const discriminatorCandidates = (element: ElementNode): string[] => {
 			typeof value === 'string' &&
 			!/["\\]/.test(value)
 		)
-			candidates.add(exact(name, value))
-	return [...candidates]
+			candidates.set(exact(name, value), PRECISION.bare)
+	return [...candidates].map(([base, rank]) => ({ base, rank }))
 }
 
 /**
@@ -676,7 +704,10 @@ const branchMayMatchShape = (
  * candidate no composed child's element could match is emitted as is; one
  * that some could is emitted with a `:not(<child-tag> *)` exclusion per
  * such child, and dropped when a child's tag is unknown. Clean candidates
- * come first, so the exclusion only appears where no clean one is unique.
+ * come first, so the exclusion only appears where no clean one is unique;
+ * among the decorated ones the most precise base wins (LT-520) — every
+ * candidate pays the same exclusion there, so the bare tag no longer beats
+ * a discriminated form by arriving first in candidate order.
  *
  * The exclusion is sound because a composed child's markup is exactly its
  * root tag's descendants; it would also exclude an element of this
@@ -694,7 +725,18 @@ const branchMayMatchShape = (
 type Candidates = {
 	/** The structural count every candidate's `base` must prove itself in. */
 	count: (selector: string) => number
+	/**
+	 * The authored (when it resolved) and clean synthesized candidates, in
+	 * candidate order — every one of them is preferred over any
+	 * exclusion-decorated candidate.
+	 */
 	list: Array<{ base: string; emit: string }>
+	/**
+	 * The exclusion-decorated candidates, in candidate order paired with
+	 * their precision rank (LT-520) — consulted only when nothing in `list`
+	 * is unique, most precise base first.
+	 */
+	excluded: Array<{ base: string; emit: string; rank: number }>
 }
 
 const selectorCandidates = (
@@ -705,29 +747,30 @@ const selectorCandidates = (
 	const count = enclosingComposeOf(tree, element)
 		? (selector: string) => probeCountWithRegions(tree, selector)
 		: (selector: string) => countForSelector(tree, selector)
-	const bases = [
-		buildSelector(element, 'role'),
-		buildSelector(element, 'bare'),
+	const role = buildSelector(element, 'role')
+	const bases: RankedBase[] = [
+		...(role !== null ? [{ base: role, rank: PRECISION.role }] : []),
+		{ base: element.tag, rank: PRECISION.bare },
 		...discriminatorCandidates(element),
-	].filter((s): s is string => s !== null)
+	]
 	const authored = authoredSelectorOf(element)
 	if (!composed) {
-		const synthesized = bases.map(base => ({ base, emit: base }))
+		const synthesized = bases.map(({ base }) => ({ base, emit: base }))
 		return {
 			count,
 			list: authored
 				? [{ base: authored, emit: authored }, ...synthesized]
 				: synthesized,
+			excluded: [],
 		}
 	}
 	const emitFor = composedEmitter(tree, element, composed)
-	const clean: Array<{ base: string; emit: string }> = []
-	const excluded: Array<{ base: string; emit: string }> = []
-	for (const base of bases) {
-		const resolved = emitFor(base)
-		if (!resolved) continue
-		;(resolved.clean ? clean : excluded).push({ base, emit: resolved.emit })
-	}
+	const resolved = bases.flatMap(({ base, rank }) => {
+		const emitted = emitFor(base)
+		return emitted
+			? [{ base, emit: emitted.emit, rank, clean: emitted.clean }]
+			: []
+	})
 	// The authored selector leads even when it needs the exclusion: it is
 	// the contract, and the exclusion only narrows it to this component's
 	// own markup.
@@ -736,9 +779,11 @@ const selectorCandidates = (
 		count,
 		list: [
 			...(authored && own ? [{ base: authored, emit: own.emit }] : []),
-			...clean,
-			...excluded,
+			...resolved
+				.filter(r => r.clean)
+				.map(({ base, emit }) => ({ base, emit })),
 		],
+		excluded: resolved.filter(r => !r.clean),
 	}
 }
 
@@ -854,8 +899,21 @@ const authoredSelectorOf = (element: ElementNode): string | null => {
 }
 
 /**
+ * The exclusion-decorated candidates, most precise base first (LT-520):
+ * when no clean candidate is unique, every survivor carries the same
+ * exclusion and the base decides — the bare tag narrows nothing and is the
+ * first form to break when the template grows a same-tag sibling, where a
+ * discriminated form survives. Stable within a rank (`sort` is), so
+ * candidate order breaks ties.
+ */
+const byPrecision = <T extends { rank: number }>(excluded: readonly T[]): T[] =>
+	[...excluded].sort((a, b) => b.rank - a.rank)
+
+/**
  * Resolve the selector for an element: try role, bare, then upgrade to a
- * discriminator; accept the first structurally unique candidate. Counting is
+ * discriminator; accept the first structurally unique candidate. Clean
+ * candidates keep that order; when only exclusion-decorated candidates
+ * remain, they are tried most precise base first (LT-520). Counting is
  * scoped to `tree` — the whole template, or a loop output subtree for
  * bindItem-scoped element queries.
  */
@@ -864,11 +922,17 @@ export const resolveSelectorIn = (
 	element: ElementNode,
 	composed?: ReadonlyMap<string, ComposedMarkup>,
 ): { selector: string; unique: boolean } => {
-	const { count, list } = selectorCandidates(tree, element, composed)
+	const { count, list, excluded } = selectorCandidates(tree, element, composed)
 	for (const { base, emit } of list) {
 		if (count(base) === 1) return { selector: emit, unique: true }
 	}
-	return { selector: list[0]?.emit ?? element.tag, unique: false }
+	for (const { base, emit } of byPrecision(excluded)) {
+		if (count(base) === 1) return { selector: emit, unique: true }
+	}
+	return {
+		selector: list[0]?.emit ?? excluded[0]?.emit ?? element.tag,
+		unique: false,
+	}
 }
 
 /**
@@ -890,11 +954,12 @@ export const resolveSelectorIn = (
 export const resolveComposeContentSelector = (
 	el: ElementNode,
 ): { selector: string; unique: false } | null => {
-	const candidates = [
-		buildSelector(el, 'role'),
+	const role = buildSelector(el, 'role')
+	const candidates: RankedBase[] = [
+		...(role !== null ? [{ base: role, rank: PRECISION.role }] : []),
 		...discriminatorCandidates(el),
-	].filter((s): s is string => s !== null)
-	const selector = candidates[0]
+	]
+	const selector = candidates[0]?.base
 	return selector === undefined ? null : { selector, unique: false }
 }
 
@@ -986,13 +1051,21 @@ export const resolveExclusiveSelectorIn = (
 	clash: readonly TemplateNode[],
 	composed?: ReadonlyMap<string, ComposedMarkup>,
 ): { selector: string; unique: boolean } => {
-	const { count, list } = selectorCandidates(tree, element, composed)
+	const { count, list, excluded } = selectorCandidates(tree, element, composed)
 	for (const { base, emit } of list) {
 		if (count(base) !== 1) continue
 		if (matchesUnder(clash, base)) continue
 		return { selector: emit, unique: true }
 	}
-	return { selector: list[0]?.emit ?? element.tag, unique: false }
+	for (const { base, emit } of byPrecision(excluded)) {
+		if (count(base) !== 1) continue
+		if (matchesUnder(clash, base)) continue
+		return { selector: emit, unique: true }
+	}
+	return {
+		selector: list[0]?.emit ?? excluded[0]?.emit ?? element.tag,
+		unique: false,
+	}
 }
 
 /** The `@for` loop whose output element is `node`, if any. */

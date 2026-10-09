@@ -368,6 +368,85 @@ Full entry text: `git log -p -- DONE.md`.
   ancestor of the host, which no composition produces.
 - **Scrollarea's wall time at demo scale is noise** (LT-103).
 
+- [x] LT-480: Reshape the compiler's public contract to the D-32 ruling — the corpus entry point moves into the compiler, `RegistryEntry` narrows to a public projection, and the stability policy names the generated-module API. — done, pending review ⏳
+  **Area:** compiler
+  **Needs:** LT-471
+  **Gates:** typecheck, test:server, check:contract, check:corpus, build:docs
+  **Area:** compiler
+  **Filed (Architect, LT-471 design session, 2026-10-06):** D-32 is ruled (`COMPILER_SPEC.md`
+  §12). This is the pre-publish reshape it implies, in the pattern of LT-370, LT-371 and LT-375:
+  the package (LT-254) publishes whatever `contract.ts` names, so the set must be right first.
+  **Rulings (owner, 2026-10-06):**
+  1. **One entry point, the corpus pass.** `compileCorpus` moves from `server/corpus-compile.ts`
+     into `server/compiler/` along with what it needs to run in an installing project:
+     - the config loader (`loadCorpusConfig`, `resolveCorpusConfig`);
+     - the sibling-module collection;
+     - the `i18n` module writer;
+     - the census.
+
+     It must not depend on `REPO_CONFIG`, `REPO_ROOT` or the dev server's `io` runtime shim
+     beyond a file-system seam the package owns. It **writes** the artifacts, `registry.json`
+     and the `i18n` modules to `config.outDir`, and **returns** the diagnostics and a summary.
+     Name the summary type. The repo's `server/corpus-compile.ts`, `scripts/build-corpus.ts`,
+     `scripts/check-corpus.ts`, `scripts/i18n-sync.ts` and the build effect become thin callers.
+     `compileComponentTsx` leaves `contract.ts`: it stays exported internally for the corpus
+     pass and the tests.
+  2. **`RegistryEntry` narrows.** The public type is the projection a consumer reads: `tag`,
+     `name`, `source`, `serverModule`, `clientModule`, `css`, `propsType`, `exposedProps`,
+     `tier` and `composesTags`. `renderedShapes`, `suppressedSites`, `composeReadTags` and
+     `routingSignals` move to an internal type the corpus pass and compose validation use.
+     `registry.json` serializes the public projection only. Check first that no in-repo
+     consumer of `registry.json` (CEM build, docs pipeline, dev server) reads a dropped field.
+     If one does, move it to the internal type or, if it is genuinely consumer-facing, flag it
+     in `NOTES.md` instead of widening the set.
+  3. **The stability policy names the generated-module API.** Rewrite the policy in
+     `contract.ts`'s header so that semver applies to the designated set **and** to the
+     generated-module API, by name and signature, never by bytes:
+     - `render<Name>` in each `*.server.ts`;
+     - the client module's default export;
+     - the `i18n` module's shape;
+     - the `registry.json` schema.
+
+     Say that `argsFromAttrs` is internal. The "and to nothing else" sentence goes. ADR 0034 s8
+     already reads this way; this brings the policy in line with it.
+
+  **Out of scope:** the incremental API (a later minor, D-32); the input source map (LT-376);
+  the package manifest and `exports` map (LT-254).
+  **Contract set after this task** (`contract.test.ts` pins it):
+  - the corpus entry point and its config, result and summary types;
+  - the public `RegistryEntry`, `ExposeKind`;
+  - the five `Diagnostic*`/`CompileDiagnostic` shapes;
+  - `EvaluationTier`.
+
+  Settle whether `RoutingSignal`, `RoutingSignalOrigin`, `Resolution` and `UnresolvableLimb` stay.
+  They stay only if a public type still names them once `routingSignals` leaves `RegistryEntry`.
+  Otherwise they leave too: shrinking the set before first publish is free. Do the same for
+  `CompiledComponent`, `CompileFileResult`, `SourceSpan`, `EmitPaths` and `DEFAULT_EMIT_PATHS`,
+  which belong to the per-file front end.
+  **Docs:** `LE_TRUC_COMPILER.md` §2 (the public-contract table and the "result" paragraph) and §7
+  (where the corpus orchestration lives) follow the code. Hand the copy to `writer` if the
+  rewrite is more than the table.
+  **Channel/tier:** none. This task is a contract reshape and adds no new check.
+  **Verification:** `contract.test.ts` pins the new set. The corpus builds byte-identically
+  before and after (the goldens are unchanged). `registry.json` carries only the public fields.
+  Full gates.
+  **Ruling 4 (owner, 2026-10-09): compose-validation fields are internal in 3.0.** The public projection in ruling 2 stands as listed. Every other field moves to the internal type, including those added after the D-32 session: `childrenRegion`, `interactive`, `childrenModel` (ADR 0048), `handlerArgs` (LT-461), `roleWrites` (LT-476), plus `declaresI18n`, `langArgDefault`, `i18nMessages` and `clientMessageKeys` (ADR 0030). One corpus pass composes only its own sources in 3.0, so no consumer reads them. Composing across corpora (for example an installed component library) would add them back as a minor. `registry.json` serializes the public projection only; check its in-repo readers (ruling 2's check) against this longer list.
+  **Handoff (Architect, 2026-10-09, eighth prune):** two facts from consumed tasks bear on the reshape.
+  - `contract.ts` exports `HandlerPlacement` beside `RegistryEntry` and `contract.test.ts` pins it (LT-461 review, the `ExposeKind` precedent). Ruling 4 makes `handlerArgs` internal, so the export and its pin leave with it.
+  - `render<Name>` takes an optional second parameter, the content owner's tag (LT-472; `queue/LEDGER.md`, eighth pass). It is part of the generated-module API that ruling 3 puts under semver. Name it in the policy and in `LE_TRUC_COMPILER.md` §2, which still spells `render<Name>(args)`.
+
+  **Changed:** The compiler's public contract is reshaped to the D-32 ruling: `compileCorpus` — the corpus pass, with the config loader, source/sibling scan, i18n catalog pipeline and census — moved from `server/corpus-compile.ts` + `server/corpus-sources.ts` + `server/effects/i18n.ts` into `server/compiler/` (`corpus.ts`, `corpus-scan.ts`, `i18n-catalog.ts`, plus `fs.ts`, the package-owned file-system seam); `RegistryEntry` narrowed to the ten-field public projection with everything internal moved to `InternalRegistryEntry` (rulings 2+4, incl. `childrenRegion`/`interactive`/`childrenModel`/`handlerArgs`/`roleWrites`/`declaresI18n`/`langArgDefault`/`i18nMessages`/`clientMessageKeys`); the stability policy in `contract.ts` now names the generated-module API (`render<Name>` with the LT-472 content-owner tag, the client default export, the i18n module shape, the `registry.json` schema), says `argsFromAttrs` is internal, and drops the "and to nothing else" sentence.
+
+  **How:**
+  - **One entry point.** The published `compileCorpus(config)` scans the configured sources itself, runs both corpus passes, writes every artifact to `outDir`, and returns `{ diagnostics, summary }` (`CorpusSummary`: component count, diagnostic counts by severity, post-contamination tier census with zero counts, translation-census locales + gaps). Compile errors are RETURNED, not thrown; the repo's `server/corpus-compile.ts` stays as the thin fail-on-error wrapper with the historical `(files, target)` shorthand, so scripts/tests keep their exact semantics (throw message byte-identical). `compileComponentTsx` left `contract.ts` and stays internal (`frontend/tsx/index.ts`). `loadCorpusConfig`'s no-config fallback became the discovered project boundary (nearest `package.json`/`.git`) instead of the module-anchored `REPO_ROOT` — identical behavior for every in-repo caller, no repo anchor inside the package.
+  - **The registry pair.** `registry.json` now serializes only the public projection (new `publicRegistryEntry`/`registryJson`); the compile's own record serializes to a NEW internal sidecar `registry.internal.json` beside it. The sidecar is the resolution of ruling 2's consumer check: simulate/page-render (docs pipeline) and the census/i18n scripts read routing signals, suppressed sites and i18n declarations cross-process — the ruling moves those fields to the internal type, and the sidecar is that type's serialization home. The simulate pass's no-substrate reroute now rewrites BOTH files (the public one keeps the flipped tier, the sidecar the appended signal). In-repo file readers of dropped fields all switched to the sidecar or to the compile's in-memory result; the dev server's `routes.ts` reads `source` only and stays on the public file.
+  - **Contract set** (pinned by `contract.test.ts`): `compileCorpus` + `CorpusConfig`/`CorpusConfigInput`/`CorpusResult`/`CorpusSummary`, `RegistryEntry`, `ExposeKind`, the five `Diagnostic*` shapes, `EvaluationTier`. `RoutingSignal`/`RoutingSignalOrigin`/`Resolution`/`UnresolvableLimb` left (no public type names them once `routingSignals` left the entry — the tier is the public observable); so did `CompiledComponent`/`CompileFileResult`/`SourceSpan`/`EmitPaths`/`DEFAULT_EMIT_PATHS` and `HandlerPlacement` (per the 2026-10-09 handoff addendum).
+  - **`locales` config field (NEW — flags for the Architect, extends ADR 0036's surface).** The generated `i18n` module embeds the site's locale list (`I18N_LOCALES`, default page locale); with `server/config` off-limits inside the package, the list needed a home. `le-truc.config.json` gains `"locales": ["en", "de"]` (the default is this repo's site locales, like every default; deliberately not derived from the catalogs on disk, which carry six locales the site does not build). This is what keeps `i18n.ts` byte-identical. An ADR 0036 amendment recording the field is the Architect's to write.
+  - **Runtime-neutrality gate** now carves out the seam by module: `fs.ts` may import `node:fs`/`node:fs/promises`, `i18n-catalog.ts` `node:crypto`; everything else is still `node:path`-only, no `Bun`, no `import.meta`. `server/runtimes/glob.ts` re-exports the translator from `server/compiler/fs.ts` (one semantics, no duplication).
+  - **`check:contract` rewritten** to the published surface: a scratch corpus of four components through `compileCorpus(config)` — one per tier plus an LTC008 refusal — asserting the summary's tier census, the diagnostics (returned, not thrown), `registry.json`'s exact ten-field projection, and `render<Name>` in the generated server module.
+
+  **Check:** Full gates green in the worktree: `typecheck`, `test:server` (3734 pass / 0 fail), `check:contract`, `check:corpus` (exit 0, baseline 1 standing warning), `build:docs` + `check:links` (776 links), `lint:server`, runtime-neutrality gate. Byte-identity verified by diffing the regenerated artifacts against the main checkout's pre-change build: `i18n.ts`, `tsrx-imports.d.ts`, spot-checked `.server.ts`/`.client.ts`/`.css` all identical (goldens unchanged, no snapshot regeneration); `registry.json` narrows by design. New regressions: the public-projection pin in `dual-corpus.test.ts`, `locales` validation in `corpus-config.test.ts`. Doubts the review should look at: (1) the `registry.internal.json` sidecar is my resolution of ruling 2's "move it to the internal type" for cross-process readers — not named in the ruling; if the Architect prefers threading in-memory or pruning the docs pipeline's needs, the seam to change is `simulate.ts`/`page-render.ts` defaults and the census scripts' file reads. (2) The `locales` config field (above). (3) The generated i18n module's embedded comment still says "see effects/i18n.ts" — byte-identity kept it; a follow-up that regenerates that string is a golden re-pin, not a free edit. (4) `server/config.ts`'s `LOCALES` and the corpus default `['en','de']` now duplicate a fact in two places — a drift hazard worth an owner call. (5) `loadCorpusConfig` stays off the contract (the task's set names "config… types" only); publishing it rides LT-254's exports map.
+
 - [x] LT-483: '`handleAsyncBoundary` checks client positions against `badFreeNames` where every other arm-set handler uses `fx.scopeBadNames` — align it.' — reviewed ✓
   **Area:** compiler
   **Gates:** test:server
@@ -600,3 +679,78 @@ Full entry text: `git log -p -- DONE.md`.
   **Channel/tier:** none (copy).
 
   **Changed:** copy pass landed — LTC081's `read` face says "raw element" (a placement publishes on an owned custom tag too, so "native element" was wrong; HOST_PROFILE's LTC081 bullet follows), and its `in-loop` face states the consequence (only the first item's element would get the one listener); `errors.md`'s LTC007 row now carries the LT-496/LT-498 compose-site faces (scope words, the forward's tag-unknown clause, the per-shape class fixes) and the LTC005 row gains the LT-461 parent-side face (a handler arg on a composed child where no mount binds it); `LE_TRUC_COMPILER.md`'s census re-pinned to 36 of 43 Folded against `check:corpus` (7 Simulated, enumerated from the fresh census; `module-lazyload` listed Folded with the nil-arm reason) and the Static-tier census line to 36/7/0; `VOCABULARY_LEDGER.md` records LTC082 as released unused (LT-136) in both mentions. Message pins held, so no test changed. Gates: test:server 3662/0, check:links 775/775.
+
+- [x] LT-519: A `first()` into a compose site inside an arm, a loop body or a server-rendered branch compiles with a dangling query — the client references an undeclared local. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-492
+  **Gates:** test:server, check:corpus
+  **Area:** compiler
+  **Filed (Architect, 2026-10-09, from LT-492's review — its doubt 1, pre-existing there):**
+  `planContentConstructs` runs only from the host-level walk (`emitTopEffects`'
+  compose branch). A compose site inside an arm, a reactive-list or server-data
+  loop body, or a server-rendered branch never plans its content `first()`
+  references: the authored setup statement (`const mark = first('span.x', …)`) is
+  dropped from the generated client, while any authored statement reading `mark`
+  emits verbatim — the client references an undeclared local and throws
+  `ReferenceError` at connect. Probed on LT-492's branch (parent with
+  `@if (open) { <ChildPre><span class="x">hi</span></ChildPre> }`): diagnostics
+  empty, `watch(() => true, () => { mark.title = 'marked' })` emitted with no
+  `mark` declaration. LT-492's scoped refusal covers reactive `truc:html` only;
+  this is the `first()` ref shape.
+  **Change:** extend `validateArmSetPlacement`'s whole-template checkpoint — the
+  same walk that refuses a reactive `truc:html` in composed content at a scoped
+  site — to refuse a content element carrying a `first()` reference whose compose
+  site sits in an arm, a loop body or a server-rendered branch, LTC005's
+  arm/branch face, naming the enclosure (the `truc:html` refusal's per-enclosure
+  wording and fixes are the template). Planning the query instead (maybe-guarded,
+  the branch-held-query shape) is a design alternative — take it to `Area:
+  design` only if refusal proves wrong for an existing corpus shape; none is
+  known today.
+  **Check:** both-surface pins for the arm and branch enclosures at minimum (the
+  shared-walk argument covers the loop bodies), plus one leg asserting the
+  host-direct site still plans (the existing LT-472 legs already do; do not
+  re-pin them). `test:server`, `check:corpus` green.
+  **Channel/tier:** compiler check, tier 1 Prevented — LTC005's existing arm/branch
+  face, extended wording in `skills/le-truc/references/errors.md`.
+
+  **Changed:** `validateArmSetPlacement`'s whole-template checkpoint (the LT-492 walk) now also refuses a compose-content element carrying a `first()` reference when the compose site sits in an arm, a loop body or a server-rendered branch — LTC005's arm/branch face, extended wording in `skills/le-truc/references/errors.md`. Previously the authored `const mark = first(…)` was dropped from the generated client while statements reading `mark` emitted verbatim: a `ReferenceError` at connect (probed on all enclosures before the fix; the dangles were the server-data loop body and both server-branch spellings).
+
+  **How:** the checkpoint's composed-content walk gained a second subject beside the reactive `truc:html` refusal: the synthetic ref attribute the raw `first()` resolution attaches. Per-enclosure fix clauses live in a `contentRefFix` helper beside `serverBranchFix` (same file, `server/compiler/analysis/effects.ts`). In a reactive arm or a reactive-list item the new face never fires — the raw resolution refuses the reference first and attaches no ref attr — so one mistake is never reported twice; those enclosures' pins assert the raw face's message ("inside a reactive conditional's arm" / "inside a reactive-list loop body"). A content element carrying both a ref and a reactive `truc:html` gets the truc:html refusal only. No emission changed, no new diagnostic code, census unchanged (43 entries, 0 translation gaps).
+
+  **Check:** `test:server` 3733 pass / 0 fail (the first run's 27 serve failures were the fresh worktree's missing `docs/` — `build:docs` then re-run); `check:corpus` exit 0; `typecheck` exit 0; `check:contract` ✓; `lint:server` clean with no residue; `build:docs` + `check:links` ✓ (776 links). Pins: arm and server-rendered branch on both surfaces, server-data loop body and server-only `try` on `.tsrx` (the shared-walk argument; the `.tsx` server-only `try` spells differently), asserting component-null plus the per-face message; the LT-472 host-direct legs pass untouched, not re-pinned. Reviewer note: typecheck's standing LTC087 warning on `examples/test/scoping/css-probe.tsx` predates this branch — verified present at HEAD via stash — so the warning baseline question is LT-520's or the iteration bookkeeping's, not this task's.
+
+  **Review:** ✓ (2026-10-10). The refusal verified in the checkpoint's walk: the ref subject is the synthetic attr the raw resolution attaches, the truc:html clause is verbatim-preserved, and the no-double-report design holds — where the raw path refuses first (a reactive arm, a list item) no attr exists, and the arm pins honestly assert the raw face's message. `contentRefFix`'s clauses improve on the filed "wording as template": they reason about a stale REFERENCE per enclosure ("a reference taken at connect goes stale", "could only ever bind one item's"), accurate to the ref semantics where the truc:html clauses speak of bindings — within the entry's intent. Pins match the Check's spec (arm and branch both surfaces, server-data loop and server-only try on `.tsrx`, the LT-472 host-direct legs untouched), and errors.md's new sentence records the dual refusal paths honestly. Gates re-run in the worktree: build:docs, `test:server` 3733/0 — the count reconciles exactly (post-LT-514-merge v3 was 3727: the branch's 3717 predating LT-492's integration, plus LT-492's 10 legs; +6 here), `typecheck` 0, `check:corpus` 0 (baseline 1 standing, census 36/7/0), `lint:server`, `check:contract`, `check:links` 776/776. One correction to the Check's reviewer note: the standing css-probe warning is **LTC088** (`.probe-global`, the fixture's deliberate global-rule probe), not LTC087 — verified present at HEAD, uncounted as a test-fixture warning; correctly out of scope here. No nits.
+
+- [x] LT-520: Selector synthesis drops the class discriminator among exclusion-decorated candidates — prefer precision when no candidate is clean. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-519
+  **Gates:** test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-10, from LT-514's review — its flagged synthesis gap):** once a
+  composed child accepts open children (`Children<{}, …>`), its passed content is unknown
+  markup, so every selector candidate for a parent's own element "could match" inside it and
+  needs the `:not(<child> *)` decoration. The candidate chooser
+  (`selectorCandidates`/`resolveSelectorIn` in `server/compiler/analysis/selectors.ts`) takes
+  the FIRST unique decorated candidate, and the bare tag precedes the class discriminator in
+  candidate order — so module-todo's `p` query synthesized as
+  `p:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)` where
+  `p.remaining:not(…)` was available and strictly more precise (LT-514 re-pinned the parity
+  snapshot with the coarse form). Correct today — module-todo has exactly one `p` — but a
+  second `p` in the parent's own template would break the bare tag's uniqueness where the
+  discriminated form would survive.
+  **Change:** when no candidate is clean and several decorated candidates are unique, prefer
+  the most precise base (id > data-* / class discriminators > bare tag), not the first in
+  candidate order. The exclusion set is unaffected — only the base selector changes.
+  **Check:** the module-todo parity/client snapshots re-pin to the discriminated form (both
+  surfaces); no other snapshot moves. `test:server` green.
+  **Channel/tier:** none — emission quality; no check added or narrowed.
+  **Sequence (Architect, 2026-10-10):** runs after LT-519 (`needs:`) — track X stays one at a
+  time (ruling 4), and its module-todo snapshot re-pins sit beside LT-519's new legs.
+
+  **Changed:** Among exclusion-decorated selector candidates the most precise base wins (LT-520). `selectorCandidates` now returns the authored+clean list and the decorated pool separately, each decorated candidate carrying a precision rank (`PRECISION`: role 3, id 2, class/data-* hook 1, bare tag with type/aria 0); `resolveSelectorIn` and `resolveExclusiveSelectorIn` walk the clean list first as before, then the decorated pool most-precise-first, stable within a rank. The exclusion set is untouched — only the base changes. Snapshot movement (parity.test.ts.snap, one shared leg covering both surfaces): module-todo re-pins to `p.remaining`, `button.reorder`, `form-checkbox.todo`, `span.visually-hidden`, `input.visually-hidden`, `label.label`; **form-combobox's clear button gains `button.clear`** — see the deviation below. The differential reference (`probe-differential.test.ts`) mirrors the policy so the pin keeps catching unintended engine drift; `analysis.test.ts` re-pins two LT-096/LT-512 expectations whose bare bases were the old candidate-order choice; two new regression tests pin the rank boundaries the corpus never exercises (id over class, role first over a class hook, and `type` not a hook — a decorated type-only button keeps the bare tag). LE_TRUC_COMPILER.md §8 selector bullet states the new rule.
+
+  **How:** `discriminatorCandidates` returns `{base, rank}` pairs (Map keyed by base, preserving candidate order); `Candidates` gains `excluded`; `byPrecision` stable-sorts it. No diagnostic, channel or tier change (per the entry: emission quality only).
+
+  **Check:** All gates green in the worktree: `test:server` 3735/3735 ✓ (a fresh worktree needs `build:docs` first — the serve/route tests read it), `lint:server` ✓ clean with no residue outside my paths, `typecheck` ✓, `check:contract` ✓, `check:corpus` ✓ (census 0 gaps, standing module-dialog LTC088 baseline), `build:docs` ✓, `check:links` 776/776 ✓, and — beyond the entry's gate list, because the emitted client queries changed — Playwright `test:component` for the two components whose queries moved: module-todo 60/60 ✓, form-combobox 60/60 ✓ (run unsandboxed). **Deviation to adjudicate:** the entry's Check line predicted "no other snapshot moves", but form-combobox's client-module snapshot necessarily moves — its clear button carries `class="clear"` and its decorated query is exactly the case the Change line describes (the bare tag beat the class hook by candidate order). No implementation of the stated ranking (id > data-*/class > bare) can leave it bare; the prediction predates a corpus sweep. Two ranking judgment calls the entry leaves open, both encoded in the regression tests: `role` keeps its first place (the documented semantic-contract calibration — module-todo's `span[role="status"]` line therefore stays bare-of-class), and `type`/`aria-*` stay with the bare tag rather than counting as hooks (boilerplate/last-resort, not author addressing hooks — this is what keeps every `type="button"`-only decorated query at its pre-change shape).
+
+  **Review:** ✓ (2026-10-10). The implementation is faithful: the clean list keeps candidate order and its authored-first contract, the decorated pool is tried most-precise-first with stable ties, every re-pinned query carries an IDENTICAL exclusion set (only the base changed, as the Change line orders), and the not-unique fallback reproduces the old emission byte-for-byte. **The deviation is adjudicated ACCEPTED:** form-combobox's `button:not(form-listbox *)` → `button.clear:not(form-listbox *)` is the Change's own case (a class hook beaten by candidate order), and the Check's "no other snapshot moves" prediction predated a corpus sweep — the filer's error, not the implementation's; the annotation documents it correctly. **Both ranking judgment calls accepted and pinned:** `role` keeps first place (rank above id) — it already led the documented candidate order, and a role is the semantic contract, more refactor-stable than an id; `type`/`aria-*` stay rank 0 (boilerplate and LT-101's last resort, not author addressing hooks), which is what keeps every type-only or aria-only decorated query at its pre-change shape — module-todo's reorder handle settles on `button.reorder` (rank 1) rather than either the bare tag or `[aria-pressed="false"]`, retiring the LT-489-era state-attribute selector entirely. The differential reference mirrors `PRECISION` so the pin still catches engine drift, and the two new analysis tests pin the rank boundaries the corpus never exercises. Gates re-run in the worktree: build:docs, `test:server` 3735/0 (exactly +2, the new pins), `typecheck`, `lint:server`, `check:contract`, `check:corpus` (baseline 1 standing, census 36/7/0), `check:links` 776/776, and the two components whose emitted queries moved proven in a real browser: module-todo 60/60, form-combobox 60/60. No nits.

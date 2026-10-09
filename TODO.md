@@ -94,11 +94,11 @@ ruling 7 excepts. The translation census has 0 gaps across 6 locales. `server/co
 83 modules and 41.4k lines (every `.ts` file except `*.test.ts`, the same net as the 2026-10-06
 measurement).
 
-**Status 2026-10-10 (Architect).** Tracks B, D and W are integrated and reviewed; track X has
-LT-519 → LT-520 left; track R is untouched. **Pickable today: LT-480** (R, alone in the
-contract files), **then LT-519** (X), **then LT-520** (X, gated on LT-519). LT-516 and LT-484
-are design sessions with the owner — a contributor session does not pick them. The writer
-changelog sweep runs when the iteration closes, not per task.
+**Status 2026-10-10, after LT-520's review (Architect).** Tracks B, D, W and all of X
+(LT-483 → LT-492 → LT-493 → LT-519 → LT-520) are integrated and reviewed. Track R is open:
+**LT-480** (already claimed ⚙), then LT-254, then LT-377. LT-516 and LT-484 are design
+sessions with the owner — a contributor session does not pick them; they are the only
+non-R work left. The writer changelog sweep runs when the iteration closes, not per task.
 
 **Next free task ID: LT-521.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
@@ -113,73 +113,6 @@ LTC056 is LT-358's).
 <!-- entries -->
 
 ### R — the package
-
-- [ ] LT-480: Reshape the compiler's public contract to the D-32 ruling — the corpus entry point moves into the compiler, `RegistryEntry` narrows to a public projection, and the stability policy names the generated-module API.
-  **Area:** compiler
-  **Needs:** LT-471
-  **Gates:** typecheck, test:server, check:contract, check:corpus, build:docs
-  **Area:** compiler
-  **Filed (Architect, LT-471 design session, 2026-10-06):** D-32 is ruled (`COMPILER_SPEC.md`
-  §12). This is the pre-publish reshape it implies, in the pattern of LT-370, LT-371 and LT-375:
-  the package (LT-254) publishes whatever `contract.ts` names, so the set must be right first.
-  **Rulings (owner, 2026-10-06):**
-  1. **One entry point, the corpus pass.** `compileCorpus` moves from `server/corpus-compile.ts`
-     into `server/compiler/` along with what it needs to run in an installing project:
-     - the config loader (`loadCorpusConfig`, `resolveCorpusConfig`);
-     - the sibling-module collection;
-     - the `i18n` module writer;
-     - the census.
-
-     It must not depend on `REPO_CONFIG`, `REPO_ROOT` or the dev server's `io` runtime shim
-     beyond a file-system seam the package owns. It **writes** the artifacts, `registry.json`
-     and the `i18n` modules to `config.outDir`, and **returns** the diagnostics and a summary.
-     Name the summary type. The repo's `server/corpus-compile.ts`, `scripts/build-corpus.ts`,
-     `scripts/check-corpus.ts`, `scripts/i18n-sync.ts` and the build effect become thin callers.
-     `compileComponentTsx` leaves `contract.ts`: it stays exported internally for the corpus
-     pass and the tests.
-  2. **`RegistryEntry` narrows.** The public type is the projection a consumer reads: `tag`,
-     `name`, `source`, `serverModule`, `clientModule`, `css`, `propsType`, `exposedProps`,
-     `tier` and `composesTags`. `renderedShapes`, `suppressedSites`, `composeReadTags` and
-     `routingSignals` move to an internal type the corpus pass and compose validation use.
-     `registry.json` serializes the public projection only. Check first that no in-repo
-     consumer of `registry.json` (CEM build, docs pipeline, dev server) reads a dropped field.
-     If one does, move it to the internal type or, if it is genuinely consumer-facing, flag it
-     in `NOTES.md` instead of widening the set.
-  3. **The stability policy names the generated-module API.** Rewrite the policy in
-     `contract.ts`'s header so that semver applies to the designated set **and** to the
-     generated-module API, by name and signature, never by bytes:
-     - `render<Name>` in each `*.server.ts`;
-     - the client module's default export;
-     - the `i18n` module's shape;
-     - the `registry.json` schema.
-
-     Say that `argsFromAttrs` is internal. The "and to nothing else" sentence goes. ADR 0034 s8
-     already reads this way; this brings the policy in line with it.
-
-  **Out of scope:** the incremental API (a later minor, D-32); the input source map (LT-376);
-  the package manifest and `exports` map (LT-254).
-  **Contract set after this task** (`contract.test.ts` pins it):
-  - the corpus entry point and its config, result and summary types;
-  - the public `RegistryEntry`, `ExposeKind`;
-  - the five `Diagnostic*`/`CompileDiagnostic` shapes;
-  - `EvaluationTier`.
-
-  Settle whether `RoutingSignal`, `RoutingSignalOrigin`, `Resolution` and `UnresolvableLimb` stay.
-  They stay only if a public type still names them once `routingSignals` leaves `RegistryEntry`.
-  Otherwise they leave too: shrinking the set before first publish is free. Do the same for
-  `CompiledComponent`, `CompileFileResult`, `SourceSpan`, `EmitPaths` and `DEFAULT_EMIT_PATHS`,
-  which belong to the per-file front end.
-  **Docs:** `LE_TRUC_COMPILER.md` §2 (the public-contract table and the "result" paragraph) and §7
-  (where the corpus orchestration lives) follow the code. Hand the copy to `writer` if the
-  rewrite is more than the table.
-  **Channel/tier:** none. This task is a contract reshape and adds no new check.
-  **Verification:** `contract.test.ts` pins the new set. The corpus builds byte-identically
-  before and after (the goldens are unchanged). `registry.json` carries only the public fields.
-  Full gates.
-  **Ruling 4 (owner, 2026-10-09): compose-validation fields are internal in 3.0.** The public projection in ruling 2 stands as listed. Every other field moves to the internal type, including those added after the D-32 session: `childrenRegion`, `interactive`, `childrenModel` (ADR 0048), `handlerArgs` (LT-461), `roleWrites` (LT-476), plus `declaresI18n`, `langArgDefault`, `i18nMessages` and `clientMessageKeys` (ADR 0030). One corpus pass composes only its own sources in 3.0, so no consumer reads them. Composing across corpora (for example an installed component library) would add them back as a minor. `registry.json` serializes the public projection only; check its in-repo readers (ruling 2's check) against this longer list.
-  **Handoff (Architect, 2026-10-09, eighth prune):** two facts from consumed tasks bear on the reshape.
-  - `contract.ts` exports `HandlerPlacement` beside `RegistryEntry` and `contract.test.ts` pins it (LT-461 review, the `ExposeKind` precedent). Ruling 4 makes `handlerArgs` internal, so the export and its pin leave with it.
-  - `render<Name>` takes an optional second parameter, the content owner's tag (LT-472; `queue/LEDGER.md`, eighth pass). It is part of the generated-module API that ruling 3 puts under semver. Name it in the policy and in `LE_TRUC_COMPILER.md` §2, which still spells `render<Name>(args)`.
 
 - [ ] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` (TSX-only) — manifest, `exports`, the `.tsrx`-excluding build, the runtime peer and the `runtimeImport` default.
   **Area:** compiler
@@ -230,67 +163,6 @@ LTC056 is LT-358's).
   **Channel/tier:** none (a build check).
   **Verification:** the check fails on a planted `ts.Node` in a public type; full gates.
 
-
-### X — compiler, analysis passes
-
-- [ ] LT-519: A `first()` into a compose site inside an arm, a loop body or a server-rendered branch compiles with a dangling query — the client references an undeclared local. — in progress ⚙
-  **Area:** compiler
-  **Needs:** LT-492
-  **Gates:** test:server, check:corpus
-  **Area:** compiler
-  **Filed (Architect, 2026-10-09, from LT-492's review — its doubt 1, pre-existing there):**
-  `planContentConstructs` runs only from the host-level walk (`emitTopEffects`'
-  compose branch). A compose site inside an arm, a reactive-list or server-data
-  loop body, or a server-rendered branch never plans its content `first()`
-  references: the authored setup statement (`const mark = first('span.x', …)`) is
-  dropped from the generated client, while any authored statement reading `mark`
-  emits verbatim — the client references an undeclared local and throws
-  `ReferenceError` at connect. Probed on LT-492's branch (parent with
-  `@if (open) { <ChildPre><span class="x">hi</span></ChildPre> }`): diagnostics
-  empty, `watch(() => true, () => { mark.title = 'marked' })` emitted with no
-  `mark` declaration. LT-492's scoped refusal covers reactive `truc:html` only;
-  this is the `first()` ref shape.
-  **Change:** extend `validateArmSetPlacement`'s whole-template checkpoint — the
-  same walk that refuses a reactive `truc:html` in composed content at a scoped
-  site — to refuse a content element carrying a `first()` reference whose compose
-  site sits in an arm, a loop body or a server-rendered branch, LTC005's
-  arm/branch face, naming the enclosure (the `truc:html` refusal's per-enclosure
-  wording and fixes are the template). Planning the query instead (maybe-guarded,
-  the branch-held-query shape) is a design alternative — take it to `Area:
-  design` only if refusal proves wrong for an existing corpus shape; none is
-  known today.
-  **Check:** both-surface pins for the arm and branch enclosures at minimum (the
-  shared-walk argument covers the loop bodies), plus one leg asserting the
-  host-direct site still plans (the existing LT-472 legs already do; do not
-  re-pin them). `test:server`, `check:corpus` green.
-  **Channel/tier:** compiler check, tier 1 Prevented — LTC005's existing arm/branch
-  face, extended wording in `skills/le-truc/references/errors.md`.
-
-- [ ] LT-520: Selector synthesis drops the class discriminator among exclusion-decorated candidates — prefer precision when no candidate is clean.
-  **Area:** compiler
-  **Needs:** LT-519
-  **Gates:** test:server
-  **Area:** compiler
-  **Filed (Architect, 2026-10-10, from LT-514's review — its flagged synthesis gap):** once a
-  composed child accepts open children (`Children<{}, …>`), its passed content is unknown
-  markup, so every selector candidate for a parent's own element "could match" inside it and
-  needs the `:not(<child> *)` decoration. The candidate chooser
-  (`selectorCandidates`/`resolveSelectorIn` in `server/compiler/analysis/selectors.ts`) takes
-  the FIRST unique decorated candidate, and the bare tag precedes the class discriminator in
-  candidate order — so module-todo's `p` query synthesized as
-  `p:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)` where
-  `p.remaining:not(…)` was available and strictly more precise (LT-514 re-pinned the parity
-  snapshot with the coarse form). Correct today — module-todo has exactly one `p` — but a
-  second `p` in the parent's own template would break the bare tag's uniqueness where the
-  discriminated form would survive.
-  **Change:** when no candidate is clean and several decorated candidates are unique, prefer
-  the most precise base (id > data-* / class discriminators > bare tag), not the first in
-  candidate order. The exclusion set is unaffected — only the base selector changes.
-  **Check:** the module-todo parity/client snapshots re-pin to the discriminated form (both
-  surfaces); no other snapshot moves. `test:server` green.
-  **Channel/tier:** none — emission quality; no check added or narrowed.
-  **Sequence (Architect, 2026-10-10):** runs after LT-519 (`needs:`) — track X stays one at a
-  time (ruling 4), and its module-todo snapshot re-pins sit beside LT-519's new legs.
 
 ### Design gates
 
