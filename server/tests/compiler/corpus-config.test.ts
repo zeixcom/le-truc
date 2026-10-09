@@ -13,9 +13,11 @@ import { describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as os from 'node:os'
 import * as path from 'node:path'
+import { LOCALES } from '../../config'
 import {
 	CONFIG_FILENAME,
 	type CorpusConfigInput,
+	DEFAULT_LOCALES,
 	DEFAULT_OUT_DIR,
 	DEFAULT_RUNTIME_IMPORT,
 	DEFAULT_SOURCES,
@@ -69,6 +71,16 @@ describe('the defaults are this repo, not the mechanism', () => {
 		// the catalogs on disk, which carry locales the site does not build.
 		const config = resolveCorpusConfig(REPO_ROOT)
 		expect(config.locales).toEqual(['en', 'de'])
+	})
+
+	test('the site locales and the corpus default are one fact (LT-480 review)', () => {
+		// Two homes for one fact: the site config's page-tree list and the
+		// corpus default the generated i18n module enumerates. Deriving one
+		// from the other would widen the site config's literal union, so the
+		// pin holds the line instead — a locale added to one list but not
+		// the other fails HERE, not as a page tree in a locale the i18n
+		// module never enumerated.
+		expect(LOCALES).toEqual(DEFAULT_LOCALES)
 	})
 
 	test('the repo needs no config file — none is found above it', () => {

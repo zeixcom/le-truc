@@ -589,7 +589,7 @@ export function P({}: {})
 }`,
 			'p.tsrx',
 		).component as ComponentIR
-		const registry = new Map<string, RegistryEntry>([
+		const registry = new Map<string, InternalRegistryEntry>([
 			[
 				(
 					component.root.children.find(n => n.kind === 'compose') as {
@@ -599,7 +599,7 @@ export function P({}: {})
 				{
 					tag: 'child-el',
 					renderedShapes: renderedShapesOf(rawChild),
-				} as RegistryEntry,
+				} as InternalRegistryEntry,
 			],
 		])
 		component.composedShapes = composedShapesFor(component.root, registry)
@@ -631,7 +631,7 @@ export function P({}: {})
 }`,
 			'p.tsrx',
 		).component as ComponentIR
-		const registry = new Map<string, RegistryEntry>([
+		const registry = new Map<string, InternalRegistryEntry>([
 			[
 				(
 					component.root.children.find(n => n.kind === 'compose') as {
@@ -643,7 +643,7 @@ export function P({}: {})
 					renderedShapes: renderedShapesOf(
 						child('<button type="button">in</button>'),
 					),
-				} as RegistryEntry,
+				} as InternalRegistryEntry,
 			],
 		])
 		component.composedShapes = composedShapesFor(component.root, registry)
