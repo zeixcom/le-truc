@@ -431,6 +431,76 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** ✓ (2026-10-09). The ruling verified clause by clause: three closed literal unions with JSDoc and default-omitting class emission (`undefined` drops the attribute entirely); `.secondary`/`.medium`/`.normal` carry no CSS rules, so the omitted defaults render identically, and the kind rules follow `.primary` in the sheet as the ruling's cascade note assumes. All four re-baselines checked diff-by-diff: the golden, sim-driver and equivalence-audit shifts are default-token omissions plus the badge span (`&:empty` under `.badge` hides it), and the parity snapshot's selector synthesis is sound — `aria-pressed="false"` is a template literal, so every clone mounts matching, and `basic-button button` is LT-461's placement selector. No stale old spelling anywhere in authored sources; page-authored `.html` keeps its classes per the ruling. Gates re-run in the worktree: typecheck exit 0 (43 components, 0 census gaps), build:docs green, test:server 3662/0, test:variants 537 passed, test:component basic-button 12 / module-todo 60 — the real-browser remove flow clicks the composed button end to end. module-list's missing spec file confirmed; the deviation note is accurate. No nits.
 
+- [x] LT-492: Lift LTC011 for `truc:html` in a composed element's content — the parent's own sanitized binding (ADR 0048 s1). — done, pending review ⏳
+  **Area:** compiler
+  **Needs:** LT-472, LT-483
+  **Gates:** test:server, typecheck, check:corpus
+  **Area:** compiler
+  **Needs:** LT-472, LT-483 (planning, 2026-10-09: track X runs one at a time)
+  **Filed (Architect, 2026-10-07, from LT-463's review; owner ruling 2026-10-07):** `<div
+  truc:html={start}/>` inside composed `<ModuleScrollarea>` children fails LTC011 through
+  `composedElementUnsupported` ("`html` attribute in a composed element's content is not supported
+  yet", ADR 0024 s10). That blocks module-splitview's conversion (LT-493).
+  **Ruling:** content the parent passes as `children` belongs to the parent (ADR 0048 s1), so a
+  `truc:html` on an element in that region is the parent's own binding, exactly like a
+  `truc:html` in the parent's own template. It goes through the same sanitized channel (LT-025):
+  the server render sanitizes and splices it into the children string, and a reactive thunk binds
+  from the parent's client against the parent-owned element. **Rejected:** a markup-valued
+  ModuleScrollarea prop. It would open a second HTML channel just for this one child and route
+  markup through an arg that no sanitizer sees.
+  **Change:** drop the `html`-attribute case from the composed-content refusal. Lower it through
+  the existing `truc:html` emission, in the Children Region scope that LT-472's query re-include covers. The other
+  constructs `composedElementUnsupported` names stay refused. Amend ADR 0024 s10's "not supported
+  yet" list in place (it is unpublished) and cross-reference ADR 0048 s1.
+  **Check:** `test:server` pins three things: a static `truc:html` arg in composed children
+  renders sanitized server-side, a reactive thunk binds client-side, and a script in the markup
+  is stripped. `check:corpus` green.
+  **Channel/tier:** compiler — LTC011 narrows; no new check. The sanitizer's existing tier-2
+  containment applies unchanged.
+
+  **Changed:** `truc:html` on an element in composed content is the parent's own sanitized binding (ADR 0048 s1): the data-reference arg splices server-side through `sanitizeHtml` into the children string, and a reactive thunk plans as a host watch against the Children Region — LTC011 no longer refuses the `html` case; every other construct it names stays refused. A reactive thunk at a site the host walk cannot reach — inside an arm, a loop body or a server-rendered branch — is now refused (LTC005, per-enclosure fix), so nothing compiles as a silently inert watch; the data-reference form needs no client half and is legal in every scope. ADR 0024 s10 amended in place cross-referencing ADR 0048 s1; HOST_PROFILE (bullet 3's region passage), LE_TRUC_COMPILER (the one-writer passage) and `skills/le-truc/references/errors.md` (LTC005's arm/branch faces) updated.
+
+  **How:** `validateComposedChildren` admits `kind: 'html'`; `planContentRefs` became `planContentConstructs`, planning a reactive thunk through the shared `emitConstructEffects` (query under the reference's name when the author addressed the element, else the tag's — the `emitTopEffects` pattern); `validateArmSetPlacement` gained the scoped-site refusal at its whole-template checkpoint.
+
+  **Check:** gates green in the worktree: `test:server` 3675/0 (after `build:docs`; the 16 serve-test failures on a fresh worktree were the missing `docs/` build), `typecheck`, `lint:server`, `check:corpus`, `check:contract`, `check:links`. New legs in `server/tests/compiler/children-region.test.ts` pin: a static arg renders sanitized (fail-closed escaped default) on both surfaces; a configured sanitizer strips a `<script>` from the content markup; a reactive thunk emits `watch(() => body.get(), dangerouslyBindInnerHTML(article, { sanitize: sanitizeHtml }))` and the harness renders its seed server-side, on both surfaces; the static form stays legal inside a server branch; and the four scoped refusals (arm, reactive-list body, server-data loop body, server-rendered branch) each fire LTC005 naming the enclosure. Two doubts for the review pass: (1) pre-existing, not from this change — a `first()` into a compose site inside a server-rendered branch compiles with a dangling query name (the branch walk never calls the content planner; probes confirmed the emitted client references an undeclared local). My refusal covers `truc:html` only; the ref shape may want its own task. (2) `roleWrites` (LTC084) scans authored statements only, so a reactive `truc:html` on a role element is a parent write it cannot see — the accepted-edge ruling scopes it so (widening is LT-515's question); noted in the `findRoleWriterConflicts` docstring.
+
+- [x] LT-494: FormRadiogroup's `.split-button` variant hides its own legend and radios; module-todo composes `<FormRadiogroup>`. — reviewed ✓
+  **Area:** examples
+  **Needs:** LT-463, LT-489
+  **Gates:** check:corpus, test:variants, test:server, typecheck
+  **Area:** examples
+  **Needs:** LT-463, LT-489 (planning, 2026-10-09: both edit module-todo; track B)
+  **Filed (Architect, 2026-10-07, from LT-463's review; owner ruling 2026-10-07):** module-todo's
+  filter radiogroup stayed raw. The composed render cannot carry the page-level `visually-hidden`
+  class on the legend and the radio inputs. (Under ADR 0033 as revised 2026-10-07, the parent
+  could style the child's internals without a limit, but LTC087 would flag it as a leak. The
+  ruling stands: the presentation is the child's.)
+  **Ruling:** that presentation belongs to the child's own `.split-button` variant. Every
+  split-button usage hides the legend and the native radios (see `form-radiogroup.html`), so the
+  variant's own stylesheet owns it. No new prop. **Rejected:** a presentation arg (`hideLegend`
+  and similar), which would expose one variant's internals as API, and accepting a visible
+  difference.
+  **Change:**
+  1. In FormRadiogroup's sheet, `&.split-button` visually hides `legend` and
+     `input[type="radio"]` with the same declarations as the shared `.visually-hidden` utility,
+     so the legend keeps its accessible name and the inputs stay focusable. The page-authored
+     demo drops its now-redundant `visually-hidden` classes, or keeps them (harmless). Pick
+     whichever leaves `form-radiogroup.spec.ts` unchanged. The hand-written `form-radiogroup.css`
+     gets the same rule, so its CSS matches the compiled sheet.
+  2. module-todo (`.tsx` and `.tsrx`) composes `<FormRadiogroup class="split-button" name="filter"
+     legend={t.filter} options={…} value="all" />`, with the option labels from `t.all`,
+     `t.active` and `t.completed`. Remove the raw markup's LT-463 comment.
+  **Check:** `check:corpus` green; `bun run test:component form-radiogroup` and `module-todo`
+  green on all surfaces, with no expectation changed. If a spec expectation must change beyond
+  the composed root's attributes, stop and write it in `NOTES.md` (LT-463's rule for surprises).
+  **Channel/tier:** none — corpus CSS and composition.
+
+  **Changed:** FormRadiogroup's `.split-button` variant now visually hides its own legend and radios — the exact `.visually-hidden` declarations, in the compiled sheet and the hand-written `form-radiogroup.css` twin — and module-todo's filter composes `<FormRadiogroup class="split-button" name="filter" legend={t.filter} options={…} value="all" />` on both compiled surfaces (`.tsx`/`.tsrx`), labels from `t.all`/`t.active`/`t.completed`; the LT-463 raw-markup comments are gone and the demo html keeps its page-level classes (the spec pins `input.visually-hidden`).
+  **How:** Composing required `form-radiogroup > *` added to module-todo's `@scope to (…)` limits on both surfaces — LTC087's prescribed fix (the child's labels carry a dynamic class, so every class selector "could" match inside it; module-coloreditor's multi-limit form). Two review records re-pinned: sim-driver's module-todo fixed-point markup and the equivalence-audit hydration boundary. The boundary moved for the designed reason: the composed root gains `name="filter"`, the legend/radios drop the page-level classes (the variant's sheet hides them now), and the child's connect-time writes (label `selected`, per-radio `tabindex`, the `checked` property write) are module-todo's boundary — the same write class form-radiogroup's own audit entry records.
+  **Check:** `check:corpus` (0 new warnings — the 6 fresh LTC087s the compose raised are gone with the limit), `typecheck`, `test:server` (3665 pass after the two deliberate snapshot re-pins), `test:component form-radiogroup` (40) and `module-todo` (60), `test:variants` (537, every surface), `lint:examples` — all green, no spec expectation changed. Doubt for the review pass: the composed render gives up the raw markup's hand-baked pre-upgrade steady state — a served module-todo page shows no checked/selected filter until client activation (the child's server render never bakes it; its own demo hand-bakes for the docs page). Inherent to composing this child; flagging it because the old raw markup was better pre-upgrade.
+
+  **Review:** ✓ (2026-10-09). The ruling verified: the `.split-button` rule carries the exact six `.visually-hidden` declarations (`examples/_global.css:558`), in the compiled sheet and the hand-written twin; legend and radios only, so the accessible name and focusability survive. The composition matches the ruled spelling on both surfaces, labels from `t.all`/`t.active`/`t.completed`, LT-463 comments gone; the demo html keeps its utility classes per the "whichever leaves the spec unchanged" clause. The `@scope to (basic-button > *, form-radiogroup > *)` limit is exactly module-coloreditor's multi-limit form — LTC087's prescribed fix. Both snapshot re-pins read as the designed consequence: the composed root gains `name="filter"`, the page-level classes drop, and the child's connect-time writes (`selected`, `tabindex`, the `checked` property) become module-todo's hydration boundary. **The flagged doubt is ruled inherent-and-accepted:** the child renders selection through `host.value` thunks (form-radiogroup.tsrx:119-125) — client positions that do not fold server-side, which is why its own demo hand-bakes — and no page can reach inside another component's template to bake it. The pre-upgrade unselected flash is the cost of the ruled composition; recorded here. (Whether the child should bake its initial selection from a static `value` arg is a separate design question, left to the owner.) Gates re-run in the worktree: check:corpus exit 0 (43 components, census 36/7/0, 1 standing warning — 0 new), typecheck 0, build:docs, test:server 3665/0, test:variants 537, component form-radiogroup 40 / module-todo 60, lint:examples clean. No spec expectation changed. No nits.
+
 - [x] LT-517: The probe differential's composed leg is vacuous — key its synthetic registry by source path so `composedShapesFor` lookups hit. — reviewed ✓
   **Area:** compiler
   **Gates:** test:server
