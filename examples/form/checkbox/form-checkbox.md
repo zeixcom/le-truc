@@ -29,9 +29,11 @@ A styled, form-associated wrapper around a native checkbox, with todo-item and t
 ---
 - `label`
 - `string`
-- Text content of `.label` or `label`
-- Label text shown next to the checkbox
+- Text content of `.label`
+- Visible label text of the checkbox. Optional: a composed parent passes rich static content as `children` instead, which `.label` renders in place of this text. Writing `label` at runtime replaces that rich content with text
 {% /table %}
+
+A composed parent passes the visible label as children (`<FormCheckbox>Done</FormCheckbox>`); the children must be non-interactive — the compiler refuses interactive content at the compose site. Page-authored markup labels the checkbox directly, with a `<label>` wrapping or pointing at the native input.
 
 {% partial file="form-associated.md" /%}
 

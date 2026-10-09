@@ -1,14 +1,18 @@
 /**
  * `.tsx` spelling of examples/form/checkbox/form-checkbox.tsrx (LT-464) —
- * semantically identical. Keeps the `label: string` arg; the switch to
- * `children` lands in LT-463.
+ * semantically identical. Takes its visible label as non-interactive
+ * `children` beside an optional reactive `label` prop (LT-479).
+ *
+ * module-todo's `<form-checkbox>` stays raw: its label is live per item and
+ * passed children are static (LTC011). LT-515 tracks lazy children in
+ * composed content.
  *
  * Lives beside its `.tsrx` twin as a variant set (ADR 0039). Every member
  * declares its own `HTMLElementTagNameMap` entry (s4): the served member's
  * generated client must carry it.
  */
 
-import type { FormFactoryContext } from '@zeix/le-truc'
+import type { Children, FormFactoryContext } from '@zeix/le-truc'
 import { asBoolean } from '@zeix/le-truc'
 import { css } from '@zeix/le-truc-compiler/macros'
 
@@ -21,8 +25,13 @@ export type FormCheckboxProps = {
 	 * inner native input — and restored to that default on `<form>.reset()`.
 	 */
 	checked: boolean
-	/** Visible label text of the checkbox. */
-	label: string
+	/**
+	 * Visible label text of the checkbox, when the label is plain text.
+	 * Optional: a composed parent passes rich static content as `children`
+	 * instead, which `.label` renders in place of this text. Writing the
+	 * reactive `label` at runtime replaces that rich content with text.
+	 */
+	label?: string
 }
 
 declare global {
@@ -47,10 +56,23 @@ export function FormCheckbox(
 		name,
 		label,
 		checked = false,
+		children = '',
 	}: {
 		name: string
-		label: string
+		/**
+		 * Visible label text of the checkbox. Optional: a composed parent
+		 * passes rich static content as `children` instead, which `.label`
+		 * renders in place of this text. Writing the reactive `label` at
+		 * runtime replaces that rich content with text.
+		 */
+		label?: string
 		checked?: boolean
+		/**
+		 * Static rich label content, rendered by `.label` in place of the
+		 * `label` text. Non-interactive: the compiler refuses interactive
+		 * content at a compose site (LTC085, ADR 0048 s4).
+		 */
+		children?: Children<{}, 'non-interactive'>
 		/**
 		 * Compiler-consumed compose surface (truc:pass), never a render
 		 * arg — a parent's `truc:pass={{ checked: … }}` type-checks
@@ -60,13 +82,27 @@ export function FormCheckbox(
 			checked?:
 				| (() => boolean)
 				| { get: () => boolean; set: (value: boolean) => void }
+			label?:
+				| (() => string)
+				| { get: () => string; set: (value: string) => void }
 		}
 	},
-	{ host, first, expose }: FormFactoryContext<FormCheckboxProps>,
+	{ host, first, expose, watch }: FormFactoryContext<FormCheckboxProps>,
 ) {
 	const checkbox = first('input', 'checkbox input')
+	const labelSpan = first('span.label')
 	expose({
 		checked: asBoolean(false),
+		label: labelSpan?.textContent ?? '',
+	})
+	// A parent's `truc:pass` drives `label` live. The equality guard keeps
+	// that write off the connect run, whose value IS the span's own text —
+	// without it, the first run would flatten rich children markup to text.
+	// (A plain sink gets no nil call; the null check only narrows the
+	// unset-prop type.)
+	watch('label', v => {
+		if (labelSpan && v != null && labelSpan.textContent !== v)
+			labelSpan.textContent = v
 	})
 
 	return (
@@ -78,7 +114,11 @@ export function FormCheckbox(
 					disabled={() => host.disabled}
 					onChange={() => ({ checked: checkbox.checked })}
 				/>
-				<span class="label">{label}</span>
+				{children ? (
+					<span class="label">{children}</span>
+				) : (
+					<span class="label">{label}</span>
+				)}
 			</label>
 
 			<style>{css`
