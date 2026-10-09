@@ -879,7 +879,7 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review (Architect, 2026-10-10): reviewed ✓ — every claim re-verified independently; no nits.** The byte proof was rebuilt from scratch: corpus rebuilt on both sides and the generated trees diffed — exactly one line differs (`i18n.ts:36`, the comment), with the only extras being the main checkout's known stale `basic-pluralize.*` artifacts and a stray `.claude` dir, both pre-existing and outside this task. The vacuous re-pin confirmed by a repo-wide sweep: no test, snapshot or golden carries `see effects/i18n.ts` (`server.golden.test.ts` asserts renders, not bytes). The declared doc line (LE_TRUC_COMPILER.md naming the moved module) is the same stale-provenance fact — in scope by the same reasoning. Gates in the worktree: `test:server` 3743/0 (89 snapshots), `typecheck` 0 errors (the residue fix holds through the branch), biome clean.
 
-- [x] LT-522: Writer copy pass — the compiler package's user-facing copy (README, §2 install passage, experimental label). — done ✓
+- [x] LT-522: Writer copy pass — the compiler package's user-facing copy (README, §2 install passage, experimental label). — reviewed ✓
   **Area:** docs
   **Needs:** LT-254
   **Gates:** check:links
@@ -895,3 +895,5 @@ Full entry text: `git log -p -- DONE.md`.
   **Channel/tier:** none (copy).
 
   **Changed:** `compiler/README.md` (npm-face register: intro split, peer paragraph — census string fixed to `unavailable-substrate`, typescript/jsdom facts one spelling with §2) and `server/compiler/LE_TRUC_COMPILER.md` §2 (the one divergent label wording folded into the canonical clause; "jsdom stays" → "is"); `contract.ts` and `VOCABULARY_LEDGER.md` verified already canonical, untouched.
+
+  **Review (Architect, 2026-10-10): reviewed ✓ — prose-only diff verified; both factual calls confirmed against the code.** The census string fix is correct (`tier.ts:120` records `'unavailable-substrate'`, hyphenated — the README's spaced spelling was wrong); `contract.ts` confirmed verbatim canonical (the clause wraps through its JSDoc line prefixes); the ledger's two mentions are shorthand references citing ADR 0034 s2, not competing definitions of the label, so the one-wording rule holds across all four files. `check:links` green (782) in the worktree; "Not in scope" respected. No nits.
