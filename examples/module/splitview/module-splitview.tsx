@@ -4,10 +4,12 @@
  * member declares its own `HTMLElementTagNameMap` entry (s4).
  *
  * The template renders what module-splitview.html authors by hand: two
- * vertical-overflow `module-scrollarea` panes around the divider. `start` and
- * `end` are the panes' content markup, rendered through `truc:html` — which
- * escapes it unless the site configures a sanitizer (`configureHtmlSanitizer`).
- * The root's `--module-splitview-ratio` and the divider's
+ * vertical-overflow panes around the divider, each a composed
+ * `ModuleScrollarea` (LT-463, LT-492) whose `<div truc:html>` child carries
+ * the pane's content markup — the parent's own sanitized binding (ADR 0048
+ * s1), which escapes it unless the site configures a sanitizer
+ * (`configureHtmlSanitizer`). The root's `--module-splitview-ratio` and the
+ * divider's
  * `aria-orientation`/`aria-valuenow` render from the args, in the exact form
  * the `split` watcher writes, so the served markup is already correct before
  * it runs (no 50% flash for a preset split).
@@ -20,6 +22,7 @@
 
 import { asNumber, type FactoryContext } from '@zeix/le-truc'
 import { css } from '@zeix/le-truc-compiler/macros'
+import { ModuleScrollarea } from '../scrollarea/module-scrollarea.tsx'
 
 export type ModuleSplitviewProps = {
 	/** Split ratio between 0.1 and 0.9 (e.g. 0.5 = 50/50). Read from the `split` attribute at connect time. */
@@ -111,9 +114,9 @@ export function ModuleSplitview(
 			orientation={orientation}
 			style={`--module-splitview-ratio: ${(split * 100).toFixed(2)}%;`}
 		>
-			<module-scrollarea>
+			<ModuleScrollarea>
 				<div truc:html={start} />
-			</module-scrollarea>
+			</ModuleScrollarea>
 			<button
 				type="button"
 				class="divider"
@@ -124,9 +127,9 @@ export function ModuleSplitview(
 				aria-valuemin="10"
 				aria-valuemax="90"
 			/>
-			<module-scrollarea>
+			<ModuleScrollarea>
 				<div truc:html={end} />
-			</module-scrollarea>
+			</ModuleScrollarea>
 
 			<style>{css`
 			@scope {
