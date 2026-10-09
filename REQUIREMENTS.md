@@ -232,7 +232,7 @@ This obliges a standing invariant on every design from here forward, emitter or 
 
 #### M28. Distribution and dependency weight
 
-The compiler ships as **`@zeix/le-truc-compiler`**, separate from the browser-only `@zeix/le-truc` client layer ([ADR 0034](adr/0034-distribution-compiler-package-and-template-emission.md) s1). v3.0 publishes the **`.tsx` front end only**; `.tsrx` remains a first-class repo-internal surface under the ADR 0032 parity contract and publishes in a later 3.x, gated on `@tsrx/core` reaching 1.0 (s2).
+The compiler ships as **`@zeix/le-truc-compiler`**, separate from the browser-only `@zeix/le-truc` client layer ([ADR 0034](adr/0034-distribution-compiler-package-and-template-emission.md) s1). v3.0 publishes **both authored surfaces** (owner ruling 2026-10-10): the `.tsx` input surface is stable under semver from the first publish, while `.tsrx` ships **experimental** — it compiles and ships, and it may change or be removed in any minor release while so labeled, so its grammar, parser pin and `TSRX###` codes carry no compatibility obligation (s2).
 
 A published compiler's dependencies are a consumer-visible cost, so every build dependency carries a stated justification and, where it serves an opt-in capability, an opt-out. jsdom is an **optional peer dependency**: present, the Simulated tier is available; absent, components that would route Simulated route Static and record an `unavailable substrate` reason in the tier census — a census row, not a warning ([M23](#m23-census-reporting-zero-warning-baseline)), and never a failed build (s5).
 

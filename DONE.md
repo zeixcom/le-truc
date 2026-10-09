@@ -380,6 +380,67 @@ Full entry text: `git log -p -- DONE.md`.
   3.0): the emoji lines moved with the pass and byte-identical behavior was the task's bar. A
   `log` seam or `quiet` option is an additive minor when a consumer asks for one.
 
+- [x] LT-254: Stand up the publishable package `@zeix/le-truc-compiler` — manifest, `exports`, both authored surfaces (`.tsx` stable, `.tsrx` experimental), the runtime peer and the `runtimeImport` default. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-471, LT-480
+  **Gates:** typecheck, test:server, check:contract, check:corpus
+  **Area:** compiler
+  **Rewritten (Architect, 2026-10-09, owner-approved consolidation).** The earlier riders are settled elsewhere:
+  - LT-370, LT-371 and LT-375 landed the pre-publish reshapes.
+  - LT-271 carried out the LT-206 vocabulary sweep (the old deliverable (c)).
+  - D-32 (LT-471) ruled the entry point, and LT-480 reshapes `contract.ts` to match.
+  - The `./macros` module exists (`server/compiler/macros.ts`, LT-442).
+
+  This task publishes whatever `contract.ts` names after LT-480, and nothing more.
+  **Context:** ADR 0034 s1–s2, s8 (s2 folded to the 2026-10-10 owner ruling: both surfaces ship).
+  The compiler ships separate from the browser-only `@zeix/le-truc`, named for its function rather
+  than its input format. The package compiles both authored surfaces: `.tsx` is the stable input
+  surface under semver; `.tsrx` ships **experimental** — it compiles, and it may change or be
+  removed in any minor while so labeled. (Why not TSX-only: the corpus this repo must compile with
+  its own published package still serves 17 of 43 tags from `.tsrx`, so exclusion would force a
+  corpus rewrite before the repo could adopt its own package.) `@tsrx/core` rides as the compiler's
+  own build-time dependency — never in an emitted client module, never a consumer's direct
+  dependency. The `@zeix` scope is owned, so the name cannot be taken, and the first pre-release
+  claims it.
+  **Deliverable:**
+  1. **Manifest and `exports` map.**
+     - The root entry is the corpus pass and its types, exactly the set `contract.test.ts` pins after LT-480.
+     - The `./macros` subpath carries the compile-time markers as types plus throwing stubs (ADR 0034 s1). It must resolve without loading the compiler's dependencies (`typescript`, `jsdom`).
+     - Nothing else is exported, and no deep imports are allowed.
+  2. **Build.** It emits JS plus declarations for the whole compiler, both front ends included;
+     `@tsrx/core` lands as the compiler's own dependency (the `.tsrx` front end's parser), never a
+     peer and never re-exported. The `.d.ts` output is what LT-377 checks.
+  3. **Stability policy (`contract.ts`).** Add the experimental carve-out to the policy header: the
+     `.tsx` input surface is stable from first publish; the `.tsrx` input surface is experimental —
+     it compiles and ships, and it may change or be removed in any minor release while so labeled
+     (ADR 0034 s2). No `exports`-map gating: dispatch is per extension inside `compileCorpus`;
+     there is no `.tsrx` entry point to gate.
+  4. **Runtime peer (ADR 0034 s8).** Declare `@zeix/le-truc` as a peer dependency with a minimum version. Add a build check that every runtime export the emitted client modules import exists at that version, resolved against that version's published export list.
+  5. **`runtimeImport` default.** Switch `DEFAULT_RUNTIME_IMPORT` in `server/compiler/emit-paths.ts` from the repo-relative `'../../compiler/runtime'` to the published package specifier. Keep this repo working by setting the field explicitly in its own `le-truc.config.json` (ADR 0036). Consumers then never set it.
+  6. **Diagnostic codes become public API on first publish.** With both surfaces shipping, the six
+     kept `TSRX###` codes publish beside the `LTC###` set; confirm each kept code's reason still
+     holds (LT-271's record is the source). Renamed copy follows `writer` → error-messages.
+  **Rider (LT-243 review, 2026-10-01): `@typescript-eslint/typescript-estree` becomes a runtime dependency.**
+  - Weigh it under M28 with its closure: `semver`, `debug`, `minimatch`, `ts-api-utils` and the `@typescript-eslint/{types,visitor-keys,tsconfig-utils,project-service}` siblings.
+  - Record the `typescript` peer range the package inherits (`<6.1.0` at 8.71.0).
+  - Weigh it against D-33's goal (TypeScript 7.1 or a native parser behind the converter, ADR 0032 s4): the peer range must be able to follow TypeScript.
+  - Record the outcome in the manifest's comments or `LE_TRUC_COMPILER.md` §2.
+
+  **Docs:** `LE_TRUC_COMPILER.md` §2 (installation, entry point, peer) and `COMPILER_SPEC.md` Appendix B (refresh it as of the publish). Hand the user-facing copy to `writer`.
+  **Channel/tier:** none (packaging and a build check).
+  **Check:**
+  - `npm pack` on a clean checkout produces a tarball that installs into an empty project. That project builds a three-component corpus through the published entry point with no `runtimeImport` set: two `.tsx` components, one composing the other, and one `.tsrx` component — proving the experimental surface ships and compiles. `@tsrx/core` appears only inside the compiler's own dependency closure, and no emitted client module imports it.
+  - The runtime-peer check fails on a planted import of a symbol the minimum version lacks.
+  - Full gates.
+
+  **Changed:** `@zeix/le-truc-compiler` stood up in `compiler/` (manifest + README; `exports` = root entry — the pinned `contract.ts` set — plus `./macros` and `./runtime`): `build:compiler` emits JS + declarations for the whole compiler from `server/compiler/` (bundler-style relative specifiers normalized to `.js`, directory imports to `/index.js`; the css-tree import moved to the exports-map-compatible `dist/csstree.esm` subpath), `DEFAULT_RUNTIME_IMPORT` flipped to `@zeix/le-truc-compiler/runtime` with the repo pinning `'../../compiler/runtime'` in a new root `le-truc.config.json`, `runtime.ts`'s library imports now name the `@zeix/le-truc` peer, `CorpusConfig.runtimeImport` became optional (defaulted in `emitPathsFor`, so hand-built configs never set it), the experimental `.tsrx` carve-out joined `contract.ts`'s stability policy, `REPO_CONFIG` now loads through `loadCorpusConfig` (one fact, one loader), the root tsconfig maps the `./runtime` subpath in-repo beside `/macros`, the six kept `TSRX###` codes confirmed publishing (ledger line flipped), the typescript-estree rider recorded in LE_TRUC_COMPILER §2 (closure incl. `tinyglobby`, inherited peer `>=4.8.4 <6.1.0` narrowed to `>=5.8.0 <6.1.0`, D-33 weighed at the converter seam), and Appendix B + ADR 0036 s2 folded.
+
+  **How:** Deliverable-by-deliverable against the entry: (1) exports map exactly `.`/`./macros`/`./runtime`/`./package.json` — macros is import-free, proven textually in `check:package`; (2) tsc emit via `tsconfig.compiler.json` (`module: preserve` + bundler resolution; `@zeix/le-truc` resolves to the committed `types/` so nothing outside `server/compiler/` emits) + the normalizer in `scripts/build-compiler.ts`; (3) the carve-out sentence names both labels and the no-gating rationale (dispatch is per extension inside `compileCorpus`); (4) peer `@zeix/le-truc ^3.0.0-next.1` + `check:peer`, which compiles the repo corpus and asserts every `@zeix/le-truc` import in emitted client AND server modules exists in the floor version's export list, plus a lockstep assertion (runtime version satisfies the floor); (5) default flip + config file, byte-identity kept (repo output still carries `'../../compiler/runtime'`; goldens unchanged); (6) each kept code's reason re-checked against LT-271's record — all surface-specific, none gains a `.tsx` counterpart.
+
+  **Check:** `bun run --cwd .worktrees/LT-254 check:package` — packs BOTH tarballs, installs into an empty project, compiles a 3-component corpus (two `.tsx`, one composing the other, one `.tsrx`) under Node with no `runtimeImport` set, asserts the default lands on the package subpath, `@tsrx/core` only inside the compiler's closure and absent from every emitted module, then renders the generated server module under Bun through `./runtime` + the peer (composed `start={7}` folded in). `bun run check:peer -- --plant=notARealExport` exits 1 naming file + symbol; without it, 237 imports across 86 modules hold. Gates: `test:server` 3743/0 ✓, `check:contract` ✓, `check:corpus` ✓, `build:docs` + `check:links` (781) ✓, biome clean on all changed paths. `typecheck` exits 1 on ONE error that reproduces byte-identically on the clean main checkout (`corpus-config.test.ts:83` TS2769, a `toEqual` overload inference failure — bun-types drift, pre-existing, not this change). Doubts for review: (a) the third subpath `./runtime` vs the entry's "nothing else is exported" — it is the generated server modules' harness channel, not consumer API, and the flipped default cannot resolve without it; (b) `CorpusConfig.runtimeImport` optionality is a public-shape adjustment (pre-first-publish, pinned set unchanged); (c) `check:peer`'s export list is barrel-derived with a lockstep pin rather than registry-derived (v3 is not on npm yet); (d) `loadCorpusConfig` stays internal per the LT-480 residue note — consumers hand-build configs, as the README shows; (e) REQUIREMENTS M28 still states the old tsx-only publish stance — architect-owned, unfiled; (f) ARCHITECTURE.md may want a line for the `compiler/` assembly directory; (g) user-facing copy (compiler/README.md, install docs page) should get a `writer` pass.
+
+  **Review (Architect, 2026-10-10): reviewed ✓ — every gate re-verified live on the branch; both nit fixes and all seven doubts ruled.** Gates: `check:peer` ✓ (237 imports / 86 modules; `--plant=notARealExport` exits 1 naming file + symbol), `test:server` 3743/0 ✓, `check:contract` ✓, `check:corpus` ✓, `check:package` ✓ (pack → install → compile under Node, both surfaces, no `runtimeImport` set → render under Bun, composed `start={7}` folded), biome on all changed paths ✓ after one nit, `typecheck` 1 error confirmed byte-identical on clean v3 (pre-existing, honestly reported). Doubt rulings: (a) `./runtime` **ratified** — deliverable 5's flipped default makes it load-bearing (the generated modules' import must resolve), it is the generated-module harness channel, not consumer API, and `contract.ts`/`LE_TRUC_COMPILER.md` say so; `./package.json` is standard tooling access. (b) **ratified** — pre-first-publish shape adjustment; the loader and `emitPathsFor` default consistently, and consumers never set the field (that is the point of the flip). (c) **ratified** — barrel-derived with the lockstep pin is the correct pre-registry approximation (the committed barrel IS the floor version's export list); switch to registry-derived only if a release ever desyncs. (d) upheld, matches the LT-480 residue. (e)/(f) were mine, not the contributor's: REQUIREMENTS M28 now carries the 2026-10-10 both-surfaces ruling, ARCHITECTURE.md gained the `compiler/` assembly line (this session). (g) filed as **LT-522** (W track): writer pass on the compiler package copy. Nits fixed on the branch (`8af30274`): biome formatting of `compiler/package.json`; `engines.node` `>=18` → `>=18.18` — the floor `@typescript-eslint/typescript-estree` 8.71.0 itself requires (`^18.18.0 || ^20.9.0 || >=21.1.0`), so bare `>=18` advertised a Node that cannot run the `.tsx` parser.
+
 - [x] LT-480: Reshape the compiler's public contract to the D-32 ruling — the corpus entry point moves into the compiler, `RegistryEntry` narrows to a public projection, and the stability policy names the generated-module API. — reviewed ✓
   **Area:** compiler
   **Needs:** LT-471

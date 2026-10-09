@@ -53,20 +53,24 @@ iteration.
 
 **The chain.**
 - **R — the package** — P1; the contract reshape runs alone in the contract files (ruling 6).
-  ~~LT-480~~ → LT-254 → LT-377. (LT-480 reviewed ✓ and integrated 2026-10-10, b482d527; its
-  golden re-pin residue is LT-521, which may run beside LT-254 — it touches only a generated
-  comment and the goldens, not the contract files.)
+  ~~LT-480~~ → ~~LT-254~~ → LT-377. (LT-480 reviewed ✓ and integrated 2026-10-10, b482d527;
+  LT-254 reviewed ✓ and integrated 2026-10-10, 560d91e9 — the package stands up, both surfaces,
+  `./macros` + `./runtime`, the peer floor under `check:peer`; LT-480's golden re-pin residue is
+  LT-521, which touches only a generated comment and the goldens, not the contract files.)
 - **X — compiler, analysis passes** — one at a time (ruling 4). ~~LT-483~~ → ~~LT-492~~ →
-  ~~LT-493~~ → LT-519 → LT-520. (LT-519 joined by owner instruction, 2026-10-09: filed from
+  ~~LT-493~~ → ~~LT-519~~ → ~~LT-520~~. (LT-519 joined by owner instruction, 2026-10-09: filed from
   LT-492's review after the chain was written; P6 band remainder, needs satisfied. LT-520
   filed 2026-10-10 from LT-514's review — the decorated-candidate precision gap; it follows
   LT-519 by `needs:` so the track stays one-at-a-time, and it re-pins the module-todo
-  snapshots LT-519's legs sit beside.)- **B — module-todo and BasicButton** — ruling 5. ~~LT-489~~ → ~~LT-494~~ → ~~LT-514~~
+  snapshots LT-519's legs sit beside. Both reviewed ✓ and integrated 2026-10-10, c999cb2 and
+  9fd470f6.)
+- **B — module-todo and BasicButton** — ruling 5. ~~LT-489~~ → ~~LT-494~~ → ~~LT-514~~
   (integrated 2026-10-09/10; the band's conversions are done).
 - **D — test harness** — beside everything. ~~LT-517~~ (the probe differential's composed
   leg, integrated 2026-10-09).
 - **W — writer copy** — beside everything; area `docs`, a `writer` session. ~~LT-518~~
-  (landed 2026-10-09).
+  (landed 2026-10-09). LT-522 (filed 2026-10-10 from LT-254's review: the compiler package's
+  user-facing copy — README, §2 install passage, one experimental-label wording).
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-516 (ADR 0043 amendment, LT-257's split) and LT-484 (boundary arm-root parity). Neither
   holds the iteration open beyond its own ruling: each ends in an amended ADR or a recorded
@@ -110,7 +114,7 @@ set it builds on is pinned and green). LT-521 (the generated-comment golden re-p
 residue) is pickable beside it — it touches no contract file. Then LT-377 closes track R.
 LT-516 and LT-484 remain design sessions with the owner, never `start-task` picks.
 
-**Next free task ID: LT-522.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Next free task ID: LT-523.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
