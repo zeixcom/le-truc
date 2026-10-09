@@ -222,29 +222,6 @@ LTC056 is LT-358's).
 
 ### X — compiler, analysis passes
 
-- [ ] LT-483: '`handleAsyncBoundary` checks client positions against `badFreeNames` where every other arm-set handler uses `fx.scopeBadNames` — align it.'
-  **Area:** compiler
-  **Gates:** test:server
-  **Area:** compiler
-  **Filed (Architect, 2026-10-07, from LT-481's residue 2):** in
-  `server/compiler/analysis/effects.ts`, `handleAsyncBoundary` destructures
-  `badFreeNames: badNames` and passes it to the ok arm's construct effects and, since LT-481, to
-  the pending and catch compose roots' pass entries. `handleReactiveConditional` and the other
-  Mount Scope handlers read `fx.scopeBadNames`, which, inside a reactive-list item, refuses the
-  names a list body cannot read on the client (setup consts and imports: LTC005's server-only
-  face). The review probed an item-nested boundary whose pending compose root passes
-  `() => item.get()`: it plans correctly, so item names are not affected. A setup-const or
-  import read in an item-nested boundary's client position was not probed. It may compile clean
-  and then fail at runtime in the cloned item.
-  **Change:** probe the setup-const read in an item-nested boundary on both surfaces (ok-arm
-  construct and pending compose root pass entry). If it compiles clean, switch
-  `handleAsyncBoundary` to `fx.scopeBadNames`. If it is already refused upstream, still align
-  the reader for consistency and record the probe here.
-  **Check:** a both-surface test pins the probed shape's diagnostic (LTC005 server-only face),
-  and host-level boundaries are unchanged (`test:server`). CHANGELOG Fixed only if the shape
-  compiled clean before.
-  **Channel/tier:** compiler check, tier 1 Prevented; no runtime check.
-
 - [ ] LT-492: Lift LTC011 for `truc:html` in a composed element's content — the parent's own sanitized binding (ADR 0048 s1).
   **Area:** compiler
   **Needs:** LT-472, LT-483
@@ -290,30 +267,6 @@ LTC056 is LT-358's).
   **Channel/tier:** none — corpus conversion.
 
 ### B — module-todo and BasicButton
-
-- [ ] LT-489: BasicButton's modifiers become three orthogonal server args (`variant`, `kind`, `size`); module-todo's remove button composes `<BasicButton>`.
-  **Area:** examples
-  **Needs:** LT-461
-  **Gates:** check:corpus, test:server, typecheck, test:variants, build:docs
-  **Area:** examples
-  **Filed (Architect, 2026-10-07, from LT-461's review). Ruled (owner, 2026-10-09: option 2', orthogonal server args):** module-todo's remove button stays raw (`<basic-button class="remove">` with an inner `<button class="tertiary destructive small">`). BasicButton's single `variant` enum mixes weight and color, so a parent cannot ask for that class triple.
-  **Ruling.** Three optional server args, each a closed literal union; the default is in italics:
-  - `variant`: `primary` | *`secondary`* | `tertiary`. The weight.
-  - `kind`: `constructive` | *`normal`* | `destructive`. The color family.
-  - `size`: `small` | *`medium`* | `large`.
-
-  A default value has no special styles and is omitted from the emitted class. The inner button's class is the non-default tokens only, joined by spaces, so all defaults give an empty class. Drop the class attribute or emit `class=""`, whichever keeps the existing specs unchanged. `constructive`/`destructive` leave `variant` and move to `kind`. **Rejected:** a `variant` array and a cross-product enum (`tertiary-destructive`).
-  **Change:**
-  1. **BasicButton** (`basic-button.tsrx`, and the hand-written `basic-button.css` if it diverges): the three args with JSDoc, typed as above, and the class computed from the non-default tokens.
-     - **CSS:** class names stay the same, so the stylesheet needs no new token. Existing usages must render as before: `tertiary destructive small`, `constructive`, `destructive`, `primary medium` and the rest.
-     - **New combinations:** `primary` with a non-normal kind renders the kind's colors through the existing cascade order (the kind rules follow `primary`), so no new rule is needed. If a combination renders visibly wrong, write it in `NOTES.md` instead of designing a fix.
-     - Keep the CSS byte-identical between the `.tsrx` source and its served artifact (ADR 0039).
-  2. **Compose sites.** `variant="constructive"` becomes `kind="constructive"` in module-todo and module-list (both `.tsx` and `.tsrx`). Page-authored `.html` markup keeps its classes. A leftover default token such as `secondary` or `medium` is harmless there.
-  3. **module-todo's remove button** composes `<BasicButton class="remove" variant="tertiary" kind="destructive" size="small" label="✕" ariaLabel="Remove" onClick={() => items.remove(k)} />` in both surfaces, and drops the LT-463 "raw, not composed" comment.
-     - The compose site sits in a reactive-list item. If LT-461's handler-arg lowering refuses the parent-side `onClick` there, keep the button raw with the new class spelling and write a `NOTES.md` entry. Don't work around it.
-  4. **Docs.** HOST_PROFILE § Handler args' note that a parent needing classes on the child's inner button uses the ownership rule gets BasicButton's three args as its worked example. The BasicButton `.md` lists the args.
-  **Check:** `test:component basic-button module-todo module-list` unchanged on all surfaces, except mechanical rewrites of the sim-driver snapshot. `check:corpus`, `test:server`, `typecheck`, `test:variants` and `build:docs` green.
-  **Channel/tier:** none. Example-corpus API shape; TypeScript already refuses a value outside each union.
 
 - [ ] LT-494: FormRadiogroup's `.split-button` variant hides its own legend and radios; module-todo composes `<FormRadiogroup>`.
   **Area:** examples
@@ -364,41 +317,6 @@ LTC056 is LT-358's).
   **Channel/tier:** no new check. LTC085 (LT-477) already refuses interactive content at these compose sites. Any remaining interactive site is a `NOTES.md` entry, not a workaround.
   **Check:** `test:component` for each changed component and its composers is unchanged. `check:corpus` and `test:variants` stay green.
   **Sequence (Architect, 2026-10-09):** LT-514 runs after LT-494, which first composes module-todo's `<FormRadiogroup legend={t.filter} …>`; item 3 then moves that site's `legend` to children. It also runs after LT-489, which reshapes BasicButton's props (`variant`/`kind`/`size`), so BasicButton's API changes in one order.
-
-### D — test harness
-
-- [ ] LT-517: The probe differential's composed leg is vacuous — key its synthetic registry by source path so `composedShapesFor` lookups hit.
-  **Area:** compiler
-  **Gates:** test:server
-  **Area:** compiler
-  **Filed (Architect, 2026-10-09; LT-512 review).** In `server/tests/compiler/probe-differential.test.ts`, `runDifferential` builds its synthetic registry keyed by `ComponentIR.source`. That holds the source **text**, while a compose node's `source` is the resolved file path. Every `composedShapesFor` lookup misses on both the reference and production sides, so each child resolves as unknown markup. The corpus leg's composed comparison therefore agrees trivially, and has done so since LT-379. It cannot catch a divergence in `composedEmitter`, including LT-512's region-content `children` skip.
-  **Do:**
-  1. Key the registry by the path the compose nodes carry: the corpus file path the harness compiled, resolved the same way `scripts/build-corpus.ts` resolves compose sources.
-  2. Add a non-vacuity guard: the corpus leg asserts that at least one compose lookup hits a registered entry with a known tag, and fails otherwise.
-  3. Bring the reference re-encoding of `composedEmitter` up to date with production: the `children` skip for region-content targets (LT-512), the region-form exclusion and `regionSafe`. Fix any mismatch the now-live comparison surfaces in the reference unless it shows a production bug. A production bug goes to `NOTES.md` instead of being fixed here.
-
-  **Check:** `test:server` green. Temporarily removing the LT-512 skip from the reference's re-encoding makes the differential fail on module-codeblock (a temporary edit, not committed).
-  **Channel/tier:** none. Test harness only.
-
-### W — writer copy
-
-- [ ] LT-518: Writer copy pass — LTC081 and the reworded LTC007 refusals, plus three stale compiler-doc facts.
-  **Area:** docs
-  **Gates:** test:server, check:links
-  **Area:** docs (`writer`)
-  **Filed (Architect, 2026-10-09, eighth prune):** two reviews deferred copy to a later batch, and no open task held it. The prune audit also found three stale facts.
-  **Do:**
-  1. **Error copy** (`writer` → error-messages), in `server/compiler/diagnostics.ts` with the matching `skills/le-truc/references/errors.md` rows:
-     - LTC081's message (LT-461's review deferred it).
-     - The arm and list-item faces of LTC007 that LT-498 reworded.
-     - The LTC005 row gains LT-461's parent-side face: a handler arg on a child where no mount binds it (today only `analysis/effects.ts`'s doc states it).
-     Keep each message's channel and tier wording (ADR 0028). Update the server tests that pin message text in the same commit.
-  2. **`LE_TRUC_COMPILER.md`** (around the tier-census passage): refresh the tier counts against `check:corpus` and list module-lazyload as Folded (LT-093; `queue/LEDGER.md`, eighth pass).
-  3. **`VOCABULARY_LEDGER.md`**: LTC082 is released unused (LT-136), not held by another task. Fix both mentions.
-
-  **Not in scope:** LT-496's "Multiple sites" copy for a mixed clash (accepted as is), and the CSS codes (LT-503 reviewed them).
-  **Check:** `test:server` and `check:links` green. The diff changes message text and docs only, with no diagnostic code or condition.
-  **Channel/tier:** none (copy).
 
 ### Design gates
 
