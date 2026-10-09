@@ -396,7 +396,12 @@ projection with the routed tiers, the diagnostics return the refusal
 (`LTC008`) without throwing, and the generated server module exports
 `render<Name>`. The run goes through the repo's own module paths;
 re-running it against the published package's exports belongs to the
-packaging step, not to this check.
+packaging step, not to this check. The same run carries the D-33 pin
+(LT-377): it rebuilds the package (`build:compiler`) and scans every
+emitted `.d.ts` under `compiler/dist` for imports from `typescript` or
+`@typescript-eslint/*` — no TypeScript type reaches the published
+declarations (ADR 0034 s8), so the engine swap behind the converter
+(ADR 0032 s4) stays a non-breaking change.
 
 ## 3. Module map
 
