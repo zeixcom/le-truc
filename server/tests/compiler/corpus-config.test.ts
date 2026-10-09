@@ -79,8 +79,10 @@ describe('the defaults are this repo, not the mechanism', () => {
 		// from the other would widen the site config's literal union, so the
 		// pin holds the line instead — a locale added to one list but not
 		// the other fails HERE, not as a page tree in a locale the i18n
-		// module never enumerated.
-		expect(LOCALES).toEqual(DEFAULT_LOCALES)
+		// module never enumerated. (The actual is widened past its const
+		// tuple: bun-types' toEqual overloads refuse a NoInfer tuple
+		// against the default's readonly string[].)
+		expect(LOCALES as readonly string[]).toEqual(DEFAULT_LOCALES)
 	})
 
 	test('the repo needs no config file — none is found above it', () => {
