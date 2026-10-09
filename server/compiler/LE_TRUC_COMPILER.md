@@ -239,9 +239,9 @@ left the same way (handler args are internal, LT-480 ruling 4).
 `contract.test.ts` pins the set against two lists. Widening it is a
 public-API decision; shrinking it is a breaking one. Either change fails the
 test until the lists move with it. Both front ends stay internal (D-32 — the
-corpus entry point is the published surface); the `.tsrx` input surface ships
-experimental at 3.0: it compiles, and it may change or be removed in any
-minor while so labeled ([ADR 0034](../../adr/0034-distribution-compiler-package-and-template-emission.md) s2).
+corpus entry point is the published surface); the `.tsrx` input surface is
+**experimental** — it compiles and ships, and it may change or be removed in
+any minor release while so labeled ([ADR 0034](../../adr/0034-distribution-compiler-package-and-template-emission.md) s2).
 
 **The result.** `compileCorpus(config)` returns a `CorpusResult`:
 `diagnostics` — every diagnostic both passes reported, errors included; the
@@ -359,7 +359,7 @@ published entry point with no `runtimeImport` set (the default is the
 peer is `@zeix/le-truc` (`^3.0.0-next.1` floor — `check:peer` pins that
 every emitted module's runtime import exists at the floor, and that the two
 packages' versions move in lockstep); `typescript` (`>=5.8.0 <6.1.0`) is
-the `.tsx` front end's parser peer; `jsdom` stays the optional substrate
+the `.tsx` front end's parser peer; `jsdom` is the optional substrate
 peer (ADR 0034 s5). `@tsrx/core` — the `.tsrx` front end's pinned parser —
 is the compiler's own dependency, never a peer and never re-exported.
 
