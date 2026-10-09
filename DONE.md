@@ -575,6 +575,38 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** ✓ (2026-10-09). The switch verified against every `badNames` consumer in the handler — the ok arm's construct effects and both compose roots' pass entries; nothing else rides it, and `planHostComposeHandlers`' explicit `badFreeNames` is unreachable for item positions by construction (reconcile loops are skipped), so no sibling inconsistency was left behind. The How's BEFORE-clean claim re-proven live on the base commit (ddc5f884): diagnostics empty, the const declared client-side with the ok-arm watch emitted beside it — the mechanism note is exact and the CHANGELOG Fixed obligation stands. Gates re-run in the worktree: `test:server` 3665/0, `typecheck` exit 0, biome clean, touched files 128/128. Reviewer nit on the branch (d79816ff): `plan.ts`'s `badListBodyNames` doc still carried LT-349's "walks no list-body position → ReferenceError" rationale, which this task's probe disproves — reworded to the uniform-authoring-rule rationale. Comment only.
 
+- [x] LT-484: An element root of an async boundary's pending or catch arm refuses every client construct, while a reactive conditional's element arm root plans them — decide whether boundary arms gain parity. — done ✓
+  **Area:** design
+  **Area:** design
+  **Filed (Architect, 2026-10-07, from LT-481's residue 3):** the two arm-set kinds treat their
+  element roots differently. A reactive `@if`/`@switch` arm root plans its client constructs in
+  the arm's mount through `emitConstructEffects`. An async boundary's pending or catch element
+  root refuses every client construct except the catch-parameter text channel (LT-449). LT-481
+  made a compose root in those same arms plan its `truc:pass` entries, so an author can now pass
+  a reactive value to a composed pending root but cannot bind a reactive attribute on an element
+  pending root. Both lowerings are arm mounts under `reconcile()`.
+  **Question for the session:** should pending and catch element roots plan constructs the way
+  reactive-conditional arms do? Or is the refusal deliberate (ADR 0041's three-arm boundary,
+  with the in-flight state as the `isPending` idiom outside the boundary) and should be kept,
+  with a sharper message that names the idiom? Read ADR 0037, ADR 0041 and LT-449 before
+  ruling. Out of the session comes either a `compiler` task or a recorded refusal.
+
+  **Ruled (2026-10-10, session with the owner): full parity — option A.** The refusals are
+  residue, not a ruling: ADR 0037 s3/s4 already grant boundary arms the conditional arms'
+  vocabulary ("arm content owns its effects"; "the boundary switches to the same mechanism"),
+  the deep-construct refusal's citation (ADR 0024 s13, no addressing below the root) was
+  superseded by the arm-scope machinery (ADR 0045 proof, LT-424 recursion), and no ADR records
+  an exception — keeping the refusal would have owed one. ADR 0041's no-stale-arm/`isPending`
+  ruling is about arm states, not arm content. Decisive gap: `isClientConstructAttr` covers
+  client-only attributes, so retry/cancel handlers in catch/pending arms did not compile
+  except through a composed-child root. **LT-530** builds it (factor the conditional
+  arm-content planner, thread through `handleAsyncBoundary`, retire `boundaryDeepConstructOf`
+  and four refusal faces, keep the value-channel disciplines — driver detection, one catch
+  read, message discriminator; no new diagnostics; new repo, `needs: LT-524`). No ADR change:
+  parity is ADR 0037 s4 finally honored. Rejected: B (keep + sharper copy — would contradict
+  0037's letter and need an exception note; retry/cancel keeps its compose-only workaround) and
+  C (root-only — keeps the nested-element asymmetry alive).
+
 - [x] LT-489: BasicButton's modifiers become three orthogonal server args (`variant`, `kind`, `size`); module-todo's remove button composes `<BasicButton>`. — reviewed ✓
   **Area:** examples
   **Needs:** LT-461

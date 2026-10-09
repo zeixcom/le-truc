@@ -78,9 +78,12 @@ iteration.
   ~~LT-516~~ (ADR 0043 amendment) ruled 2026-10-10 — D-28 closed: the `boundary` operation
   with a three-state result arg, `loop` + `listTemplate` for reactive lists, capture-and-raw
   children through the `composed-markup` context; LT-257 split into LT-527 → LT-528 → LT-529
-  (against the new repository, `needs: LT-524`). LT-484 (boundary arm-root parity) is still
-  owed. Neither gate holds the iteration open beyond its own ruling: each ends in an amended
-  ADR or a recorded refusal, plus banded follow-up tasks. ~~LT-523~~ (the compiler
+  (against the new repository, `needs: LT-524`). ~~LT-484~~ (boundary arm-root parity) ruled
+  2026-10-10 — full parity: the boundary's arms plan constructs like conditional arms
+  (ADR 0037 s3/s4 honored, the refusals were residue); **LT-530** builds it (new repo,
+  `needs: LT-524`, P2b; four refusal faces retire, none arrive, no ADR change). Both gates
+  have ruled: each ended in an amended ADR plus banded follow-up tasks. ~~LT-523~~ (the
+  compiler
   repo split) ruled 2026-10-10 → ADR 0049; its chain LT-524 → LT-525 → LT-526 is staged as the
   NEXT iteration's opening, after this one closes.
 
@@ -162,7 +165,20 @@ LT-529 — the shared walk with the census folded in, the Twig target, the PHP C
 remainder: the LT-484 session only. When it has ruled, the writer changelog sweep runs and
 the exit criterion is verified on the closing commit.
 
-**Next free task ID: LT-530.** Next free diagnostic code: LTC091 (LTC090 is LT-527's; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Status 2026-10-10, after the LT-484 session (Architect) — both design gates have ruled.**
+LT-484 ruled with the owner → full parity: the async boundary's arms plan client constructs
+exactly like reactive-conditional arms (root constructs in every channel, nested elements
+through the arm scope's proved selectors, nested arm sets and lists through `planNested`);
+the value-channel disciplines stay; the refusals were residue of the channel-by-channel
+build-out, not a recorded decision — ADR 0037 s3/s4 already grant the vocabulary, so no ADR
+changes. **LT-530** builds it (new repo, `needs: LT-524`, P2b; four refusal faces retire,
+none arrive). Every chain task is integrated and both design sessions have ruled: the
+iteration is ready to close — the `writer` changelog sweep runs next (it consumes LT-516 and
+LT-484's records; LT-527 → LT-530 stay in the store for the next iteration, which opens with
+the split chain LT-524 → LT-525 → LT-526), then the exit criterion is verified on the closing
+commit.
+
+**Next free task ID: LT-531.** Next free diagnostic code: LTC091 (LTC090 is LT-527's; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

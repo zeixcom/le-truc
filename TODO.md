@@ -78,9 +78,12 @@ iteration.
   ~~LT-516~~ (ADR 0043 amendment) ruled 2026-10-10 — D-28 closed: the `boundary` operation
   with a three-state result arg, `loop` + `listTemplate` for reactive lists, capture-and-raw
   children through the `composed-markup` context; LT-257 split into LT-527 → LT-528 → LT-529
-  (against the new repository, `needs: LT-524`). LT-484 (boundary arm-root parity) is still
-  owed. Neither gate holds the iteration open beyond its own ruling: each ends in an amended
-  ADR or a recorded refusal, plus banded follow-up tasks. ~~LT-523~~ (the compiler
+  (against the new repository, `needs: LT-524`). ~~LT-484~~ (boundary arm-root parity) ruled
+  2026-10-10 — full parity: the boundary's arms plan constructs like conditional arms
+  (ADR 0037 s3/s4 honored, the refusals were residue); **LT-530** builds it (new repo,
+  `needs: LT-524`, P2b; four refusal faces retire, none arrive, no ADR change). Both gates
+  have ruled: each ended in an amended ADR plus banded follow-up tasks. ~~LT-523~~ (the
+  compiler
   repo split) ruled 2026-10-10 → ADR 0049; its chain LT-524 → LT-525 → LT-526 is staged as the
   NEXT iteration's opening, after this one closes.
 
@@ -162,7 +165,20 @@ LT-529 — the shared walk with the census folded in, the Twig target, the PHP C
 remainder: the LT-484 session only. When it has ruled, the writer changelog sweep runs and
 the exit criterion is verified on the closing commit.
 
-**Next free task ID: LT-530.** Next free diagnostic code: LTC091 (LTC090 is LT-527's; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Status 2026-10-10, after the LT-484 session (Architect) — both design gates have ruled.**
+LT-484 ruled with the owner → full parity: the async boundary's arms plan client constructs
+exactly like reactive-conditional arms (root constructs in every channel, nested elements
+through the arm scope's proved selectors, nested arm sets and lists through `planNested`);
+the value-channel disciplines stay; the refusals were residue of the channel-by-channel
+build-out, not a recorded decision — ADR 0037 s3/s4 already grant the vocabulary, so no ADR
+changes. **LT-530** builds it (new repo, `needs: LT-524`, P2b; four refusal faces retire,
+none arrive). Every chain task is integrated and both design sessions have ruled: the
+iteration is ready to close — the `writer` changelog sweep runs next (it consumes LT-516 and
+LT-484's records; LT-527 → LT-530 stay in the store for the next iteration, which opens with
+the split chain LT-524 → LT-525 → LT-526), then the exit criterion is verified on the closing
+commit.
+
+**Next free task ID: LT-531.** Next free diagnostic code: LTC091 (LTC090 is LT-527's; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -288,21 +304,50 @@ LTC056 is LT-358's).
   **Check:** CI runs the three suites on the real engine and passes; a local run without
   `php` exits green with an explicit skip line; nothing in this repo changes.
 
-- [ ] LT-484: An element root of an async boundary's pending or catch arm refuses every client construct, while a reactive conditional's element arm root plans them — decide whether boundary arms gain parity.
-  **Area:** design
-  **Area:** design
-  **Filed (Architect, 2026-10-07, from LT-481's residue 3):** the two arm-set kinds treat their
-  element roots differently. A reactive `@if`/`@switch` arm root plans its client constructs in
-  the arm's mount through `emitConstructEffects`. An async boundary's pending or catch element
-  root refuses every client construct except the catch-parameter text channel (LT-449). LT-481
-  made a compose root in those same arms plan its `truc:pass` entries, so an author can now pass
-  a reactive value to a composed pending root but cannot bind a reactive attribute on an element
-  pending root. Both lowerings are arm mounts under `reconcile()`.
-  **Question for the session:** should pending and catch element roots plan constructs the way
-  reactive-conditional arms do? Or is the refusal deliberate (ADR 0041's three-arm boundary,
-  with the in-flight state as the `isPending` idiom outside the boundary) and should be kept,
-  with a sharper message that names the idiom? Read ADR 0037, ADR 0041 and LT-449 before
-  ruling. Out of the session comes either a `compiler` task or a recorded refusal.
+- [ ] LT-530: Boundary-arm construct parity — the async boundary's arms plan client constructs exactly like reactive-conditional arms (ADR 0037 s3/s4 honored; LT-484's ruling). Builds in the le-truc-compiler repository.
+  **Area:** compiler
+  **Needs:** LT-524
+  **Gates:** typecheck, test:server
+  **Area:** compiler (the new `../le-truc-compiler` repository)
+  **Ruled (LT-484 session, 2026-10-10, owner — option A, full parity):** the refusals were
+  residue of the LT-449 → LT-460 → LT-481 channel-by-channel build-out, not a recorded
+  decision: ADR 0037 s3 ("arm content owns its effects… `watch()`/`on()`/`pass()` are usable
+  inside an arm") and s4 ("the boundary switches to the same mechanism") already grant the
+  vocabulary, and the refusal's own citation (ADR 0024 s13, "deeper elements have no
+  addressing") was superseded by the arm-scope machinery (ADR 0045 proof, LT-424 recursion).
+  `isClientConstructAttr` covers client-only attributes, so retry/cancel handlers in
+  catch/pending arms do not compile today — the gap parity closes.
+  **Do:**
+  - Factor the conditional arm-content planner out of `handleReactiveConditional`
+    (`analysis/effects.ts`): root-construct emission (`emitConstructEffects`), the
+    `mountScope` + `localFor` addressing for nested elements, `collectKeyAttrs`, and the
+    `planNested` recursion for nested arm sets and reactive lists (LT-424). Thread it
+    through `handleAsyncBoundary`'s three arm plans (`ok`/`nil`/`err`).
+  - Retire `boundaryDeepConstructOf` and the four refusal faces: the ok-root-via-child-channel
+    refusal (root constructs + the lazy signal child now coexist, as the `truc:html` thunk
+    channel already proved), the err-root refusal, the pending-arm refusal, and the
+    deep-construct refusal ("Deeper elements have no addressing"). These are faces of
+    existing codes, not codes — no LTC retires; the arm-scope proof's existing
+    unaddressable-element face covers nested elements inside boundary arms.
+  - Keep the value-channel disciplines untouched: driver-channel detection (direct lazy child
+    or `truc:html` thunk), the one-catch-read rule, the message-element discriminator inside
+    composed content, and the compose-arg catch-read refusal (LT-460). The ok arm's value
+    write and construct effects coexist in one mount, as the thunk channel already does.
+  - Fixtures on both surfaces: a retry handler in a catch arm, a cancel handler in a pending
+    arm, a reactive attribute on a nested element inside each arm, a nested conditional and a
+    nested reactive list inside an arm, beside the existing driver-channel/one-read/
+    discriminator cases staying green. Goldens re-pin.
+  - Rewrite `HOST_PROFILE.md`'s boundary section (the driver channels and one-catch-read rule
+    stay; the sanctioned-channel-only model goes) and check `AGENTS.md`'s boundary bullet
+    still reads true (a proposal through `.agents-proposals/` if copy must move).
+  **Channel/tier (ADR 0028):** no new checks. Four refusal faces retire; none arrive.
+  **Depends on** LT-524 (the repository). Independent of LT-527 → LT-529 (this touches
+  `analysis/effects.ts`; the emission chain adds new code) — parallelizable; LT-527's boundary
+  fixture may exercise an arm construct if this lands first.
+  **Check:** every fixture compiles and behaves on both surfaces; the arm-scope selector proof
+  holds inside boundary arms (nested elements addressable, unique-class failures report); the
+  server render and the zero-warning baseline are unchanged (client-written sites inside inert
+  arm templates already bake empty); the four faces no longer fire anywhere in the corpus.
 
 - [ ] LT-524: Bootstrap the `le-truc-compiler` repository — fresh history, the moved tree, mirrored fixture corpus, registry-typed peer, its own gates.
   **Area:** compiler
