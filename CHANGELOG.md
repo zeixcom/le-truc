@@ -66,6 +66,17 @@
 - **An async boundary may read its task through `truc:html`**: `truc:html={() => data.get()}` on the ok arm's root drives the boundary, and that root's other client constructs mount and die with the arm. `createTask` is a compiled signal constructor.
 - **`bun run check:baseline`**: the build fails when the library or compiler-emitted code uses a web feature newer than the `leTruc.baseline` pin in `package.json` (2023). Features in authored code are reported, not judged.
 - **The `le-truc` and `cause-effect` skills ship in the package**: agents find them at `node_modules/@zeix/le-truc/skills/`. `le-truc` covers the `.tsx` surface, the `LTC` codes and runtime errors; `cause-effect` states the version it describes.
+- **Handler args**: a child arg named `on` plus a capital letter, with a function type and placed as an event attribute on a native element (`<button onClick={onClick}>`), is a listener the parent binds. `<BasicButton onClick={…} />` lowers to a parent-side `on()`, in a list item or arm too.
+- **`LTC081`**: a handler arg the composing parent cannot address fails the compile: a type that is not a function type, a read outside an event attribute, or a placement in a reactive arm, a reactive-list item or a server-data loop body.
+- **`HandlerPlacement` in the compiler contract**: `RegistryEntry.handlerArgs` lists where a component places each handler arg, and `contract.ts` exports the type.
+- **`BasicButton` args `type`, `ariaLabel` and `onClick`**: they render on its native button as `type`, `aria-label` and a handler arg.
+- **Children Region** (ADR 0048 s1): a parent's `first()` into the content it passes as `children` to a composed child compiles instead of failing `LTC026`. The server marks the child's element that encloses `{children}` with `data-children="<owner-tag>"`.
+- **`Children<Roles, Model>`** (ADR 0048 s2): type a `children` arg with the role classes the child may address in passed content, `Children<{ tab: 'button' }>`. Under the typed factory context, `first('.tab')` types as that tag. It stays a string, so `children = ''` defaults compile.
+- **`LTC083`**: a declared `first()` reference that matches nothing in the component's own template fails the compile when the template inserts `{children}` and the selector names no declared role class. The passed content belongs to the parent.
+- **`LTC084`**: a parent `watch` binding into passed content fails the compile when it writes the same property, attribute, class token, style property or text as the child's binding on that role element. The message names both writers.
+- **`LTC085`**: a compose site fails the compile when the child declares `Children<…, 'non-interactive'>` and the passed content holds an interactive element (a link, button, form control, `[tabindex]`, …) or a composed child that renders one.
+- **`le-truc` skill `errors.md`**: rows for `LTC081`, `LTC083`, `LTC084` and `LTC085`.
+- **`form-checkbox` label content**: `FormCheckbox` takes non-interactive `children` as rich label content, beside a reactive `label` prop it exposes and accepts through `truc:pass`. Writing `label` replaces the content with text.
 
 ### Changed
 
@@ -84,6 +95,7 @@
 - **The parent-props type parameter of `PassedProps` and `PassHelper`**: it only typed the removed property-key form. **Migration**: `PassedProps<P, Q>` → `PassedProps<Q>`, `PassHelper<P>` → `PassHelper`.
 - **`FactoryResult` and returned effects** (ADR 0018): effect helpers return `void` and register as they are called; factories return nothing. **Migration**: replace `return [watch(…)]` with bare calls, conditional arrays with `if`, and a returned descriptor with `watch(() => true, descriptor)`.
 - **Array returns from an extension's `onConnect`**: it returns a single `EffectDescriptor`. **Migration**: return one descriptor instead of a `FactoryResult` array.
+- **The `basic-pluralize` example**: `module-todo` words its own count. **Migration**: use an ICU plural message, as `module-todo` does with `t.remaining({ count })`.
 
 ### Fixed
 
@@ -96,6 +108,14 @@
 - **A `truc:pass` onto a composed child in a server-known branch never bound**: Previously, in a reactive-list item the compose minted a required local, so with the branch folded off every item mount threw `MissingElementError` and the pass entries never bound; at the host the entries were silently unplanned. Now the shape fails the compile (`LTC005`) with the reactive-conditional remedy, and a pass-less composed child in a branch stays legal (LT-470).
 - **A `truc:pass` on a compose site that is a reactive arm root never bound**: Previously, the entries compiled clean and never bound — the arm walk checked only the arm root's descendants, so the pass on the root was neither refused nor lowered. Now the entries plan as `pass()` effects in the arm's mount against the arm element parameter — the arm root IS the child's rendered element, so nothing is queried from the host — re-binding on every adopt and clone, for reactive `@if`/`@switch` arms and the async boundary's pending and catch arms on both surfaces; a `first()` on the site is refused (LT-481).
 - **A `truc:pass` onto a composed child in a server-only `@try` never bound**: Previously, a `try` with no `pending` arm folded once per render into its body or catch arm, but the host walk keyed its server-branch refusal on server-mode conditionals alone, so the compose compiled clean and the entries were silently unplanned. Now both arms are server-rendered branches and the shape fails the compile (`LTC005`), with the fix worded per arm — the catch arm's remedy is a pending arm, the body's is to move the composed child out; a pass-less composed child in a `try` stays legal (LT-482, LT-488).
+- **A composed child as an arm root**: Previously, it failed with an `LTC011` message about `.map()` output. Now the root of a reactive `@if`/`@switch` arm or of an async boundary's `pending` or `catch` arm may be a compose site, on both surfaces.
+- **The error parameter at a compose site in a `catch` arm**: Previously, a read of it compiled into a server module that threw a `ReferenceError`. Now a read inside an element of the composed content binds in the arm, and a read in a compose arg fails `LTC005`.
+- **A setup const read only in a handler arg**: Previously, the generated client dropped it and failed `tsc` with TS2304. Now a handler arg's body counts as a client read, like a native `onX` attribute.
+- **Element children against a `string` `children` arg** (`.tsx`): Previously, element children at a compose site failed `tsc` with TS2322 when the child declared `children?: string`. Now the host profile accepts `JSX.Element | string`, singly or as an array.
+- **Compose-site queries and same-tag elements**: Previously, a compose site's query could match a raw element of the child's tag, or one inside another composed child, and bound by document order. Now such elements count against the selector, and an ambiguous site fails `LTC007`.
+- **`LTC087` at nested compose sites**: Previously, a scoped rule that reached a grandchild's root through a class set at a nested compose site did not warn. Now `LTC087` reads the compose-site attributes at every level of nesting.
+- **A thunk-rendered signal with a setup-const initializer**: Previously, an initializer that read a setup const or an import routed the component to the Simulated tier (`LTC004`). Now the client reuses the initializer, and the component can fold.
+- **`module-todo` editing**: Previously, the in-place editor sat inside the checkbox's `<label>`, so the double-click that starts editing also toggled the item. Now the editor sits beside the checkbox.
 
 ## 2.6.0
 
