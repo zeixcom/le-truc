@@ -1,7 +1,7 @@
 # Compiler Vocabulary Ledger (LT-271)
 
 The disposition of every TSRX-only name the compiler carried, with the reason.
-Settled 2026-09-19 under [ADR 0034](../../adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md)
+Settled 2026-09-19 under [ADR 0034](../../adr/0034-distribution-compiler-package-and-template-emission.md)
 s1–s2, discharging the packaging-time deferrals [LT-206](../../DONE.md) parked.
 
 **The rule this ledger applies.** `.tsrx` remains a first-class *repo-internal*
@@ -62,17 +62,18 @@ place to widen, so the three cannot drift apart again.
 
 **Owner ruling, 2026-09-19: split by ownership. 44 codes → `LTC###`; 6 keep `TSRX###`.**
 
-These become public API at first publish ([ADR 0034](../../adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md)
+These become public API at first publish ([ADR 0034](../../adr/0034-distribution-compiler-package-and-template-emission.md)
 s1), and a package name is the one decision that cannot be revised afterwards —
 so the vocabulary is settled now, before P6, even though the publish is after it.
 
 **Renamed to `LTC###`** (`@zeix/le-truc-compiler`), numbers preserved:
 `LTC001`–`LTC017`, `LTC019`, `LTC025`–`LTC050`.
 
-> These are emitted by the shared machinery and fire on both surfaces. At v3.0
-> the published package contains the `.tsx` front end only (ADR 0034 s2), so
-> every code an outside author can see would otherwise have been named after a
-> format they cannot author. Numbers are preserved so the ADR 0028 spent-number
+> These are emitted by the shared machinery and fire on both surfaces. They are
+> named for the package, not a surface: `.tsx` is the stable authored surface
+> and the corpus majority (the `.tsrx` input surface ships experimental,
+> ADR 0034 s2), so a `TSRX` prefix would name the minority format on codes
+> every author sees. Numbers are preserved so the ADR 0028 spent-number
 > ledger survives the rename intact — `TSRX004`/`013`/`031`/`043`'s retirements
 > and `TSRX020`'s carry over as `LTC004`/`013`/`031`/`043` and stay visible in
 > the union.

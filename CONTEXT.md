@@ -101,7 +101,7 @@ To read a **Component**'s initial state back out of the server-rendered DOM at c
 _Avoid_: hydrate, scrape, parse. "Hydrate" is correct only when describing other frameworks, which do ship a state payload; a Le Truc **Component** enhances markup and harvests from it.
 
 **Compile-Time Marker**:
-A call in an authored source that the compiler consumes and never runs, imported from `@zeix/le-truc-compiler/macros`: `harvest()` (a seed's parsers) and the `css` tag. Its runtime stub throws ([ADR 0034](adr/0034-distribution-tsx-only-compiler-package-and-template-emission.md) s1).
+A call in an authored source that the compiler consumes and never runs, imported from `@zeix/le-truc-compiler/macros`: `harvest()` (a seed's parsers) and the `css` tag. Its runtime stub throws ([ADR 0034](adr/0034-distribution-compiler-package-and-template-emission.md) s1).
 _Avoid_: macro (except as the subpath's name), ambient (the factory-context helpers are ambients and runtime values, not markers)
 
 **Value Harness**:

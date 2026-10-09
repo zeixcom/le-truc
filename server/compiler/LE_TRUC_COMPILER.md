@@ -238,8 +238,10 @@ left the same way (handler args are internal, LT-480 ruling 4).
 
 `contract.test.ts` pins the set against two lists. Widening it is a
 public-API decision; shrinking it is a breaking one. Either change fails the
-test until the lists move with it. The `.tsrx` shell's `compileComponent`
-stays repo-internal until `@tsrx/core` reaches 1.0.
+test until the lists move with it. Both front ends stay internal (D-32 — the
+corpus entry point is the published surface); the `.tsrx` input surface ships
+experimental at 3.0: it compiles, and it may change or be removed in any
+minor while so labeled ([ADR 0034](../../adr/0034-distribution-compiler-package-and-template-emission.md) s2).
 
 **The result.** `compileCorpus(config)` returns a `CorpusResult`:
 `diagnostics` — every diagnostic both passes reported, errors included; the

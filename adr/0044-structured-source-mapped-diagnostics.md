@@ -46,4 +46,4 @@
 
 - Requirements: [M18](../REQUIREMENTS.md#m18-compile-time-contract-checking), [M22](../REQUIREMENTS.md#m22-tiered-error-surfacing), [M25](../REQUIREMENTS.md#m25-tooling-continuity)
 - Compiler contract: [LE_TRUC_COMPILER.md](../server/compiler/LE_TRUC_COMPILER.md) (diagnostics, stability policy)
-- Related: [ADR 0028](0028-tiered-error-surfacing.md) (codes, tiers, censuses), [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6 (the adapter seam), [ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s8 (the public API)
+- Related: [ADR 0028](0028-tiered-error-surfacing.md) (codes, tiers, censuses), [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6 (the adapter seam), [ADR 0034](0034-distribution-compiler-package-and-template-emission.md) s8 (the public API)

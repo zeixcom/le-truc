@@ -6,7 +6,7 @@
 
 ## Context
 
-[ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s3 commits 3.0 to template emission ([M27](../REQUIREMENTS.md#m27-backend-neutral-template-emission)): the fold resolves everything independent of server args and leaves each server arg as a **hole** in a backend template language. Twig is the first target and HTL is known to follow, so only the interface is a 3.0 commitment, and it must be decided before the first emitter. [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) adds IR that the interface must read: a reactive condition whose initial winner depends on server args. Escaping in languages the compiler does not execute is a security boundary, so the interface has to make "a target forgot a case" a type error rather than a review finding.
+[ADR 0034](0034-distribution-compiler-package-and-template-emission.md) s3 commits 3.0 to template emission ([M27](../REQUIREMENTS.md#m27-backend-neutral-template-emission)): the fold resolves everything independent of server args and leaves each server arg as a **hole** in a backend template language. Twig is the first target and HTL is known to follow, so only the interface is a 3.0 commitment, and it must be decided before the first emitter. [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) adds IR that the interface must read: a reactive condition whose initial winner depends on server args. Escaping in languages the compiler does not execute is a security boundary, so the interface has to make "a target forgot a case" a type error rather than a review finding.
 
 ## Decision
 
@@ -56,6 +56,6 @@
 ## Related
 
 - Requirements: [M27](../REQUIREMENTS.md#m27-backend-neutral-template-emission), [M28](../REQUIREMENTS.md#m28-distribution-and-dependency-weight)
-- Amends: [ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) (s3: the interface is this ADR), [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) (a reactive condition travels as a backend conditional only)
+- Amends: [ADR 0034](0034-distribution-compiler-package-and-template-emission.md) (s3: the interface is this ADR), [ADR 0037](0037-reactive-conditions-via-template-cloned-arms.md) (a reactive condition travels as a backend conditional only)
 - Builds on: [ADR 0010](0010-trusted-types-support-via-sanitize-hook.md), [ADR 0029](0029-tiered-server-evaluation.md), [ADR 0030](0030-internationalization-as-build-time-server-data.md), [ADR 0040](0040-typed-ir-contracts-discriminated-unions-and-pass-signatures.md)
 - Specification: `COMPILER_SPEC.md` §3.8, §6.3, §9.2

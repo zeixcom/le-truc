@@ -13,7 +13,8 @@ current iteration's chain in `TODO.md`.
 entry — read the ADR.
 
 **Standing framing.** The governing premise is the general-purpose framework (REQUIREMENTS §1,
-ADR 0034): the published package is `@zeix/le-truc-compiler`, TSX-only at 3.0; template
+ADR 0034): the published package is `@zeix/le-truc-compiler` (`.tsx` stable, `.tsrx`
+experimental at 3.0); template
 emission is a v3.0 requirement; and the partial-readiness invariant (ADR 0034 s4) — a fold may
 depend only on its props and a closed, enumerable set of page-ambient values — constrains every
 design in every band. Server evaluation is three tiers, Folded / Simulated / Static, decided
@@ -23,7 +24,7 @@ The Simulated tier is kept, SSG-only for all of 3.x (ADR 0035).
 
 ## P1 — The v3.0 release track (ADR 0034)
 
-Everything v3.0 does not ship without: the publishable TSX-only `@zeix/le-truc-compiler`
+Everything v3.0 does not ship without: the publishable `@zeix/le-truc-compiler`
 package (LT-254), template emission against the ruled target-emitter interface (LT-257,
 ADR 0043), the 2.x codemod (LT-259), and the two Zeix pioneer projects that are the release
 gates (LT-260, LT-261). The owner has ruled the first publish waits for the P6 cleanup round —

@@ -8,7 +8,7 @@ Amended 2026-10-10 (LT-480, D-32): sub-design 2's "IO beside the compiler" rule 
 
 ## Context
 
-The compiler's build path executes JavaScript. The corpus compile imports and runs the emitted server modules to fold ([ADR 0029](0029-tiered-server-evaluation.md)), reads the configured sources, writes the output tree, and spawns typechecking. Every one of those steps reached for Bun's globals. For repo tooling that is fine: [§5](../REQUIREMENTS.md#5-technical-constraints) names Bun this repo's primary build tooling. But [ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s1 commits the compiler to shipping as `@zeix/le-truc-compiler`, and [M28](../REQUIREMENTS.md#m28-distribution-and-dependency-weight) makes the installing developer a persona. Once the package exists, its build path's runtime requirement is consumer-visible. "Requires Bun" would prescribe a toolchain to every consumer, when the honest floor for executing a JS package's build is already *a* JS runtime.
+The compiler's build path executes JavaScript. The corpus compile imports and runs the emitted server modules to fold ([ADR 0029](0029-tiered-server-evaluation.md)), reads the configured sources, writes the output tree, and spawns typechecking. Every one of those steps reached for Bun's globals. For repo tooling that is fine: [§5](../REQUIREMENTS.md#5-technical-constraints) names Bun this repo's primary build tooling. But [ADR 0034](0034-distribution-compiler-package-and-template-emission.md) s1 commits the compiler to shipping as `@zeix/le-truc-compiler`, and [M28](../REQUIREMENTS.md#m28-distribution-and-dependency-weight) makes the installing developer a persona. Once the package exists, its build path's runtime requirement is consumer-visible. "Requires Bun" would prescribe a toolchain to every consumer, when the honest floor for executing a JS package's build is already *a* JS runtime.
 
 Two standing constraints already pulled the same direction. `server/compiler/` was already pure computation over strings, with config resolution split from discovery ([ADR 0036](0036-corpus-configuration-surface.md) s5). The corpus config is JSON rather than an executable module precisely so no runtime-specific loader couples to it (ADR 0036 s1). The file-IO, glob and spawn layer was the last Bun-coupled surface. The decision precedes the package's first publication, because the contract below is consumer-visible the moment the package exists.
 
@@ -41,7 +41,7 @@ Two standing constraints already pulled the same direction. `server/compiler/` w
 
 **Good:**
 
-- The package's install story states a floor every JS project already meets instead of prescribing a toolchain. The pioneer builds ([ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s6) can run the compiler under whatever the host project uses.
+- The package's install story states a floor every JS project already meets instead of prescribing a toolchain. The pioneer builds ([ADR 0034](0034-distribution-compiler-package-and-template-emission.md) s6) can run the compiler under whatever the host project uses.
 - Runtime-specific behavior has exactly one home. Neutrality is a standing one-command check rather than a claim, cheap enough to run on every relevant change.
 - The corpus configuration surface gets glob semantics that cannot drift per runtime; a consumer's configured globs mean one thing everywhere.
 
@@ -54,5 +54,5 @@ Two standing constraints already pulled the same direction. `server/compiler/` w
 ## Related
 
 - Requirements: [§5](../REQUIREMENTS.md#5-technical-constraints), [M28](../REQUIREMENTS.md#m28-distribution-and-dependency-weight)
-- Related: [ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s1 (the publication that makes this contract consumer-visible), [ADR 0035](0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) (the sibling build-path seam), [ADR 0036](0036-corpus-configuration-surface.md) s1/s5 (the pure/IO split this seam completes), [ADR 0028](0028-tiered-error-surfacing.md) s1 (the Surfacing Tier for the config-resolution ruling)
+- Related: [ADR 0034](0034-distribution-compiler-package-and-template-emission.md) s1 (the publication that makes this contract consumer-visible), [ADR 0035](0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md) (the sibling build-path seam), [ADR 0036](0036-corpus-configuration-surface.md) s1/s5 (the pure/IO split this seam completes), [ADR 0028](0028-tiered-error-surfacing.md) s1 (the Surfacing Tier for the config-resolution ruling)
 - Operational: `server/SERVER.md` § The Runtime Seam; the gate is `bun run check:portability`

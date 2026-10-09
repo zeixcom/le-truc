@@ -1,4 +1,4 @@
-# ADR 0034: Distribution — `@zeix/le-truc-compiler`, TSX-Only at 3.0, the Fold Travels as Template Emission
+# ADR 0034: Distribution — `@zeix/le-truc-compiler` and Template Emission
 
 ## Status
 
@@ -12,7 +12,7 @@ The compiler was built in this repo, for this repo: REQUIREMENTS [§5](../REQUIR
 
 1. **The compiler ships as `@zeix/le-truc-compiler`** — named for its **function, not its input format** — while `@zeix/le-truc` stays the browser-only client layer. The `@tsrx/le-truc` name is withdrawn; the npm name registers before the first pre-release: a name is the one decision that cannot be revised after first publish. Its `/macros` subpath exports the **compile-time markers** an authored source imports (the `css` tag, `harvest()`). A marker is an import, never an ambient: a `.tsx` source is plain TypeScript, so the import is the only sign that a compiler consumes the call. The compiler recognizes a marker by module specifier and imported binding, so an alias resolves and a same-named local never matches, and it strips the import from both generated modules. The shipped stubs throw when reached uncompiled.
 
-2. **v3.0 publishes the `.tsx` front end only.** `.tsrx` stays repo-internal — the parity contract ([ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md)) unchanged — but publishing it would make the format, its pre-1.0 parser pin, and its `TSRX###` codes public API before they settle. It publishes in a later 3.x, gated on `@tsrx/core` 1.0.
+2. **Both authored surfaces ship; `.tsx` is the stable one, `.tsrx` is experimental.** The package compiles whatever the configured corpus carries — the entry point dispatches per file extension over the two first-class front ends of [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6 — and a consumer whose globs select `.tsx` only never reaches the `.tsrx` front end. The stability policy names the difference: the `.tsx` input surface is stable under semver from the first publish, while **the `.tsrx` input surface is experimental** — it compiles and ships, and it may change or be removed in any minor release while so labeled. The grammar, its pre-1.0 parser pin and its `TSRX###` codes are thereby not a compatibility obligation. `@tsrx/core` rides as the compiler's own build-time dependency — never in an emitted client module, never a consumer's direct dependency.
 
 3. **The fold travels off SSG as template emission, not as HTML files.** For a CMS a folded partial and a template are the same artifact: page-supplied server args are *content*, so a fold per signature is combinatorially dead. The fold resolves everything independent of server args and leaves the server args as holes. The compiler gains a third emission target: a **partial with holes**, each server arg a template variable in the target language. **Twig at 3.0**, verified against the Craft pioneer; HTL follows. Targets sit behind a **target-emitter interface** decided before the first emitter ([ADR 0043](0043-the-target-emitter-interface-for-template-emission.md)) — only the interface is a 3.0 commitment, not the target set. Each target owns its escaping contract: an unescapable position is a compile-time diagnostic, never a silent unsafe emit. A v3.0 requirement ([M27](../REQUIREMENTS.md#m27-backend-neutral-template-emission)) — pioneer 2's critical path.
 
@@ -34,7 +34,9 @@ The compiler was built in this repo, for this repo: REQUIREMENTS [§5](../REQUIR
 - **A per-request SSR runtime**: reverses the founding premise; see sub-design 7.
 - **Ambient compile-time markers**: what `.vue` and `.svelte` do, where the file type already announces compilation; a `.tsx` source does not, so an ambient falls from nowhere and matches by bare name.
 - **`@tsrx/le-truc` as the name**: names the product after the minority pre-1.0 surface the TSX adoption exists to route around.
-- **Publish both surfaces at 3.0**: makes a pre-1.0 format and its pin a compatibility obligation before they settle.
+- **Exclude `.tsrx` from the package**: the corpus this repo must compile with its own published package still serves 17 of 43 tags from `.tsrx` (including `basic-button`, the most-composed component), and every variant set's `.tsrx` twin compiles as a CSS-parity check ([ADR 0039](0039-canonical-plus-variants-authored-surfaces.md)) — the repo could not adopt its own package without first rewriting the corpus, a migration cliff gating distribution on nothing technical.
+- **Publish both surfaces as stable**: makes the pre-1.0 grammar, its parser pin and its `TSRX###` codes a compatibility obligation before they settle. The experimental label ships the capability without the obligation.
+- **A `.tsrx` → `.tsx` source-to-source pre-pass**, so the package compiles one format only: both surfaces are first-class adapters over one shared pipeline ([ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6), and a faithful transpiler between grammars that have diverged (the `css` tag vs the `{count}` shorthand, `@` directives) would be a third front end with the hardest job — worse than compiling both.
 - **jsdom as a hard dependency**: what the repo does today — a heavyweight build dependency in every downstream install for a capability few components use.
 - **Remove the Simulated tier**: [ADR 0035](0035-simulation-seam-ssg-scoped-tier-and-substrate-package.md)'s call — sub-design 5 constrains it, not pre-empts.
 
@@ -44,14 +46,14 @@ The compiler was built in this repo, for this repo: REQUIREMENTS [§5](../REQUIR
 
 - The headline capability becomes reachable by §1's personas; every v3.0 criterion becomes falsifiable outside `examples/` — a live pioneer, a verified Twig emit, a measured drift number.
 - The partial-readiness invariant is a standing check that keeps per-request SSR reachable in 4.0 without an authoring break.
-- Installs stop paying for jsdom unless they want the Simulated tier; dropping `.tsrx` from the package removes a pre-1.0 pin from every consumer tree and defers an expensive public-API commitment.
+- Installs stop paying for jsdom unless they want the Simulated tier; the experimental `.tsrx` label ships the capability this repo needs without putting a pre-1.0 pin under semver.
 
 **Bad / accepted tradeoffs:**
 
 - Template emission is a substantial new subsystem inside 3.0 scope, scheduled against a client engagement's timeline rather than the repo's.
 - **The escaping contract is a security boundary**: the compiler owns output encoding in a language it does not execute — a mis-encoded hole is an XSS — so per-target test corpora and the unescapable-position diagnostic are not optional.
 - The release is coupled to two external projects; pre-releases mitigate, not remove.
-- `.tsrx` authors get no published tool at 3.0 — a distribution gap, not a capability one, but visible to anyone following the format.
+- The experimental `.tsrx` surface ships to early adopters: its grammar bugs land in the package's tracker although `.tsx` is the recommended surface, and removing the surface later is still breaking for whoever adopted it, label or no label. The main `.tsrx` consumer is this repo, and [ADR 0039](0039-canonical-plus-variants-authored-surfaces.md)'s `.tsx`-default-served direction keeps shrinking it across 3.x — the label is a bridge, with removal pressure self-controlled.
 - The optional peer adds a second supported configuration: CI must run with and without the substrate, and `unavailable substrate` is new routing code on a previously impossible path.
 - AEM is a build-*integration* problem (dialogs, authoring model, clientlibs), not only an emit problem — it needs a spike well ahead of pioneer 3.
 

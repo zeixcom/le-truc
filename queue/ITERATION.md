@@ -79,7 +79,7 @@ where they are.
 
 **Exit criterion.** Every chain task is reviewed and integrated, and both design sessions have
 ruled. `npm pack` of `@zeix/le-truc-compiler` installs into an empty project and builds a
-two-component corpus through the published entry point, with no `@tsrx/core` in its tree
+corpus through the published entry point — two `.tsx` components, one composing the other, plus one `.tsrx` component proving the experimental surface ships — with `@tsrx/core` only inside the compiler's own dependency closure
 (LT-254's check). `contract.test.ts` pins LT-480's set, and `registry.json` carries only the
 public projection. P6 is empty: module-splitview and module-todo compose every site LT-463
 named, and no corpus form component or BasicButton renders its visible label from a `string`
