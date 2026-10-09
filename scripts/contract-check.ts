@@ -1,13 +1,15 @@
 /**
  * The public-contract check (LT-265; re-scoped by LT-370, ADR 0034 s8; and
- * again by LT-480, D-32).
+ * again by LT-480, D-32; declaration phase LT-377, D-33).
  *
- * Writes a consumer into a scratch project OUTSIDE the repo and runs it
- * there. The consumer imports NOTHING but `server/compiler/contract.ts`,
- * the designated export surface, and drives the published corpus entry
- * point (`compileCorpus(config)`) the way a published-package consumer
- * would: a scratch corpus of four components, varied along the single axis
- * each case isolates —
+ * Two phases:
+ *
+ * 1. The designated surface. Writes a consumer into a scratch project
+ * OUTSIDE the repo and runs it there. The consumer imports NOTHING but
+ * `server/compiler/contract.ts`, the designated export surface, and drives
+ * the published corpus entry point (`compileCorpus(config)`) the way a
+ * published-package consumer would: a scratch corpus of four components,
+ * varied along the single axis each case isolates —
  *
  * - `seed`'s initializer is never rendered (no harvestable initial-DOM
  *   site), so its value decides the tier: absent → Folded, a literal →
@@ -31,19 +33,49 @@
  * exports variant is LT-254's check and replaces the one interpolated
  * specifier below with the package name.
  *
+ * 2. The declaration surface (LT-377, D-33; ADR 0034 s8, ADR 0032 s4).
+ * Rebuilds the package (`build:compiler`, so no stale `dist` can pass) and
+ * scans every emitted `.d.ts` under `compiler/dist` for imports from
+ * `typescript` or `@typescript-eslint/*`. No TypeScript type may reach the
+ * published declarations — the engine can move to TypeScript 7.1 or a
+ * native parser without a major. The whole emitted tree is scanned, not
+ * just the exports-map entries: every file ships in the tarball and any of
+ * them can surface through a future re-export of the published entries,
+ * so a leak is caught at its source. The emitted `.js` is exempt by
+ * design — the converter runs the engine at build time (ADR 0032 s4);
+ * only the type surface must be free of it.
+ *
  *   bun run check:contract
  *
  * Exit code is non-zero on any failure, so it is usable as a gate.
  */
 
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import {
+	mkdirSync,
+	mkdtempSync,
+	readdirSync,
+	readFileSync,
+	rmSync,
+	writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 /* === Constants === */
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const DIST = join(ROOT, 'compiler', 'dist')
+
+/**
+ * An engine specifier in an emitted declaration: `typescript` bare or any
+ * `@typescript-eslint/*` subpath, matched where a module specifier can
+ * legally stand — after `from`, inside `import(...)`, or after a bare
+ * `import` — in single or double quotes. Multi-line import statements
+ * match: only the tail carries the specifier.
+ */
+const ENGINE_SPECIFIER =
+	/(from\s*|import\s*\(\s*|import\s+)(['"])(typescript|@typescript-eslint\/[^'"]*)\2/g
 
 const SUMMARY =
 	'contract check: the published corpus entry point compiled a scratch corpus through the designated contract surface'
@@ -93,6 +125,27 @@ const PUBLIC_FIELDS = [
 	.slice()
 	.sort()
 	.join(',')
+
+/** Every file under a directory, recursively, as absolute paths. */
+const walkFiles = (dir: string): string[] =>
+	readdirSync(dir, { withFileTypes: true }).flatMap(entry =>
+		entry.isDirectory()
+			? walkFiles(join(dir, entry.name))
+			: [join(dir, entry.name)],
+	)
+
+/** The emitted declarations that import the TypeScript engine, if any. */
+const declarationLeaks = (): string[] => {
+	const leaks: string[] = []
+	for (const path of walkFiles(DIST)) {
+		if (!path.endsWith('.d.ts')) continue
+		const text = readFileSync(path, 'utf8')
+		for (const match of text.matchAll(ENGINE_SPECIFIER)) {
+			leaks.push(`${relative(DIST, path)}: ${match[3]}`)
+		}
+	}
+	return leaks
+}
 
 /**
  * The scratch consumer. It hand-builds its `CorpusConfig` (the type is the
@@ -230,4 +283,44 @@ try {
 } finally {
 	if (keep) console.log(`\nkept: ${workDir}`)
 	else rmSync(workDir, { recursive: true, force: true })
+}
+
+/*
+ * Phase 2: the emitted declarations import no engine module (LT-377,
+ * D-33). The build runs first so no stale dist can pass; its stdout is
+ * surfaced only on failure.
+ */
+const build = Bun.spawnSync(['bun', 'run', 'build:compiler'], {
+	cwd: ROOT,
+	env: { ...process.env, NODE_ENV: 'production' },
+	stdout: 'pipe',
+	stderr: 'pipe',
+})
+if (build.exitCode !== 0) {
+	console.error(
+		`✗ declaration check failed: build:compiler exited ${build.exitCode}`,
+	)
+	console.error(
+		(build.stdout.toString() + build.stderr.toString())
+			.split('\n')
+			.slice(-25)
+			.join('\n'),
+	)
+	process.exitCode = 1
+} else {
+	const leaks = declarationLeaks()
+	if (leaks.length > 0) {
+		console.error(
+			`✗ D-33: ${leaks.length} TypeScript-engine import(s) in the emitted declarations:`,
+		)
+		for (const leak of leaks) console.error(`  ${leak}`)
+		console.error(
+			'  no TypeScript type may reach the published declarations (ADR 0034 s8); keep the engine types internal to the converter (ADR 0032 s4)',
+		)
+		process.exitCode = 1
+	} else {
+		console.log(
+			'✓ D-33 holds: no emitted .d.ts imports typescript or @typescript-eslint/* — the engine swap stays a non-breaking change',
+		)
+	}
 }
