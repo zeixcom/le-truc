@@ -53,7 +53,8 @@ Maintained by the Architect (`.agents/skills/architect/references/adr.md`) — u
 | [0046](0046-reactive-list-items-as-mount-scopes.md) | Reactive-List Items as Mount Scopes — Signal Items, a Keyed `map`, Recursive Emission | ✅ Accepted | M5, M11, M17, M18 |
 | [0047](0047-harvest-through-a-key-alias-witnessed-by-the-render.md) | Harvest Through a Key Alias, Witnessed by the Render | ✅ Accepted | M17, M18, M19, M22, M27 |
 | [0048](0048-the-children-contract-parent-owned-content-child-declared-roles.md) | The Children Contract — Parent-Owned Content, Child-Declared Roles | ✅ Accepted | M17, M18 |
+| [0049](0049-the-compiler-lives-in-its-own-repository.md) | The Compiler Lives in Its Own Repository — Fresh History, `link:` Consumer Loop, Registry Peer Floor | ✅ Accepted | §5, M28 |
 
 ---
 
-**Last updated:** 2026-10-07
+**Last updated:** 2026-10-10

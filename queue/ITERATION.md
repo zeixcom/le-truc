@@ -77,7 +77,9 @@ iteration.
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-516 (ADR 0043 amendment, LT-257's split) and LT-484 (boundary arm-root parity). Neither
   holds the iteration open beyond its own ruling: each ends in an amended ADR or a recorded
-  refusal, plus banded follow-up tasks. Both still owed (2026-10-10).
+  refusal, plus banded follow-up tasks. Both still owed (2026-10-10). ~~LT-523~~ (the compiler
+  repo split) ruled 2026-10-10 → ADR 0049; its chain LT-524 → LT-525 → LT-526 is staged as the
+  NEXT iteration's opening, after this one closes.
 
 **Deliberately not here.** LT-259, LT-260, LT-257 and LT-261 (ruling 2). The rest of P2b,
 including LT-381 (it changes the census by design and needs the owner's sign-off) and LT-246.
@@ -137,7 +139,16 @@ criterion is verified on the closing commit. (`typecheck` reads green at HEAD �
 pin-test TS2769 residue was fixed on v3 in LT-377's review session, and holds through
 LT-521's branch.)
 
-**Next free task ID: LT-524.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Status 2026-10-10, after LT-522's review and the LT-523 session (Architect).** LT-522
+reviewed ✓ and integrated (409315c8) — the writer copy pass is in. LT-523 ruled the same day →
+ADR 0049: the compiler moves to its own repository (fresh history, `link:` dev loop, mirrored
+fixture corpus, public repo). The split chain LT-524 → LT-525 → LT-526 opens the NEXT
+iteration; LT-516's template-emission build tasks file against the new repository once the
+cutover lands. This iteration's remainder: the LT-516 and LT-484 sessions only — when both
+have ruled, the writer changelog sweep runs and the exit criterion is verified on the closing
+commit (typecheck is green at HEAD).
+
+**Next free task ID: LT-527.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

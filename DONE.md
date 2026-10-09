@@ -897,3 +897,63 @@ Full entry text: `git log -p -- DONE.md`.
   **Changed:** `compiler/README.md` (npm-face register: intro split, peer paragraph — census string fixed to `unavailable-substrate`, typescript/jsdom facts one spelling with §2) and `server/compiler/LE_TRUC_COMPILER.md` §2 (the one divergent label wording folded into the canonical clause; "jsdom stays" → "is"); `contract.ts` and `VOCABULARY_LEDGER.md` verified already canonical, untouched.
 
   **Review (Architect, 2026-10-10): reviewed ✓ — prose-only diff verified; both factual calls confirmed against the code.** The census string fix is correct (`tier.ts:120` records `'unavailable-substrate'`, hyphenated — the README's spaced spelling was wrong); `contract.ts` confirmed verbatim canonical (the clause wraps through its JSDoc line prefixes); the ledger's two mentions are shorthand references citing ADR 0034 s2, not competing definitions of the label, so the one-wording rule holds across all four files. `check:links` green (782) in the worktree; "Not in scope" respected. No nits.
+
+- [x] LT-523: Design session — the compiler moves to its own repository `zeixcom/le-truc-compiler` (sibling of this repo); settle the split rulings, write ADR 0049, file the chain. — done ✓
+  **Area:** design
+  **Needs:** LT-522
+  **Area:** design (the Architect with the owner; never a `start-task` pick)
+  **Context:** the owner directs (2026-10-10): after the writer pass, the whole compiler moves to
+  `le-truc-compiler/` as a sibling folder and a separate git repo, published on GitHub. The
+  package identity (`@zeix/le-truc-compiler`, exports map, peer floor) is settled (LT-254) and
+  survives the move unchanged; what changes is WHERE the sources live and what each repo owns.
+  The move inventory is larger than `server/compiler/` alone: `server/runtimes/` (the ADR 0038
+  runtime-neutral seam — `server/compiler` imports it), the 97-file compiler test suite with its
+  fixtures, the package scripts (`build:compiler`, `check:contract`, `check:peer`,
+  `check:package`), `tsconfig.compiler.json`, the `compiler/` assembly dir, and the compiler
+  docs (`LE_TRUC_COMPILER.md`, `HOST_PROFILE.md`, `VOCABULARY_LEDGER.md`, `COMPILER_SPEC.md`).
+  Stays in le-truc: the runtime, the examples corpus, the docs site and dev server, the
+  generated tree and goldens, the corpus-level checks, CEM.
+  **Rulings the session settles** (Architect recommendations in parentheses):
+  1. **History**: fresh start (le-truc keeps the record) vs `git filter-repo` subtree split.
+     (Fresh start; `cause-effect-gitreversed` already probes the rewrite path.)
+  2. **le-truc's dev/docs loop post-split**: npm-only, a `link:`/`file:` sibling dependency, or a
+     canary channel. (`link:` for development, pinned prereleases for CI — the docs build
+     becomes a real consumer, which is ADR 0036's stated endgame.)
+  3. **Config defaults (ADR 0036 s2)**: today every default is le-truc's path. Re-anchor to the
+     new repo's fixture corpus at the same relative paths, genericize, or drop defaults.
+     (Mirror the fixture corpus at `examples/**` so defaults stay honest and the ADR stands.)
+  4. **Test split**: unit + fixtures move; where do the corpus-level integration checks
+     (`check:corpus`, census, goldens, `check:portability`) live. (Corpus checks stay in le-truc
+     as the consumer-side suite; portability moves with the compiler, run on its own corpus.)
+  5. **`check:peer`'s facts**: today barrel- and manifest-derived from this checkout. Post-split:
+     registry-derived (runtime published first), with what lockstep convention.
+  6. **Sequencing**: split before LT-516's template-emission build tasks (the third front end is
+     born in its final home) and after this iteration closes; LT-516/LT-484 rulings are
+     repo-independent and stand either way.
+  7. **Queue/tooling for the new repo**: own queue store + copied scripts, or plain GitHub
+     issues; the split work itself is tracked here until cutover.
+  8. **The GitHub act**: org repo `zeixcom/le-truc-compiler`, public vs private start, branch
+     protection + required checks (typecheck, suite, contract, package, peer, biome), publish
+     workflow with the NPM token, LICENSE (MIT per the manifest — no LICENSE file exists yet),
+     publish order (runtime first, then compiler).
+  **Prerequisite:** `@zeix/le-truc@3.0.0-next.1` on the registry — the split repo types the
+  peer against the published runtime (today `tsconfig.compiler.json` maps it to this repo's
+  committed `types/`), and its `check:package` installs the peer from the registry. The first
+  pre-release was reserved as an owner act (iteration ruling 3, 2026-10-09).
+  **Deliverable:** ADR 0049 (the split, the rulings, the consumer relationship), plus the phased
+  chain filed in the store: bootstrap the repo → le-truc cutover (consume the package, delete
+  the in-tree compiler, re-point the docs build) → CI + publish → le-truc's goldens green
+  through the installed package (the adoption milestone).
+  **Channel/tier:** none (repository structure).
+
+  **Ruled (2026-10-10, owner session): all eight settled → ADR 0049.** Owner rulings (all on the
+  Architect recommendation): (1) **fresh history** — the new repo's first commit is the moved
+  tree, le-truc keeps the record; (2) **`link:` sibling dep** for development, pinned
+  pre-release in CI and releases; (3) **mirror the fixture corpus** at the defaults' relative
+  paths, ADR 0036 s2 stands verbatim; (4) **public from the first push**, MIT LICENSE in the
+  first commit. Architect rulings (no objection): test split per the entry; `check:peer`
+  registry-derived with a runtime-first lockstep convention; split before LT-516's build tasks
+  (its filings target the new repo); the queue tooling is not copied (lean start, reversible).
+  Chain filed: **LT-524** (bootstrap the repository) → **LT-525** (le-truc cutover) → **LT-526**
+  (publish + CI hardening), staged as the NEXT iteration's opening. Prerequisite owner act
+  before LT-524: publish `@zeix/le-truc@3.0.0-next.1` to the registry.
