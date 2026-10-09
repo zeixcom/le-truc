@@ -38,9 +38,12 @@
 		},
 		"./package.json": "./package.json"
 	},
-	"files": ["dist", "README.md"],
+	"files": [
+		"dist",
+		"README.md"
+	],
 	"engines": {
-		"node": ">=18"
+		"node": ">=18.18"
 	},
 	"scripts": {
 		"build": "bun run ../scripts/build-compiler.ts"
