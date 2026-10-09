@@ -466,6 +466,79 @@ export function P({}: {})
 		)
 	})
 
+	test('a template-proper candidate beside content holding a match keeps the exclusion (LT-512)', () => {
+		// The owner ruling's probe: the child renders only `{children}`, and
+		// the parent passes a matching element into it. The plain probe never
+		// sees compose content, so the exclusion is the only thing keeping
+		// the passed element out of the query — the client's querySelector
+		// takes the first match in document order, and the content sits
+		// under the child's host, earlier than the target.
+		const rawChild = compileSource(
+			`export function Child({ children }: { children?: string })
+@{
+		<child-el>{children}
+			<style>@scope {
+:scope {
+	  color: red;
+	}
+}</style>
+		</child-el>
+}`,
+			'child.tsrx',
+		).component as ComponentIR
+		const parent = compileSource(
+			`import { Child } from './child.tsrx'
+export function P({}: {})
+@{
+	expose({})
+		<p-el>
+			<Child><button type="button" class="overlay">in</button></Child>
+			<button type="button" class="overlay">out</button>
+		</p-el>
+}`,
+			'p.tsrx',
+		).component as ComponentIR
+		const composeSource = (
+			parent.root.children.find(n => n.kind === 'compose') as {
+				source: string
+			}
+		).source
+		parent.composedShapes = composedShapesFor(
+			parent.root,
+			new Map<string, RegistryEntry>([
+				[
+					composeSource,
+					{
+						tag: 'child-el',
+						renderedShapes: renderedShapesOf(rawChild),
+					} as RegistryEntry,
+				],
+			]),
+		)
+		const button = (
+			parent.root.children as ReadonlyArray<{ kind: string; tag?: string }>
+		).find(n => n.kind === 'element' && n.tag === 'button') as Extract<
+			ComponentIR['root'],
+			{ kind: 'element' }
+		>
+		// The synthesized form: the exclusion for the bare tag.
+		expect(resolveSelector(parent, button)).toEqual({
+			selector: 'button:not(child-el *)',
+			unique: true,
+		})
+		// The authored-contract form: the ref attr carries the author's
+		// selector, and it still proves itself exclusion-wrapped.
+		;(
+			button as {
+				attrs: Array<{ kind: string; name?: string; selector?: string }>
+			}
+		).attrs.push({ kind: 'ref', name: 'overlay', selector: 'button.overlay' })
+		expect(resolveSelector(parent, button)).toEqual({
+			selector: 'button.overlay:not(child-el *)',
+			unique: true,
+		})
+	})
+
 	test('an unregistered child cannot be excluded — no candidate is unique', () => {
 		const component = withChild(null)
 		expect(

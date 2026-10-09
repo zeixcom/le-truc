@@ -4,7 +4,9 @@
  * enclosing `{children}` with `data-children="<owner-tag>"`, and the
  * structural verifier counts the region as the parent's, so a parent's
  * `first()` into its own content resolves — on both surfaces — through a
- * query that excludes the child's template and re-includes the region.
+ * query that excludes the child's own markup and re-includes the region.
+ * Since LT-512 the exclusion needs no `data-children` marker where the
+ * child's own markup cannot match: the reference ships as authored.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { JSDOM } from 'jsdom'
@@ -157,7 +159,7 @@ const REGION = (owner: string, ...children: string[]) => {
 
 describe('a parent reference into its own children (ADR 0048 s1)', () => {
 	for (const surface of SURFACES)
-		test(`${surface}: \`first('span.x')\` into content inserted at <code> resolves, and the server marks the region`, async () => {
+		test(`${surface}: a reference into content whose child cannot match ships the authored selector, and the server marks the region (LT-512)`, async () => {
 			const child = childPre(surface)
 			expect(child.entry.childrenRegion).toEqual({
 				shapes: [],
@@ -183,9 +185,9 @@ describe('a parent reference into its own children (ADR 0048 s1)', () => {
 			// LTC026 no longer fires: the content is the parent's markup.
 			expect(compiled.diagnostics).toEqual([])
 			const parent = mustCompile(compiled, 'basic-parent')
-			expect(parent.clientCode).toContain(
-				`first('span.x${REGION('basic-parent', 'child-pre')}', 'the marked span')`,
-			)
+			// child-pre renders only `child-pre`, `pre` and `code` — no clash
+			// for `span.x`, so the query ships as authored, no marker needed.
+			expect(parent.clientCode).toContain(`first('span.x', 'the marked span')`)
 			expect(parent.serverCode).toContain(
 				'renderChildPre({ children: __children1.join(\'\') }, "basic-parent")',
 			)
@@ -200,6 +202,11 @@ describe('a parent reference into its own children (ADR 0048 s1)', () => {
 			expect(html).toContain(
 				'<child-pre><pre><code data-children="basic-parent"><span class="x">hi</span></code></pre></child-pre>',
 			)
+			// The shipped query reaches exactly the passed content.
+			const host = new JSDOM(html).window.document.querySelector(
+				'basic-parent',
+			) as Element
+			expect(host.querySelector('span.x')?.textContent).toBe('hi')
 		})
 
 	test('a page-rendered instance has no compiled owner and carries no marker', async () => {
@@ -253,41 +260,112 @@ describe('a parent reference into its own children (ADR 0048 s1)', () => {
 		expect(compiled.diagnostics.map(d => d.code)).toEqual(['LTC007'])
 	})
 
-	test("the child's markup outside the region does not block the re-include", () => {
-		const split = mustCompile(
-			compile(
-				'tsrx',
-				tsrx(
-					'',
-					'ChildSplit',
-					'child-split',
-					'expose({})',
-					'<p class="intro">intro</p><div>{children}</div>',
+	test(`a reference whose child's own markup can match keeps the region-aware exclusion`, async () => {
+		// ChildSplit's own `<p class="intro">` can match a bare `p`, so the
+		// query must exclude the child's template and re-include the region
+		// (LT-512: the element case is unchanged) — the content `p` still
+		// resolves, the intro `p` stays out.
+		for (const surface of SURFACES) {
+			const split = mustCompile(
+				compile(
+					surface,
+					(surface === 'tsrx' ? tsrx : tsx)(
+						'',
+						'ChildSplit',
+						'child-split',
+						'expose({})',
+						'<p class="intro">intro</p><div>{children}</div>',
+					),
+					'examples/child/child-split',
 				),
-				'examples/child/child-split',
-			),
-			'child-split',
-		)
-		const compiled = compile(
-			'tsrx',
-			tsrx(
-				IMPORT('tsrx', 'ChildSplit', 'child/child-split'),
-				'BasicParent',
-				'basic-parent',
-				`const para = first('p', 'the paragraph')
+				'child-split',
+			)
+			const compiled = compile(
+				surface,
+				(surface === 'tsrx' ? tsrx : tsx)(
+					IMPORT(surface, 'ChildSplit', 'child/child-split'),
+					'BasicParent',
+					'basic-parent',
+					`const para = first('p', 'the paragraph')
 		expose({})
 		watch(() => true, () => { para.title = 'x' })`,
-				'<ChildSplit><p>hi</p></ChildSplit>',
-				'{}: {}',
-			),
-			'examples/parent/basic-parent',
-			registryOf(split.entry),
-		)
-		expect(compiled.diagnostics).toEqual([])
-		expect(mustCompile(compiled, 'basic-parent').clientCode).toContain(
-			`first('p${REGION('basic-parent', 'child-split')}', 'the paragraph')`,
-		)
+					'<ChildSplit><p>hi</p></ChildSplit>',
+					'{}: {}',
+				),
+				'examples/parent/basic-parent',
+				registryOf(split.entry),
+			)
+			expect(compiled.diagnostics).toEqual([])
+			const parent = mustCompile(compiled, 'basic-parent')
+			const query = `p${REGION('basic-parent', 'child-split')}`
+			expect(parent.clientCode).toContain(`first('${query}', 'the paragraph')`)
+			const html = await render(
+				[
+					['child-split', split.serverCode],
+					['basic-parent', parent.serverCode],
+				],
+				'basic-parent',
+				'BasicParent',
+			)
+			const host = new JSDOM(html).window.document.querySelector(
+				'basic-parent',
+			) as Element
+			const hits = [...host.querySelectorAll(query)]
+			expect(hits.map(el => el.textContent)).toEqual(['hi'])
+		}
 	})
+})
+
+/* === The template proper beside compose content === */
+
+describe('a reference in the template proper beside compose content (LT-512)', () => {
+	for (const surface of SURFACES)
+		test(`${surface}: the child's exclusion is kept even where its own markup cannot match`, async () => {
+			// The plain probe never sees compose content, so the `children`
+			// shape keeps child-pre excluded even though its own markup
+			// (`child-pre`, `pre`, `code`) cannot match the selector: an
+			// element the parent passes that DID match would otherwise bind
+			// first (the client's querySelector takes the first match in
+			// document order).
+			const child = childPre(surface)
+			const parentSource = (surface === 'tsrx' ? tsrx : tsx)(
+				IMPORT(surface, 'ChildPre', 'child/child-pre'),
+				'BasicParent',
+				'basic-parent',
+				`const slot = first('button[data-slot="outer"]', 'the outer button')
+		expose({})
+		watch(() => true, () => { slot.title = 'outer' })`,
+				`<ChildPre><button type="button" class="overlay">in</button></ChildPre>
+				<button type="button" class="overlay" data-slot="outer">out</button>`,
+				'{}: {}',
+			)
+			const compiled = compile(
+				surface,
+				parentSource,
+				'examples/parent/basic-parent',
+				registryOf(child.entry),
+			)
+			expect(compiled.diagnostics).toEqual([])
+			const parent = mustCompile(compiled, 'basic-parent')
+			expect(parent.clientCode).toContain(
+				`first('button[data-slot="outer"]:not(child-pre *)', 'the outer button')`,
+			)
+			const html = await render(
+				[
+					['child-pre', child.serverCode],
+					['basic-parent', parent.serverCode],
+				],
+				'basic-parent',
+				'BasicParent',
+			)
+			const host = new JSDOM(html).window.document.querySelector(
+				'basic-parent',
+			) as Element
+			expect(
+				host.querySelector('button[data-slot="outer"]:not(child-pre *)')
+					?.textContent,
+			).toBe('out')
+		})
 })
 
 /* === Forwarding === */
@@ -354,12 +432,11 @@ describe('forwarded children keep their owner (ADR 0048 s1)', () => {
 		)
 		expect(compiled.diagnostics).toEqual([])
 		const parent = mustCompile(compiled, 'basic-parent')
-		expect(parent.clientCode).toContain(
-			`span.a${REGION('basic-parent', 'fwd-bare', 'fwd-wrap')}`,
-		)
-		expect(parent.clientCode).toContain(
-			`span.b${REGION('basic-parent', 'fwd-bare', 'fwd-wrap')}`,
-		)
+		// No shape of either forwarder's own markup matches a `span.*`, so
+		// both queries ship as authored (LT-512) — the marker never enters
+		// the client.
+		expect(parent.clientCode).toContain(`first('span.a', 'the forwarded span')`)
+		expect(parent.clientCode).toContain(`first('span.b', 'the wrapped span')`)
 		const html = await render(
 			[
 				['child-pre', child.serverCode],
@@ -376,7 +453,7 @@ describe('forwarded children keep their owner (ADR 0048 s1)', () => {
 		expect(html).toContain(
 			'<fwd-wrap><child-pre><pre><code data-children="fwd-wrap"><div data-children="basic-parent" class="frame"><span class="b">b</span></div></code></pre></child-pre></fwd-wrap>',
 		)
-		// The emitted queries, run against the served DOM, reach exactly the
+		// The shipped queries, run against the served DOM, reach exactly the
 		// parent's content — through a forwarder and through a wrapper.
 		const host = new JSDOM(html).window.document.querySelector(
 			'basic-parent',
@@ -385,16 +462,9 @@ describe('forwarded children keep their owner (ADR 0048 s1)', () => {
 			['a', 'a'],
 			['b', 'b'],
 		] as const) {
-			const query = `span.${cls}${REGION('basic-parent', 'fwd-bare', 'fwd-wrap')}`
-			const hits = [...host.querySelectorAll(query)]
+			const hits = [...host.querySelectorAll(`span.${cls}`)]
 			expect(hits.map(el => el.textContent)).toEqual([text])
 		}
-		// The child's own template stays excluded.
-		expect(
-			host.querySelectorAll(
-				`pre${REGION('basic-parent', 'fwd-bare', 'fwd-wrap')}`,
-			),
-		).toHaveLength(0)
 	})
 })
 
