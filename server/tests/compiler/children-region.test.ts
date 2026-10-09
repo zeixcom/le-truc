@@ -10,7 +10,9 @@
  * A `truc:html` attribute on a content element is the parent's own
  * sanitized binding (LT-492): the data-reference form splices
  * server-side, the reactive thunk plans as a host watch against the
- * region — and only where the host walk reaches the site.
+ * region — and only where the host walk reaches the site. A `first()`
+ * reference into content at a site the walk cannot reach is refused for
+ * the same reason (LT-519): the declaration would never ship.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import createDOMPurify, { type WindowLike } from 'dompurify'
@@ -782,6 +784,128 @@ describe('a `truc:html` attribute in the content (LT-492)', () => {
 					d.code === 'LTC005' &&
 					d.message.includes('`truc:html`') &&
 					d.message.includes(enclosure),
+			)
+			expect(hit).toBeDefined()
+		})
+})
+
+/* === The parent's `first()` reference into content at a scoped site (LT-519) === */
+
+describe('a `first()` reference in the content (LT-519)', () => {
+	const SETUP = `const mark = first('span.x', 'the marked span')
+		expose({})
+		watch(() => true, () => { mark.title = 'marked' })`
+
+	// A content reference plans through the same host walk as the LT-492
+	// binding, so the shared walk argument carries the same enclosures. The
+	// arm and the branch pin on both surfaces; the loop body and the try
+	// body ride the tsrx leg (the `.tsx` server-only `try` is the same
+	// shared walk). The arm's refusal is the raw resolution's — the authored
+	// `first()` is rejected before the ref attribute exists — so its pin
+	// asserts that face; the loop and branch pins assert the checkpoint's.
+	for (const [surface, enclosure, imports, setup, body, params, expected] of [
+		[
+			'tsrx',
+			'an arm',
+			`import { createCell } from '@zeix/le-truc'`,
+			`const open = createCell(true)
+		${SETUP}`,
+			`@if (open.get()) {
+			<ChildPre><span class="x">hi</span></ChildPre>
+		} @else {
+			<p class="none">none</p>
+		}`,
+			'{}: {}',
+			"inside a reactive conditional's arm",
+		],
+		[
+			'tsx',
+			'an arm',
+			`import { createCell } from '@zeix/le-truc'`,
+			`const open = createCell(true)
+		${SETUP}`,
+			`{open.get() ? (
+			<ChildPre><span class="x">hi</span></ChildPre>
+		) : (
+			<p class="none">none</p>
+		)}`,
+			'{}: {}',
+			"inside a reactive conditional's arm",
+		],
+		[
+			'tsrx',
+			'a server-rendered branch',
+			'',
+			SETUP,
+			`@if (open) {
+			<ChildPre><span class="x">hi</span></ChildPre>
+		} @else {
+			<p class="none">none</p>
+		}`,
+			'{ open }: { open?: boolean }',
+			'inside a server-rendered branch',
+		],
+		[
+			'tsx',
+			'a server-rendered branch',
+			'',
+			SETUP,
+			`{open ? (
+			<ChildPre><span class="x">hi</span></ChildPre>
+		) : (
+			<p class="none">none</p>
+		)}`,
+			'{ open }: { open?: boolean }',
+			'inside a server-rendered branch',
+		],
+		[
+			'tsrx',
+			'a server-data loop body',
+			'',
+			SETUP,
+			`<ul class="list">
+			@for (const row of rows) {
+				<li><ChildPre><span class="x">hi</span></ChildPre></li>
+			}
+		</ul>`,
+			'{ rows }: { rows?: string[] }',
+			'inside a server-data loop body',
+		],
+		[
+			'tsrx',
+			'a server-only try',
+			'',
+			SETUP,
+			`@try {
+			<ChildPre><span class="x">hi</span></ChildPre>
+		} @catch (e) {
+			<p class="none">{e.message}</p>
+		}`,
+			'{}: {}',
+			'inside a server-rendered branch',
+		],
+	] as const)
+		test(`${surface}: a reference into composed content in ${enclosure} is refused`, () => {
+			const child = childPre(surface)
+			const compiled = compile(
+				surface,
+				(surface === 'tsrx' ? tsrx : tsx)(
+					`${imports}\n${IMPORT(surface, 'ChildPre', 'child/child-pre')}`,
+					'BasicParent',
+					'basic-parent',
+					setup,
+					body,
+					params,
+				),
+				'examples/parent/basic-parent',
+				registryOf(child.entry),
+			)
+			expect(compiled.component).toBeNull()
+			const hit = compiled.diagnostics.find(
+				d =>
+					d.code === 'LTC005' &&
+					d.message.includes('`first()`') &&
+					d.message.includes(expected),
 			)
 			expect(hit).toBeDefined()
 		})
