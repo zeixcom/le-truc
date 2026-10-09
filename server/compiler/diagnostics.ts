@@ -939,11 +939,11 @@ export const diagnostic = {
 				case 'not-function':
 					return `Handler arg \`${arg}\` has no function type in the parameter annotation. An arg named \`on\` plus a capital letter is a handler arg, which the parent binds as an event listener — declare it with a function type, for example \`${arg}?: (e: Event) => void\`, or rename the arg.`
 				case 'read':
-					return `Handler arg \`${arg}\` is read outside an event attribute. The parent binds a handler arg as a listener on the element that carries it, so the arg has no value inside the component — place it as an event attribute on a native element, \`<button onClick={${arg}}>\`, or forward it to a composed child's handler arg.`
+					return `Handler arg \`${arg}\` is read outside an event attribute. The parent binds a handler arg as a listener on the element that carries it, so the arg has no value inside the component — place it as an event attribute on a raw element, \`<button onClick={${arg}}>\`, or forward it to a composed child's handler arg.`
 				case 'in-scope':
 					return `Handler arg \`${arg}\` is placed inside ${condition.where}. The client recreates the ${condition.scope}'s elements on every ${condition.scope === 'arm' ? 'flip' : 'reconcile'}, so the listener the parent binds at connect would stay on a removed element — place the arg on an element outside the ${condition.scope}.`
 				case 'in-loop':
-					return `Handler arg \`${arg}\` is placed inside a server-data ${condition.loop} body. The parent binds one listener for each placement, and the loop renders the element once for each item — place the arg on an element outside the loop.`
+					return `Handler arg \`${arg}\` is placed inside a server-data ${condition.loop} body. The parent binds one listener for each placement, and the loop renders the element once for each item, so only the first item's element would get one — place the arg on an element outside the loop.`
 			}
 		})()
 		return error('LTC081', message, rangeOf(source, at))

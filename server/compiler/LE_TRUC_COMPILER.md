@@ -878,10 +878,14 @@ arg, a required Parser arg whose fallback does not resolve at module scope,
 or a suppressed harness emits no helper and is never page-rendered.
 
 Measured against the corpus, the Folded tier is the **majority** path: the
-classifier folds 27 of 35 components (Simulated: the other eight — compose
-reads through `form-combobox`/`form-listbox` and `form-colorgraph`/
-`module-coloreditor`, `form-spinbutton`'s ref-reading Parser fallbacks, and
-derived-task components such as `module-lazyload`; Static: none yet).
+classifier folds 36 of 43 components (Simulated: the other seven — compose
+reads of a Simulated-tier child at `form-combobox`, `form-colorgraph`,
+`module-coloreditor` and `module-listnav`; `hidden`/`disabled` attributes
+with no server-renderable value in `form-listbox` and `form-spinbutton`;
+`module-carousel`'s `panels`/`dots`/`buttons` reading the client-only
+`all()`; Static: none yet). A component whose only async state is a `Task`
+folds too — `module-lazyload` renders the nil arm, which is what the client
+shows until the task settles, so the realm buys nothing.
 `first()` in
 `watch()`/`on()` positions is a client concern that reaches no served byte
 and was never a refusal site — what routes a component is a site whose
@@ -988,7 +992,7 @@ byte-identical across all three tiers**, pinned corpus-wide in
 A Static-tier component gets the phase-1 skeleton with its unresolved expressions
 omitted, and the client corrects at connect. No realm is opened.
 
-No corpus component routes here today — the census is 20 Folded / 2 Simulated /
+No corpus component routes here today — the census is 36 Folded / 7 Simulated /
 0 Static. The components with unanswerable reads (`module-scrollarea`'s scroll
 geometry — at 2,091 occurrences the corpus's largest would-be cost driver —
 `card-mediaqueries`' `matchMedia`, `form-colorgraph`'s `getBoundingClientRect`,
