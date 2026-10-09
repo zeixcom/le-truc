@@ -1188,7 +1188,9 @@ the six `.tsrx`-grammar `TSRX###` codes) fall into families:
   that resolved to no own-template element; `on()` return updates write
   host props and are not recorded) — as `roleWrites` on the entry, and a
   parent `watch` binding on a `first()` reference into its compose site's
-  content — the one client construct the content admits (LTC011) — that
+  content — the one AUTHORED write channel the scan reads; a reactive
+  `truc:html` in content (LT-492) is a template-authored write it does not
+  see — that
   writes the same property, attribute, class token, style property or text
   on an element carrying that role's class is LTC084, reported at the
   parent's binding and naming both writers. Property/attribute writes

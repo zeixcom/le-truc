@@ -7,12 +7,18 @@
  * query that excludes the child's own markup and re-includes the region.
  * Since LT-512 the exclusion needs no `data-children` marker where the
  * child's own markup cannot match: the reference ships as authored.
+ * A `truc:html` attribute on a content element is the parent's own
+ * sanitized binding (LT-492): the data-reference form splices
+ * server-side, the reactive thunk plans as a host watch against the
+ * region — and only where the host walk reaches the site.
  */
 import { afterAll, describe, expect, test } from 'bun:test'
+import createDOMPurify, { type WindowLike } from 'dompurify'
 import { JSDOM } from 'jsdom'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import type { RegistryEntry } from '../../compiler/registry'
+import { configureHtmlSanitizer } from '../../compiler/runtime'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
 const generated = createGeneratedDir('children-region')
@@ -546,6 +552,239 @@ describe('extracted arm and list templates carry the marker (ADR 0048 s1)', () =
 			'<template data-list="0"><li><child-pre><pre><code data-children="basic-parent"><span class="x">x</span></code></pre></child-pre></li></template>',
 		)
 	})
+})
+
+/* === The parent's own sanitized binding (ADR 0048 s1, LT-492) === */
+
+describe('a `truc:html` attribute in the content (LT-492)', () => {
+	// `configureHtmlSanitizer` is process-wide and shared with the library's
+	// client half (LT-138): a test that configures one restores the
+	// fail-closed default (escape everything) before the next.
+	const purify = createDOMPurify(new JSDOM('').window as unknown as WindowLike)
+	const stripDangerousMarkup = (html: string): string => purify.sanitize(html)
+
+	for (const surface of SURFACES)
+		test(`${surface}: a static arg renders sanitized into the children string`, async () => {
+			const child = childPre(surface)
+			const compiled = compile(
+				surface,
+				(surface === 'tsrx' ? tsrx : tsx)(
+					IMPORT(surface, 'ChildPre', 'child/child-pre'),
+					'BasicParent',
+					'basic-parent',
+					'expose({})',
+					'<ChildPre><div truc:html={start} /></ChildPre>',
+					'{ start }: { start?: string }',
+				),
+				'examples/parent/basic-parent',
+				registryOf(child.entry),
+			)
+			expect(compiled.diagnostics).toEqual([])
+			const parent = mustCompile(compiled, 'basic-parent')
+			const html = await render(
+				[
+					['child-pre', child.serverCode],
+					['basic-parent', parent.serverCode],
+				],
+				'basic-parent',
+				'BasicParent',
+				{ start: '<p>Rich <em>content</em></p>' },
+			)
+			// Unconfigured, the sanitizer's fail-closed default escapes the
+			// markup — the same single channel the template proper uses.
+			expect(html).toContain(
+				'<code data-children="basic-parent"><div>&lt;p&gt;Rich &lt;em&gt;content&lt;/em&gt;&lt;/p&gt;</div></code>',
+			)
+		})
+
+	test('a configured sanitizer strips a script from the content markup', async () => {
+		configureHtmlSanitizer(stripDangerousMarkup)
+		try {
+			const child = childPre('tsrx')
+			const compiled = compile(
+				'tsrx',
+				tsrx(
+					IMPORT('tsrx', 'ChildPre', 'child/child-pre'),
+					'BasicParent',
+					'basic-parent',
+					'expose({})',
+					'<ChildPre><div truc:html={start} /></ChildPre>',
+					'{ start }: { start?: string }',
+				),
+				'examples/parent/basic-parent',
+				registryOf(child.entry),
+			)
+			expect(compiled.diagnostics).toEqual([])
+			const parent = mustCompile(compiled, 'basic-parent')
+			const html = await render(
+				[
+					['child-pre', child.serverCode],
+					['basic-parent', parent.serverCode],
+				],
+				'basic-parent',
+				'BasicParent',
+				{
+					start: '<p onclick="steal()">hi</p><script>alert(1)</script>',
+				},
+			)
+			expect(html).toContain(
+				'<code data-children="basic-parent"><div><p>hi</p></div></code>',
+			)
+		} finally {
+			configureHtmlSanitizer(undefined)
+		}
+	})
+
+	for (const surface of SURFACES)
+		test(`${surface}: a reactive thunk plans a host watch against the region`, async () => {
+			const child = childPre(surface)
+			const compiled = compile(
+				surface,
+				(surface === 'tsrx' ? tsrx : tsx)(
+					`import { createState } from '@zeix/le-truc'\n${IMPORT(surface, 'ChildPre', 'child/child-pre')}`,
+					'BasicParent',
+					'basic-parent',
+					`const body = createState('<b>seed</b>')
+		expose({})`,
+					'<ChildPre><article class="pane" truc:html={() => body.get()} /></ChildPre>',
+					'{}: {}',
+				),
+				'examples/parent/basic-parent',
+				registryOf(child.entry),
+			)
+			expect(compiled.diagnostics).toEqual([])
+			const parent = mustCompile(compiled, 'basic-parent')
+			// The watch addresses the content element through the same
+			// sanitized sink the template proper uses (LT-025), under the
+			// tag-derived query name an unreferenced element gets.
+			expect(parent.clientCode).toContain(
+				'watch(() => body.get(), dangerouslyBindInnerHTML(article, { sanitize: sanitizeHtml }))',
+			)
+			// The value harness renders the seed server-side, escaped — both
+			// halves share one sanitizer configuration (LT-138).
+			const html = await render(
+				[
+					['child-pre', child.serverCode],
+					['basic-parent', parent.serverCode],
+				],
+				'basic-parent',
+				'BasicParent',
+			)
+			expect(html).toContain(
+				'<article class="pane">&lt;b&gt;seed&lt;/b&gt;</article>',
+			)
+		})
+
+	test('the static arg stays legal in scopes the host walk does not reach', async () => {
+		// The data-reference form needs no client half, so a server-rendered
+		// branch folds it like any server expression — only the REACTIVE
+		// thunk is scope-refused below.
+		const child = childPre('tsrx')
+		const compiled = compile(
+			'tsrx',
+			tsrx(
+				IMPORT('tsrx', 'ChildPre', 'child/child-pre'),
+				'BasicParent',
+				'basic-parent',
+				'expose({})',
+				`@if (open) {
+					<ChildPre><div truc:html={start} /></ChildPre>
+				}`,
+				'{ open, start }: { open?: boolean; start?: string }',
+			),
+			'examples/parent/basic-parent',
+			registryOf(child.entry),
+		)
+		expect(compiled.diagnostics).toEqual([])
+		const parent = mustCompile(compiled, 'basic-parent')
+		const html = await render(
+			[
+				['child-pre', child.serverCode],
+				['basic-parent', parent.serverCode],
+			],
+			'basic-parent',
+			'BasicParent',
+			{ open: true, start: '<p>Rich</p>' },
+		)
+		expect(html).toContain('<div>&lt;p&gt;Rich&lt;/p&gt;</div>')
+	})
+
+	// The host walk plans content constructs only at a host-direct compose
+	// site; anywhere else the reactive thunk would be a silently inert watch,
+	// so the whole-template placement check refuses it. Shared walk code —
+	// the `.tsrx` spelling carries the matrix.
+	for (const [, setup, body, params, enclosure] of [
+		[
+			'an arm',
+			`const open = createCell(true)
+		const body = createState('<b>seed</b>')
+		expose({})`,
+			`@if (open.get()) {
+			<ChildPre><article truc:html={() => body.get()} /></ChildPre>
+		} @else {
+			<p class="none">none</p>
+		}`,
+			'{}: {}',
+			'inside an arm',
+		],
+		[
+			'a reactive-list item',
+			`const items = createList<string>(['a'], { keyConfig: s => s })
+		const body = createState('<b>seed</b>')
+		expose({})`,
+			`<ul class="list">
+			@for (const item of items; key k) {
+				<li><ChildPre><article truc:html={() => body.get()} /></ChildPre></li>
+			}
+		</ul>`,
+			'{}: {}',
+			'inside a reactive-list loop body',
+		],
+		[
+			'a server-data loop body',
+			"const body = createState('<b>seed</b>')\n\t\texpose({})",
+			`<ul class="list">
+			@for (const row of rows) {
+				<li><ChildPre><article truc:html={() => body.get()} /></ChildPre></li>
+			}
+		</ul>`,
+			'{ rows }: { rows?: string[] }',
+			'inside a server-data loop body',
+		],
+		[
+			'a server-rendered branch',
+			"const body = createState('<b>seed</b>')\n\t\texpose({})",
+			`@if (open) {
+			<ChildPre><article truc:html={() => body.get()} /></ChildPre>
+		}`,
+			'{ open }: { open?: boolean }',
+			'inside a server-rendered branch',
+		],
+	] as const)
+		test(`a reactive thunk in composed content ${enclosure} is refused`, () => {
+			const child = childPre('tsrx')
+			const compiled = compile(
+				'tsrx',
+				tsrx(
+					`import { createCell, createList, createState } from '@zeix/le-truc'\n${IMPORT('tsrx', 'ChildPre', 'child/child-pre')}`,
+					'BasicParent',
+					'basic-parent',
+					setup,
+					body,
+					params,
+				),
+				'examples/parent/basic-parent',
+				registryOf(child.entry),
+			)
+			expect(compiled.component).toBeNull()
+			const hit = compiled.diagnostics.find(
+				d =>
+					d.code === 'LTC005' &&
+					d.message.includes('`truc:html`') &&
+					d.message.includes(enclosure),
+			)
+			expect(hit).toBeDefined()
+		})
 })
 
 /* === The args annotation's type import (LT-479) === */

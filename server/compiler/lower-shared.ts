@@ -431,14 +431,22 @@ export const lowerExpressionChild = (
  * Composed-element children (ADR 0024 sub-design 10, LT-018): the markup
  * between a composed element's opening/closing tags substitutes into the
  * child's own template wherever it writes a bare `{children}` expression —
- * compile-time content substitution, not a live client binding (that markup
- * is rendered once, server-side, into the string forwarded as the child's
- * `children` server arg). Anything that would need CLIENT wiring — refs,
- * events, reactive/pass attributes, nested control-flow, or further
- * composition — has no meaning at a content-substitution site, so it is
- * diagnosed instead of silently dropped or silently inert. The two message
- * fragments naming the offending shapes are surface vocabulary (the `.tsrx`
- * sigil spelling vs. the `.tsx` expression spelling).
+ * compile-time content substitution into the string forwarded as the child's
+ * `children` server arg. The content is the parent's own markup (ADR 0048
+ * s1), so its statics and server expressions render into that string, its
+ * `first()` references plan from the host (attached after lowering), and a
+ * `truc:html` attribute is the parent's own sanitized binding (LT-492):
+ * the data-reference form splices server-side through `sanitizeHtml`, the
+ * reactive thunk plans as a host watch against the Children Region — but
+ * only where the host walk reaches the site, so the scoped positions
+ * (inside an arm, a list item or a server-rendered branch) are refused at
+ * effect planning (`validateArmSetPlacement`), not here. Anything else that
+ * would need CLIENT wiring — events, reactive/pass attributes, nested
+ * control-flow, or further composition — has no meaning at a
+ * content-substitution site, so it is diagnosed instead of silently
+ * dropped or silently inert. The two message fragments naming the
+ * offending shapes are surface vocabulary (the `.tsrx` sigil spelling vs.
+ * the `.tsx` expression spelling).
  */
 export const validateComposedChildren = (
 	ctx: ExtractContext,
@@ -483,7 +491,14 @@ export const validateComposedChildren = (
 			return
 		}
 		for (const attr of node.attrs) {
-			if (attr.kind === 'static' || attr.kind === 'server') continue
+			if (
+				attr.kind === 'static' ||
+				attr.kind === 'server' ||
+				// The parent's own sanitized binding (ADR 0048 s1, LT-492):
+				// server-spliced or host-planned, per `reactive`.
+				attr.kind === 'html'
+			)
+				continue
 			ctx.diagnostics.push(
 				diagnostic.composedElementUnsupported(
 					ctx.source,

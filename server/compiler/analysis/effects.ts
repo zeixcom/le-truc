@@ -2803,6 +2803,50 @@ const validateArmSetPlacement = (fx: EffectsContext): void => {
 					serverBranchFix(inServerBranch),
 				),
 			)
+		// A reactive `truc:html` in composed content is the parent's own
+		// binding (ADR 0048 s1, LT-492), planned by the HOST walk
+		// (`planContentConstructs`) — which never reaches a site inside an
+		// arm, a loop body or a server-rendered branch. Refusing here, at the
+		// one whole-template checkpoint, keeps those positions from compiling
+		// as silently inert watches. The data-reference form needs no client
+		// half, so it stays legal in every scope.
+		if (node.kind === 'compose' && (inArm || loop !== null || inServerBranch))
+			for (const child of node.children)
+				walkTemplate(
+					child,
+					inner => {
+						if (
+							!isElement(inner) ||
+							!inner.attrs.some(a => a.kind === 'html' && a.reactive)
+						)
+							return
+						const enclosure = inArm
+							? 'an arm'
+							: loop?.kind === 'reconcile'
+								? 'a reactive-list loop body'
+								: loop?.kind === 'each'
+									? 'a server-data loop body'
+									: 'a server-rendered branch'
+						const fix = inArm
+							? 'The arm is recreated from its template on every switch, and the content renders server-side into each clone, so the binding goes stale on the first flip — move the composed child out of the arm.'
+							: loop !== null
+								? 'The content renders per item and its elements are recreated on every pass, so a host-level binding addresses stale markup — move the composed child out of the loop.'
+								: inServerBranch === 'try-body'
+									? 'The `try` renders its body once per render, and its body cannot hold the binding — move the composed child out of the `try`.'
+									: inServerBranch === 'try-catch'
+										? 'The catch arm folds once per render, so the binding would address markup that never re-renders — move the composed child out of the catch arm.'
+										: 'The branch folds once per render, so the binding would address markup that never re-renders — move the composed child out of the branch.'
+						diagnostics.push(
+							diagnostic.unsupported(
+								source,
+								inner.node,
+								`A reactive \`truc:html\` in the content of a composed element inside ${enclosure}`,
+								fix,
+							),
+						)
+					},
+					{ intoCompose: false },
+				)
 		// An arm and a reactive-list item are Mount Scopes: what sits inside
 		// starts over from its own mount. A server-data loop body stays
 		// `each()`'s; a server-rendered branch or composed content encloses.
@@ -2994,8 +3038,9 @@ const handleReactiveConditional = (
 		if (root.kind === 'element')
 			fx.armSelectors.set(rootName, resolveSelector(fx, root).selector)
 		const armScope = mountScope(fx, {
-			// Composed content is never queried (its elements carry no
-			// constructs — `validateComposedChildren`), so the scope root's
+			// Composed content is never queried here (a reactive `truc:html`
+			// in it is `validateArmSetPlacement`'s refusal — only the host
+			// walk plans content constructs), so the scope root's
 			// element-typed queries never touch the compose node.
 			root: root as ElementNode,
 			rootRef: () => {
@@ -3057,8 +3102,9 @@ const handleReactiveConditional = (
 				visitDescendants(child)
 			}
 		}
-		// Composed content carries no constructs (`validateComposedChildren`),
-		// so the descent never plans against the compose node itself.
+		// Composed content carries no constructs in an arm (a reactive
+		// `truc:html` in it is `validateArmSetPlacement`'s refusal), so the
+		// descent never plans against the compose node itself.
 		visitDescendants(root as ElementNode)
 		// The root local is only declared when something reads it.
 		if (
@@ -3372,7 +3418,7 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 	}
 	if (node.kind === 'compose') {
 		emitComposeEffects(fx, node)
-		planContentRefs(fx, node)
+		planContentConstructs(fx, node)
 		return
 	}
 	if (!isElement(node)) return
@@ -3482,20 +3528,32 @@ const emitTopEffects = (fx: EffectsContext, node: TemplateNode): void => {
 }
 
 /**
- * The `first()` references into a compose site's content (ADR 0048 s1): the
- * content is this scope's markup, rendered into the child's Children
- * Region, so its references query from here. A reference is the one client
- * construct the content admits; the rest are LTC011's, nested compose
- * sites included, so the walk stops at them.
+ * The client constructs a compose site's content carries (ADR 0048 s1):
+ * the content is this scope's markup, rendered into the child's Children
+ * Region, so its `first()` references query from here, and a reactive
+ * `truc:html` on one of its elements is the parent's own sanitized binding
+ * (LT-492) — planned exactly like an element of the template proper: one
+ * query under the reference's name when the author addressed the element,
+ * else the tag's, and the shared construct emission (the watch-html sink).
+ * References without the attribute keep today's query-only shape; a
+ * non-reactive `truc:html` needs nothing here (the server render splices
+ * it, sanitized, into the children string). Everything else is LTC011's,
+ * nested compose sites included, so the walk stops at them — and a site
+ * the host walk cannot reach (inside an arm, a list item or a
+ * server-rendered branch) is `validateArmSetPlacement`'s refusal, which is
+ * why this function runs only from the host-level walk.
  */
-const planContentRefs = (fx: EffectsContext, node: ComposeNode): void => {
+const planContentConstructs = (fx: EffectsContext, node: ComposeNode): void => {
 	for (const child of node.children)
 		walkTemplate(
 			child,
 			inner => {
 				if (!isElement(inner)) return
 				const refAttr = refOf(inner)
-				if (!refAttr) return
+				const reactiveHtml = inner.attrs.some(
+					a => a.kind === 'html' && a.reactive,
+				)
+				if (!refAttr && !reactiveHtml) return
 				const { selector, unique } = resolveSelector(fx, inner)
 				if (!unique)
 					fx.diagnostics.push(
@@ -3505,7 +3563,12 @@ const planContentRefs = (fx: EffectsContext, node: ComposeNode): void => {
 							`No unique selector for <${inner.tag}> in the content passed to <${node.component}> — add a distinguishing static attribute (\`role\`, \`class\` or \`data-*\`).`,
 						),
 					)
-				fx.addQuery(refAttr.name, selector, 'one')
+				const query = fx.addQuery(
+					refAttr?.name ?? sanitizeVarName(inner.tag),
+					selector,
+					'one',
+				)
+				if (reactiveHtml) emitConstructEffects(fx, inner, query)
 			},
 			{ intoCompose: false },
 		)
