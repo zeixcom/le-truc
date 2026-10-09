@@ -14,6 +14,75 @@ into this prose.
 
 ---
 
+Pruned 2026-10-09, eighth pass (Architect, after the "P6 cleanup round and the composition
+batch" iteration closed; the `writer` recorded it in `CHANGELOG.md [Unreleased]` the same day).
+Consumed: LT-093, LT-136, LT-282, LT-437, LT-460–LT-467, LT-469–LT-472, LT-474, LT-476–LT-479,
+LT-481, LT-482, LT-485, LT-486, LT-488, LT-490, LT-491, LT-495, LT-496, LT-498, LT-501–LT-505,
+LT-507, LT-512. Where their rulings live: ADR 0048 s1–s5; ADR 0033 as revised (s3–s6); ADR 0024
+s10 and ADR 0046 s1, amended in place; COMPILER_SPEC §2, §12 and the decision log (D-32), with
+LT-480 ruling 4. `HOST_PROFILE.md`: compose arm roots and their passes (LT-460, LT-481);
+§ Handler args (LT-461); the item/Mount-Scope passage (LT-470); § Styles (LT-501, LT-504);
+§ Element references (the region re-include, LT-512's boundary, the hand-authored mirror rule,
+raw same-tag counting; LT-472, LT-478, LT-496, LT-498); the roles, one-writer and content-model
+paragraphs (LT-474, LT-476, LT-477); the `children` JSX mapping (LT-495). `LE_TRUC_COMPILER.md`:
+the plan walks, server-only `try` included (LT-482), and the baseline exceptions (LT-502).
+`errors.md`: LTC005's compose/`try` faces (LT-470, LT-488), LTC066–LTC089, LTC081, LTC083–LTC085.
+`VOCABULARY_LEDGER.md`: LTC081–LTC089 and `data-children`. `SERVER.md`: `docs-src/api/` is build
+output (LT-282). Code docs: `analysis/harvest.ts` (LT-093), `analysis/effects.ts` (LT-470,
+LT-461), `analysis/selectors.ts`, `children-region.ts`, `host-profile.d.ts` (LT-495),
+`for-collection-shadow.test.ts` (LT-136), `layout-graph.test.ts` and `examples/main.ts` (LT-467,
+LT-485). Component sources: `section-menu.tsx` (LT-469), `module-todo.tsx` (LT-466),
+`form-checkbox.tsx`/`.md` (LT-479). `spike/children-scope/FINDING.md` (LT-465, ADR 0048's
+evidence). Open handoffs: LT-480 (its 2026-10-09 handoff addendum), LT-518 (the owed copy pass);
+LT-254, LT-489, LT-492–LT-494, LT-497, LT-506, LT-511, LT-513–LT-515, LT-517 and the others that
+cite a consumed ID restate what they need.
+
+**Rulings carried from the 2026-10-09 eighth pass** (recorded nowhere else; do not re-litigate):
+- **A component whose only async state is a `Task` folds** (LT-093). The server renders the nil
+  arm, which is what the client shows until the task settles, so the realm buys nothing.
+  module-lazyload is Folded by design; the equivalence audit records its nil→err connect diff.
+- **`render<Name>` takes an optional second parameter, the content owner's tag** (LT-472). Only a
+  component with a `{children}` insertion or forward has it. A compose site passes its own tag, a
+  bare forward passes its owner on, a page render passes nothing (no marker is written). Under
+  D-32's policy it is part of the public `render<Name>` signature once LT-480 publishes it.
+- **An item-setup `first()` into an item's compose content emits the authored selector verbatim**
+  (LT-472): scoped to the item root with no composed-child exclusion, per ADR 0046's item-ref
+  policy. The region-resident check still drops a selector the child's own markup could match.
+- **Children-contract reading limits are accepted** (LT-474, LT-477). An intersection
+  (`Children<…> & string`) reads as no contract; LTC083 carries no `related` range to the
+  annotation; a role-addressed required query is not deduplicated; an unknown model literal
+  records `'any'` (tsc rejects it); "literal children" stop at a nested compose site. Widen only
+  on a real case.
+- **LTC084's accepted edges** (LT-476). The parent's write channel is the reference-targeted
+  `watch` binding only (compose content admits nothing else today; LT-515 would widen it).
+  Properties and attributes count as one write. A role-addressed reference whose selector also
+  names a custom tag resolves on the deferred leg and is recorded only when no compose site
+  claimed it — analysis-only; a bare `.role` selector never defers.
+- **LTC087 errs toward warning** (LT-502, LT-505). It tests the subject compound alone, counts a
+  dynamic attribute as a possible match, and merges a compose site's static args even when they
+  never render as attributes; ticker, todo and codeblock keep their `basic-button > *` limits for
+  that reason. **Rejected:** a single-guard lowered form (the lowered CSS already came in under
+  v3's size).
+- **A relative rule such as `> my-tag .x` inside `@scope` is not LTC066** (LT-501). Only a rule
+  *led* by the own tag is.
+- **LT-512's rejected and waived options.** A per-site content-directed clash was rejected (no
+  consumer; its nested-composition, `{children}`-forward and unregistered-source corners need a
+  design). module-codeblock's `copy`/`overlay` keep `:not(module-scrollarea *)` by design.
+- **LT-495's rejected alternative:** retyping each child's `children` as `JSX.Element`. The host
+  profile translates instead, and the string stays the server-side truth.
+- **The test layout's `<base href="/">` turns a bare `#fragment` link into a navigation away**
+  (LT-491). A fixture link carries the page path (`/test/<tag>#id`); fix the fixture, never the
+  layout. form-listbox's fixture still has bare `#` links, safe only because its spec never
+  clicks them.
+- **A spec-less example folder is not a `test:variants` gap** (LT-485). The runner refuses a set
+  with no `<tag>.spec.ts`; `main.ts` registration on every `/test/*` page is the accepted smoke
+  test.
+- **A probe-first task may close `done` with a finding** (ITERATION ruling 9 of 2026-10-06).
+  When a task states a premise to check and the premise is false, it closes with a pinning test
+  or a one-line finding rather than building the fix (LT-136, LT-282).
+
+---
+
 Pruned 2026-10-09 (Architect, next-iteration preparation, owner-approved). Deleted: LT-134,
 LT-135, LT-311, LT-297.
 - **LT-134**: nothing to do. LTC035 retired at LT-275, LTC038's fix names no per-arm shape, and

@@ -7,172 +7,89 @@ in this file; contributors claim and annotate only through `bun run scripts/queu
 are unique by construction — the filename is the ID; the "Next free task ID" line below
 allocates the next one.
 
-**Iteration opened 2026-10-06: the P6 cleanup round and the composition batch.** The
-previous iteration (the corpus port and the pre-publish reshapes, opened 2026-10-02) closed on
-2026-10-06. The `writer` recorded it in `CHANGELOG.md [Unreleased]`, and its 61 entries are
-pruned (`queue/LEDGER.md`, seventh pass).
+**Iteration opened 2026-10-09: the first package and the P6 remainder.** The previous
+iteration (the P6 cleanup round and the composition batch, opened 2026-10-06) closed on
+2026-10-09. The `writer` recorded it in `CHANGELOG.md [Unreleased]`, and its 38 entries are
+pruned (`queue/LEDGER.md`, eighth pass).
 
-**Why now (Architect, 2026-10-06).** The first publish waits for the P6 cleanup round (owner,
-2026-09-19), and the corpus port's close unblocked P6. P6 does two jobs. It finishes the
-standing cleanup items, and it converts the compiled corpus from raw custom-element markup to
-composed sub-components (LT-463), so that the corpus models ownership before the compiler
-ships. The composition probe for LT-463 found two compose-lowering bugs (LT-460), and LT-468's
-review found a third (LT-470). Those are equivalence gaps that more compose sites would only
-multiply, so they run first. Section-menu (LT-469) closes the last uncompiled example folder.
+**Why now (Architect, 2026-10-09).** The first publish waited for the P6 cleanup round (owner,
+2026-09-19). That round has closed apart from the conversions LT-463 left raw. D-32 is ruled
+(LT-471), so P1 opens unblocked: LT-480 reshapes the contract and LT-254 publishes it. The P6
+remainder runs beside it and empties the band, so the corpus a consumer meets in the first
+pre-release composes every site LT-463 named. Template emission (LT-257) cannot be built
+against ADR 0043 as written, so its design session runs now and the build follows next
+iteration.
 
-**Rulings taken at planning (Architect with the owner, 2026-10-06).**
-1. **Scope: P6 plus the two P2b compose fixes.** LT-460 and LT-470 join from P2b because they
-   sit in the compose lowering that LT-461 extends and LT-463 exercises. The rest of P2b stays
-   in the backlog. The CSS-departures cluster behind LT-409 was struck by ruling 14.
-2. **LT-461 is implementation, not a session.** The owner ruled its design on 2026-10-06, so its
-   area flips from `design` to `compiler` and it becomes pickable. LTC081 is reserved for its
-   rule 6.
-3. **Compose enablers run one at a time** (track E): LT-460 → LT-470 → LT-481 → LT-482 → LT-488 → LT-461 all change
-   compose-site lowering and its Mount Scope placement. Run in parallel, they would conflict at
-   integration.
-4. **LT-463 is split (owner).** Its two sites that need the children contract
-   (`module-codeblock`'s scrollarea, and `form-checkbox` with its label as children) move to
-   LT-462's implementation tasks. LT-463 converts the rest once tracks E and T have landed, so
-   the iteration's exit does not wait on a design session.
-5. **`module-todo` is edited in sequence:** LT-466 → LT-467 → LT-463. Each `needs:` field says
-   so, and track T orders the first two.
-6. **LT-135 is merged into LT-093 (owner).** It is the same free-name-through-a-const wall,
-   fixed in one pass through the client-needed fixpoint. LT-093 does LT-135's half first.
-7. **Two design sessions are scheduled (owner).**
-   - LT-462 (the children contract → ADR 0048) runs after the LT-465 spike reports in
-     `NOTES.md`.
-   - LT-471 (D-32, the compiler's public contract) can run at any point. Nothing in this
-     iteration waits on it, and it gates LT-254. Ruling it now means P1 opens unblocked.
-
-   ADR 0048's implementation tasks join this chain if they are ruled before track K closes.
-   Otherwise they are banded P6 and open the next iteration beside P1. The session only delays
-   them; it never holds this iteration open.
-10. **LT-462 ruled into ADR 0048 (owner, 2026-10-06), before track K closed.** Its tasks join as
-    track C. Three owner rulings shape them:
-    - **Self-nesting gates too little, never too much.** It survives ruling 14 for authored
-      limits in the lowered form only (LT-501).
-    - **A child styles its declared role boxes**, at zero specificity. Withdrawn by ruling 14;
-      LT-475 struck.
-    - **The content model is `Children`'s second type argument** (LT-477).
-
-    Track C serializes after track E (LT-472 needs LT-461), because the region marker changes
-    compose-site lowering (ruling 3). LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477.
-11. **LT-471 ruled D-32 (owner, 2026-10-06).** There is one published entry point, the corpus
-    pass. It writes to `outDir`. `RegistryEntry` is narrowed to a public projection, and the
-    generated-module API is under semver (`argsFromAttrs` excluded). The reshape is LT-480,
-    banded P1. It opens the next iteration ahead of LT-254 and stays out of this chain, because
-    P1 waits for this round.
-12. **LT-463's residues (owner, 2026-10-07).** LT-490 (a handler-arg body's setup const is
-    dropped from the client) joins track E, and LT-491 (section-menu's link-click close) joins
-    track M. The conversions LT-463 left raw are banded P6 and stay out of this chain. They are
-    LT-489 (BasicButton modifiers), LT-492 → LT-493 (`truc:html` in composed children, then
-    splitview) and LT-494 (FormRadiogroup's `.split-button` presentation, then module-todo).
-    The exit criterion counts LT-463's sites as composed or ruled into one of them.
-13. **A task that changes compiled corpus output gates `test:server` (Architect, 2026-10-07).**
-    LT-463 changed generated modules, the server-render snapshots and the authored `.tsx`
-    typing, but its gates named only `check:corpus` and `test:variants`. Sixteen server tests
-    went red unseen. LT-495 repairs them. From now on an `examples` task that edits a compiled
-    source lists `test:server` and `typecheck` among its gates, and the review runs them.
-14. **Compiled CSS is platform CSS (owner, 2026-10-07; ADR 0033 rewritten, ADR 0048 s5 cut
-    back).** The shadow-root emulation is withdrawn. Its compiler-derived boundaries, ownership
-    re-includes and root-insertion exception made the applied rules unpredictable. Scoping is
-    now an authored `@scope { … }` with author-written limits. The compiler warns at concrete
-    leaks and never emits a limit. Consequences:
-    - LT-473 was approved on its own terms but is not integrated. LT-501 salvaged
-      `css-probe-child` from its branch, which is now removed.
-    - LT-499, LT-500 and LT-475 are struck, and so is the P2b CSS-departures cluster
-      (LT-405, LT-407, LT-408, LT-409); the revision answers LT-409's question.
-    - LT-501 (emission, errors and the corpus cutover in one commit) → LT-502 (warnings, and
-      trimming the codemod's limits) → LT-503 (writer) join track C ahead of LT-478, which is
-      re-scoped.
-    - LTC070 retires. LTC086–LTC089 are reserved for LT-501/LT-502.
-15. **Corpus-level checks are deferred to P7 (owner, 2026-10-08).** A check whose verdict depends
-    on more than the compiler sees (page markup, client scripts, render args) is a stand-alone
-    gate over the reference corpus, with an allowlist that gives a reason per surviving finding.
-    It is not a compiler diagnostic and gets no `LTC` code. LT-506 (dead CSS: the template is not
-    the only markup source, ADR 0033 s2) is reframed so, and it joins `check:html` (LT-508 →
-    LT-509, LT-510) in P7, out of this iteration, until iteration planning re-prioritizes them.
-    Whichever lands first builds the allowlist matcher the other reuses. Known findings don't
-    wait for the gates: LT-507 removes the known dead selectors in this iteration.
-16. **Track C's remainder runs in three parallel steps (owner, 2026-10-08).** LT-478 has no
-    stake in the children contract's compiler work, so it moves to track CB and runs beside
-    LT-474. LT-476 moves to track C2 and needs LT-477 as well as LT-474: both extend the compose
-    registry, add a diagnostic and write error copy, and in parallel they would conflict at
-    integration. LT-476 then runs beside LT-479. The steps are LT-478 ∥ LT-474, then LT-477,
-    then LT-479 ∥ LT-476.
-8. **Acceptance criteria are goals, not constraints to satisfy by workaround** (ruling 10 of
-   the last iteration still stands). The goals are byte-identical CSS across a variant set, a
-   warning baseline of 0 (deliberate component-bound page-wide rules excepted, `examples/test/**` fixtures uncounted; LT-502 ruling), unchanged Playwright specs and unchanged goldens. If a contributor can
-   meet one only by bending the design, they annotate the task `blocked` and write the impasse
-   into `NOTES.md`. LT-463's rule for surprises is the same thing for composition sites.
-9. **Probe-first tasks may close as `done` with a finding.** LT-136 (re-verify against ADR
-   0046) and LT-282 (TypeDoc may already regenerate `_media`) each state a premise to check. If
-   the premise is false, close the task with a pinning test or a one-line finding rather than
-   building the fix.
+**Rulings taken at planning (Architect with the owner, 2026-10-09).**
+1. **Scope: P1's package track, the P6 remainder, two design sessions and two P2b items.**
+   LT-480 → LT-254 → LT-377 build the package. LT-489, LT-492 → LT-493, LT-494 and LT-517 are
+   P6, and so is LT-518, the writer copy pass the eighth prune found owed. LT-514 moves from P7 to P6 and joins: it is the last label-as-children conversion and
+   needs only P6 work. LT-516 (ADR 0043 amendment) and LT-484 (async-boundary arm roots) are
+   design sessions. LT-483 joins from P2b (owner).
+2. **LT-259 and the pioneers stay out (owner).** The codemod's drift-cost metric is unruled,
+   and its check runs over the pioneer-1 project. It pairs with LT-260, which needs both
+   LT-254 and LT-259. LT-257 and LT-261 wait for LT-516's split.
+3. **The package is built, not published.** LT-254's check is `npm pack` into an empty
+   project. The first pre-release to the registry is an outward-facing act and waits for the
+   owner, after this iteration.
+4. **One compiler track at a time through the analysis passes** (track X): LT-483 → LT-492.
+   LT-483 edits `handleAsyncBoundary` in `analysis/effects.ts`, and LT-492 changes the
+   composed-content refusal and its lowering. Run in parallel, they would conflict at
+   integration. If LT-484's session rules parity, its compiler task joins track X after
+   LT-492.
+5. **module-todo and BasicButton change in one order** (track B): LT-489 → LT-494 → LT-514.
+   LT-489 and LT-494 both edit module-todo's two surfaces, and LT-514 then moves the sites
+   they compose to passed children (LT-514's sequence note).
+6. **LT-480 runs alone in the contract files.** It moves `compileCorpus` into
+   `server/compiler/` and narrows `RegistryEntry` (ruling 4: every compose-validation field is
+   internal). Tracks X and B do not edit `contract.ts`, `registry.ts` or `corpus-compile.ts`.
+   A task that finds it must, stops and writes it in `NOTES.md`.
+7. **Standing rulings carried from the last iteration.** Acceptance criteria are goals, not
+   constraints to satisfy by workaround: a contributor who can meet one only by bending the
+   design annotates the task `blocked` and writes the impasse into `NOTES.md` (ruling 8 of
+   2026-10-06). An `examples` task that edits a compiled source gates `test:server` and
+   `typecheck` (ruling 13 of 2026-10-06). Corpus-level checks stay in P7 (ruling 15 of
+   2026-10-06).
 
 **The chain.**
-- **E — compose enablers** — compose-site lowering, one at a time (ruling 3). LT-460 → LT-470 →
-  LT-481 → LT-482 → LT-488 → LT-461 → LT-490. Every task in the track is integrated (LT-490 on
-  2026-10-07, ruling 12). Done.
-
-  LT-481 and LT-482 joined from the reviews of LT-470 and LT-481: the arm-root pass planning,
-  and the server-only `try` as a server-rendered branch. LT-488 rewords LT-470's remedy for a
-  `try` site.
-- **S — children-contract spike** — fed the LT-462 session (ruling 10). LT-465. Done.
-- **T — module-todo** — ruling 5. LT-466 → LT-467. Done (2026-10-07).
-- **G — layout graph** — the variant sets `main.ts` still registers through their `.ts` twins,
-  so `test:variants` has never measured their compiled clients (found in LT-467's rework). It
-  runs before LT-463, which converts them; LT-463 needs it. LT-485. Done.
-- **M — section-menu** — the last uncompiled example folder, beside everything. LT-469. Done
-  (2026-10-07). LT-491 (ruling 12) fixed its link-click close failure (a fixture link under the test
-  layout's `<base>`). Done (2026-10-07).
-- **F — form-checkbox `.tsx`** — example folder only. LT-464. Done.
-- **K — composition** — after tracks E, T and G (ruling 4; G added 2026-10-07). LT-463 → LT-495 →
-  LT-496 → LT-498. LT-463 and LT-495 are done (2026-10-07; LT-495 repaired the `test:server` fallout,
-  ruling 13). LT-496 (from LT-495's review) made the compose-site reference count raw
-  same-tag elements. LT-498 (from LT-496's review) closes the same blind spot in the other
-  discriminator callers and in composed children's own templates. Done (2026-10-07).
-- **C — children contract** — ADR 0048, after track E (ruling 10). LT-472, LT-501 → LT-502 →
-  LT-504 → LT-505 → LT-507 → LT-503 are done (2026-10-08): they moved compiled CSS to authored
-  `@scope` (ruling 14), retired the corpus's 2.x child chains, completed the leak warning and
-  removed the corpus's known dead selectors (ruling 15). Remaining: LT-474 → LT-477 → LT-479
-  (ruling 16).
-- **C2 — role writers** — beside track C (ruling 16). LT-476 → LT-512 (owner, 2026-10-08: the
-  reference-precision follow-up from LT-478's review, after LT-474's verifier changes).
-- **CB — module-codeblock** — beside track C (ruling 16). LT-478 styles its passed content
-  under the platform-CSS contract.
-- **P — compiler cleanup** — independent of the compose machinery. LT-093 → LT-136. Done
-  (2026-10-07). LT-136 closed with a pinning test: LTC005 already refuses the shadowed read.
-- **Q — docs and build cleanup** — small, independent. LT-437 → LT-282 → LT-486. Done
-  (2026-10-07). LT-282 closed on a false premise (ruling 9): TypeDoc regenerates `_media`.
+- **R — the package** — P1; the contract reshape runs alone in the contract files (ruling 6).
+  LT-480 → LT-254 → LT-377.
+- **X — compiler, analysis passes** — one at a time (ruling 4), ending in the splitview
+  conversion the `truc:html` lift unblocks. LT-483 → LT-492 → LT-493.
+- **B — module-todo and BasicButton** — ruling 5. LT-489 → LT-494 → LT-514.
+- **D — test harness** — beside everything. LT-517 (the probe differential's composed leg).
+- **W — writer copy** — beside everything; area `docs`, a `writer` session. LT-518 (the copy
+  LT-461 and LT-498 deferred, and three stale compiler-doc facts from the eighth prune).
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
-  LT-471 (D-32) — ruled 2026-10-06 (ruling 11).
+  LT-516 (ADR 0043 amendment, LT-257's split) and LT-484 (boundary arm-root parity). Neither
+  holds the iteration open beyond its own ruling: each ends in an amended ADR or a recorded
+  refusal, plus banded follow-up tasks.
 
-**Deliberately not here.** P1 waits for this round: LT-254 now also needs LT-471 (ruled) and LT-480, its reshape, banded P1. The
-rest of P2b stays in the backlog (its CSS-departures cluster is struck by ruling 14). So do LT-381, which needs the owner's sign-off because it changes the
-census by design, and LT-246, which needs a settled census. The fetched-partials sessions
-(LT-448, LT-450) stay in P7, and P2–P5 stay where they are.
+**Deliberately not here.** LT-259, LT-260, LT-257 and LT-261 (ruling 2). The rest of P2b,
+including LT-381 (it changes the census by design and needs the owner's sign-off) and LT-246.
+LT-515 (lazy children in composed content) and the corpus-level checks stay in P7. P2–P5 stay
+where they are.
 
-**Exit criterion.** Every chain task except the two design sessions is reviewed and
-integrated. LT-462 has ruled into ADR 0048, or its open state is recorded here (ruling 7). The
-compiled corpus composes every site LT-463 names, except the sites ruled into LT-489, LT-493 and
-LT-494 (ruling 12), and every example folder is served compiled,
-section-menu included, and `examples/main.ts` registers no variant set through its `.ts` twin
-(LT-485). No compose-lowering miscompile LT-460, LT-470, LT-481 or LT-482 names remains. The tier
-census and the warning baseline are unchanged from the opening measurement below, except where
-a task states a by-design change: LT-469 adds `section-menu: folded`, LT-467 removes
-basic-pluralize's entry, and LT-093 may move components from Simulated to Folded. The warning
-baseline stays 0. `typecheck`, the server suite, `check:contract`, `check:corpus`, `build:docs`
-and `check:links` are green on the closing commit. The net line count of `server/compiler/` is
-recorded against the opening measurement.
+**Exit criterion.** Every chain task is reviewed and integrated, and both design sessions have
+ruled. `npm pack` of `@zeix/le-truc-compiler` installs into an empty project and builds a
+two-component corpus through the published entry point, with no `@tsrx/core` in its tree
+(LT-254's check). `contract.test.ts` pins LT-480's set, and `registry.json` carries only the
+public projection. P6 is empty: module-splitview and module-todo compose every site LT-463
+named, and no corpus form component or BasicButton renders its visible label from a `string`
+arg where LT-514 moves it to children. The tier census and the warning baseline are unchanged
+from the opening measurement below, except where a task states a by-design change. `typecheck`,
+the server suite, `check:contract`, `check:corpus`, `test:variants`, `build:docs` and
+`check:links` are green on the closing commit. The net line count of `server/compiler/` is
+recorded against the opening measurement; LT-480 grows it by the code it moves in.
 
-**Opening measurement (b63fbfed):** `check:corpus` exits 0. The tier census has 42
-entries: 34 Folded, 8 Simulated, 0 Static. The compile-warning baseline is 0, and the
-translation census has 0 gaps across 6 locales. `server/compiler/` has 79 modules and 37.3k
-lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
-figure from 2026-10-02, so compare the closing measurement with this one only.
+**Opening measurement (2b26f032):** `check:corpus` exits 0. The tier census has 43 entries:
+36 Folded, 7 Simulated, 0 Static. The compile-warning baseline is 1 unique standing warning,
+module-dialog's `body.scroll-lock` (LTC088), a deliberate component-bound page-wide rule that
+ruling 7 excepts. The translation census has 0 gaps across 6 locales. `server/compiler/` has
+83 modules and 41.4k lines (every `.ts` file except `*.test.ts`, the same net as the 2026-10-06
+measurement).
 
-**Next free task ID: LT-518.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Next free task ID: LT-519.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

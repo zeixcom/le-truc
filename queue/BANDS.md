@@ -28,11 +28,13 @@ package (LT-254), template emission against the ruled target-emitter interface (
 ADR 0043), the 2.x codemod (LT-259), and the two Zeix pioneer projects that are the release
 gates (LT-260, LT-261). The owner has ruled the first publish waits for the P6 cleanup round —
 publishing a package its consumers cannot yet use is not a milestone — so this band sits above
-the others in priority but behind P6 in practice. Inside the band the order is LT-254 →
+the others in priority but behind P6 in practice. Inside the band the order is LT-480 → LT-254 →
 LT-257 → the pioneers, because a pioneer cannot start before the package exists and emission
-is proven. LT-377 (no TypeScript types in the published declarations, ADR 0034 s8) lands with
-or after LT-254's declaration build. The D-32 design session (LT-471, the public contract) gates LT-254
-and runs during the P6 round, so the band opens unblocked.
+is proven. LT-480 reshapes the contract to the D-32 ruling (LT-471) before LT-254 publishes it.
+LT-377 (no TypeScript types in the published declarations, ADR 0034 s8) lands after LT-254's
+declaration build. LT-257 needs LT-516, the session that amends ADR 0043 for the `Try`
+boundary, reactive lists and passed children, and splits LT-257 into buildable tasks. LT-259
+(the codemod) waits for its drift-cost metric to be ruled and pairs with LT-260.
 
 ## P2 — Internationalization follow-ups (ADR 0030)
 
@@ -81,17 +83,14 @@ handler-args design in P6 and carries only its tombstone.
 
 ## P6 — Cleanup round and the composition batch
 
-The cleanup round the first publish waits for (see P1), unblocked by the corpus port's close.
-It carries two kinds of work: the standing cleanup items (LT-093, which absorbed LT-135;
-LT-136, LT-282, LT-437), and the composition batch — convert the compiled corpus from raw
-custom-element markup to sub-components (LT-463) on the compiler enablers LT-460 and LT-470
-(kept in P2b) and LT-461's ruled handler-args design, beside LT-464, LT-466 and LT-467. The two
-sites that need the children contract ride the design spine LT-465 → LT-462 (ADR 0048) and its
-implementation tasks (split from LT-463, owner 2026-10-06). The section-menu chrome migration (LT-469, from
-LT-446's ruled design) closes the last uncompiled example folder and interleaves freely.
-Ordering matters: the design spine and
-enablers before the corpus conversion, while the cleanup items interleave freely because none
-of them touches the compose machinery.
+The cleanup round the first publish waits for (see P1). Its standing cleanup items and the
+composition batch (LT-463 on the compose enablers and ADR 0048's children contract) closed on
+2026-10-09. The remainder is the conversions LT-463 left raw, each on its own ruling:
+BasicButton's orthogonal server args (LT-489), `truc:html` in composed children and the
+splitview panes it unblocks (LT-492 → LT-493), FormRadiogroup's `.split-button` presentation
+(LT-494), and the label-as-children sweep over the form components and BasicButton (LT-514,
+after LT-489 and LT-494). LT-517 makes the probe differential's composed leg live. Ordering
+matters only where two tasks edit module-todo: LT-489 → LT-494 → LT-514.
 
 ## P7 — Backlog (not scheduled)
 
