@@ -75,13 +75,17 @@ iteration.
   (landed 2026-10-09). LT-522 (filed 2026-10-10 from LT-254's review: the compiler package's
   user-facing copy — README, §2 install passage, one experimental-label wording).
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
-  LT-516 (ADR 0043 amendment, LT-257's split) and LT-484 (boundary arm-root parity). Neither
-  holds the iteration open beyond its own ruling: each ends in an amended ADR or a recorded
-  refusal, plus banded follow-up tasks. Both still owed (2026-10-10). ~~LT-523~~ (the compiler
+  ~~LT-516~~ (ADR 0043 amendment) ruled 2026-10-10 — D-28 closed: the `boundary` operation
+  with a three-state result arg, `loop` + `listTemplate` for reactive lists, capture-and-raw
+  children through the `composed-markup` context; LT-257 split into LT-527 → LT-528 → LT-529
+  (against the new repository, `needs: LT-524`). LT-484 (boundary arm-root parity) is still
+  owed. Neither gate holds the iteration open beyond its own ruling: each ends in an amended
+  ADR or a recorded refusal, plus banded follow-up tasks. ~~LT-523~~ (the compiler
   repo split) ruled 2026-10-10 → ADR 0049; its chain LT-524 → LT-525 → LT-526 is staged as the
   NEXT iteration's opening, after this one closes.
 
-**Deliberately not here.** LT-259, LT-260, LT-257 and LT-261 (ruling 2). The rest of P2b,
+**Deliberately not here.** LT-259, LT-260, LT-527 → LT-528 → LT-529 (the emission chain,
+LT-257's split; ruling 2) and LT-261. The rest of P2b,
 including LT-381 (it changes the census by design and needs the owner's sign-off) and LT-246.
 LT-515 (lazy children in composed content) and the corpus-level checks stay in P7. P2–P5 stay
 where they are.
@@ -148,12 +152,23 @@ cutover lands. This iteration's remainder: the LT-516 and LT-484 sessions only �
 have ruled, the writer changelog sweep runs and the exit criterion is verified on the closing
 commit (typecheck is green at HEAD).
 
-**Next free task ID: LT-527.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Status 2026-10-10, after the LT-516 session (Architect).** LT-516 ruled with the owner →
+ADR 0043 revised in place (D-28 closed: the `boundary` operation with a three-state result
+arg; `loop` + `listTemplate` for reactive lists; capture-and-raw children through the new
+`composed-markup` escaping context; key-alias confirmed as a census outcome). `COMPILER_SPEC`
+§9.2 carries the new mappings and D-28 is Ratified. LT-257 is pruned into LT-527 → LT-528 →
+LT-529 — the shared walk with the census folded in, the Twig target, the PHP CI job — all
+`needs: LT-524` and building in the new repository (ADR 0049 sequencing). The iteration's
+remainder: the LT-484 session only. When it has ruled, the writer changelog sweep runs and
+the exit criterion is verified on the closing commit.
+
+**Next free task ID: LT-530.** Next free diagnostic code: LTC091 (LTC090 is LT-527's; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
 LT-399's; LTC066–LTC070 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are
-LT-274's; LTC061 is LT-383's; LTC060 is LT-375's; LTC059 is LT-374's; LTC057/LTC058 are LT-257's;
+LT-274's; LTC061 is LT-383's; LTC060 is LT-375's; LTC059 is LT-374's; LTC057/LTC058 are LT-527's
+(LT-257's before the split);
 LTC056 is LT-358's).
 
 ---

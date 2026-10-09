@@ -736,6 +736,44 @@ Full entry text: `git log -p -- DONE.md`.
 
   **Review:** ✓ (2026-10-10). The ruling verified item by item: the four form components swap the string arg for `Children<{}, 'non-interactive'>` at the same render site (spinbutton's optionality via `@if (children)`; radiogroup's JSDoc keeps `option.label` a string as ruled), and BasicButton carries both channels with the equality-guarded `watch('label', …)` as the span's one runtime writer — the guard's connect-run rationale checked and the runtime-write contract documented in JSDoc and the Server Args table. The regression pin covers all four legs (trusted children, escaped arg, children surviving connect then flattened by a runtime write, plain label still updating). **Flag 1 resolved:** the `""` placeholders are safe by the pinned LT-195 semantics (a placeholder resolves the SOURCE string, not empty — untranslated locales render the English fallback), and the German copy reviewed correct and idiomatic: "Helligkeit", "Chroma", "Farbton", "Was muss erledigt werden?". **Flag 2 confirmed and filed as LT-520:** the parity snapshot shows `p.remaining` → the bare `p` with the four-child exclusion set — correct today (one `p`), but the chooser takes the first unique decorated candidate where the class discriminator was available; LT-520 orders precision preference among decorated candidates. **Flag 3 accepted:** the multiline `.tsx` children formatting note is proven by the byte-identity the variant assert and parity's value-harness already pin. Gates re-run in the worktree, all matching the entry: typecheck 0, check:corpus 0 (baseline 1 standing, the pre-existing module-dialog LTC088; census 36/7/0), build:docs, `test:server` 3717/0, `test:variants` 537, `check:links` 775/775, all eleven component specs green with the entry's exact counts (12/30/60/6/42/40/26/20/14/60/24), lint:examples and lint:server clean. No nits.
 
+- [x] LT-516: Design session — amend ADR 0043 for the corpus template emission must now carry (the `Try` boundary, reactive lists, passed children), and split LT-257. — done ✓
+  **Area:** design
+  **Area:** design
+  **Filed (Architect, 2026-10-09, next-iteration preparation; owner: the session joins the next iteration, with no implementation work):** ADR 0043 (2026-10-01) ruled the target-emitter interface before three later decisions changed what a component's server render contains. LT-257 cannot be built against it as written. The session amends ADR 0043, editing it in place while Proposed or superseding it per `references/adr.md`, and leaves LT-257 buildable.
+  **Questions to rule:**
+  1. **`Try` in template targets (D-28, deferred since the 2026-10-01 team review).** ADR 0041's boundary has three arms (`ok`, `pending`, `catch`; no `stale`). `COMPILER_SPEC.md` §9.2's draft renders `catch` from a CMS-supplied error shape (`{ error: { code, message } }`). Rule what a backend template renders for each arm, where the error shape comes from, and how the inert arm templates (ADR 0037) sit beside the backend conditional. Otherwise rule `Try` non-emittable, as a census routing outcome (ADR 0043 s2).
+  2. **Reactive lists (ADR 0046).** A reactive list renders its initial items in place plus an extracted `<template data-list="N">`, and nests recursively through Mount Scopes. ADR 0043's operation vocabulary has a server-data loop and an arm template, but no list template. Rule the operation, the hole scope of a list item, and how a nested list inside an arm or an item emits.
+  3. **Passed children (ADR 0048).** Compose content is the parent's own markup, wrapped in a `data-children` region marker. Under LT-492 it may hold a sanitized `truc:html`. ADR 0043 s5 still calls "markup passed as children" "a separate security question". Rule how an include passes children, for example a Twig `embed`/block or a pre-rendered argument in the HTML escaping context through the sanitizer hook. Rule what escaping context each part takes, and where the region marker is written.
+  4. **The key-alias harvest** (ADR 0047 s4; already recorded on LT-257) is a census routing outcome. Confirm it in the amended text.
+  **Output:** the amended ADR, `COMPILER_SPEC.md` §9 and D-28 updated, and LT-257 split into buildable tasks. A likely split: the shared walk plus the test-only second target; the Twig target; the census per target; the PHP CI job. Each split task names its `needs:`, gates and the diagnostics it owns (LTC057/LTC058 are reserved). New refusals name their channel and tier (ADR 0028).
+  **Not in scope:** any implementation. Pioneer 2 (LT-261) stays after the build.
+
+  **Ruled (2026-10-10, session with the owner; all four on the recommendation):**
+  1. **`Try` (D-28): a `boundary` operation with a three-state result arg.** Emittable only
+     when the task's initial value routes from a server arg — the result arg `T` /
+     `{ error: { code, message } }` / null renders `ok` / `err` / `nil`, a total function over
+     request-time input; the shape test is target vocabulary, not a portable-subset operator;
+     an opaque driver routes Static (`non-portable initial`); a result type with its own
+     `error` member is Prevented (LTC090); the sync `try` is not emittable (census).
+  2. **Reactive lists: `loop` + `listTemplate`.** Initial items reuse the loop verbatim over
+     the seed arg; the list template is the inert shape — no holes, one shape for all items —
+     stamped `data-list="N"` at host level; loop sources extend to enclosing-item member
+     paths. In every inert template, server-arg sites stay holes and client-written sites bake
+     empty.
+  3. **Children: capture-and-raw through a new `composed-markup` escaping context.** The
+     parent captures the region (holes in parent scope, `truc:html` hooked at its site) and
+     passes it as one more arg; the child emits it raw and writes `data-children` from an
+     implicit minted `owner` arg only when a compiled parent passed children. `embed`/block
+     and whole-region sanitization rejected (ADR 0043 Alternatives).
+  4. **Key-alias harvest confirmed** as a census routing outcome (ADR 0047 s4), recorded in
+     ADR 0043 s2's principle: a routing outcome is decided by what the initial value routes
+     from.
+  **Done:** ADR 0043 revised in place (66 lines; ~1810 words — over the 1500 budget by the
+  folded rulings' commitments, flagged to the owner); `COMPILER_SPEC.md` §9.2's table carries
+  the new mappings and D-28 is Ratified; LT-257 pruned into **LT-527 → LT-528 → LT-529**
+  (three tasks against the new repository, census folded into the walk; LTC057/LTC058 owned,
+  LTC090 taken).
+
 - [x] LT-517: The probe differential's composed leg is vacuous — key its synthetic registry by source path so `composedShapesFor` lookups hit. — reviewed ✓
   **Area:** compiler
   **Gates:** test:server

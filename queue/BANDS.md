@@ -25,16 +25,19 @@ The Simulated tier is kept, SSG-only for all of 3.x (ADR 0035).
 ## P1 — The v3.0 release track (ADR 0034)
 
 Everything v3.0 does not ship without: the publishable `@zeix/le-truc-compiler`
-package (LT-254), template emission against the ruled target-emitter interface (LT-257,
-ADR 0043), the 2.x codemod (LT-259), and the two Zeix pioneer projects that are the release
+package (LT-254), template emission against the ruled target-emitter interface (LT-527 →
+LT-528 → LT-529, ADR 0043 as amended by the LT-516 session), the 2.x codemod (LT-259), and
+the two Zeix pioneer projects that are the release
 gates (LT-260, LT-261). The owner has ruled the first publish waits for the P6 cleanup round —
 publishing a package its consumers cannot yet use is not a milestone — so this band sits above
 the others in priority but behind P6 in practice. Inside the band the order is LT-480 → LT-254 →
-LT-257 → the pioneers, because a pioneer cannot start before the package exists and emission
-is proven. LT-480 reshapes the contract to the D-32 ruling (LT-471) before LT-254 publishes it.
-LT-377 (no TypeScript types in the published declarations, ADR 0034 s8) lands after LT-254's
-declaration build. LT-257 needs LT-516, the session that amends ADR 0043 for the `Try`
-boundary, reactive lists and passed children, and splits LT-257 into buildable tasks. LT-259
+the emission chain → the pioneers, because a pioneer cannot start before the package exists and
+emission is proven. LT-480 reshapes the contract to the D-32 ruling (LT-471) before LT-254
+publishes it. LT-377 (no TypeScript types in the published declarations, ADR 0034 s8) lands
+after LT-254's declaration build. The emission chain (LT-257, split 2026-10-10) builds in the
+le-truc-compiler repository once LT-524 bootstraps it: LT-527 is the shared walk, operation
+layer, census and test-only second target; LT-528 the Twig target; LT-529 the PHP CI job.
+LT-259
 (the codemod) waits for its drift-cost metric to be ruled and pairs with LT-260.
 
 ## P2 — Internationalization follow-ups (ADR 0030)

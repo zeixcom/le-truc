@@ -75,13 +75,17 @@ iteration.
   (landed 2026-10-09). LT-522 (filed 2026-10-10 from LT-254's review: the compiler package's
   user-facing copy — README, §2 install passage, one experimental-label wording).
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
-  LT-516 (ADR 0043 amendment, LT-257's split) and LT-484 (boundary arm-root parity). Neither
-  holds the iteration open beyond its own ruling: each ends in an amended ADR or a recorded
-  refusal, plus banded follow-up tasks. Both still owed (2026-10-10). ~~LT-523~~ (the compiler
+  ~~LT-516~~ (ADR 0043 amendment) ruled 2026-10-10 — D-28 closed: the `boundary` operation
+  with a three-state result arg, `loop` + `listTemplate` for reactive lists, capture-and-raw
+  children through the `composed-markup` context; LT-257 split into LT-527 → LT-528 → LT-529
+  (against the new repository, `needs: LT-524`). LT-484 (boundary arm-root parity) is still
+  owed. Neither gate holds the iteration open beyond its own ruling: each ends in an amended
+  ADR or a recorded refusal, plus banded follow-up tasks. ~~LT-523~~ (the compiler
   repo split) ruled 2026-10-10 → ADR 0049; its chain LT-524 → LT-525 → LT-526 is staged as the
   NEXT iteration's opening, after this one closes.
 
-**Deliberately not here.** LT-259, LT-260, LT-257 and LT-261 (ruling 2). The rest of P2b,
+**Deliberately not here.** LT-259, LT-260, LT-527 → LT-528 → LT-529 (the emission chain,
+LT-257's split; ruling 2) and LT-261. The rest of P2b,
 including LT-381 (it changes the census by design and needs the owner's sign-off) and LT-246.
 LT-515 (lazy children in composed content) and the corpus-level checks stay in P7. P2–P5 stay
 where they are.
@@ -148,12 +152,23 @@ cutover lands. This iteration's remainder: the LT-516 and LT-484 sessions only �
 have ruled, the writer changelog sweep runs and the exit criterion is verified on the closing
 commit (typecheck is green at HEAD).
 
-**Next free task ID: LT-527.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Status 2026-10-10, after the LT-516 session (Architect).** LT-516 ruled with the owner →
+ADR 0043 revised in place (D-28 closed: the `boundary` operation with a three-state result
+arg; `loop` + `listTemplate` for reactive lists; capture-and-raw children through the new
+`composed-markup` escaping context; key-alias confirmed as a census outcome). `COMPILER_SPEC`
+§9.2 carries the new mappings and D-28 is Ratified. LT-257 is pruned into LT-527 → LT-528 →
+LT-529 — the shared walk with the census folded in, the Twig target, the PHP CI job — all
+`needs: LT-524` and building in the new repository (ADR 0049 sequencing). The iteration's
+remainder: the LT-484 session only. When it has ruled, the writer changelog sweep runs and
+the exit criterion is verified on the closing commit.
+
+**Next free task ID: LT-530.** Next free diagnostic code: LTC091 (LTC090 is LT-527's; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
 LT-399's; LTC066–LTC070 are LT-304's; LTC065 is LT-394's; LTC064 is LT-268's; LTC062/LTC063 are
-LT-274's; LTC061 is LT-383's; LTC060 is LT-375's; LTC059 is LT-374's; LTC057/LTC058 are LT-257's;
+LT-274's; LTC061 is LT-383's; LTC060 is LT-375's; LTC059 is LT-374's; LTC057/LTC058 are LT-527's
+(LT-257's before the split);
 LTC056 is LT-358's).
 
 ---
@@ -162,17 +177,116 @@ LTC056 is LT-358's).
 
 ### Design gates
 
-- [ ] LT-516: Design session — amend ADR 0043 for the corpus template emission must now carry (the `Try` boundary, reactive lists, passed children), and split LT-257.
-  **Area:** design
-  **Area:** design
-  **Filed (Architect, 2026-10-09, next-iteration preparation; owner: the session joins the next iteration, with no implementation work):** ADR 0043 (2026-10-01) ruled the target-emitter interface before three later decisions changed what a component's server render contains. LT-257 cannot be built against it as written. The session amends ADR 0043, editing it in place while Proposed or superseding it per `references/adr.md`, and leaves LT-257 buildable.
-  **Questions to rule:**
-  1. **`Try` in template targets (D-28, deferred since the 2026-10-01 team review).** ADR 0041's boundary has three arms (`ok`, `pending`, `catch`; no `stale`). `COMPILER_SPEC.md` §9.2's draft renders `catch` from a CMS-supplied error shape (`{ error: { code, message } }`). Rule what a backend template renders for each arm, where the error shape comes from, and how the inert arm templates (ADR 0037) sit beside the backend conditional. Otherwise rule `Try` non-emittable, as a census routing outcome (ADR 0043 s2).
-  2. **Reactive lists (ADR 0046).** A reactive list renders its initial items in place plus an extracted `<template data-list="N">`, and nests recursively through Mount Scopes. ADR 0043's operation vocabulary has a server-data loop and an arm template, but no list template. Rule the operation, the hole scope of a list item, and how a nested list inside an arm or an item emits.
-  3. **Passed children (ADR 0048).** Compose content is the parent's own markup, wrapped in a `data-children` region marker. Under LT-492 it may hold a sanitized `truc:html`. ADR 0043 s5 still calls "markup passed as children" "a separate security question". Rule how an include passes children, for example a Twig `embed`/block or a pre-rendered argument in the HTML escaping context through the sanitizer hook. Rule what escaping context each part takes, and where the region marker is written.
-  4. **The key-alias harvest** (ADR 0047 s4; already recorded on LT-257) is a census routing outcome. Confirm it in the amended text.
-  **Output:** the amended ADR, `COMPILER_SPEC.md` §9 and D-28 updated, and LT-257 split into buildable tasks. A likely split: the shared walk plus the test-only second target; the Twig target; the census per target; the PHP CI job. Each split task names its `needs:`, gates and the diagnostics it owns (LTC057/LTC058 are reserved). New refusals name their channel and tier (ADR 0028).
-  **Not in scope:** any implementation. Pioneer 2 (LT-261) stays after the build.
+- [ ] LT-527: Template emission — the shared walk and operation layer, the census routing, the boundary fixture, and the test-only second target (ADR 0043 as amended; LT-257's build half, split by the LT-516 session). Builds in the le-truc-compiler repository.
+  **Area:** compiler
+  **Needs:** LT-524
+  **Gates:** typecheck, test:server, check:contract
+  **Area:** compiler (the new `../le-truc-compiler` repository; ADR 0049 sequencing — never `server/compiler/` here)
+  **Context:** ADR 0043 as revised 2026-10-10 (the LT-516 session, D-28 ruled). The shared
+  walk owns every decision; a target owns only syntax. LT-254, LT-274, LT-373 and LT-234 have
+  landed; the IR carries the `conditional` node, the `try` node and reactive lists.
+  **Do:**
+  - The emission-operation vocabulary over the settled IR — text, hole, segment list,
+    conditional, **boundary**, loop, **list template**, include, message format, arm template —
+    with `HtmlWriter` as the only output path. The operation layer never sees IR nodes.
+  - The **boundary operation** (ADR 0043 s4): the three-state result arg (`T` /
+    `{ error: { code, message } }` / null → `ok` / `err` / `nil`), the err scope (catch
+    parameter → member paths over `error`), inert arm templates beside the winner. Emittable
+    only when the task's initial value routes from a server arg; an opaque driver routes the
+    partial Static (`non-portable initial`). The synchronous `try` is not emittable (census
+    reason, no diagnostic).
+  - **Reactive lists** (ADR 0043 s5): the initial items reuse the loop operation verbatim
+    (source: the seed arg; key and raw sources as item-scope holes); the list-template
+    operation is the inert item shape — no holes, client-written sites empty — stamped
+    `data-list="N"`, a direct child of the host in document order whatever the nesting depth.
+    Extend the loop-source grammar: a source may be a member path over an enclosing item
+    scope (nested lists nest as native loops).
+  - **Children capture** (ADR 0043 s3/s5): the parent-owned region captured with its holes in
+    parent scope, `truc:html` hooked at its site inside the capture, passed as one more arg in
+    the new **composed-markup** escaping context (raw, no hook); the child writes
+    `data-children` from the implicit, minted `owner` arg only when a compiled parent passed
+    children. The escaping-context union gains the eighth member; every target's switch is
+    exhaustive over it.
+  - In every inert template (arm, list, boundary): server-arg sites emit as holes the backend
+    fills per request; client-written sites bake empty.
+  - Portable-subset classification and the shared refusals, both only when a template target
+    is configured; SSG-only builds and the zero-warning baseline unchanged.
+  - The census routing outcomes per component: `non-portable initial` (reactive and task),
+    sync `try`, key-alias harvest (ADR 0047 s4), `ambiguous result shape` — census rows, never
+    warnings (M23).
+  - A **boundary fixture component** (no corpus component uses `Try` yet; ADR 0041's
+    consequence note): result-arg-seeded task with all three arms, in the new repository's
+    fixture corpus; offered to this repo's corpus at cutover.
+  - The test-only second target in `server/tests/compiler/targets/` (its new-repo path): an
+    operation dump plus a small in-process interpreter, byte-compared with SSG for every
+    emittable fixture × locale.
+  **New diagnostics (compiler channel, Prevented, only when a template target is configured):**
+  LTC057 — a non-portable expression in a hole position (one face for `Intl` formatting over a
+  hole, naming the ICU-pattern fix); LTC058 — a hole in a refused position (faces:
+  `<script>`/`<style>` content or comment, `on*`/`srcdoc`, attribute or tag name, whole-string
+  `style`); LTC090 — a boundary result type with its own `error` member (the three-state test
+  is ambiguous; fix: rename the field). Copy follows `writer` → error-messages.
+  **Depends on** LT-524 (the repository exists; fixture corpus mirrored).
+  **Check:** every fixture component emits through the dump target in its tier; dump-target
+  renders are byte-identical to SSG for every emittable component × locale; the census carries
+  each routing reason; builds with no target configured show zero new warnings and no census
+  change.
+
+- [ ] LT-528: Template emission — the Twig target (ADR 0043 as amended): syntax table, exhaustive escaping map, boundary/list/children emission, one partial per component × locale, byte-equivalence on the real engine.
+  **Area:** compiler
+  **Needs:** LT-527
+  **Gates:** typecheck, test:server
+  **Area:** compiler (the new `../le-truc-compiler` repository)
+  **Context:** ADR 0043 as revised 2026-10-10. The target owns only syntax: a syntax table
+  plus an escaping map, switching exhaustively over the operation set and the eight-member
+  context union (tsc flags a missing case — that is the interface's safety property).
+  **Do:**
+  - The Twig syntax table for every operation: native `if`/`for` (loop sources include
+    enclosing-item member paths), the boundary as a three-test conditional over the result
+    arg, the list template stamped `data-list="N"` at host level, includes with `only` and the
+    captured children arg in the composed-markup context (raw emit, no hook, with a generated
+    comment naming why it is safe), the conditional's initial winner beside inert arm
+    templates.
+  - The exhaustive escaping map — text, quoted attribute, URL attribute (the safe-protocol
+    allowlist as a Twig check), boolean attribute, class token, style value, HTML (through
+    `le_truc_sanitize_html`), composed markup (raw).
+  - The `owner` arg: minted collision-free against every component's props; passed by
+    compiled compose sites with children; absent for page-rendered instances and pass-less
+    includes.
+  - One partial per component × locale; argument-less messages and the client `i18n`
+    attribute folded; message calls as `le_truc_format` over the localized pattern literal
+    (ADR 0043 s6 unchanged).
+  - The host-helpers manifest for the integrator: URL allowlist check,
+    `le_truc_sanitize_html`, `le_truc_format` over `MessageFormatter`.
+  - Byte-equivalence against SSG on the real engine (`twig/twig`, `intl`) for every
+    emittable fixture × locale, the boundary fixture included; the adversarial escaping
+    corpus, negative cases included.
+  **Diagnostics:** none new — LTC057/LTC058/LTC090 are the walk's (LT-527); a target that
+  fails exhaustiveness is a tsc error, not a diagnostic.
+  **Depends on** LT-527 (the operation layer and the fixture corpus, including the boundary
+  fixture).
+  **Check:** Twig renders are byte-identical to SSG for every emittable fixture × locale; the
+  escaping corpus passes with negative cases; no change to the walk or the dump target
+  (the interface's second-target proof holds).
+
+- [ ] LT-529: Template emission — the PHP CI job (twig/twig + intl): Twig equivalence, the adversarial escaping corpus and the ICU equivalence corpus on the real engine; local runs skip without php.
+  **Area:** compiler
+  **Needs:** LT-528
+  **Area:** compiler (the new `../le-truc-compiler` repository)
+  **Context:** ADR 0043 s8. Equivalence is byte identity with SSG, checked on the real
+  engine — `twig.js` was rejected as the reference renderer (divergent escaping, no ICU).
+  **Do:**
+  - A CI workflow installing `php` with `twig/twig` and `intl`, running the Twig
+    byte-equivalence suite, the adversarial escaping corpus (negative cases included) and the
+    ICU equivalence corpus.
+  - The job is required-check eligible but tolerant locally: without `php` on the machine the
+    suites skip, never fail (the dump target is the PHP-free equivalence check).
+  - State the exact local invocation in the README's contributing section.
+  **Diagnostics:** none.
+  **Depends on** LT-528 (the suites exist). If LT-526's branch protection is still open when
+  this lands, add the job to the required-checks list in the same change rather than after.
+  **Check:** CI runs the three suites on the real engine and passes; a local run without
+  `php` exits green with an explicit skip line; nothing in this repo changes.
 
 - [ ] LT-484: An element root of an async boundary's pending or catch arm refuses every client construct, while a reactive conditional's element arm root plans them — decide whether boundary arms gain parity.
   **Area:** design

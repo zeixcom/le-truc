@@ -914,7 +914,7 @@ their first occurrences with the list's keys and throws
 static generation and the realm fail the build there. The witness call
 reads the list, so its declaration rides the server module even when the
 alias is its only reader. A template target (ADR 0043) cannot carry the
-witness: once the target emitter exists (LT-257), a key-alias harvest is
+witness: once the target emitter exists (LT-527 → LT-529), a key-alias harvest is
 a census routing outcome there, not emittable, until a target operation
 carries it. An unseeded sensor, or one whose seed no phase can answer, is
 left out of `serverKnown`: every read of it is omitted, and an `LTC013`

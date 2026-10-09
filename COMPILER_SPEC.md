@@ -512,10 +512,14 @@ All HTML targets serialize the same template walk; they differ in when `server`-
 | `server` `Text` / `Attribute` | Escaped variable output |
 | Server-known `Conditional` / `Loop` | The backend's native `if` / `for` |
 | Reactive `Conditional` | The prop-dependent initial winner as a backend conditional, plus the inert arm templates |
+| Reactive list | The seed arg's native loop for the initial items, plus the inert `data-list` item shape as a direct child of the host (ADR 0043 s5) |
 | `Compose` | Include or macro call with args |
+| `Compose` with children | Include; the captured region passes as one arg in the **composed-markup** escaping context (raw, no hook), and the child writes `data-children` from the implicit `owner` arg (ADR 0043 s5) |
 | Message calls | Translation calls (6.3) |
 | `RawHtml` | The backend's implementation of the application's policy |
-| `Try` | Rendered from an **error shape the CMS supplies** (`{ error: { code, message } }`), `catch` arm on error — deferred (D-28): ADR 0043 has no boundary operation yet |
+| `Try` (async) | The **boundary operation** over a three-state **result arg** — `T` renders `ok`, `{ error: { code, message } }` renders `err` (the catch parameter reads member paths over `error`), null renders `nil`; every arm also ships as an inert template. Emittable only when the task's initial value routes from a server arg (ADR 0043 s4) |
+
+Not emittable, routing the component's partial Static in the census (ADR 0043 s2): the synchronous `Try` (a JavaScript throw has no template counterpart) and a key-alias harvest (ADR 0047 s4, no render witness).
 
 ### 9.3 Keeping SSR reachable
 
@@ -603,7 +607,7 @@ Emitted bytes are not contract. Everything else under the compiler is internal.
 
 ## 13. Decision log
 
-33 decisions, after the team review of 2026-10-01: 30 Ratified (D-16 and D-23 superseded by ADR 0043 while Proposed; nine more endorsed and recorded the same day; D-32 at its design session on 2026-10-06), 1 Endorsed (D-01, whose REQUIREMENTS wording waits for O-9), 1 Parked (D-04) and 1 Deferred to a design session (D-28). Open questions are in section 15.
+33 decisions, after the team review of 2026-10-01: 31 Ratified (D-16 and D-23 superseded by ADR 0043 while Proposed; nine more endorsed and recorded the same day; D-32 at its design session on 2026-10-06; D-28 at the ADR 0043 amendment session on 2026-10-10), 1 Endorsed (D-01, whose REQUIREMENTS wording waits for O-9) and 1 Parked (D-04). Open questions are in section 15.
 
 | # | Decision | Status | Source | § |
 | --- | --- | --- | --- | --- |
@@ -634,7 +638,7 @@ Emitted bytes are not contract. Everything else under the compiler is internal.
 | D-25 | IR is the lowering, internal, one walk with many emitters | Ratified — endorsed 2026-10-01 and recorded | ADR 0034 s8, ADR 0040 | 8 |
 | D-26 | Reactivity class annotation on every expression | Ratified — endorsed 2026-10-01 and recorded | ADR 0040 s7 | 8.2 |
 | D-27 | Template emission: holes, escaping as a security boundary | Ratified | ADR 0034 s3, ADR 0043 | 9.2 |
-| D-28 | Template `Try` renders from a CMS-supplied error shape | Deferred — design session to amend ADR 0043; without `Try` a whole class of use cases is unsupported | draft Q-23; team 2026-10-01 | 9.2 |
+| D-28 | Template `Try` renders from a CMS-supplied error shape | Ratified — the boundary operation over a three-state result arg; the synchronous `Try` is not emittable (ADR 0043 s4, revised 2026-10-10) | draft Q-23; team 2026-10-01; session 2026-10-10 | 9.2 |
 | D-29 | Readable, ejectable client; harvested state; connect is a fixed point | Ratified | ADR 0024, 0027 | 10 |
 | D-30 | Structured, source-mapped diagnostics; JSON and SARIF | Ratified — endorsed 2026-10-01 and recorded | ADR 0044 | 11.2 |
 | D-31 | Compiler first, runtime backstop (tiered surfacing) | Ratified | ADR 0028 | 11.2 |
@@ -744,7 +748,7 @@ As of 2026-10-10, for orientation only; it ages quickly. The current architectur
 | 6 i18n | Partial | MF1, per-key types, client message channel, censuses, MF2 exit pin | Missing: template-target translation |
 | 7 Styling | Partial | Scoped CSS: native `@scope` or the flat-selector lowering (LT-268, LT-304, LT-306) | Missing: ADR 0042 checks (LT-214 and LT-269 gated on need, LT-270 open); children style scope (ADR 0048) |
 | 8 IR | Partial | Internal (D-25); typed unions (LT-287, LT-289) | Missing: no reactivity-class annotation as such |
-| 9 HTML | Partial | SSG | Missing: template emission (LT-257, release-gating) |
+| 9 HTML | Partial | SSG | Missing: template emission (LT-527 → LT-529, release-gating) |
 | 10 Client | Done | All |  |
 | 11 Diagnostics | Partial | ~77 codes; record is `{ code, severity, message, location, related, fix? }` (ADR 0044 s1, LT-371) | Partial: terminal only |
 | 12 Public contract | Partial | Ruled (D-32, 2026-10-06), reshaped (LT-480), stood up as `@zeix/le-truc-compiler` (LT-254: manifest, `exports` map, runtime peer floor, `check:peer` + `check:package`) | Missing: the `npm publish` act itself and the pioneer-gated release (ADR 0034 s6); the no-TypeScript-type declaration pin (LT-377) |

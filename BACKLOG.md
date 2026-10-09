@@ -25,74 +25,21 @@ The Simulated tier is kept, SSG-only for all of 3.x (ADR 0035).
 ## P1 — The v3.0 release track (ADR 0034)
 
 Everything v3.0 does not ship without: the publishable `@zeix/le-truc-compiler`
-package (LT-254), template emission against the ruled target-emitter interface (LT-257,
-ADR 0043), the 2.x codemod (LT-259), and the two Zeix pioneer projects that are the release
+package (LT-254), template emission against the ruled target-emitter interface (LT-527 →
+LT-528 → LT-529, ADR 0043 as amended by the LT-516 session), the 2.x codemod (LT-259), and
+the two Zeix pioneer projects that are the release
 gates (LT-260, LT-261). The owner has ruled the first publish waits for the P6 cleanup round —
 publishing a package its consumers cannot yet use is not a milestone — so this band sits above
 the others in priority but behind P6 in practice. Inside the band the order is LT-480 → LT-254 →
-LT-257 → the pioneers, because a pioneer cannot start before the package exists and emission
-is proven. LT-480 reshapes the contract to the D-32 ruling (LT-471) before LT-254 publishes it.
-LT-377 (no TypeScript types in the published declarations, ADR 0034 s8) lands after LT-254's
-declaration build. LT-257 needs LT-516, the session that amends ADR 0043 for the `Try`
-boundary, reactive lists and passed children, and splits LT-257 into buildable tasks. LT-259
+the emission chain → the pioneers, because a pioneer cannot start before the package exists and
+emission is proven. LT-480 reshapes the contract to the D-32 ruling (LT-471) before LT-254
+publishes it. LT-377 (no TypeScript types in the published declarations, ADR 0034 s8) lands
+after LT-254's declaration build. The emission chain (LT-257, split 2026-10-10) builds in the
+le-truc-compiler repository once LT-524 bootstraps it: LT-527 is the shared walk, operation
+layer, census and test-only second target; LT-528 the Twig target; LT-529 the PHP CI job.
+LT-259
 (the codemod) waits for its drift-cost metric to be ruled and pairs with LT-260.
 
-
-- [ ] LT-257: Template emission — **build the target-emitter interface ([ADR 0043](adr/0043-the-target-emitter-interface-for-template-emission.md)) with Twig as its first implementation** ([M27](REQUIREMENTS.md#m27-backend-neutral-template-emission)). **Release-gating; pioneer 2's critical path.**
-  **Area:** compiler
-  **Needs:** LT-254, LT-516
-  **Re-scoped (Architect, 2026-10-01):** the interface was designed in LT-360 and is ADR 0043.
-  This entry is the build half. Read the ADR first; this text only names the deliverables.
-  **Context:** ADR 0034 s3. For a CMS, a folded HTML partial and a template are the same
-  artifact: page props are *content*, so pre-folding per prop signature is combinatorially dead.
-  The fold resolves everything prop-independent and leaves each server arg as a **hole**.
-  **Deliverable:**
-  - The shared template walk over the settled IR, writing through `HtmlWriter` (LT-234): the
-    emission-operation vocabulary, portable-subset classification (ADR 0043 s1), escaping-context
-    assignment and the shared refusals (s3), emittability per component (s2), and the
-    `conditional` node's initial winner as a backend conditional beside inert arm templates (s4,
-    built by LT-274).
-  - The Twig target: syntax table, exhaustive escaping map, `{% include … only %}` composition
-    (s5), one partial per component × locale (s6), the declared host helpers — URL allowlist
-    check, `le_truc_sanitize_html`, `le_truc_format` over `MessageFormatter` — listed in the
-    manifest for the integrator.
-  - Census: per-component tier per target, with the routing reasons (`non-portable initial`,
-    Simulated → Static).
-  - The trivial second target in `server/tests/compiler/targets/` only: an operation dump plus an
-    in-process interpreter, compared byte-for-byte with SSG (s8).
-  - CI: a PHP job (`twig/twig`, `intl`) running Twig equivalence, the adversarial escaping
-    corpus and the ICU equivalence corpus; local runs skip without `php`.
-  - Spec sweep (`COMPILER_SPEC.md`): §3.8 drops "calls to functions marked pure"; §9.2's mapping
-    table follows ADR 0043 (message calls as pattern-literal formatter calls, `Compose` with the
-    closed-scope include); D-23 and O-6 close; §3.7's "the library ships no sanitizer" is
-    corrected for the fail-closed escaping default. *Done 2026-10-01 by the Architect in the §13
-    team review* — the spec now follows ADR 0043 in §3.7, §3.8, §6.3, §9.1 and §9.2; nothing left here.
-  - **`Try` in template targets is undecided** (D-28, deferred to a design session that amends
-    ADR 0043). Do not build a placeholder mapping; until the session rules, a `Try` in a
-    template-target build has no defined output, so sequence the Twig target's boundary handling
-    after that session.
-  **New diagnostics (compiler channel, Prevented; only when a template target is configured):**
-  LTC057 — a non-portable expression in a hole position (one face for `Intl` formatting over a
-  hole, naming the ICU-pattern fix); LTC058 — a hole in a refused position (faces:
-  `<script>`/`<style>` content or comment, `on*`/`srcdoc`, attribute or tag name, whole-string
-  `style`). LTC056 is taken by the authored-`<script>` refusal (LT-358 rider). Copy follows
-  `writer` → error-messages.
-  **Depends on** LT-254 (where it ships), LT-274 (the `conditional` node), LT-373 (the reactivity
-  class the hole classifier reads), and the D-28 session for `Try`. LT-258, LT-313 and LT-234 have landed.
-  **Check:** every corpus component emits a Twig partial in its tier; the escaping corpus passes,
-  negative cases included; the test-only second target passes the same equivalence with no
-  change to the Twig target or the shared walk; Twig renders are byte-identical to SSG for every
-  fixture × locale; zero-warning baseline unchanged for builds with no template target.
-
-  **Added 2026-10-01 — the `COMPILER_SPEC.md` §13 team review** (decisions D-07, D-20, D-25,
-  D-26, D-30, D-33; recorded in ADRs 0032, 0033, 0034, 0040, 0044 and `HOST_PROFILE.md` the same
-  day). D-04 is parked, D-28 and D-32 are deferred to design sessions, section 15 is open; none of
-  those has a task yet.
-  **Added (Architect, 2026-10-06, from LT-453's review, ADR 0047 s4):** a key-alias harvest is
-  not emittable to a target: classify it as a census routing outcome (ADR 0043 s2), because a
-  backend template cannot carry the render witness. `key-alias.ts`'s `isAliasHarvestable` and
-  `aliasScopeOf` identify the lists.
-  **Gated on LT-516 (Architect, 2026-10-09):** ADR 0043 predates ADR 0046 (reactive lists), ADR 0048 (passed children) and the D-28 ruling for `Try`. The LT-516 design session amends it and splits this entry into buildable tasks. Do not start from this text. LT-274 and LT-373 have landed.
 
 - [ ] LT-259: The 2.x → 3.0 codemod, and the drift-cost measurement it instruments.
   **Area:** compiler
@@ -132,14 +79,15 @@ boundary, reactive lists and passed children, and splits LT-257 into buildable t
 
 - [ ] LT-261: Pioneer 2 — verify template emission against the Zeix Craft (PHP) project. **Release gate.**
   **Area:** design
-  **Needs:** LT-257
-  **Context:** ADR 0034 s3/s6. LT-257 is the mechanism; this is the proof, and the owner has
+  **Needs:** LT-529
+  **Context:** ADR 0034 s3/s6. LT-527 → LT-528 → LT-529 are the mechanism (LT-257, split by
+  the LT-516 session); this is the proof, and the owner has
   ruled it must pass **before v3.0 releases**. What is being verified is not that Twig files are
   produced but that a CMS page carries **real content in its initial HTML with no JavaScript**.
   **Deliverable:** the Craft integration — where partials land, how the build fits their
   pipeline, how the `i18n` ambient set is passed through the include; the escaping contract
   exercised against real content, adversarial cases included; a recorded list of what the
-  emitter had to grow. **Depends on LT-257. Blocks the v3.0 release.**
+  emitter had to grow. **Depends on LT-529. Blocks the v3.0 release.**
   **Check:** JavaScript disabled, a Craft-rendered page shows content-bearing folded markup from
   a compiler-emitted partial; enabling JavaScript corrects nothing that was already right.
 
