@@ -222,33 +222,6 @@ LTC056 is LT-358's).
 
 ### X — compiler, analysis passes
 
-- [ ] LT-492: Lift LTC011 for `truc:html` in a composed element's content — the parent's own sanitized binding (ADR 0048 s1).
-  **Area:** compiler
-  **Needs:** LT-472, LT-483
-  **Gates:** test:server, typecheck, check:corpus
-  **Area:** compiler
-  **Needs:** LT-472, LT-483 (planning, 2026-10-09: track X runs one at a time)
-  **Filed (Architect, 2026-10-07, from LT-463's review; owner ruling 2026-10-07):** `<div
-  truc:html={start}/>` inside composed `<ModuleScrollarea>` children fails LTC011 through
-  `composedElementUnsupported` ("`html` attribute in a composed element's content is not supported
-  yet", ADR 0024 s10). That blocks module-splitview's conversion (LT-493).
-  **Ruling:** content the parent passes as `children` belongs to the parent (ADR 0048 s1), so a
-  `truc:html` on an element in that region is the parent's own binding, exactly like a
-  `truc:html` in the parent's own template. It goes through the same sanitized channel (LT-025):
-  the server render sanitizes and splices it into the children string, and a reactive thunk binds
-  from the parent's client against the parent-owned element. **Rejected:** a markup-valued
-  ModuleScrollarea prop. It would open a second HTML channel just for this one child and route
-  markup through an arg that no sanitizer sees.
-  **Change:** drop the `html`-attribute case from the composed-content refusal. Lower it through
-  the existing `truc:html` emission, in the Children Region scope that LT-472's query re-include covers. The other
-  constructs `composedElementUnsupported` names stay refused. Amend ADR 0024 s10's "not supported
-  yet" list in place (it is unpublished) and cross-reference ADR 0048 s1.
-  **Check:** `test:server` pins three things: a static `truc:html` arg in composed children
-  renders sanitized server-side, a reactive thunk binds client-side, and a script in the markup
-  is stripped. `check:corpus` green.
-  **Channel/tier:** compiler — LTC011 narrows; no new check. The sanitizer's existing tier-2
-  containment applies unchanged.
-
 - [ ] LT-493: module-splitview composes `<ModuleScrollarea>` for its panes.
   **Area:** examples
   **Needs:** LT-492
@@ -268,38 +241,7 @@ LTC056 is LT-358's).
 
 ### B — module-todo and BasicButton
 
-- [ ] LT-494: FormRadiogroup's `.split-button` variant hides its own legend and radios; module-todo composes `<FormRadiogroup>`.
-  **Area:** examples
-  **Needs:** LT-463, LT-489
-  **Gates:** check:corpus, test:variants, test:server, typecheck
-  **Area:** examples
-  **Needs:** LT-463, LT-489 (planning, 2026-10-09: both edit module-todo; track B)
-  **Filed (Architect, 2026-10-07, from LT-463's review; owner ruling 2026-10-07):** module-todo's
-  filter radiogroup stayed raw. The composed render cannot carry the page-level `visually-hidden`
-  class on the legend and the radio inputs. (Under ADR 0033 as revised 2026-10-07, the parent
-  could style the child's internals without a limit, but LTC087 would flag it as a leak. The
-  ruling stands: the presentation is the child's.)
-  **Ruling:** that presentation belongs to the child's own `.split-button` variant. Every
-  split-button usage hides the legend and the native radios (see `form-radiogroup.html`), so the
-  variant's own stylesheet owns it. No new prop. **Rejected:** a presentation arg (`hideLegend`
-  and similar), which would expose one variant's internals as API, and accepting a visible
-  difference.
-  **Change:**
-  1. In FormRadiogroup's sheet, `&.split-button` visually hides `legend` and
-     `input[type="radio"]` with the same declarations as the shared `.visually-hidden` utility,
-     so the legend keeps its accessible name and the inputs stay focusable. The page-authored
-     demo drops its now-redundant `visually-hidden` classes, or keeps them (harmless). Pick
-     whichever leaves `form-radiogroup.spec.ts` unchanged. The hand-written `form-radiogroup.css`
-     gets the same rule, so its CSS matches the compiled sheet.
-  2. module-todo (`.tsx` and `.tsrx`) composes `<FormRadiogroup class="split-button" name="filter"
-     legend={t.filter} options={…} value="all" />`, with the option labels from `t.all`,
-     `t.active` and `t.completed`. Remove the raw markup's LT-463 comment.
-  **Check:** `check:corpus` green; `bun run test:component form-radiogroup` and `module-todo`
-  green on all surfaces, with no expectation changed. If a spec expectation must change beyond
-  the composed root's attributes, stop and write it in `NOTES.md` (LT-463's rule for surprises).
-  **Channel/tier:** none — corpus CSS and composition.
-
-- [ ] LT-514: Form components and BasicButton take their visible label as non-interactive children.
+- [ ] LT-514: Form components and BasicButton take their visible label as non-interactive children. — in progress ⚙
   **Area:** examples
   **Needs:** LT-477, LT-479, LT-489, LT-494
   **Gates:** check:corpus, test:variants, typecheck, test:server, build:docs
