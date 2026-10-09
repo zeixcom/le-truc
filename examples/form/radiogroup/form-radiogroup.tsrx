@@ -226,6 +226,21 @@ export function FormRadiogroup(
 			}
 
 			:where(:scope).split-button {
+				/* The variant owns its hiding presentation (LT-494): every
+				   split-button usage hides the legend and the native radios,
+				   so the sheet carries the `.visually-hidden` declarations
+				   itself — the legend keeps its accessible name and the
+				   inputs stay focusable. */
+				& legend,
+				& input[type='radio'] {
+					position: absolute;
+					left: -10000px;
+					top: auto;
+					width: 1px;
+					height: 1px;
+					overflow: hidden;
+				}
+
 				& fieldset {
 					gap: 0;
 					padding: 0;

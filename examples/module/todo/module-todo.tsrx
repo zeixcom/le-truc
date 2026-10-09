@@ -27,10 +27,11 @@
  *
  * The submit and remove buttons are composed `BasicButton`s (LT-463; the
  * remove since LT-489's orthogonal `variant`/`kind`/`size` args, its
- * `onClick` a per-item handler arg). The clear-completed button and the
- * filter radiogroup stay raw: LT-489 moved the remove button only, and
- * the composed radiogroup render cannot carry the page-level
- * `visually-hidden` presentation on its legend and radios.
+ * `onClick` a per-item handler arg), and the filter radiogroup a composed
+ * `FormRadiogroup` (LT-494) — its `.split-button` variant owns the
+ * visually-hidden legend and radios, so the compose site carries no
+ * presentation. The clear-completed button stays raw: LT-489 moved the
+ * remove button only.
  */
 import {
 	bindState,
@@ -42,6 +43,7 @@ import {
 import { nextTodoId, setupReorder, type TodoItem } from '../../_common/reorder.ts'
 import { BasicButton } from '../../basic/button/basic-button.tsrx'
 import { FormInplaceEdit } from '../../form/inplace-edit/form-inplace-edit.tsrx'
+import { FormRadiogroup } from '../../form/radiogroup/form-radiogroup.tsrx'
 import { FormTextbox } from '../../form/textbox/form-textbox.tsrx'
 
 declare global {
@@ -210,42 +212,20 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 			</ol>
 			<footer>
 				<p class="remaining">{() => t.remaining({ count: activeCount.get() })}</p>
-				{/* Raw, not composed (LT-463): the composed render cannot carry the
-				    page-level `visually-hidden` presentation on the legend and the
-				    radios — a child-contract decision, not a compose arg. */}
-				<form-radiogroup value="all" class="split-button">
-					<fieldset>
-						<legend class="visually-hidden">{t.filter}</legend>
-						<label data-value="all" class="selected">
-							<input
-								type="radio"
-								class="visually-hidden"
-								value="all"
-								checked
-								tabindex="0"
-							/>
-							<span>{t.all}</span>
-						</label>
-						<label data-value="active">
-							<input
-								type="radio"
-								class="visually-hidden"
-								value="active"
-								tabindex="-1"
-							/>
-							<span>{t.active}</span>
-						</label>
-						<label data-value="completed">
-							<input
-								type="radio"
-								class="visually-hidden"
-								value="completed"
-								tabindex="-1"
-							/>
-							<span>{t.completed}</span>
-						</label>
-					</fieldset>
-				</form-radiogroup>
+				{/* Composed since LT-494: the `.split-button` variant owns the
+				    visually-hidden legend and radios, so no presentation
+				    rides the compose site — only the discriminator class. */}
+				<FormRadiogroup
+					class="split-button"
+					name="filter"
+					legend={t.filter}
+					options={[
+						{ value: 'all', label: t.all },
+						{ value: 'active', label: t.active },
+						{ value: 'completed', label: t.completed },
+					]}
+					value="all"
+				/>
 				{/* Stays raw: LT-489 ruled the modifier args and moved the
 				    remove button to the composed spelling; this one stays
 				    raw. */}
@@ -264,7 +244,7 @@ export function ModuleTodo({ i18n: { t } }: { i18n: I18n<typeof i18n> })
 			</footer>
 
 			<style>
-			@scope to (basic-button > *) {
+			@scope to (basic-button > *, form-radiogroup > *) {
 				:where(:scope) {
 					display: flex;
 					flex-direction: column;
