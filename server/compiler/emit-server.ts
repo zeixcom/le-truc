@@ -61,7 +61,7 @@ import type {
 } from './ir'
 import { aliasScopeOf, harvestsPerField, isAliasHarvestable } from './key-alias'
 import { NO_DEPS } from './reactivity'
-import type { RegistryEntry } from './registry'
+import type { InternalRegistryEntry } from './registry'
 import { onServer } from './setup-extraction'
 import { reindent, type SourceSpan } from './spans'
 import type { EvaluationTier } from './tier'
@@ -173,7 +173,7 @@ type EmitContext = {
 	 * is missing here was already diagnosed as an error upstream
 	 * (`index.ts`), so `emitCompose` never needs to handle a missing entry.
 	 */
-	composeRegistry: ReadonlyMap<string, RegistryEntry> | undefined
+	composeRegistry: ReadonlyMap<string, InternalRegistryEntry> | undefined
 	/** The render function's markup statements, in emission order. */
 	out: CodeBuilder
 	/** Runtime harness names referenced by the emitted code → import line. */
@@ -1691,7 +1691,7 @@ export const emitServerModule = (
 		 * is missing here was already diagnosed as an error upstream
 		 * (`index.ts`), so `emitCompose` never needs to handle a missing entry.
 		 */
-		composeRegistry?: ReadonlyMap<string, RegistryEntry> | undefined
+		composeRegistry?: ReadonlyMap<string, InternalRegistryEntry> | undefined
 		/**
 		 * The component's evaluation tier (ADR 0029 sub-design 4, LT-165).
 		 * Defaults to `'folded'`, which is the pre-LT-165 behaviour — every

@@ -30,7 +30,7 @@ import { asArray, identifierName, isNode, nodeType } from '../ast-utils'
 import { childrenInsertionsOf } from '../children-region'
 import { namesDeclaredRole } from '../first-refs'
 import type { ComponentIR, TemplateNode } from '../ir'
-import type { RegistryEntry } from '../registry'
+import type { InternalRegistryEntry } from '../registry'
 import { walkTemplate } from '../walk'
 import { allComposeNodes, type ComposeNode, refOf } from './selectors'
 
@@ -312,7 +312,7 @@ export const roleWritesOf = (
  */
 export const findRoleWriterConflicts = (
 	component: ComponentIR,
-	composeRegistry: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry: ReadonlyMap<string, InternalRegistryEntry>,
 ): RoleWriterConflict[] => {
 	const bindings = watchBindingsOf(component)
 	if (bindings.length === 0) return []

@@ -73,7 +73,7 @@ export const AMBIENT_RECORD_PARAM = 'i18n'
 /**
  * The closed page-ambient set: the reserved `i18n` record's members (ADR
  * 0030 sub-design 2), each with the TypeScript type the generated `I18n`
- * interface gives it. `server/effects/i18n.ts` writes that interface from
+ * interface gives it. `server/compiler/i18n-catalog.ts` writes that interface from
  * this table, so the record type and the check cannot disagree about what
  * the record carries.
  */

@@ -22,7 +22,7 @@ import {
 } from '../../compiler/analysis/selectors'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import type { ComponentIR } from '../../compiler/ir'
-import type { RegistryEntry } from '../../compiler/registry'
+import type { InternalRegistryEntry } from '../../compiler/registry'
 
 const source = `export function C({}: {})
 @{
@@ -397,7 +397,7 @@ export function P({}: {})
 				source: string
 			}
 		).source
-		const registry = new Map<string, RegistryEntry>(
+		const registry = new Map<string, InternalRegistryEntry>(
 			childIR
 				? [
 						[
@@ -405,7 +405,7 @@ export function P({}: {})
 							{
 								tag: 'child-el',
 								renderedShapes: renderedShapesOf(childIR),
-							} as RegistryEntry,
+							} as InternalRegistryEntry,
 						],
 					]
 				: [],
@@ -508,13 +508,13 @@ export function P({}: {})
 		).source
 		parent.composedShapes = composedShapesFor(
 			parent.root,
-			new Map<string, RegistryEntry>([
+			new Map<string, InternalRegistryEntry>([
 				[
 					composeSource,
 					{
 						tag: 'child-el',
 						renderedShapes: renderedShapesOf(rawChild),
-					} as RegistryEntry,
+					} as InternalRegistryEntry,
 				],
 			]),
 		)
@@ -589,7 +589,7 @@ export function P({}: {})
 }`,
 			'p.tsrx',
 		).component as ComponentIR
-		const registry = new Map<string, RegistryEntry>([
+		const registry = new Map<string, InternalRegistryEntry>([
 			[
 				(
 					component.root.children.find(n => n.kind === 'compose') as {
@@ -599,7 +599,7 @@ export function P({}: {})
 				{
 					tag: 'child-el',
 					renderedShapes: renderedShapesOf(rawChild),
-				} as RegistryEntry,
+				} as InternalRegistryEntry,
 			],
 		])
 		component.composedShapes = composedShapesFor(component.root, registry)
@@ -631,7 +631,7 @@ export function P({}: {})
 }`,
 			'p.tsrx',
 		).component as ComponentIR
-		const registry = new Map<string, RegistryEntry>([
+		const registry = new Map<string, InternalRegistryEntry>([
 			[
 				(
 					component.root.children.find(n => n.kind === 'compose') as {
@@ -643,7 +643,7 @@ export function P({}: {})
 					renderedShapes: renderedShapesOf(
 						child('<button type="button">in</button>'),
 					),
-				} as RegistryEntry,
+				} as InternalRegistryEntry,
 			],
 		])
 		component.composedShapes = composedShapesFor(component.root, registry)

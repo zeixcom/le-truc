@@ -11,7 +11,7 @@ import { analyzeClient } from '../../compiler/analysis/plan'
 import type { LocalDiagnostic } from '../../compiler/diagnostics'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
-import type { RegistryEntry } from '../../compiler/registry'
+import type { InternalRegistryEntry } from '../../compiler/registry'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
 // `value` is exposed from a plain literal, i.e. Slot-backed (LT-158): the
@@ -37,7 +37,7 @@ const compileChild = (path: string, source = child) => {
 	return component
 }
 
-const composeRegistryOf = (...entries: RegistryEntry[]) =>
+const composeRegistryOf = (...entries: InternalRegistryEntry[]) =>
 	new Map(entries.map(e => [e.source, e]))
 
 // Generated server modules must exist for in-process execution (LT-090);
@@ -911,7 +911,7 @@ export function BasicParent({ title }: { title: string })
 	}`
 		const childEntry = () =>
 			compileChild('examples/child/basic-child.tsrx').entry
-		const compileParent = (parent: string, ...extra: RegistryEntry[]) =>
+		const compileParent = (parent: string, ...extra: InternalRegistryEntry[]) =>
 			compileComponent(
 				parent,
 				'examples/parent/basic-parent.tsrx',
@@ -1869,7 +1869,7 @@ describe('compose arm roots plan their `truc:pass` entries (LT-481)', () => {
 			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
 		return component
 	}
-	const compileValueChildTsxEntry = (): RegistryEntry => {
+	const compileValueChildTsxEntry = (): InternalRegistryEntry => {
 		const { component, diagnostics } = compileComponentTsx(
 			valueChildTsx,
 			'examples/child/value-child.tsx',
@@ -1944,7 +1944,7 @@ export function BasicParent({}: {}) {
 
 	const compileParent = (
 		source: string,
-		childEntry: RegistryEntry,
+		childEntry: InternalRegistryEntry,
 		surface: 'tsrx' | 'tsx' = 'tsrx',
 	) =>
 		surface === 'tsrx'
@@ -2154,7 +2154,7 @@ describe('a pass entry on a boundary compose root in a list item refuses setup-c
 			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
 		return component
 	}
-	const compileValueChildTsxEntry = (): RegistryEntry => {
+	const compileValueChildTsxEntry = (): InternalRegistryEntry => {
 		const { component, diagnostics } = compileComponentTsx(
 			valueChildTsx,
 			'examples/child/value-child.tsx',

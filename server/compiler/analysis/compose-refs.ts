@@ -26,7 +26,7 @@ import {
 	namesDeclaredRole,
 } from '../first-refs'
 import type { ComponentIR, TemplateNode } from '../ir'
-import type { RegistryEntry } from '../registry'
+import type { InternalRegistryEntry } from '../registry'
 import { wordingOf } from '../surface'
 import { allComposeNodes, composeStaticAttrs, refOf } from './selectors'
 
@@ -43,7 +43,7 @@ export type ComposeRefs =
 	| { mode: 'skipped' }
 	| {
 			mode: 'resolved'
-			registry: ReadonlyMap<string, RegistryEntry>
+			registry: ReadonlyMap<string, InternalRegistryEntry>
 			/**
 			 * Refs that matched nothing — optional ones (LT-123) and
 			 * role-addressed ones, required included (ADR 0048 s2, LT-474
@@ -84,7 +84,7 @@ export type ComposeRefs =
 export const resolveComposeRefs = (
 	component: ComponentIR,
 	diagnostics: LocalDiagnostic[],
-	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry?: ReadonlyMap<string, InternalRegistryEntry>,
 ): ComposeRefs => {
 	// No registry: this is the discovery pass. Resolving is impossible and
 	// not needed — say nothing rather than reporting a false LTC026.

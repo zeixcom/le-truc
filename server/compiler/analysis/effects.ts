@@ -35,7 +35,7 @@ import type {
 	ReconcileForIR,
 	TemplateNode,
 } from '../ir'
-import type { RegistryEntry } from '../registry'
+import type { InternalRegistryEntry } from '../registry'
 import {
 	SUPPRESSED_HOST_SELECTOR,
 	type SuppressedSite,
@@ -205,7 +205,7 @@ type EffectsContext = {
 	 * one through: pass 1 puts every compilable file's entry in there, so
 	 * the two indexes are the same set of components.
 	 */
-	entryByTag: Map<string, RegistryEntry>
+	entryByTag: Map<string, InternalRegistryEntry>
 	/**
 	 * A reactive conditional's arm locals (ADR 0037) are `bindArm`-scoped
 	 * variables, not factory queries: each one's selector over the whole
@@ -3688,7 +3688,7 @@ export const runEffects = (
 	 * one through: pass 1 puts every compilable file's entry in there, so
 	 * the two indexes are the same set of components.
 	 */
-	const entryByTag = new Map<string, RegistryEntry>()
+	const entryByTag = new Map<string, InternalRegistryEntry>()
 	if (composeRefs.mode === 'resolved')
 		for (const entry of composeRefs.registry.values())
 			entryByTag.set(entry.tag, entry)

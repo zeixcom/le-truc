@@ -34,9 +34,9 @@ import * as path from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { compileComponent } from '../../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../../compiler/frontend/tsx'
-import type { RegistryEntry } from '../../../compiler/registry'
+import { collectI18n, writeI18nModule } from '../../../compiler/i18n-catalog'
+import type { InternalRegistryEntry } from '../../../compiler/registry'
 import { createSimulationRealm } from '../../../compiler/sim/realm'
-import { collectI18n, writeI18nModule } from '../../../effects/i18n'
 import { createGeneratedDir } from '../../helpers/generated-corpus'
 import { CORPUS_ARGS, renderName } from '../corpus-args'
 import { loadCorpus } from '../corpus-fixture'
@@ -114,8 +114,8 @@ const registry = new Set<string>([
 	...OTHERS.map(tagOf),
 ])
 
-const compileOne = (filename: string, entries: RegistryEntry[]) => {
-	const composeRegistry = new Map<string, RegistryEntry>(
+const compileOne = (filename: string, entries: InternalRegistryEntry[]) => {
+	const composeRegistry = new Map<string, InternalRegistryEntry>(
 		entries.map(e => [e.source, e]),
 	)
 	const compile = filename.endsWith('.tsx')
@@ -131,8 +131,8 @@ const compileOne = (filename: string, entries: RegistryEntry[]) => {
 }
 
 /** Both front ends get the same compose graph (e.g. combobox composes listbox). */
-const compilePair = (fx: Fixture, entries: RegistryEntry[]) => {
-	const composeRegistry = new Map<string, RegistryEntry>(
+const compilePair = (fx: Fixture, entries: InternalRegistryEntry[]) => {
+	const composeRegistry = new Map<string, InternalRegistryEntry>(
 		entries.map(e => [e.source, e]),
 	)
 	const tsrx = compileComponent(
@@ -232,6 +232,8 @@ await writeI18nModule(
 	generated.path,
 	await collectI18n(
 		discoveryEntries.filter(entry => entry.source.endsWith('.tsrx')),
+		undefined,
+		path.join(ROOT, 'i18n'),
 	),
 )
 

@@ -12,7 +12,10 @@
 
 import { afterAll, describe, expect, test } from 'bun:test'
 import * as path from 'node:path'
-import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
+import type {
+	InternalComponentRegistry,
+	InternalRegistryEntry,
+} from '../../compiler/registry'
 import { compileCorpus } from '../../corpus-compile'
 import {
 	type PageRenderModule,
@@ -23,7 +26,7 @@ import { createGeneratedDir } from '../helpers/generated-corpus'
 
 /* === Fixtures === */
 
-const entry = (over: Partial<RegistryEntry>): RegistryEntry =>
+const entry = (over: Partial<InternalRegistryEntry>): InternalRegistryEntry =>
 	({
 		tag: 'x-el',
 		name: 'XEl',
@@ -35,10 +38,11 @@ const entry = (over: Partial<RegistryEntry>): RegistryEntry =>
 		declaresI18n: true,
 		langArgDefault: null,
 		...over,
-	}) as RegistryEntry
+	}) as InternalRegistryEntry
 
-const registryOf = (...entries: RegistryEntry[]): ComponentRegistry =>
-	Object.fromEntries(entries.map(e => [e.tag, e]))
+const registryOf = (
+	...entries: InternalRegistryEntry[]
+): InternalComponentRegistry => Object.fromEntries(entries.map(e => [e.tag, e]))
 
 /** A fake generated module: captures the args the renderer assembles. */
 const fakeModule = (tag: string, rendered: string): PageRenderModule => ({

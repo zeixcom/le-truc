@@ -52,7 +52,7 @@ const LLMS_FULL_TXT_FILE = join(ROOT, 'docs/llms-full.txt')
  * corpus to the Simulated tier.
  *
  * The FIRST entry is the default locale — the one `/` redirects to and the one
- * the source strings are written in (`SOURCE_LOCALE` in effects/i18n.ts).
+ * the source strings are written in (`SOURCE_LOCALE` in compiler/i18n-catalog.ts).
  * Adding a locale here costs one more page tree; measured at ~1.5 s per locale
  * (LT-175), because only PAGES multiply — see `LOCALE_INDEPENDENT_DIRS`.
  */

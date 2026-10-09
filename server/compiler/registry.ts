@@ -11,6 +11,18 @@
  * (ADR 0039) excepted: its members compile, and only the selected surface's
  * entry, naming that member's source, reaches this registry.
  *
+ * Since D-32 (LT-480) the entry is TWO types. {@link RegistryEntry} is the
+ * public projection — the fields a consumer of the built corpus reads, and
+ * exactly the `registry.json` schema, which semver covers. Everything only
+ * the compiler's own passes read — the compose-validation facts, the tier
+ * routing record, the i18n declarations — lives on
+ * {@link InternalRegistryEntry} and serializes to the pass's internal
+ * `registry.internal.json` sidecar, written beside `registry.json` in the
+ * same output root. One corpus pass composes only its own sources in 3.0,
+ * so no consumer reads the internal fields; composing across corpora (an
+ * installed component library, say) would promote the ones it needs back
+ * onto the public projection as a minor.
+ *
  * Three consumers:
  * - the client analyzer — registry-aware attribute dispatch (a reactive
  *   attribute on a registry tag lowers to `pass()`, any other dashed tag
@@ -18,8 +30,8 @@
  *   registry knowledge hand-written code lacks);
  * - `pass={{ }}` legality (LT-158) — a binding's target is decided against
  *   the TARGET component's own `expose()`, recorded here as `exposedProps`;
- * - the future docs/examples migration, which resolves tags to render
- *   functions and stylesheets through this file.
+ * - the docs/examples pipeline, which resolves tags to render functions,
+ *   stylesheets and i18n declarations through this file.
  */
 
 import type { RoleWrite } from './analysis/role-writes'
@@ -30,6 +42,11 @@ import type { EvaluationTier, RoutingSignal } from './tier'
 
 /* === Types === */
 
+/**
+ * The public projection of a compiled component: the fields a consumer of
+ * the built corpus reads. This shape — and nothing wider — is the
+ * `registry.json` schema (D-32).
+ */
 export type RegistryEntry = {
 	/** Custom element tag (`basic-counter`). */
 	tag: string
@@ -78,6 +95,32 @@ export type RegistryEntry = {
 	 */
 	composesTags: string[]
 	/**
+	 * Which server-evaluation mechanism renders this component's initial
+	 * HTML (ADR 0029, LT-165), and why it was routed there.
+	 *
+	 * Recorded here rather than kept inside the compiler because the tier is
+	 * product surface, not an implementation detail: it decides build cost,
+	 * it feeds the build report's tier census, and a component drifting from
+	 * the Folded tier to the Simulated tier is a cost regression worth
+	 * seeing. `emit-server.ts` also reads it — a Simulated-tier or
+	 * Static-tier module does not re-declare `@{ }` setup verbatim.
+	 *
+	 * The value written by the FIRST pass is pre-contamination. The
+	 * registry-aware second pass applies ADR 0029 sub-design 3's compose-read
+	 * fixpoint, which can only move a component downward, towards the
+	 * Simulated tier.
+	 */
+	tier: EvaluationTier
+}
+
+/**
+ * The compile's own record of a component — the public projection plus
+ * every field only a compiler pass or the repo's build pipeline reads
+ * (D-32, LT-480 ruling 4). Serializes to `registry.internal.json`, never
+ * to `registry.json`.
+ */
+export type InternalRegistryEntry = RegistryEntry & {
+	/**
 	 * Every element this component's template can render (LT-096), for the
 	 * PARENT's selector engine: a composing parent's synthesized `first()`
 	 * query runs over the whole subtree, the child's markup included, so a
@@ -111,7 +154,7 @@ export type RegistryEntry = {
 	 * composed child this flag is set through (LTC085,
 	 * `analysis/content-model.ts`). The discovery pass knows no composed
 	 * child, so its entries carry the direct half only; the entry that
-	 * reaches `registry.json` is the registry-aware one.
+	 * reaches the internal registry is the registry-aware one.
 	 */
 	interactive: boolean
 	/**
@@ -125,23 +168,6 @@ export type RegistryEntry = {
 	 * turns LTC085 on there.
 	 */
 	childrenModel?: 'any' | 'non-interactive' | null
-	/**
-	 * Which server-evaluation mechanism renders this component's initial
-	 * HTML (ADR 0029, LT-165), and why it was routed there.
-	 *
-	 * Recorded here rather than kept inside the compiler because the tier is
-	 * product surface, not an implementation detail: it decides build cost,
-	 * it feeds the build report's tier census, and a component drifting from
-	 * the Folded tier to the Simulated tier is a cost regression worth
-	 * seeing. `emit-server.ts` also reads it — a Simulated-tier or
-	 * Static-tier module does not re-declare `@{ }` setup verbatim.
-	 *
-	 * The value written by the FIRST pass is pre-contamination. The
-	 * registry-aware second pass applies ADR 0029 sub-design 3's compose-read
-	 * fixpoint, which can only move a component downward, towards the
-	 * Simulated tier.
-	 */
-	tier: EvaluationTier
 	/** Why this component is not Folded-tier; empty for the Folded tier. */
 	routingSignals: RoutingSignal[]
 	/**
@@ -236,9 +262,52 @@ export type HandlerPlacement =
 	| { event: string; selector: string; optional: boolean }
 	| { via: string; clause: string; arg: string; optional: boolean }
 
+/** The parsed `registry.json` shape — one public entry per tag. */
 export type ComponentRegistry = Record<string, RegistryEntry>
+
+/**
+ * The parsed `registry.internal.json` shape — the compile's full record,
+ * for the passes that need the internal fields.
+ */
+export type InternalComponentRegistry = Record<string, InternalRegistryEntry>
 
 /* === Exported Functions === */
 
-export const registryJson = (entries: RegistryEntry[]): string =>
+/** The public projection of one entry — the `registry.json` schema, exactly. */
+export const publicRegistryEntry = (
+	entry: InternalRegistryEntry,
+): RegistryEntry => ({
+	tag: entry.tag,
+	name: entry.name,
+	source: entry.source,
+	serverModule: entry.serverModule,
+	clientModule: entry.clientModule,
+	css: entry.css,
+	propsType: entry.propsType,
+	exposedProps: entry.exposedProps,
+	tier: entry.tier,
+	composesTags: entry.composesTags,
+})
+
+/**
+ * `registry.json` — the public projection only (D-32): the published
+ * schema, one entry per tag keyed by tag.
+ */
+export const registryJson = (
+	entries: readonly InternalRegistryEntry[],
+): string =>
+	`${JSON.stringify(
+		Object.fromEntries(entries.map(e => [e.tag, publicRegistryEntry(e)])),
+		null,
+		'\t',
+	)}\n`
+
+/**
+ * `registry.internal.json` — the compile's own record, full internal
+ * entries. The repo's build passes (simulation, page render) and the census
+ * scripts read this sidecar; no package consumer does.
+ */
+export const internalRegistryJson = (
+	entries: readonly InternalRegistryEntry[],
+): string =>
 	`${JSON.stringify(Object.fromEntries(entries.map(e => [e.tag, e])), null, '\t')}\n`

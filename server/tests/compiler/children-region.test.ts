@@ -19,7 +19,7 @@ import createDOMPurify, { type WindowLike } from 'dompurify'
 import { JSDOM } from 'jsdom'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
-import type { RegistryEntry } from '../../compiler/registry'
+import type { InternalRegistryEntry } from '../../compiler/registry'
 import { configureHtmlSanitizer } from '../../compiler/runtime'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
@@ -81,14 +81,14 @@ export function ${name}(${params}, { expose, first, watch }: FactoryContext<Reco
 }
 `
 
-const registryOf = (...entries: RegistryEntry[]) =>
+const registryOf = (...entries: InternalRegistryEntry[]) =>
 	new Map(entries.map(entry => [entry.source, entry]))
 
 const compile = (
 	surface: 'tsrx' | 'tsx',
 	source: string,
 	path: string,
-	registry: Map<string, RegistryEntry> = new Map(),
+	registry: Map<string, InternalRegistryEntry> = new Map(),
 ): Compiled => {
 	const result =
 		surface === 'tsrx'

@@ -23,12 +23,12 @@ import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { Glob } from 'bun'
-import { DEFAULT_CSS_TARGETS } from '../server/compiler/emit-paths'
-import { compileCorpus } from '../server/corpus-compile'
 import {
 	collectCorpusSources,
 	loadCorpusConfig,
-} from '../server/corpus-sources'
+} from '../server/compiler/corpus-scan'
+import { DEFAULT_CSS_TARGETS } from '../server/compiler/emit-paths'
+import { compileCorpus } from '../server/corpus-compile'
 import {
 	BASELINE_ALLOWLIST,
 	checkPin,
@@ -77,7 +77,7 @@ problems.push(...checkPin(pin, reference))
 // Its own output directory, so a configured `cssTargets` never decides what
 // this check sees, and the build's own artifacts stay untouched.
 const config = loadCorpusConfig()
-const compiled = await compileCorpus(collectCorpusSources(config), {
+const compiled = await compileCorpus(await collectCorpusSources(config), {
 	...config,
 	cssTargets: DEFAULT_CSS_TARGETS,
 	outDir: join(root, 'server/generated/baseline'),

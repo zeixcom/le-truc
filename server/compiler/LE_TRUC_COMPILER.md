@@ -82,8 +82,11 @@ and `frontend/tsx/index.ts` exports `compileComponentTsx` with the same
 signature. Both are thin shells over the shared `compileFromIR`
 (`pipeline.ts`), differing only in which front end parses the source, so a
 pipeline change cannot drift between surfaces. That shared seam is
-internal; the published surface is `compileComponentTsx` and the types it
-takes and returns (§ 2). Severity policy: **errors fail the file**; **warnings skip it** (the build effect logs and moves on).
+internal, and so are both front ends since D-32 (LT-480): the published
+surface is the corpus entry point `compileCorpus` (§ 2), which is the only
+orchestration that can answer a component's artifacts correctly. Severity
+policy: **errors fail the file**; **warnings skip it** (the build effect
+logs and moves on).
 
 ### The parser boundaries
 
@@ -208,31 +211,48 @@ its input (ADR 0032 s6). That seam is not built yet (LT-376).
 
 `contract.ts` names the public contract. It is the compiler's designated
 export surface: the exact set published as `@zeix/le-truc-compiler`
-(ADR 0034 s1), by role:
+(ADR 0034 s1), reshaped to the D-32 ruling (owner 2026-10-06, LT-480), by
+role:
 
 | Role | Symbols |
 | --- | --- |
-| Bundled front end | `compileComponentTsx` |
-| Compile result | `CompileFileResult`, `CompiledComponent`, `RegistryEntry`, `ExposeKind`, `SourceSpan` |
-| Refusal channels | `CompileDiagnostic`, `DiagnosticCode`, `DiagnosticLocation`, `DiagnosticFix`, `DiagnosticEdit`, `RoutingSignal`, `RoutingSignalOrigin`, `Resolution`, `UnresolvableLimb`, `EvaluationTier` |
-| Emit-path facts | `EmitPaths`, `DEFAULT_EMIT_PATHS` |
+| The corpus entry point | `compileCorpus(config)` — the one entry point: scans the configured sources, compiles both corpus passes, writes every artifact to `outDir` |
+| The exchange types | `CorpusConfig`, `CorpusConfigInput`, `CorpusResult`, `CorpusSummary` |
+| The registry the run wrote | `RegistryEntry` (the public projection), `ExposeKind` |
+| Refusal channel | `CompileDiagnostic`, `DiagnosticCode`, `DiagnosticLocation`, `DiagnosticFix`, `DiagnosticEdit` |
+| The tier vocabulary | `EvaluationTier` |
 
-`ExposeKind` and `SourceSpan` are listed because public result types name
-them (`RegistryEntry.exposedProps`, the span tables), and the three
-`Diagnostic*` shapes because `CompileDiagnostic` names them. Which entry points and
-result types belong in the set is the D-32 design session's call.
+`ExposeKind` is listed because a public type names it
+(`RegistryEntry.exposedProps`), and the three `Diagnostic*` shapes because
+`CompileDiagnostic` names them. The per-file front end is NOT part of the
+set: `compileComponentTsx` (with `CompileFileResult`, `CompiledComponent`,
+`SourceSpan`, `EmitPaths` and `DEFAULT_EMIT_PATHS`) stays internal — exported
+from `frontend/tsx/index.ts` for the corpus pass and the tests — because a
+component's artifacts depend on other components (compose legality, tier
+contamination over the compose graph, variant sets), and a per-file entry
+point would hand every consumer that orchestration to rebuild. The
+`RoutingSignal` family (`RoutingSignal`, `RoutingSignalOrigin`,
+`Resolution`, `UnresolvableLimb`) left with `routingSignals` leaving
+`RegistryEntry`: no public type names them any more. `HandlerPlacement`
+left the same way (handler args are internal, LT-480 ruling 4).
 
 `contract.test.ts` pins the set against two lists. Widening it is a
 public-API decision; shrinking it is a breaking one. Either change fails the
-test until the lists move with it. `compileComponentTsx` is the only front
-end published at 3.0 (ADR 0034 s2); the `.tsrx` shell's `compileComponent`
+test until the lists move with it. The `.tsrx` shell's `compileComponent`
 stays repo-internal until `@tsrx/core` reaches 1.0.
 
-**The result.** `compileComponentTsx` returns a `CompileFileResult`:
-`diagnostics`, and `component` — a `CompiledComponent` that carries the three
-artifacts (`serverCode`, `clientCode`, `css`), the registry entry (`entry`),
-and the two span tables (`clientSpans`, `serverSpans`; § 6). An error
-diagnostic sets `component` to `null`.
+**The result.** `compileCorpus(config)` returns a `CorpusResult`:
+`diagnostics` — every diagnostic both passes reported, errors included; the
+pass itself does not throw on them, the caller decides — and `summary`, a
+`CorpusSummary`: the served component count, the diagnostic counts by
+severity, the post-contamination tier census (one count per tier including
+zeroes), the locales the translation census walked, and its gap count. The
+artifacts are files, not return values: the generated
+`*.server.ts`/`*.client.ts`/`*.css` per component, `registry.json` (the
+public projection — that projection IS the file's schema), the `i18n`
+module, and `tsrx-imports.d.ts` where the corpus carries `.tsrx` sources.
+An error diagnostic refuses its file: the component is dropped from the
+registry and never shipped wrong.
 
 **The refusal channel is part of the contract.** ADR 0028 names three
 surfacing tiers, and the compiler's refusals land in the first:
@@ -285,42 +305,54 @@ statically. The compiler refuses through two shapes:
 
   The classifier's conjunction: no signals routes Folded; any
   realm-answerable signal routes Simulated; otherwise Static. Every signal
-  rides the registry entry (`entry.routingSignals`) into the tier census
-  (§ 6). This is how the compiler says "I cannot answer this" and gets a
-  routed tier and a census record instead of a silently wrong component.
+  rides the compile's internal record (`registry.internal.json`) into the
+  tier census (§ 6) — the PUBLIC projection observes the outcome (the
+  entry's `tier`, the summary's counts), not the signals themselves. This
+  is how the compiler says "I cannot answer this" and gets a routed tier
+  and a census record instead of a silently wrong component.
 
 **The stability policy.** The module doc on `contract.ts` is the normative
 text. Its points:
 
 - From the first publish, semantic versioning applies to the designated set
-  and to nothing else. Everything else under `server/compiler/` — the IR and
-  `compileFromIR` included — is internal and may change in any release.
+  AND to the generated-module API, by name and signature, never by bytes:
+  `render<Name>` in each `*.server.ts` — including its optional second
+  parameter, the content owner's tag (LT-472) — the client module's default
+  export, the `i18n` module's shape, and the `registry.json` schema (the
+  public projection of `RegistryEntry`). A rename, a removal or a tightened
+  signature among these is a major.
+- `argsFromAttrs` is internal: only the compiler's own composition and audit
+  code calls it. Making it public later is a minor.
 - Emitted artifact BYTES are not contract. In-repo goldens pin the
   `*.server.ts`/`*.client.ts`/`*.css` bytes; stability covers the typed
   contract and behavior, never byte identity.
-- New `DiagnosticCode` members and new `RoutingSignalOrigin` members are
-  additive — a minor release. Renames, removals, and tightened required
-  shapes in the designated set are major.
+- New `DiagnosticCode` members are additive — a minor release. Renames,
+  removals, and tightened required shapes in the designated set are major.
 - Diagnostic codes are public API at first publish, and a number is never
   reused. `VOCABULARY_LEDGER.md` is the spent-number ledger.
+- Everything else under `server/compiler/` — the IR and `compileFromIR`
+  included, and `compileComponentTsx` with them — is internal and may
+  change in any release, including a patch release.
 
 **Connectors are third-party.** A connector for React, Vue, or Solid
 component semantics is third-party by name (ADR 0032,
 amended 2026-09-19). The engineering risk of tracking a target framework's
 minor versions transfers with ownership; the reputational risk does not.
 This contract is documentation and naming, not a plugin API: no registry, no
-lifecycle hooks, no discovery mechanism. Both refusal vocabularies are
-closed the same way (owner ruling, 2026-09-21): `DiagnosticCode` and
-`RoutingSignalOrigin` are the compiler's.
+lifecycle hooks, no discovery mechanism. The refusal vocabulary is closed
+the same way (owner ruling, 2026-09-21): `DiagnosticCode` is the compiler's.
 
 **The standing acceptance run.** `bun run check:contract` writes a consumer
 into a scratch project outside the repo. The consumer imports only
-`contract.ts` and compiles one small `.tsx` component through
-`compileComponentTsx` in all three tiers, then proves both refusal channels:
-the error diagnostic returns `component: null`, and the routing signal
-degrades the tier and lands on the entry. The run goes through the repo's
-own module paths; re-running it against the published package's exports
-belongs to the packaging step, not to this check.
+`contract.ts` and drives the published corpus entry point: a scratch corpus
+of four components compiles through `compileCorpus(config)` — one per tier
+plus one refused — then the run proves the observable channels: the summary
+carries the tier census, `registry.json` carries exactly the public
+projection with the routed tiers, the diagnostics return the refusal
+(`LTC008`) without throwing, and the generated server module exports
+`render<Name>`. The run goes through the repo's own module paths;
+re-running it against the published package's exports belongs to the
+packaging step, not to this check.
 
 ## 3. Module map
 
@@ -333,8 +365,8 @@ front-end modules, then the two front ends:
 | `pipeline.ts` | Shared post-front-end pipeline (`compileFromIR`): compose validation, `analyzeClient`, tier classification, both emitters, the registry entry — `CompiledComponent`/`CompileFileResult` live here |
 | `front-end.ts` | The shared front-end driver (LT-233): `runFrontEnd` takes a parsed module to a `ComponentIR` through ONE script — module scans, locating the component function, the `async` rejection, params, setup extraction, the output-shape check (a fragment root is LTC060, LT-375 — the output is the bare root element only), lowering, output resolution, the validation tail, IR assembly. A surface contributes a `SurfaceAdapter` (body node type, setup/output split, `<style>` CSS, children/element lowering, grammar pre-scans); `CompileResult` lives here |
 | `surface.ts` | The authored-surface vocabulary (LT-233): one `SurfaceWording` table per surface, side by side, for every diagnostic fragment shared machinery emits that names an authored spelling. Read through `wordingOf(ctx)` / `wordingOf(component)` — shared code never spells a directive itself |
-| `frontend/tsrx/index.ts` | `.tsrx` public API: `compileComponent` = `compileSource` + the shared pipeline |
-| `frontend/tsx/index.ts` | `.tsx` public API: `compileComponentTsx` = `compileSourceTsx` + the shared pipeline |
+| `frontend/tsrx/index.ts` | `.tsrx` front end: `compileComponent` = `compileSource` + the shared pipeline (internal; ADR 0034 s2 keeps the surface unpublished until `@tsrx/core` 1.0) |
+| `frontend/tsx/index.ts` | `.tsx` front end: `compileComponentTsx` = `compileSourceTsx` + the shared pipeline (internal since D-32 — `contract.ts` publishes the corpus entry point instead) |
 | `ir.ts` | Pure-data type leaf: the whole IR vocabulary (`ComponentIR`, `TemplateNode`, `AttributeIR`, `SignalIR`, `ForIR`, `ConfigIR`, …) — no function-bearing types, so a `ComponentIR` is serializable (LT-244, pinned by `ir-leaf.test.ts`) |
 | `extract-context.ts` | The front end's mutable per-source state: `ExtractContext` and `createExtractContext` (LT-244, evicted from `ir.ts`) |
 | `module-scans.ts` | Front-end-neutral whole-module scans: malformed selectors (LTC026), deferred collector calls (LTC045), `'@zeix/le-truc'` import mismatches (LTC036/037) |
@@ -372,7 +404,11 @@ front-end modules, then the two front ends:
 | `selector-syntax.ts` | Conservative CSS selector *parse* validation for `first()`/`all()` — a css-what parse plus a small post-check; reports only what no CSS parser accepts (ADR 0045 Decision 5) |
 | `corpus-config.ts` | The corpus configuration surface (§ 7.1): `CorpusConfig`, the defaults, `resolveCorpusConfig`, `outDirPrefix`, `emitPathsFor` — pure path math, no file IO |
 | `emit-paths.ts` | `EmitPaths` + `DEFAULT_EMIT_PATHS`: the two facts the emitters take from the configuration. A leaf with no `node:` import, because the browser bundle reaches it |
-| `registry.ts` | `RegistryEntry` type (incl. per-prop `ExposeKind`) + `registryJson` |
+| `registry.ts` | The registry pair (D-32): the public `RegistryEntry` projection — exactly the `registry.json` schema — and the internal `InternalRegistryEntry` (compose validation, routing, i18n declarations) that serializes to the `registry.internal.json` sidecar; `registryJson`/`internalRegistryJson` |
+| `corpus.ts` | The corpus pass (§ 7): the published `compileCorpus(config)` and the internal `compileCorpusFiles(files, config)` — both corpus passes, variant sets, the contamination fixpoint, the registry pair, `tsrx-imports.d.ts`, the i18n write and the `CorpusResult`/`CorpusSummary` it returns |
+| `corpus-scan.ts` | Corpus discovery (§ 7.1): `loadCorpusConfig` (the boundary walk, LT-273), `collectCorpusSources`, `collectSiblingModules`, the `CorpusFile` the pass consumes |
+| `i18n-catalog.ts` | The catalog pipeline's corpus half (ADR 0030 s4+s5): `readCatalogs`, `collectI18n`, `syncLocale`, the generated `i18n` module writer and the census report |
+| `fs.ts` | The package's file-system seam (D-32): the shared glob translator and the node-portable read/write/scan surface the corpus pass goes through — the ONE place under `server/compiler/` that touches a disk |
 | `analysis/plan.ts` | `ClientPlan` types, `PassShared` assembly, `analyzeClient` orchestration |
 | `analysis/selectors.ts` | Pure selector POLICY: synthesis, candidate order, union/compose addressing; the ENGINE (matching, counting, existence) runs on the materialized probe |
 | `analysis/probe.ts` | The materialized-probe selector engine (ADR 0045): template IR → HTML (each element stamped with its exclusive-arm path) → parse5 → css-select, aggregated max-over-arms |
@@ -1300,11 +1336,14 @@ the primary surface stopped needing a projection.
 The compiler is build-time tooling; `@zeix/le-truc` stays browser-only and
 never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
 
-- **Corpus orchestration** (`server/corpus-compile.ts` — standalone, importable
-  without the reactive machinery; `server/effects/compile.ts` is the docs
-  build's effect wrapper around it, LT-267):
+- **Corpus orchestration** (`server/compiler/corpus.ts` — the published
+  entry point `compileCorpus(config)` and its internal files-accepting form
+  `compileCorpusFiles`, moved into the package at LT-480, D-32; the repo's
+  `server/corpus-compile.ts` is the thin fail-on-error wrapper the scripts
+  and tests call, and `server/effects/compile.ts` is the docs build's
+  reactive wrapper):
   the scan globs every CONFIGURED source pattern (§ 7.1) — `.tsrx` and
-  `.tsx` — into one file list and `compileCorpus` dispatches per extension;
+  `.tsx` — into one file list and the pass dispatches per extension;
   pass 1 compiles every file against a registry seeded with the configured
   hand-written sibling tags, collecting compilable tags and the corpus-wide
   `composeRegistry`; pass 2 re-compiles with the full registry, child
@@ -1318,10 +1357,14 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   and the one registry entry, whose `source` names the selected member. The
   unserved member's client lands in `variants/<tag>.<surface>.client.ts` for
   the per-surface spec matrix on the component test route; no canonical
-  consumer reads it. Artifacts land in the configured output root plus
-  `registry.json` and `tsrx-imports.d.ts` — in this repo the gitignored
-  `server/generated/components/`. Errors fail the run; warnings skip the
-  file with a notice. `tsrx-imports.d.ts` (LT-312, `tsrx-imports.ts`) types
+  consumer reads it. Artifacts land in the configured output root plus the
+  registry pair — `registry.json` (the public projection, the published
+  schema, D-32) and `registry.internal.json` (the compile's own record:
+  the compose-validation, routing and i18n facts the repo's build passes
+  read) — `tsrx-imports.d.ts` and the `i18n` module — in this repo the
+  gitignored `server/generated/components/`. Errors are returned with the
+  summary (the repo wrapper fails the run on them); warnings skip the file
+  with a notice. `tsrx-imports.d.ts` (LT-312, `tsrx-imports.ts`) types
   every compiled `.tsrx` source for compose imports from authored `.tsx`:
   one ambient `declare module '*/<suffix>.tsrx'` per source, through its
   tag's served server module's args, keyed by the shortest path suffix no
@@ -1338,13 +1381,17 @@ never renders (ADR 0024 sub-design 7). jsdom never ships to clients.
   and no hand-listed client.
 - **Consumers**: `server/build.ts` (via the `index.ts` facade plus direct
   `registry`/`spans` imports), `check:corpus` (§ 6), and the CEM build
-  (`scripts/build-corpus.ts` feeds `cem analyze`, which reads the generated
+  (`scripts/build-corpus.ts` — a thin caller of the published
+  `compileCorpus(config)` — feeds `cem analyze`, which reads the generated
   clients; ADR 0024 sub-design 9).
-- **Runtime-neutrality gate** (ADR 0038 s2):
+- **Runtime-neutrality gate** (ADR 0038 s2, amended by D-32/LT-480):
   `server/tests/compiler/runtime-neutrality.test.ts` parses every non-test
   `.ts` under `server/compiler/` — both front ends and the shared machinery
   — and fails on a `Bun` global, any `import.meta`, or a built-in module
-  specifier other than `node:path`, whether static import, `require(…)` or
+  specifier other than `node:path` — except in the package's own
+  file-system seam (`fs.ts`: `node:fs`/`node:fs/promises`;
+  `i18n-catalog.ts`: `node:crypto`), which the corpus entry point's source
+  discovery and artifact writes own — whether static import, `require(…)` or
   dynamic `import(…)`. Third-party dependencies are out of scope. Browser
   loadability is not a compiler requirement; ADR 0025 s6 owns any bundle
   gate.
@@ -1391,8 +1438,9 @@ resolves against it.
 | --- | --- | --- |
 | `sources` | `["examples/**/*.tsrx", "examples/**/*.tsx"]` | The authored component sources. The front end is chosen per file by extension, so one list covers both surfaces; overlapping globs compile each file once. Glob grammar: `*`, `?`, `**/` (zero or more directories), a trailing `**`, and literals — scans are sorted, and dotfiles only match a pattern segment starting with a dot. Deliberately one grammar on every runtime (LT-267): braces and character classes are not part of it |
 | `siblingModules` | `["examples/**/*.ts"]` | Hand-written custom-element modules the corpus may address. Matched to tags by filename — a stem that is not a valid dashed tag (`main.ts`) is skipped |
-| `outDir` | `"server/generated/components"` | Where the generated `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json`, `tsrx-imports.d.ts` and `i18n.ts` land. Must sit inside the project root (see below) |
+| `outDir` | `"server/generated/components"` | Where the generated `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json` (+ the `registry.internal.json` sidecar), `tsrx-imports.d.ts` and `i18n.ts` land. Must sit inside the project root (see below) |
 | `i18nDir` | `"i18n"` | The committed per-locale translation catalogs (ADR 0030 s5). A project with no such directory censuses zero locales and zero gaps |
+| `locales` | `["en", "de"]` | Locales the corpus builds for; the first is the default page locale (ADR 0030 s1). The list the generated `i18n` module enumerates (`I18N_LOCALES`) and the translation census walks — deliberately NOT derived from the catalogs on disk, which carry locales the site may not build. The default is this repo's own site locales, like every default |
 | `runtimeImport` | `"../../compiler/runtime"` | The specifier the generated SERVER modules import the render harness from. The default is this repo's relative path; a consumer sets their own until LT-254 publishes the compiler and it becomes a package specifier |
 | `variantSurface` | `"tsx"` | The surface a variant set serves when no per-tag override applies (ADR 0039): `"tsx"` or `"tsrx"` |
 | `variantOverrides` | `{}` | Per-tag served surface for variant sets, e.g. `{ "basic-counter": "tsrx" }`. Keys must be custom-element tags; values `"tsx"` or `"tsrx"` |
@@ -1416,8 +1464,8 @@ field, what was received and what was expected:
 
 - an **unknown key** — including a mis-cased one, `"outdir"` instead of
   `"outDir"` — is rejected listing the accepted keys (`sources`,
-  `siblingModules`, `outDir`, `i18nDir`, `runtimeImport`, `variantSurface`,
-  `variantOverrides`), with a
+  `siblingModules`, `outDir`, `i18nDir`, `locales`, `runtimeImport`,
+  `variantSurface`, `variantOverrides`), with a
   did-you-mean when only the casing differs. Silently ignoring a key would
   fall back to THIS repo's defaults, which in a consumer project match
   nothing — the worst first-install failure is "it compiled, but nothing is
@@ -1448,8 +1496,16 @@ directory the root does not contain.
 
 **The registry, in consumer terms.** `registry.json` in the output root is the
 corpus's index, one entry per compiled component, and its `source` is the
-authored file's path **relative to the project root** — not to this repo. The
-duplicate-tag rule (LTC048) is likewise corpus-scoped: two files anywhere in a
+authored file's path **relative to the project root** — not to this repo.
+Since D-32 (LT-480) the file carries exactly the public projection — `tag`,
+`name`, `source`, the three artifact paths, `propsType`, `exposedProps`,
+`tier`, `composesTags` — and that shape is the published schema semver
+covers. The compile's own record (the routing signals, the compose
+validation facts, the i18n declarations) serializes to the
+`registry.internal.json` sidecar beside it, read by this repo's build passes
+and census scripts; no package consumer needs it, and composing across
+corpora would promote fields back onto the projection as a minor.
+The duplicate-tag rule (LTC048) is likewise corpus-scoped: two files anywhere in a
 project's configured sources declaring the same custom-element tag fail the
 compile naming both, because a tag is the registry's key — unless they are
 one folder-local variant set, which keeps one entry naming the selected

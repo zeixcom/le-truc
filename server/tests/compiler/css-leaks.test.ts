@@ -8,7 +8,7 @@ import { describe, expect, test } from 'bun:test'
 import type { CompileDiagnostic } from '../../compiler/diagnostics'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
-import type { RegistryEntry } from '../../compiler/registry'
+import type { InternalRegistryEntry } from '../../compiler/registry'
 
 /* === Fixtures === */
 
@@ -50,7 +50,7 @@ export function WrapEl({}: {}) {
 const compileAll = (
 	files: Array<[path: string, source: string]>,
 ): Map<string, CompileDiagnostic[]> => {
-	const registry = new Map<string, RegistryEntry>()
+	const registry = new Map<string, InternalRegistryEntry>()
 	const results = new Map<string, CompileDiagnostic[]>()
 	for (const [path, source] of files) {
 		const compile = path.endsWith('.tsx')

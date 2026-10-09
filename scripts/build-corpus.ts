@@ -1,10 +1,12 @@
 #!/usr/bin/env bun
 
 /**
- * Standalone corpus compile — the compile effect's pipeline without the build
- * system. Runs the same two-pass compile over every authored component source
- * the configured globs select and writes the generated clients (plus server
- * modules, CSS, and the registry) to the configured output root.
+ * Standalone corpus compile — a thin caller of the compiler package's own
+ * entry point (LT-480): `compileCorpus(config)` scans the configured
+ * sources, compiles them, and writes the generated clients (plus server
+ * modules, CSS, the registries and the i18n module) to the configured
+ * output root. The pass returns its diagnostics; THIS runner keeps the
+ * historical "errors fail the run" contract on top of them.
  *
  * Configuration (LT-255): a `le-truc.config.json` at the project root, found
  * by searching upward from the working directory. With none — which is this
@@ -18,21 +20,24 @@
  */
 
 import { relative } from 'node:path'
-import { compileCorpus } from '../server/corpus-compile'
-import {
-	collectCorpusSources,
-	loadCorpusConfig,
-} from '../server/corpus-sources'
+import { compileCorpus } from '../server/compiler/contract'
+import { loadCorpusConfig } from '../server/compiler/corpus-scan'
 
 const config = loadCorpusConfig()
-const files = collectCorpusSources(config)
-if (files.length === 0) {
-	console.error(
-		`❌ No component sources matched ${config.sources.join(', ')} under ${config.root}`,
+try {
+	const { diagnostics, summary } = await compileCorpus(config)
+	if (diagnostics.some(d => d.severity === 'error')) {
+		console.error(
+			`❌ Corpus compilation failed — ${diagnostics.filter(d => d.severity === 'error').length} error-severity diagnostic(s); the affected files were dropped from the generated output.`,
+		)
+		process.exit(1)
+	}
+	console.log(
+		`📦 ${summary.components} component(s) → ${relative(config.root, config.outDir)}`,
 	)
+} catch (error) {
+	// A configuration-shaped refusal (no sources matched, a bad config
+	// file): name it cleanly, the way the old runner's own check did.
+	console.error(`❌ ${error instanceof Error ? error.message : String(error)}`)
 	process.exit(1)
 }
-console.log(
-	`📦 ${files.length} source(s) → ${relative(config.root, config.outDir)}`,
-)
-await compileCorpus(files, config)

@@ -51,19 +51,19 @@
 import { readFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import type { ComponentRegistry } from '../server/compiler/registry'
-import { compileCorpus } from '../server/corpus-compile'
 import {
 	collectCorpusSources,
 	loadCorpusConfig,
-	REPO_ROOT,
-} from '../server/corpus-sources'
+} from '../server/compiler/corpus-scan'
 import {
 	collectI18n,
 	readCatalogs,
 	SOURCE_LOCALE,
 	syncLocale,
-} from '../server/effects/i18n'
+} from '../server/compiler/i18n-catalog'
+import type { InternalComponentRegistry } from '../server/compiler/registry'
+import { compileCorpus } from '../server/corpus-compile'
+import { REPO_ROOT } from '../server/corpus-sources'
 import { io } from '../server/runtimes'
 
 const config = loadCorpusConfig(REPO_ROOT)
@@ -82,12 +82,13 @@ if (catalogs.unreadableManifest !== undefined) {
 }
 
 // The compile writes the generated artifacts (gitignored) and, as a side
-// effect, the freshest registry.json — the same corpus view the build sees.
-await compileCorpus(collectCorpusSources(config), config)
+// effect, the freshest registries — the internal record is the corpus view
+// the build sees (the public registry.json is the consumer projection).
+await compileCorpus(await collectCorpusSources(config), config)
 
 const registry = JSON.parse(
-	readFileSync(join(config.outDir, 'registry.json'), 'utf8'),
-) as ComponentRegistry
+	readFileSync(join(config.outDir, 'registry.internal.json'), 'utf8'),
+) as InternalComponentRegistry
 const collection = await collectI18n(
 	Object.values(registry),
 	catalogs,

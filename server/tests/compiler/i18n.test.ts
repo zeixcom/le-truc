@@ -20,16 +20,19 @@ import { formatCensus, translationCensus } from '../../compiler/census'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import { messagesRecordType } from '../../compiler/i18n'
-import { parseMessage } from '../../compiler/icu/parse'
-import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
-import { compileCorpus } from '../../corpus-compile'
 import {
 	collectI18n,
 	readCatalogs,
 	sourceHash,
 	syncLocale,
 	writeI18nModule,
-} from '../../effects/i18n'
+} from '../../compiler/i18n-catalog'
+import { parseMessage } from '../../compiler/icu/parse'
+import type {
+	InternalComponentRegistry,
+	InternalRegistryEntry,
+} from '../../compiler/registry'
+import { compileCorpus } from '../../corpus-compile'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { loadCorpus } from './corpus-fixture'
 import { lineAt, textAt } from './located'
@@ -37,7 +40,7 @@ import { lineAt, textAt } from './located'
 const compile = (source: string, path = 'examples/x/c-i18n.tsrx') =>
 	compileComponent(source, path, new Set())
 
-const composeRegistryOf = (...entries: RegistryEntry[]) =>
+const composeRegistryOf = (...entries: InternalRegistryEntry[]) =>
 	new Map(entries.map(entry => [entry.source, entry]))
 
 /**
@@ -356,7 +359,7 @@ describe('the census has no reachability carve-out (LT-251)', () => {
 	const probe = {
 		tag: 'census-probe',
 		i18nMessages: { 'label.one': 'one', 'label.two': 'two' },
-	} as unknown as RegistryEntry
+	} as unknown as InternalRegistryEntry
 
 	test('every declared key is missing in every locale that lacks it', async () => {
 		// de's cardinal rules never select `two`; under the retired
@@ -377,9 +380,13 @@ describe('the census has no reachability carve-out (LT-251)', () => {
 		// keeps the manifest hashes fresh. Any entry here is a real
 		// regression.
 		const registry = JSON.parse(
-			readFileSync(`${generated.path}/registry.json`, 'utf8'),
-		) as ComponentRegistry
-		const collection = await collectI18n(Object.values(registry))
+			readFileSync(`${generated.path}/registry.internal.json`, 'utf8'),
+		) as InternalComponentRegistry
+		const collection = await collectI18n(
+			Object.values(registry),
+			undefined,
+			join(import.meta.dir, '../../../i18n'),
+		)
 		expect(collection.gaps).toEqual([])
 	})
 })
@@ -393,7 +400,7 @@ describe('orphaned catalog keys (LT-196)', () => {
 	const probe = {
 		tag: 'census-probe',
 		i18nMessages: { 'label.one': 'one', 'label.two': 'two' },
-	} as unknown as RegistryEntry
+	} as unknown as InternalRegistryEntry
 
 	test('a catalog key whose component is gone is orphaned', async () => {
 		const { gaps } = await collectI18n(
@@ -658,8 +665,8 @@ describe('orphaned keys over the real corpus (LT-196)', () => {
 
 	test('the planted falsification keys report orphaned; the committed catalogs report nothing else', async () => {
 		const registry = JSON.parse(
-			readFileSync(`${generated.path}/registry.json`, 'utf8'),
-		) as ComponentRegistry
+			readFileSync(`${generated.path}/registry.internal.json`, 'utf8'),
+		) as InternalComponentRegistry
 		const i18nDir = join(import.meta.dir, '../../../i18n')
 		const locales: string[] = []
 		const overrides = new Map<string, Record<string, string>>()
@@ -706,7 +713,7 @@ describe('the census pattern-integrity walks (LT-219)', () => {
 			flat: '{n} items',
 		},
 		clientMessageKeys: ['flat'],
-	} as unknown as RegistryEntry
+	} as unknown as InternalRegistryEntry
 	const gapsFor = async (overrides: Record<string, Record<string, string>>) =>
 		(await collectI18n([probe], injectedCatalogs(overrides))).gaps.filter(
 			gap => gap.status !== 'missing' && gap.status !== 'stale',
@@ -798,8 +805,8 @@ describe('the census pattern-integrity walks (LT-219)', () => {
 
 	test('falsification over the real catalogs: planted findings report, the committed catalogs report none', async () => {
 		const registry = JSON.parse(
-			readFileSync(`${generated.path}/registry.json`, 'utf8'),
-		) as ComponentRegistry
+			readFileSync(`${generated.path}/registry.internal.json`, 'utf8'),
+		) as InternalComponentRegistry
 		const i18nDir = join(import.meta.dir, '../../../i18n')
 		const locales: string[] = []
 		const overrides = new Map<string, Record<string, string>>()
@@ -857,7 +864,7 @@ describe('non-string catalog values are malformed (LT-249)', () => {
 	const probe = {
 		tag: 'census-probe',
 		i18nMessages: { greet: 'Hello, {name}!' },
-	} as unknown as RegistryEntry
+	} as unknown as InternalRegistryEntry
 	const nested = { 'census-probe': { 'stray.few': 'wenige' } }
 
 	test('a nested group reports malformed — never orphaned — and its flat twin behaves as today', async () => {
@@ -947,8 +954,8 @@ describe('non-string catalog values are malformed (LT-249)', () => {
 
 	test('falsification over the real catalogs: the planted nested group reports, the committed catalogs report none', async () => {
 		const registry = JSON.parse(
-			readFileSync(`${generated.path}/registry.json`, 'utf8'),
-		) as ComponentRegistry
+			readFileSync(`${generated.path}/registry.internal.json`, 'utf8'),
+		) as InternalComponentRegistry
 		const i18nDir = join(import.meta.dir, '../../../i18n')
 		const locales: string[] = []
 		const overrides = new Map<string, Record<string, unknown>>()
@@ -998,7 +1005,7 @@ describe('an unreadable catalog file is one census record (LT-356)', () => {
 	const probe = {
 		tag: 'census-probe',
 		i18nMessages: { greet: 'Hello, {name}!', bye: 'Bye' },
-	} as unknown as RegistryEntry
+	} as unknown as InternalRegistryEntry
 	const scratch = mkdtempSync(join(tmpdir(), 'lt-356-'))
 	afterAll(() => rmSync(scratch, { recursive: true, force: true }))
 	writeFileSync(join(scratch, 'de.json'), '{ "census-probe.bye": "Tschüss", }')
@@ -1049,7 +1056,7 @@ describe('an unreadable manifest is one census record and no stale (LT-430)', ()
 	const probe = {
 		tag: 'census-probe',
 		i18nMessages: { greet: 'Hello, {name}!', bye: 'Bye' },
-	} as unknown as RegistryEntry
+	} as unknown as InternalRegistryEntry
 	const scratch = mkdtempSync(join(tmpdir(), 'lt-430-'))
 	const absent = mkdtempSync(join(tmpdir(), 'lt-430-absent-'))
 	afterAll(() => {

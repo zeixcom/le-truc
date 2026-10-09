@@ -33,7 +33,12 @@ import {
 	tierCensus,
 	translationCensus,
 } from '../server/compiler/census'
-import type { ComponentRegistry } from '../server/compiler/registry'
+import {
+	collectCorpusSources,
+	loadCorpusConfig,
+} from '../server/compiler/corpus-scan'
+import { collectI18n } from '../server/compiler/i18n-catalog'
+import type { InternalComponentRegistry } from '../server/compiler/registry'
 import {
 	fileLineColToOffset,
 	fileOffsetToLineCol,
@@ -41,11 +46,6 @@ import {
 	type SourceSpan,
 } from '../server/compiler/spans'
 import { compileCorpus } from '../server/corpus-compile'
-import {
-	collectCorpusSources,
-	loadCorpusConfig,
-} from '../server/corpus-sources'
-import { collectI18n } from '../server/effects/i18n'
 import { io } from '../server/runtimes'
 
 // The configuration this run compiles under (LT-255): a consumer's
@@ -62,7 +62,7 @@ const DIAGNOSTIC_LINE =
 // Dual corpus (ADR 0032 sub-design 6, LT-202): both authored surfaces feed
 // the same runner; the front end is chosen per file by extension. Which files
 // those are is the configured glob list's answer, not this script's.
-const files = collectCorpusSources(config)
+const files = await collectCorpusSources(config)
 if (files.length === 0) {
 	console.error(
 		`❌ No component sources matched ${config.sources.join(', ')} under ${ROOT}`,
@@ -221,14 +221,16 @@ console.log(
 
 // The tier census (ADR 0029 sub-design 6, LT-165 step 6): a build-report
 // record, NOT a warning — its own section below, never merged into the
-// counted baseline above. Read from the registry the compile just wrote;
-// the compose-read fixpoint in compileCorpus runs BEFORE registry.json
-// is written, so the census records post-contamination tiers (the form-
+// counted baseline above. Read from the compile's own record (the
+// registry.internal.json sidecar, LT-480: the public registry.json carries
+// the projection only, and the census reasons are internal); the
+// compose-read fixpoint in the corpus pass runs BEFORE the registries are
+// written, so the census records post-contamination tiers (the form-
 // combobox ruling). This census is expected to grow; its regression story
 // is build cost, and it is pinned corpus-wide by tier-corpus.test.ts.
 const registry = JSON.parse(
-	readFileSync(join(GENERATED_DIR, 'registry.json'), 'utf8'),
-) as ComponentRegistry
+	readFileSync(join(GENERATED_DIR, 'registry.internal.json'), 'utf8'),
+) as InternalComponentRegistry
 // Signal locations name the authored file, project-relative (the registry's
 // `source` convention); the census prints each one's line.
 const authoredText = (file: string): string | undefined => {

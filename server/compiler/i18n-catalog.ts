@@ -1,15 +1,18 @@
 /**
- * The catalog pipeline's build half (ADR 0030 sub-designs 4+5, LT-173).
+ * The catalog pipeline's build half (ADR 0030 sub-designs 4+5, LT-173;
+ * moved from `server/effects/i18n.ts` into the compiler package at LT-480,
+ * D-32 — the corpus pass writes the `i18n` module itself).
  *
- * Source-locale strings live INLINE in each `.tsrx` (`export const i18n`),
- * collected by the compiler into the registry's `i18nMessages`. This module
- * is everything that spans the corpus rather than one component:
+ * Source-locale strings live INLINE in each authored source
+ * (`export const i18n`), collected by the compiler into the registry's
+ * `i18nMessages`. This module is everything that spans the corpus rather
+ * than one component:
  *
  * - the generated `i18n` module (`writeI18nModule`) — the record type, the
  *   compiled-in source catalogs and per-locale overrides, and the
  *   `i18nRecord(tag, lang?)` constructor every render call boundary uses.
- *   Generated output, gitignored like the rest of `server/generated/components/`.
- * - staleness detection — a source-string edit is a `.tsrx` edit that
+ *   Generated output, gitignored like the rest of the output root.
+ * - staleness detection — a source-string edit is a component edit that
  *   silently invalidates that key's translations, so an override alone is
  *   not enough: `i18n/manifest.json` (committed, maintained by
  *   `i18n:sync`) records the source hash each locale's translation was
@@ -17,7 +20,7 @@
  *   ⇒ `stale`; no override ⇒ `missing`. A manifest that exists but does
  *   not read as a JSON object is one `malformed` record on the file, and
  *   no `stale` is reported until it is fixed (LT-430).
- * - the translation census (`translationCensus`, `compiler/census.ts`) and the
+ * - the translation census (`translationCensus`, `census.ts`) and the
  *   gitignored machine-readable report (`writeI18nReport`). The census
  *   walks BOTH directions (LT-196): declared keys missing from a catalog
  *   (`missing`/`stale`) and catalog keys nothing declares (`orphaned` —
@@ -26,63 +29,47 @@
  *   (LT-249) — never silently dropped.
  *
  * The build stays READ-ONLY over tracked files (ADR 0030 sub-design 5):
- * writing missing keys into `i18n/<locale>.json` is the separate,
+ * writing missing keys into `<i18nDir>/<locale>.json` is the separate,
  * person-run `i18n:sync` script (scripts/i18n-sync.ts), never this
  * pipeline.
+ *
+ * No repo fact lives here: the catalog directory is the caller's
+ * configuration (`i18nDir`), and the locales the generated module
+ * enumerates come from the configuration too (`locales`, LT-480) — the
+ * default being this repo's own site locales, as with every default.
  */
 
 import { createHash } from 'node:crypto'
-import { mkdir, readdir, readFile } from 'node:fs/promises'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 import {
 	TRANSLATION_GAP_STATUSES,
 	type TranslationGap,
 	type TranslationGapStatus,
-} from '../compiler/census'
-import { DEFAULT_RUNTIME_IMPORT } from '../compiler/emit-paths'
-import { PAGE_AMBIENT_TYPES } from '../compiler/fold-inputs'
-import {
-	carriedKinds,
-	clientFallsBack,
-	type Message,
-} from '../compiler/icu/evaluate'
-import { literalOf, parseMessage } from '../compiler/icu/parse'
-import type { RegistryEntry } from '../compiler/registry'
-import { DEFAULT_LOCALE, LOCALES } from '../config'
-import { getFilePath, writeFileSafe } from '../io'
-
-/**
- * This repo's own catalog directory — the DEFAULT, kept so every in-repo
- * caller behaves exactly as before. A consumer's is configured
- * (`i18nDir`, LT-255) and threaded in through `collectI18n` from their
- * configuration, which is what keeps a consumer's census from ever seeing
- * THIS repo's keys (the i18n lesson). Anchored portably (LT-267).
- */
-export const I18N_DIR = join(
-	dirname(fileURLToPath(import.meta.url)),
-	'..',
-	'..',
-	'i18n',
-)
+} from './census'
+import { DEFAULT_LOCALES } from './corpus-config'
+import { DEFAULT_RUNTIME_IMPORT } from './emit-paths'
+import { PAGE_AMBIENT_TYPES } from './fold-inputs'
+import { readDir, readTextFile, writeTextFile } from './fs'
+import { carriedKinds, clientFallsBack, type Message } from './icu/evaluate'
+import { literalOf, parseMessage } from './icu/parse'
+import type { InternalRegistryEntry } from './registry'
 
 /**
  * The source locale — the language the inline strings are written in, and
  * the locale every catalog resolves against before an override lands
  * (ADR 0030 sub-design 5). The source locale has NO override file: its
- * strings live in the `.tsrx` sources themselves.
+ * strings live in the component sources themselves.
  */
 export const SOURCE_LOCALE = 'en'
 
 /**
- * The build's DEFAULT page locale (ADR 0030 sub-design 1) and the record's
- * formatting configuration.
+ * The record's formatting configuration, given the corpus's locales (the
+ * configuration's `locales` list, LT-480).
  *
- * Since LT-174 the site builds one page tree per entry in config's `LOCALES`,
- * so the page locale is per-page input supplied by the caller — `i18nRecord`'s
- * `lang` argument. What survives as a constant is the FALLBACK: the locale a
- * record resolves at when no caller supplies one, which is the default locale
- * and the source locale both.
+ * The page locale is per-page input supplied by the caller — `i18nRecord`'s
+ * `lang` argument (LT-174). What survives as a constant is the FALLBACK:
+ * the locale a record resolves at when no caller supplies one, which is
+ * the FIRST configured locale.
  *
  * Locale-as-build-constant is unchanged and still load-bearing — each page
  * fixes its locale before rendering, which is what keeps `Intl` foldable.
@@ -92,11 +79,12 @@ export const SOURCE_LOCALE = 'en'
  * day); `currency` has no platform mapping from a locale tag, so it stays
  * explicit.
  */
-export const BUILD_I18N = {
-	pageLocale: DEFAULT_LOCALE,
-	timeZone: 'UTC',
-	currency: 'USD',
-} as const
+export const buildI18n = (locales: readonly string[]) =>
+	({
+		pageLocale: locales[0] ?? SOURCE_LOCALE,
+		timeZone: 'UTC',
+		currency: 'USD',
+	}) as const
 
 /**
  * Primary language subtags written right-to-left — the input to the
@@ -181,7 +169,7 @@ const readCatalog = async (
 ): Promise<{ catalog: Record<string, unknown> } | { error: string }> => {
 	let value: unknown
 	try {
-		value = JSON.parse(await readFile(path, 'utf8'))
+		value = JSON.parse(await readTextFile(path))
 	} catch (error) {
 		// An ABSENT file reads as empty: the manifest's first-run state
 		// (LT-430). A listed catalog file is absent only if it vanished.
@@ -207,7 +195,7 @@ export const readCatalogs = async (i18nDir: string): Promise<Catalogs> => {
 		// Sorted: readdir order is the runtime's, and the locale order flows
 		// into the generated module, the census and the report — which must
 		// not differ between runtimes (LT-267).
-		for (const file of (await readdir(i18nDir)).sort()) {
+		for (const file of await readDir(i18nDir)) {
 			if (!file.endsWith('.json') || file === 'manifest.json') continue
 			const locale = file.replace(/\.json$/, '')
 			locales.push(locale)
@@ -266,17 +254,21 @@ export type I18nCollection = {
  * config puts it (LT-255).
  */
 export const collectI18n = async (
-	entries: readonly RegistryEntry[],
+	entries: readonly InternalRegistryEntry[],
 	catalogs?: Catalogs,
-	i18nDir: string = I18N_DIR,
+	i18nDir?: string,
 ): Promise<I18nCollection> => {
+	if (catalogs === undefined && i18nDir === undefined)
+		throw new Error(
+			'collectI18n needs the catalog directory (i18nDir) unless the catalogs are injected',
+		)
 	const {
 		locales,
 		overrides: rawOverrides,
 		manifest,
 		unreadable = new Map<string, string>(),
 		unreadableManifest,
-	} = catalogs ?? (await readCatalogs(i18nDir))
+	} = catalogs ?? (await readCatalogs(i18nDir as string))
 	const sources = new Map<string, Record<string, string>>()
 	// Split each catalog into its string entries and the rest (LT-249): a
 	// non-string value — most naturally a group nested "under the
@@ -327,7 +319,7 @@ export const collectI18n = async (
 	}
 	// Every registry entry by tag — the orphan walk resolves each catalog
 	// key's component, including components that declare no keys at all.
-	const byTag = new Map<string, RegistryEntry>()
+	const byTag = new Map<string, InternalRegistryEntry>()
 	const gaps: TranslationGap[] = []
 	for (const entry of entries) {
 		byTag.set(entry.tag, entry)
@@ -589,7 +581,9 @@ const compiledCatalog = (
 const i18nModuleText = (
 	collection: I18nCollection,
 	runtimeImport: string,
+	locales: readonly string[],
 ): string => {
+	const build = buildI18n(locales)
 	const sources = [...collection.sources.entries()]
 		.sort(([a], [b]) => (a < b ? -1 : 1))
 		.map(([tag, messages]) => {
@@ -654,17 +648,17 @@ ${Object.entries(PAGE_AMBIENT_TYPES)
  * The locale a record resolves at when the caller supplies none — the
  * default locale of \`I18N_LOCALES\` (ADR 0030 sub-design 1).
  */
-export const I18N_PAGE_LOCALE = ${JSON.stringify(BUILD_I18N.pageLocale)}
+export const I18N_PAGE_LOCALE = ${JSON.stringify(build.pageLocale)}
 
 /** Every locale the site is built for; the first is the default (LT-174). */
-export const I18N_LOCALES = ${JSON.stringify(LOCALES)} as const
+export const I18N_LOCALES = ${JSON.stringify(locales)} as const
 
 /** The source locale: the language the inline \`.tsrx\` strings are written in. */
 export const I18N_SOURCE_LOCALE = ${JSON.stringify(SOURCE_LOCALE)}
 
 /** Formatting configuration folded into every record (see effects/i18n.ts). */
-export const I18N_TIME_ZONE = ${JSON.stringify(BUILD_I18N.timeZone)}
-export const I18N_CURRENCY = ${JSON.stringify(BUILD_I18N.currency)}
+export const I18N_TIME_ZONE = ${JSON.stringify(build.timeZone)}
+export const I18N_CURRENCY = ${JSON.stringify(build.currency)}
 
 /** Primary subtags written right-to-left — the platform has no API for this. */
 const RTL_LANGUAGES: ReadonlySet<string> = new Set(${JSON.stringify([...RTL_LANGUAGES])})
@@ -748,10 +742,11 @@ export const writeI18nModule = async (
 	outDir: string,
 	collection: I18nCollection,
 	runtimeImport: string = DEFAULT_RUNTIME_IMPORT,
+	locales: readonly string[] = DEFAULT_LOCALES,
 ): Promise<void> => {
-	await writeFileSafe(
-		getFilePath(outDir, 'i18n.ts'),
-		i18nModuleText(collection, runtimeImport),
+	await writeTextFile(
+		join(outDir, 'i18n.ts'),
+		i18nModuleText(collection, runtimeImport, locales),
 	)
 }
 
@@ -759,6 +754,7 @@ export const writeI18nModule = async (
 export const writeI18nReport = async (
 	outDir: string,
 	collection: I18nCollection,
+	locales: readonly string[] = DEFAULT_LOCALES,
 ): Promise<void> => {
 	const emptyBuckets = () =>
 		Object.fromEntries(
@@ -774,7 +770,7 @@ export const writeI18nReport = async (
 	}
 	const report = {
 		sourceLocale: SOURCE_LOCALE,
-		pageLocale: BUILD_I18N.pageLocale,
+		pageLocale: buildI18n(locales).pageLocale,
 		locales: perLocale,
 		counts: Object.fromEntries(
 			TRANSLATION_GAP_STATUSES.map(status => [
@@ -783,9 +779,8 @@ export const writeI18nReport = async (
 			]),
 		),
 	}
-	await mkdir(outDir, { recursive: true })
-	await writeFileSafe(
-		getFilePath(outDir, 'i18n-report.json'),
+	await writeTextFile(
+		join(outDir, 'i18n-report.json'),
 		`${JSON.stringify(report, null, '\t')}\n`,
 	)
 }

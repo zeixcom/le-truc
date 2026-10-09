@@ -13,12 +13,12 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import * as fs from 'node:fs'
 import * as path from 'node:path'
 import type { CorpusConfig } from '../../compiler/corpus-config'
+import { collectSiblingModules } from '../../compiler/corpus-scan'
 import {
 	compileCorpus,
 	REPO_CONFIG,
 	relocateClientSpecifiers,
 } from '../../corpus-compile'
-import { collectSiblingModules } from '../../corpus-sources'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { settle } from '../helpers/test-utils'
@@ -128,6 +128,49 @@ describe('dual corpus (ADR 0032 sub-design 6, narrowed by ADR 0039)', () => {
 			'utf8',
 		)
 		expect(registryJson).toContain('sync-el')
+	})
+
+	test('registry.json carries exactly the public projection (D-32, LT-480)', async () => {
+		// The published schema: the ten consumer-facing fields per entry,
+		// nothing wider — the compose-validation, routing and i18n facts
+		// live on the internal record, which serializes to the
+		// registry.internal.json sidecar beside it.
+		const outDir = path.join(scratch.path, 'projection')
+		await compileCorpus([fileInfo(SYNC_EL)], outDir)
+		const registry = JSON.parse(
+			fs.readFileSync(path.join(outDir, 'registry.json'), 'utf8'),
+		) as Record<string, Record<string, unknown>>
+		expect(Object.keys(registry)).toEqual(['sync-el'])
+		expect(Object.keys(registry['sync-el'] ?? {}).sort()).toEqual(
+			[
+				'tag',
+				'name',
+				'source',
+				'serverModule',
+				'clientModule',
+				'css',
+				'propsType',
+				'exposedProps',
+				'tier',
+				'composesTags',
+			].sort(),
+		)
+		const internal = JSON.parse(
+			fs.readFileSync(path.join(outDir, 'registry.internal.json'), 'utf8'),
+		) as Record<string, Record<string, unknown>>
+		expect(Object.keys(internal['sync-el'] ?? []).length).toBeGreaterThan(
+			Object.keys(registry['sync-el'] ?? []).length,
+		)
+		for (const field of [
+			'routingSignals',
+			'suppressedSites',
+			'composeReadTags',
+			'renderedShapes',
+			'interactive',
+			'declaresI18n',
+			'i18nMessages',
+		])
+			expect(internal['sync-el']).toHaveProperty(field)
 	})
 
 	test('a folder-local .tsrx + .tsx variant set compiles clean and serves the selected surface (ADR 0039)', async () => {

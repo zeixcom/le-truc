@@ -1,27 +1,23 @@
 /**
- * Corpus discovery: config loading and source globbing (LT-255).
+ * This repo's corpus facts (LT-255; the loading and globbing half moved
+ * into the compiler package at LT-480 — `server/compiler/corpus-scan.ts`
+ * — where the corpus entry point finds its own inputs).
  *
- * The file-IO half of the corpus configuration surface — everything in
- * `server/compiler/corpus-config.ts` is pure path math, and everything that
- * touches a disk lives here. Since LT-267 the disk half goes through the
- * runtime seam (`server/runtimes/`): the glob scan is runtime-neutral, so
- * the published package's build path needs *a* JS runtime, not Bun.
- * `server/compiler/` stays free of `Bun.*`, `import.meta.dir` and every
- * other runtime-specific API.
+ * What stays here is everything anchored to THIS repository: its root, and
+ * the default configuration the docs build and the runner scripts compile
+ * under — the defaults ARE this repo's paths, which is why the repo needs
+ * no config file. A consumer's configuration comes from their
+ * `le-truc.config.json` through the package's loader; nothing in this
+ * module is theirs.
  */
 
-import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
-	CONFIG_FILENAME,
 	type CorpusConfig,
-	type CorpusConfigInput,
-	outDirPrefix,
 	resolveCorpusConfig,
 } from './compiler/corpus-config'
-import type { FileInfo } from './file-signals'
-import { io } from './runtimes'
+import { collectSiblingModules } from './compiler/corpus-scan'
 
 /* === Constants === */
 
@@ -33,108 +29,32 @@ import { io } from './runtimes'
  */
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
-/* === Internal Functions === */
+/**
+ * The configuration the in-repo pipeline runs under: the defaults, which ARE
+ * this repo's paths. A consumer's own configuration is loaded from their
+ * `le-truc.config.json` by the package's `loadCorpusConfig` and handed to
+ * `compileCorpus`.
+ */
+export const REPO_CONFIG: CorpusConfig = resolveCorpusConfig(REPO_ROOT)
 
 /**
- * Nearest `le-truc.config.json` at or above `from`, or null.
- *
- * The walk stops at the project boundary (LT-273): the first directory —
- * `from` itself included — holding a `package.json` or a `.git`. A stray
- * config file anywhere above a checkout must not retarget that checkout's
- * build, and a config at the boundary directory itself still applies (the
- * config is checked before the marker in the same directory).
+ * Where the corpus compile writes its artifacts, including the registry the
+ * tier census reads (`scripts/check-corpus.ts`). Exported for the scripts and
+ * tests that address the same directory the pipeline defaults to.
  */
-const findConfigFile = (from: string): string | null => {
-	let dir = resolve(from)
-	for (;;) {
-		const candidate = join(dir, CONFIG_FILENAME)
-		if (existsSync(candidate)) return candidate
-		if (existsSync(join(dir, 'package.json')) || existsSync(join(dir, '.git')))
-			return null
-		const parent = dirname(dir)
-		if (parent === dir) return null
-		dir = parent
-	}
-}
-
-/* === Exported Functions === */
+export const GENERATED_DIR = REPO_CONFIG.outDir
 
 /**
- * The configuration in force for a compile run.
+ * Custom element tags of the hand-written example components, mapped to
+ * their source paths (relative to the generated dir). Registry-aware
+ * attribute dispatch needs the tags too: a reactive attribute on ANY example
+ * custom element the docs pages load alongside (e.g. `basic-button` inside
+ * module-list) lowers to `pass()`, exactly as for migrated .tsrx tags — and
+ * the generated client imports the module for its `declare global` entry.
  *
- * Searches from `cwd` upward — no further than the project boundary, the
- * nearest directory holding a `package.json` or a `.git` (LT-273) — for a
- * `le-truc.config.json`, and takes the directory holding it as the project
- * root. With no config file within that boundary, falls back to this repo's
- * defaults — which is what every in-repo script and the docs build get, so
- * their output is unchanged.
+ * LT-255 moved the glob and the back-to-the-root prefix into the
+ * configuration (`collectSiblingModules`); this wrapper keeps the in-repo
+ * name and behaviour.
  */
-export const loadCorpusConfig = (cwd: string = process.cwd()): CorpusConfig => {
-	const file = findConfigFile(cwd)
-	if (!file) return resolveCorpusConfig(REPO_ROOT)
-	let input: CorpusConfigInput
-	try {
-		input = JSON.parse(readFileSync(file, 'utf8')) as CorpusConfigInput
-	} catch (e) {
-		throw new Error(
-			`${file}: not valid JSON — ${e instanceof Error ? e.message : String(e)}`,
-		)
-	}
-	return resolveCorpusConfig(dirname(file), input)
-}
-
-/**
- * Every authored component source the configured globs select, as the
- * `FileInfo` records `compileCorpus` consumes.
- *
- * Deduplicated by path: overlapping globs are a reasonable thing for a
- * consumer to write, and a file compiled twice would look like a duplicate
- * tag (LTC048) to a check that exists to catch two different files declaring
- * the same one. The scan is the runtime seam's, so the matched set and its
- * order are the same under every runtime.
- */
-export const collectCorpusSources = (config: CorpusConfig): FileInfo[] => {
-	const byPath = new Map<string, FileInfo>()
-	for (const pattern of config.sources) {
-		for (const rel of io.scanGlob(pattern, { cwd: config.root })) {
-			const path = join(config.root, rel)
-			if (byPath.has(path)) continue
-			const stat = statSync(path)
-			byPath.set(path, {
-				path,
-				filename: rel,
-				content: readFileSync(path, 'utf8'),
-				hash: '', // unused by compileCorpus
-				lastModified: stat.mtimeMs,
-				size: stat.size,
-				exists: true,
-			})
-		}
-	}
-	return [...byPath.values()]
-}
-
-/**
- * Hand-written custom-element modules, tag → import specifier relative to the
- * configured output root.
- *
- * Component files are named for their tag (dashed); helpers (`main.ts`,
- * `copyToClipboard.ts`) and tests carry no dash or a dot suffix and are
- * skipped. Specifiers are extensionless (bundler-style resolution,
- * TS5097-safe) and prefixed back to the project root, so they stay valid from
- * the flat output root whatever depth it was configured at.
- */
-export const collectSiblingModules = (
-	config: CorpusConfig,
-): Map<string, string> => {
-	const prefix = outDirPrefix(config.root, config.outDir)
-	const modules = new Map<string, string>()
-	for (const pattern of config.siblingModules) {
-		for (const rel of io.scanGlob(pattern, { cwd: config.root })) {
-			const tag = (rel.split('/').pop() ?? '').replace(/\.ts$/, '')
-			if (!/^[a-z][a-z0-9]*(-[a-z][a-z0-9]*)+$/.test(tag)) continue
-			modules.set(tag, `${prefix}${rel.replace(/\.ts$/, '')}`)
-		}
-	}
-	return modules
-}
+export const handwrittenExampleModules = (): Map<string, string> =>
+	collectSiblingModules(REPO_CONFIG)

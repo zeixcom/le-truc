@@ -16,6 +16,7 @@ import { pathToFileURL } from 'node:url'
 import type { CompileDiagnostic } from '../../compiler/diagnostics'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
+import { writeI18nModule } from '../../compiler/i18n-catalog'
 import {
 	bakeMessageEnv,
 	formatMessage,
@@ -25,7 +26,6 @@ import {
 import { parseMessage } from '../../compiler/icu/parse'
 import { CLIENT_MESSAGE, clientMessages } from '../../compiler/runtime'
 import { createSimulationRealm } from '../../compiler/sim/realm'
-import { writeI18nModule } from '../../effects/i18n'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
 /* === Fixture === */

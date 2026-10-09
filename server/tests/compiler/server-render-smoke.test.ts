@@ -25,8 +25,8 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import * as path from 'node:path'
 import { isVoidElement } from '../../compiler/core'
 import { resolveCorpusConfig } from '../../compiler/corpus-config'
+import { collectCorpusSources } from '../../compiler/corpus-scan'
 import { compileCorpus } from '../../corpus-compile'
-import { collectCorpusSources } from '../../corpus-sources'
 import type { FileInfo } from '../../file-signals'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { inlineI18n, MODULE_TODO_I18N } from './corpus-args'
@@ -128,8 +128,7 @@ const ARGS: Record<string, Record<string, unknown>> = {
 
 // The CONFIGURED corpus scan (LT-273) — the same source set the build
 // compiles, not a hand-rolled single-extension glob.
-const corpus = async (): Promise<FileInfo[]> =>
-	collectCorpusSources(resolveCorpusConfig(ROOT))
+const corpus = async () => await collectCorpusSources(resolveCorpusConfig(ROOT))
 
 // The REAL corpus runner writes every generated module; a per-run directory
 // keeps that out of the build pipeline's own output (LT-140). Render happens

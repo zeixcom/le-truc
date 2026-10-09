@@ -6,9 +6,10 @@
 import { readdirSync, readFileSync } from 'node:fs'
 import * as path from 'node:path'
 import { resolveCorpusConfig } from '../../compiler/corpus-config'
+import type { CorpusFile } from '../../compiler/corpus-scan'
+import { collectCorpusSources } from '../../compiler/corpus-scan'
 import { compileSource } from '../../compiler/frontend/tsrx/compiler'
 import { compileSourceTsx } from '../../compiler/frontend/tsx/compiler-tsx'
-import { collectCorpusSources } from '../../corpus-sources'
 import type { FileInfo } from '../../file-signals'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
@@ -19,7 +20,7 @@ const ROOT = path.resolve(import.meta.dir, '../../..')
  * runtime-neutral order the build, `check:corpus` and `i18n:sync` get, so a
  * test fixture cannot drift from what the pipeline actually compiles.
  */
-export const loadCorpus = async (): Promise<FileInfo[]> =>
+export const loadCorpus = async (): Promise<CorpusFile[]> =>
 	collectCorpusSources(resolveCorpusConfig(ROOT))
 
 /** The `c-plural` fixture's repo-relative path (LT-467). */

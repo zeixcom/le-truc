@@ -39,7 +39,7 @@ import type {
 	RenderedShape,
 	TemplateNode,
 } from '../ir'
-import type { RegistryEntry } from '../registry'
+import type { InternalRegistryEntry } from '../registry'
 import {
 	childNodes,
 	elseOf,
@@ -1210,7 +1210,7 @@ export const childrenRegionOfComponent = (
  */
 export const composedShapesFor = (
 	root: TemplateNode & { kind: 'element' },
-	composeRegistry: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry: ReadonlyMap<string, InternalRegistryEntry>,
 ): Map<string, ComposedMarkup> => {
 	const closure = (
 		source: string,
@@ -1280,7 +1280,7 @@ export const composedShapesFor = (
  */
 export const leakChildrenFor = (
 	root: TemplateNode,
-	composeRegistry: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry: ReadonlyMap<string, InternalRegistryEntry>,
 ): LeakChild[] => {
 	type Element = RenderedShape & { kind: 'element' }
 	type Site = { attrs: Record<string, string>; dynamic: readonly string[] }

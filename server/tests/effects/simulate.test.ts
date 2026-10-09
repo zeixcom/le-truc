@@ -21,7 +21,10 @@ import { mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { reportDiagnostics } from '../../compiler/build-report'
-import type { ComponentRegistry, RegistryEntry } from '../../compiler/registry'
+import type {
+	InternalComponentRegistry,
+	InternalRegistryEntry,
+} from '../../compiler/registry'
 import { createSimulationRealm } from '../../compiler/sim/realm'
 import type {
 	SimDiagnostic,
@@ -37,7 +40,7 @@ import {
 
 /* === Fixtures === */
 
-const entry = (tag: string, tier: EvaluationTier): RegistryEntry =>
+const entry = (tag: string, tier: EvaluationTier): InternalRegistryEntry =>
 	({
 		tag,
 		name: tag,
@@ -51,15 +54,16 @@ const entry = (tag: string, tier: EvaluationTier): RegistryEntry =>
 		tier,
 		routingSignals: [],
 		suppressedSites: [],
-	}) as unknown as RegistryEntry
+	}) as unknown as InternalRegistryEntry
 
 const composing = (
-	base: RegistryEntry,
+	base: InternalRegistryEntry,
 	...composesTags: string[]
-): RegistryEntry => ({ ...base, composesTags }) as RegistryEntry
+): InternalRegistryEntry => ({ ...base, composesTags }) as InternalRegistryEntry
 
-const registryOf = (...entries: RegistryEntry[]): ComponentRegistry =>
-	Object.fromEntries(entries.map(e => [e.tag, e]))
+const registryOf = (
+	...entries: InternalRegistryEntry[]
+): InternalComponentRegistry => Object.fromEntries(entries.map(e => [e.tag, e]))
 
 /**
  * A realm that records what the pass asked it to do, in order.
@@ -152,7 +156,7 @@ describe('the tier invariant (ADR 0029 — a realm is opened for the Simulated t
 
 describe('an absent substrate routes Static (ADR 0034 s5, LT-256)', () => {
 	test('the pass reroutes the Simulated subjects, records why, and rewrites the registry', async () => {
-		const written: ComponentRegistry[] = []
+		const written: InternalComponentRegistry[] = []
 		const log: string[] = []
 		const result = await simulateCorpus({
 			registry: registryOf(
@@ -193,7 +197,7 @@ describe('an absent substrate routes Static (ADR 0034 s5, LT-256)', () => {
 
 	test('a substrate present never touches the registry and reroutes nothing', async () => {
 		const { realm } = fakeRealm()
-		const written: ComponentRegistry[] = []
+		const written: InternalComponentRegistry[] = []
 		const result = await simulateCorpus({
 			registry: registryOf(entry('x-sim', 'simulated')),
 			createRealm: () => realm,
@@ -445,11 +449,11 @@ describe('a real realm upgrades a server-spliced Folded child (LT-188)', () => {
 				{
 					...composing(entry('x-parent', 'simulated'), ...parentComposes),
 					clientModule: 'x-parent.client.js',
-				} as RegistryEntry,
+				} as InternalRegistryEntry,
 				{
 					...entry('x-child', 'folded'),
 					clientModule: 'x-child.client.js',
-				} as RegistryEntry,
+				} as InternalRegistryEntry,
 			),
 			generatedDir: fixtureDir,
 			createRealm: options => {
@@ -541,7 +545,7 @@ describe('the demo markup path is <dir>/<tag>.html, whatever the source (LT-096,
 		const tsx = {
 			...entry('x-tsx', 'simulated'),
 			source: 'examples/fake/x-tsx/x-tsx.tsx',
-		} as RegistryEntry
+		} as InternalRegistryEntry
 		await simulateCorpus({
 			registry: registryOf(tsx, entry('x-tsrx', 'simulated')),
 			root: '/repo',
@@ -564,11 +568,11 @@ describe('the demo markup path is <dir>/<tag>.html, whatever the source (LT-096,
 		const twin = {
 			...entry('x-twin', 'simulated'),
 			source: 'examples/fake/x-twin/x-twin.ts',
-		} as RegistryEntry
+		} as InternalRegistryEntry
 		const renamed = {
 			...entry('x-renamed', 'simulated'),
 			source: 'examples/fake/x-renamed/component.tsx',
-		} as RegistryEntry
+		} as InternalRegistryEntry
 		await simulateCorpus({
 			registry: registryOf(twin, renamed),
 			root: '/repo',

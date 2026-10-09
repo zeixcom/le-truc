@@ -12,9 +12,9 @@
  * no files and calls no runtime-specific API (no `Bun.*`, no
  * `import.meta.dir`), so `server/compiler/` stays runtime-neutral (ADR 0038
  * s2; `node:path` is the one built-in allowed). Config LOADING and source
- * globbing live in `server/corpus-sources.ts`, the file-IO layer LT-267
- * replaces. The emitter-facing subset lives one level down in
- * `emit-paths.ts`.
+ * globbing live beside it in `corpus-scan.ts`, over the package's own
+ * file-system seam (`fs.ts`, LT-480). The emitter-facing subset lives one
+ * level down in `emit-paths.ts`.
  */
 
 import { isAbsolute, relative, resolve, sep } from 'node:path'
@@ -70,6 +70,20 @@ export const DEFAULT_SIBLING_MODULES = ['examples/**/*.ts']
  */
 export const DEFAULT_I18N_DIR = 'i18n'
 
+/**
+ * Locales the corpus builds for, first one the default page locale
+ * (ADR 0030 sub-design 1, LT-174) — the list the generated `i18n` module
+ * enumerates (`I18N_LOCALES`) and the translation census walks.
+ *
+ * The default is this repo's own site locales, per the defaults rule above
+ * (the defaults ARE this repo's paths). The list is deliberately NOT
+ * derived from the catalogs on disk: the catalogs carry every LOCALE a
+ * translator has ever filed (six today), while the site builds a chosen
+ * subset (the source locale plus German), and the page tree — not the
+ * catalog directory — is what decides that.
+ */
+export const DEFAULT_LOCALES: readonly string[] = ['en', 'de']
+
 export { DEFAULT_OUT_DIR, DEFAULT_RUNTIME_IMPORT }
 
 /* === Variant surface selection (ADR 0039) === */
@@ -114,6 +128,11 @@ export type CorpusConfigInput = {
 	outDir?: string
 	/** Translation-catalog directory, relative to the root. */
 	i18nDir?: string
+	/**
+	 * Locales the corpus builds for; the first is the default page locale
+	 * (ADR 0030 sub-design 1). Defaults to this repo's site locales.
+	 */
+	locales?: string[]
 	/** Specifier the generated server modules import the harness from. */
 	runtimeImport?: string
 	/**
@@ -145,6 +164,8 @@ export type CorpusConfig = {
 	siblingModules: readonly string[]
 	outDir: string
 	i18nDir: string
+	/** Locales the corpus builds for; the first is the default page locale. */
+	locales: readonly string[]
 	runtimeImport: string
 	/** Surface a variant set serves with no override (ADR 0039). */
 	variantSurface: VariantSurface
@@ -166,6 +187,7 @@ const ACCEPTED_KEYS: readonly string[] = [
 	'siblingModules',
 	'outDir',
 	'i18nDir',
+	'locales',
 	'runtimeImport',
 	'variantSurface',
 	'variantOverrides',
@@ -290,6 +312,14 @@ const validateConfigInput = (input: CorpusConfigInput): void => {
 	}
 	stringArray('sources')
 	stringArray('siblingModules')
+	stringArray('locales')
+	// The first locale is the default page locale, so an empty list has no
+	// meaning — refuse it at load like an empty `sources` list.
+	const locales = value('locales')
+	if (Array.isArray(locales) && locales.length === 0)
+		fail(
+			'"locales" must list at least one locale (the first is the default page locale).',
+		)
 	nonEmptyString('outDir')
 	nonEmptyString('i18nDir')
 	nonEmptyString('runtimeImport')
@@ -387,6 +417,7 @@ export const resolveCorpusConfig = (
 		throw new Error(
 			`${CONFIG_FILENAME}: "sources" must list at least one glob.`,
 		)
+	const locales = input.locales ?? DEFAULT_LOCALES
 	// Validation guarantees every present override value is a surface; the
 	// Partial type still admits undefined, so build the resolved map
 	// explicitly instead of spreading.
@@ -399,6 +430,7 @@ export const resolveCorpusConfig = (
 		siblingModules: [...(input.siblingModules ?? DEFAULT_SIBLING_MODULES)],
 		outDir,
 		i18nDir: at(input.i18nDir ?? DEFAULT_I18N_DIR),
+		locales: [...locales],
 		runtimeImport: input.runtimeImport ?? DEFAULT_RUNTIME_IMPORT,
 		variantSurface: input.variantSurface ?? DEFAULT_VARIANT_SURFACE,
 		variantOverrides,
