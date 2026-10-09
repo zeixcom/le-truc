@@ -1496,7 +1496,12 @@ member.
   candidate a child could match is emitted as
   `base:not(<child-tag> *)`; clean candidates win first (LT-096 — a bare
   `button` had bound module-codeblock's overlay, and form-combobox's clear
-  button, onto a composed child's `<button>`). An element in content the
+  button, onto a composed child's `<button>`), and when none is clean the
+  decorated candidates are tried most precise base first (LT-520): a `role`
+  clause keeps its first place, then `id`, then the `class`/`data-*` hooks,
+  then the bare tag with `type` and `aria-*` in candidate order — there
+  every candidate pays the same exclusion, so the bare tag no longer wins
+  by arriving first. An element in content the
   component passes as `children` sits in the child's Children Region (ADR
   0048 s1, LT-472): it counts over the region probe (every compose site's
   content serialized in place), its exclusion re-includes the component's

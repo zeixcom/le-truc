@@ -418,9 +418,12 @@ export function P({}: {})
 		const component = withChild(
 			child('<button type="button" class={size}>in</button>'),
 		)
+		// Every candidate clashes (the dynamic class may hold "overlay"), so
+		// all come out exclusion-wrapped — and the most precise decorated
+		// base wins (LT-520), the class hook over the bare tag.
 		expect(
 			resolveSelector(component, elementByTag(component, 'button')),
-		).toEqual({ selector: 'button:not(child-el *)', unique: true })
+		).toEqual({ selector: 'button.overlay:not(child-el *)', unique: true })
 	})
 
 	test('a static child class leaves a non-clashing discriminator clean', () => {
@@ -521,13 +524,16 @@ export function P({}: {})
 			ComponentIR['root'],
 			{ kind: 'element' }
 		>
-		// The synthesized form: the exclusion for the bare tag.
+		// The synthesized form: the most precise decorated base (LT-520 —
+		// the class hook over the bare tag) with the exclusion.
 		expect(resolveSelector(parent, button)).toEqual({
-			selector: 'button:not(child-el *)',
+			selector: 'button.overlay:not(child-el *)',
 			unique: true,
 		})
 		// The authored-contract form: the ref attr carries the author's
-		// selector, and it still proves itself exclusion-wrapped.
+		// selector, and it still proves itself exclusion-wrapped. Since
+		// LT-520 it coincides with the synthesized form here — the leg pins
+		// that the authored path, not the synthesis, produced it.
 		;(
 			button as {
 				attrs: Array<{ kind: string; name?: string; selector?: string }>
@@ -544,6 +550,106 @@ export function P({}: {})
 		expect(
 			resolveSelector(component, elementByTag(component, 'button')).unique,
 		).toBe(false)
+	})
+
+	test('among exclusion-decorated candidates the most precise base wins (LT-520)', () => {
+		// The child takes open children, so its `children` shape may match
+		// every candidate of the parent's own template (ADR 0048): all come
+		// out decorated and the base decides — the id outranks the class
+		// hook and the bare tag, and a role keeps its first place over a
+		// class hook.
+		const rawChild = compileSource(
+			`export function Child({ children }: { children?: string })
+@{
+		<child-el>{children}
+			<style>@scope {
+:scope {
+	  color: red;
+	}
+}</style>
+		</child-el>
+}`,
+			'child.tsrx',
+		).component as ComponentIR
+		const component = compileSource(
+			`import { Child } from './child.tsrx'
+export function P({}: {})
+@{
+	expose({})
+		<p-el>
+			<Child />
+			<button type="button" id="go" class="overlay">Go</button>
+			<span role="status" class="note">St</span>
+			<style>@scope {
+:scope {
+  color: red;
+	}
+}</style>
+		</p-el>
+}`,
+			'p.tsrx',
+		).component as ComponentIR
+		const registry = new Map<string, RegistryEntry>([
+			[
+				(
+					component.root.children.find(n => n.kind === 'compose') as {
+						source: string
+					}
+				).source,
+				{
+					tag: 'child-el',
+					renderedShapes: renderedShapesOf(rawChild),
+				} as RegistryEntry,
+			],
+		])
+		component.composedShapes = composedShapesFor(component.root, registry)
+		expect(
+			resolveSelector(component, elementByTag(component, 'button')),
+		).toEqual({ selector: 'button#go:not(child-el *)', unique: true })
+		expect(resolveSelector(component, elementByTag(component, 'span'))).toEqual(
+			{ selector: 'span[role="status"]:not(child-el *)', unique: true },
+		)
+	})
+
+	test('type is not a hook — a decorated type-only button keeps the bare tag', () => {
+		// `type="button"` is boilerplate, not an addressing hook: within its
+		// rank the candidate order stands, and the bare tag precedes it.
+		const component = compileSource(
+			`import { Child } from './child.tsrx'
+export function P({}: {})
+@{
+	expose({})
+		<p-el>
+			<Child />
+			<button type="button">Go</button>
+			<style>@scope {
+:scope {
+  color: red;
+	}
+}</style>
+		</p-el>
+}`,
+			'p.tsrx',
+		).component as ComponentIR
+		const registry = new Map<string, RegistryEntry>([
+			[
+				(
+					component.root.children.find(n => n.kind === 'compose') as {
+						source: string
+					}
+				).source,
+				{
+					tag: 'child-el',
+					renderedShapes: renderedShapesOf(
+						child('<button type="button">in</button>'),
+					),
+				} as RegistryEntry,
+			],
+		])
+		component.composedShapes = composedShapesFor(component.root, registry)
+		expect(
+			resolveSelector(component, elementByTag(component, 'button')),
+		).toEqual({ selector: 'button:not(child-el *)', unique: true })
 	})
 
 	test('without composed shapes (the discovery pass) the single-template view stands', () => {
