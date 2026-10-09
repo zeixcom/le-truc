@@ -37,7 +37,7 @@
 import type { RoleWrite } from './analysis/role-writes'
 import type { ChildrenRegion } from './children-region'
 import type { ExposeKind, RenderedShape } from './ir'
-import type { SuppressedSite } from './simulation/contract.ts'
+import type { SuppressedSite } from './simulation/contract'
 import type { EvaluationTier, RoutingSignal } from './tier'
 
 /* === Types === */

@@ -335,6 +335,48 @@ text. Its points:
 - Everything else under `server/compiler/` — the IR and `compileFromIR`
   included, and `compileComponentTsx` with them — is internal and may
   change in any release, including a patch release.
+- The two authored input surfaces carry different labels (ADR 0034 s2,
+  LT-254): `.tsx` is stable from the first publish; `.tsrx` is
+  **experimental** — it compiles and ships, and it may change or be removed
+  in any minor release while so labeled. No `exports`-map gating expresses
+  this: the front end is dispatched per file extension inside
+  `compileCorpus`, so there is no `.tsrx` entry point to gate.
+
+**The published package** (LT-254, ADR 0034 s1–s2, s8). The compiler ships
+as `@zeix/le-truc-compiler`, assembled from `compiler/`: `bun run
+build:compiler` emits JS plus declarations for everything under
+`server/compiler/` into `compiler/dist` (normalizing the sources'
+bundler-style extensionless relative imports to `.js`), and the manifest's
+`exports` map names exactly three surfaces — the root entry (the built
+`contract.ts`: the corpus pass and its types), `./macros` (the compile-time
+markers, carrying no dependency of the compiler's), and `./runtime` (the
+value harness the generated server modules import — not consumer API, which
+is why the stability policy does not name it). `npm pack` of `compiler/`
+produces the tarball; `bun run check:package` proves it end to end in an
+empty project: install, compile a three-component corpus through the
+published entry point with no `runtimeImport` set (the default is the
+`./runtime` subpath), and render a generated server module. The runtime
+peer is `@zeix/le-truc` (`^3.0.0-next.1` floor — `check:peer` pins that
+every emitted module's runtime import exists at the floor, and that the two
+packages' versions move in lockstep); `typescript` (`>=5.8.0 <6.1.0`) is
+the `.tsx` front end's parser peer; `jsdom` stays the optional substrate
+peer (ADR 0034 s5). `@tsrx/core` — the `.tsrx` front end's pinned parser —
+is the compiler's own dependency, never a peer and never re-exported.
+
+**Dependency weight, recorded (M28 rider, LT-243 review).**
+`@typescript-eslint/typescript-estree` (pinned 8.71.0) is a runtime
+dependency: the `.tsx` front end's converter is a maintained library, not a
+hand-written one (ADR 0032 s4), so it installs with its closure — the
+`@typescript-eslint/{types, visitor-keys, tsconfig-utils, project-service}`
+siblings, `ts-api-utils`, `semver`, `minimatch`, `debug` and `tinyglobby`.
+It is also where the inherited `typescript` peer range comes from
+(`>=4.8.4 <6.1.0` at 8.71.0; the package narrows the floor to the tested
+5.8). Weighed against D-33 — the engine moving to TypeScript 7.1 or a
+native parser behind the converter: the converter seam is exactly what
+makes that swap a non-breaking change (no TypeScript type appears in the
+public API, ADR 0034 s8; LT-377 pins it on the emitted `.d.ts`), and a
+TypeScript release the upstream range does not cover yet gates the upgrade
+on typescript-estree — the one dependency whose job is tracking it.
 
 **Connectors are third-party.** A connector for React, Vue, or Solid
 component semantics is third-party by name (ADR 0032,
@@ -1443,7 +1485,7 @@ resolves against it.
 | `outDir` | `"server/generated/components"` | Where the generated `<tag>.server.ts`, `<tag>.client.ts`, `<tag>.css`, `registry.json` (+ the `registry.internal.json` sidecar), `tsrx-imports.d.ts` and `i18n.ts` land. Must sit inside the project root (see below) |
 | `i18nDir` | `"i18n"` | The committed per-locale translation catalogs (ADR 0030 s5). A project with no such directory censuses zero locales and zero gaps |
 | `locales` | `["en", "de"]` | Locales the corpus builds for; the first is the default page locale (ADR 0030 s1). The list the generated `i18n` module enumerates (`I18N_LOCALES`) and the translation census walks — deliberately NOT derived from the catalogs on disk, which carry locales the site may not build. The default is this repo's own site locales, like every default |
-| `runtimeImport` | `"../../compiler/runtime"` | The specifier the generated SERVER modules import the render harness from. The default is this repo's relative path; a consumer sets their own until LT-254 publishes the compiler and it becomes a package specifier |
+| `runtimeImport` | `"@zeix/le-truc-compiler/runtime"` | The specifier the generated SERVER modules import the render harness from. The default is the published package's own `./runtime` subpath (LT-254), so a consumer never sets it. This repo is the one consumer that overrides it: its `le-truc.config.json` pins the repo-relative `"../../compiler/runtime"`, keeping the in-tree harness in the generated modules |
 | `variantSurface` | `"tsx"` | The surface a variant set serves when no per-tag override applies (ADR 0039): `"tsx"` or `"tsrx"` |
 | `variantOverrides` | `{}` | Per-tag served surface for variant sets, e.g. `{ "basic-counter": "tsrx" }`. Keys must be custom-element tags; values `"tsx"` or `"tsrx"` |
 | `cssTargets` | Baseline widely available | Minimum browser versions deciding the compiled stylesheet's emission (ADR 0033 s5): native `@scope` when every named browser supports it, the `:where(…)`-led flat lowering otherwise, and the ceiling for `lightningcss`'s own lowering of what the sheet authors. An object over `chrome`, `edge`, `firefox`, `safari` (Blink derivatives ride `chrome`); values are integer majors (`118`) or `"major.minor[.patch]"` strings (`"17.4"`), each component ≤ 255; a browser left out imposes no constraint. The default is a fixed set pinned at 3.0 (chrome/edge 124, firefox 125, safari 17.4), moved only deliberately with a major — at that pin `@scope` is not yet widely available, so the default compiles the lowered form |
@@ -1452,8 +1494,7 @@ resolves against it.
 {
   "sources": ["src/**/*.tsx"],
   "siblingModules": ["lib/**/*.ts"],
-  "outDir": "build/le-truc",
-  "runtimeImport": "@zeix/le-truc-compiler/runtime"
+  "outDir": "build/le-truc"
 }
 ```
 

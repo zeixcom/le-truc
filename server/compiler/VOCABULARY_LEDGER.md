@@ -87,8 +87,12 @@ so the vocabulary is settled now, before P6, even though the publish is after it
 > (`{cond && …}`, ternary, `.map()`, `return (<>…</>)`) — idioms that TSRX would
 > render *literally* but which are `.tsx`'s **correct** spellings, so the family
 > is in force for `.tsrx` sources only (ADR 0032 s6). Prefixing them `LTC` would
-> assert they are compiler-wide rules, which is exactly backwards. None of them
-> is in the v3.0 published package.
+> assert they are compiler-wide rules, which is exactly backwards. Each kept
+> code's reason still holds with the surface shipping (LT-254, ADR 0034 s2):
+> all six publish beside the `LTC###` set — public API from first publish, like
+> every code — but they fire on `.tsrx` sources only, so a `.tsx`-only consumer
+> never meets one; the surface's experimental label covers their behavior, not
+> their numbers.
 
 **Why not a blanket rename**, the alternative considered: it costs one prefix to
 learn instead of two, but it erases the only information that distinguishes a

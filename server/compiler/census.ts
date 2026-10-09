@@ -21,8 +21,8 @@
  * compiler-side so that is true by construction.
  */
 
-import { lineOf } from './diagnostics.ts'
-import type { EvaluationTier, RoutingSignal } from './tier.ts'
+import { lineOf } from './diagnostics'
+import type { EvaluationTier, RoutingSignal } from './tier'
 
 /* === Types === */
 

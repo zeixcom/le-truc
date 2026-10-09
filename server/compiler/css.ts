@@ -33,7 +33,7 @@
  * per `cssTargets`.
  */
 
-import type { CssNode, CssTreeDeclaration } from 'css-tree/dist/csstree.esm.js'
+import type { CssNode, CssTreeDeclaration } from 'css-tree/dist/csstree.esm'
 // The dist ESM bundle, not the package entry: the entry loads its
 // dictionary patch through a runtime `createRequire`, which cannot ride
 // the portability bundle's self-contained module graph (ADR 0038). The
@@ -43,7 +43,7 @@ import {
 	lexer,
 	parse,
 	parse as parseDeclarationList,
-} from 'css-tree/dist/csstree.esm.js'
+} from 'css-tree/dist/csstree.esm'
 import type { StyleSheet } from 'lightningcss-wasm'
 import { transform } from 'lightningcss-wasm'
 import { anchorRelativeSelectors } from './css-scope'

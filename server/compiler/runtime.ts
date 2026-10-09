@@ -8,11 +8,16 @@
  * `.set()` is a no-op, because the server renders once and never reacts
  * (ADR 0024 sub-design 2: "signals as plain values").
  *
- * This module is imported by *generated* code (`server/generated/components/`),
- * never by the compiler itself.
+ * This module is imported by *generated* code (`server/generated/components/`
+ * in this repo, any output root elsewhere), never by the compiler itself.
+ * In the published package it is the `@zeix/le-truc-compiler/runtime`
+ * subpath — the default `runtimeImport` (LT-254) — so its own runtime-library
+ * imports (`sanitizeHtml`, `configureHtmlSanitizer`) name the peer package
+ * `@zeix/le-truc`, which resolves in-repo to the same barrel through the
+ * root tsconfig's `paths` entry and Bun's package self-reference.
  */
 
-import { sanitizeHtml as librarySanitizeHtml } from '../../src/bindings'
+import { sanitizeHtml as librarySanitizeHtml } from '@zeix/le-truc'
 import { bakeMessageEnv, type Message, type MessageEnv } from './icu/evaluate'
 
 /* === Re-exports === */
@@ -646,7 +651,7 @@ export const styleAttr = (
  * one — DOMPurify on jsdom here (`createDOMPurify(new JSDOM('').window)`),
  * plain DOMPurify in the browser.
  */
-export { configureHtmlSanitizer } from '../../src/bindings'
+export { configureHtmlSanitizer } from '@zeix/le-truc'
 
 /**
  * Sanitize HTML for the `truc:html={expr}` dynamic-rendering attribute

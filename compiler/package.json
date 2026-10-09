@@ -1,0 +1,74 @@
+{
+	"name": "@zeix/le-truc-compiler",
+	"version": "3.0.0-next.1",
+	"description": "The Le Truc component compiler: builds a corpus of .tsx (stable) and .tsrx (experimental) component sources into server render modules, client modules and scoped CSS.",
+	"keywords": [
+		"Le Truc",
+		"Web Components",
+		"Custom Elements",
+		"Compiler",
+		"SSG",
+		"SSR"
+	],
+	"homepage": "https://zeixcom.github.io/le-truc/",
+	"bugs": {
+		"url": "https://github.com/zeixcom/le-truc/issues"
+	},
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/zeixcom/le-truc.git"
+	},
+	"license": "MIT",
+	"author": "Esther Brunner",
+	"type": "module",
+	"main": "./dist/contract.js",
+	"types": "./dist/contract.d.ts",
+	"exports": {
+		".": {
+			"types": "./dist/contract.d.ts",
+			"default": "./dist/contract.js"
+		},
+		"./macros": {
+			"types": "./dist/macros.d.ts",
+			"default": "./dist/macros.js"
+		},
+		"./runtime": {
+			"types": "./dist/runtime.d.ts",
+			"default": "./dist/runtime.js"
+		},
+		"./package.json": "./package.json"
+	},
+	"files": [
+		"dist",
+		"README.md"
+	],
+	"engines": {
+		"node": ">=18.18"
+	},
+	"scripts": {
+		"build": "bun run ../scripts/build-compiler.ts"
+	},
+	"dependencies": {
+		"@messageformat/date-skeleton": "^1.1.0",
+		"@messageformat/number-skeleton": "^1.2.0",
+		"@messageformat/parser": "^5.1.1",
+		"@tsrx/core": "0.2.3",
+		"@typescript-eslint/typescript-estree": "8.71.0",
+		"css-select": "^7.0.0",
+		"css-tree": "^3.2.1",
+		"css-what": "^8.0.0",
+		"eslint-visitor-keys": "5.0.1",
+		"lightningcss-wasm": "1.33.0",
+		"parse5": "^7.0.0"
+	},
+	"peerDependencies": {
+		"@zeix/le-truc": "^3.0.0-next.1",
+		"jsdom": "^30.0.0",
+		"typescript": ">=5.8.0 <6.1.0"
+	},
+	"peerDependenciesMeta": {
+		"jsdom": {
+			"optional": true
+		}
+	}
+}

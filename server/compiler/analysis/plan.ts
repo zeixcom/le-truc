@@ -27,7 +27,7 @@ import type {
 	TemplateNode,
 } from '../ir'
 import type { InternalRegistryEntry } from '../registry'
-import type { SuppressedSite } from '../simulation/contract.ts'
+import type { SuppressedSite } from '../simulation/contract'
 import type { LocalRoutingSignal } from '../tier'
 import {
 	CLIENT_ONLY_PRIMITIVES,

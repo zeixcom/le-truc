@@ -37,10 +37,7 @@
  * substrate installed can still load them.
  */
 
-import type {
-	ClassifiedDiagnostic,
-	SimDiagnostic,
-} from './simulation/contract.ts'
+import type { ClassifiedDiagnostic, SimDiagnostic } from './simulation/contract'
 
 /* === Types === */
 

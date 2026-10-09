@@ -68,7 +68,7 @@ import {
 	UNANSWERABLE_MEMBERS,
 	unanswerableGlobalReason,
 	unanswerableMemberReason,
-} from './simulation/capabilities.ts'
+} from './simulation/capabilities'
 
 /* === Types === */
 

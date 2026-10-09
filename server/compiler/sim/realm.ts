@@ -115,8 +115,8 @@ import {
 	type SimulationRealmOptions,
 	SUPPRESSED_HOST_SELECTOR,
 	type SuppressedSite,
-} from '../simulation/contract.ts'
-import { assertSynchronousWindow, drainToQuiescence } from './boundary.ts'
+} from '../simulation/contract'
+import { assertSynchronousWindow, drainToQuiescence } from './boundary'
 import {
 	detectRuntime,
 	NETWORK_GLOBALS,
@@ -125,7 +125,7 @@ import {
 	REALM_GLOBALS,
 	STUB_GLOBALS,
 	type StubShape,
-} from './patch-table.ts'
+} from './patch-table'
 
 /* === Types === */
 

@@ -35,7 +35,7 @@
  * {@link SimulationSeamVersionError} draws for a version mismatch.
  */
 
-import { SIMULATION_SEAM_VERSION, type SimulationProvider } from './contract.ts'
+import { SIMULATION_SEAM_VERSION, type SimulationProvider } from './contract'
 
 /**
  * Where the driver lives. A relative path for 3.0; `'@zeix/le-truc-simulation'`

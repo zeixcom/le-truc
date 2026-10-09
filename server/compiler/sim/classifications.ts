@@ -18,7 +18,7 @@
  * admits nothing is kept only as a record, and the baseline test says so.
  */
 
-import type { ClassifiedDiagnostic } from '../simulation/contract.ts'
+import type { ClassifiedDiagnostic } from '../simulation/contract'
 
 export const CLASSIFIED_DIAGNOSTICS: readonly ClassifiedDiagnostic[] = [
 	{

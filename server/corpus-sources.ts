@@ -4,38 +4,37 @@
  * — where the corpus entry point finds its own inputs).
  *
  * What stays here is everything anchored to THIS repository: its root, and
- * the default configuration the docs build and the runner scripts compile
- * under — the defaults ARE this repo's paths, which is why the repo needs
- * no config file. A consumer's configuration comes from their
- * `le-truc.config.json` through the package's loader; nothing in this
- * module is theirs.
+ * the configuration the docs build and the runner scripts compile under.
+ * Since LT-254 that configuration comes from the repo's own
+ * `le-truc.config.json` through the same loader a consumer's would — the
+ * one file the repo overrides is `runtimeImport`, pinned to the in-tree
+ * harness because the default flipped to the published package specifier.
+ * A consumer's configuration is none of this module's business.
  */
 
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import {
-	type CorpusConfig,
-	resolveCorpusConfig,
-} from './compiler/corpus-config'
-import { collectSiblingModules } from './compiler/corpus-scan'
+import type { CorpusConfig } from './compiler/corpus-config'
+import { collectSiblingModules, loadCorpusConfig } from './compiler/corpus-scan'
 
 /* === Constants === */
 
 /**
- * This repo's own root — the default project root, and the reason the docs
- * build needs no config file: the defaults ARE this repo's paths. Anchored
- * to this module's location, portably (LT-267): the module is the constant,
- * whichever runtime loads it.
+ * This repo's own root — the default project root, and the directory the
+ * repo's `le-truc.config.json` is found in (the loader below starts here).
+ * Anchored to this module's location, portably (LT-267): the module is the
+ * constant, whichever runtime loads it.
  */
 export const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /**
- * The configuration the in-repo pipeline runs under: the defaults, which ARE
- * this repo's paths. A consumer's own configuration is loaded from their
- * `le-truc.config.json` by the package's `loadCorpusConfig` and handed to
- * `compileCorpus`.
+ * The configuration the in-repo pipeline runs under: the repo's own
+ * `le-truc.config.json`, discovered from the root exactly as the scripts
+ * discover it — one fact, one loader. Without the file, the boundary rule
+ * lands on this root and the defaults apply, which are this repo's paths
+ * (ADR 0036 s2).
  */
-export const REPO_CONFIG: CorpusConfig = resolveCorpusConfig(REPO_ROOT)
+export const REPO_CONFIG: CorpusConfig = loadCorpusConfig(REPO_ROOT)
 
 /**
  * Where the corpus compile writes its artifacts, including the registry the

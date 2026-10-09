@@ -39,7 +39,7 @@ import type { InternalRegistryEntry } from '../registry'
 import {
 	SUPPRESSED_HOST_SELECTOR,
 	type SuppressedSite,
-} from '../simulation/contract.ts'
+} from '../simulation/contract'
 import { wordingOf } from '../surface'
 import { type LocalRoutingSignal, rangeFields, resolutionOf } from '../tier'
 import {
