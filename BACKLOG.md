@@ -639,6 +639,29 @@ matters only where two tasks edit module-todo: LT-489 → LT-494 → LT-514.
   re-pin them). `test:server`, `check:corpus` green.
   **Channel/tier:** compiler check, tier 1 Prevented — LTC005's existing arm/branch
   face, extended wording in `skills/le-truc/references/errors.md`.
+
+- [ ] LT-520: Selector synthesis drops the class discriminator among exclusion-decorated candidates — prefer precision when no candidate is clean.
+  **Area:** compiler
+  **Gates:** test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-10, from LT-514's review — its flagged synthesis gap):** once a
+  composed child accepts open children (`Children<{}, …>`), its passed content is unknown
+  markup, so every selector candidate for a parent's own element "could match" inside it and
+  needs the `:not(<child> *)` decoration. The candidate chooser
+  (`selectorCandidates`/`resolveSelectorIn` in `server/compiler/analysis/selectors.ts`) takes
+  the FIRST unique decorated candidate, and the bare tag precedes the class discriminator in
+  candidate order — so module-todo's `p` query synthesized as
+  `p:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)` where
+  `p.remaining:not(…)` was available and strictly more precise (LT-514 re-pinned the parity
+  snapshot with the coarse form). Correct today — module-todo has exactly one `p` — but a
+  second `p` in the parent's own template would break the bare tag's uniqueness where the
+  discriminated form would survive.
+  **Change:** when no candidate is clean and several decorated candidates are unique, prefer
+  the most precise base (id > data-* / class discriminators > bare tag), not the first in
+  candidate order. The exclusion set is unaffected — only the base selector changes.
+  **Check:** the module-todo parity/client snapshots re-pin to the discriminated form (both
+  surfaces); no other snapshot moves. `test:server` green.
+  **Channel/tier:** none — emission quality; no check added or narrowed.
 ## P7 — Backlog (not scheduled)
 
 Owner-parked designs, explicit 3.0 non-goals, and items gated on a real need. The non-goals
