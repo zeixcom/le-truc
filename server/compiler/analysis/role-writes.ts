@@ -304,10 +304,11 @@ export const roleWritesOf = (
  * carries a role class the child's client also writes the same property on,
  * is a conflict — reported at the parent's binding, naming both writers.
  * Runs in the registry-aware pass only (it reads each child's entry).
- * Compose content admits `first()` references as its one client construct
- * (LTC011 refuses the rest), so the reference-targeted binding is the
- * parent's only runtime write channel into its passed content today; the
- * check reads the same authored statements the child half records from.
+ * The reference-targeted binding is the parent's write channel this check
+ * reads; a reactive `truc:html` in content (LT-492) is a template-authored
+ * write the statement scan does not see — the accepted-edge ruling (LT-476
+ * review) scopes the check to authored statements, and widening it is
+ * LT-515's question.
  */
 export const findRoleWriterConflicts = (
 	component: ComponentIR,
