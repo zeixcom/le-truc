@@ -57,9 +57,9 @@ iteration.
   2026-10-10, b482d527; LT-254 reviewed ✓ and integrated 2026-10-10, 560d91e9 — the package
   stands up, both surfaces, `./macros` + `./runtime`, the peer floor under `check:peer`;
   LT-377 reviewed ✓ and integrated 2026-10-10, 5a62171e — `check:contract`'s second phase pins
-  D-33 on the emitted `.d.ts`.) **LT-521** — LT-480's generated-comment golden re-pin — is the
-  track's open residue and pickable: it touches only the provenance string in
-  `i18n-catalog.ts` and the goldens, not the contract files.
+  D-33 on the emitted `.d.ts`.) ~~LT-521~~ — LT-480's generated-comment golden re-pin —
+  reviewed ✓ and integrated 2026-10-10, 5c3fc619 (the re-pin proved vacuous: no golden carries
+  the string; exactly one regenerated line moved). The track is closed with no residue.
 - **X — compiler, analysis passes** — one at a time (ruling 4). ~~LT-483~~ → ~~LT-492~~ →
   ~~LT-493~~ → ~~LT-519~~ → ~~LT-520~~. (LT-519 joined by owner instruction, 2026-10-09: filed from
   LT-492's review after the chain was written; P6 band remainder, needs satisfied. LT-520
@@ -128,6 +128,15 @@ commit. (`typecheck` reads green at HEAD again — the LT-480 pin-test TS2769 re
 on v3 in LT-377's review session, a one-line assertion widening in
 `corpus-config.test.ts`.)
 
+**Status 2026-10-10, after LT-521's review (Architect).** Track R is closed with no residue
+(LT-521 reviewed ✓, integrated 5c3fc619). The iteration's remaining work is three items:
+**LT-522** (a `writer` session, the compiler package's user-facing copy) and the two design
+sessions with the owner, **LT-516** and **LT-484**. When LT-522 is integrated and both
+sessions have ruled, the iteration closes: the `writer` changelog sweep runs, and the exit
+criterion is verified on the closing commit. (`typecheck` reads green at HEAD — the LT-480
+pin-test TS2769 residue was fixed on v3 in LT-377's review session, and holds through
+LT-521's branch.)
+
 **Next free task ID: LT-523.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
@@ -139,27 +148,6 @@ LTC056 is LT-358's).
 ---
 
 <!-- entries -->
-
-### R — the package
-
-- [ ] LT-521: Regenerate the generated i18n module's embedded provenance comment — it still names `effects/i18n.ts`, the module LT-480 moved to `compiler/i18n-catalog.ts`.
-  **Area:** compiler
-  **Needs:** LT-480
-  **Gates:** typecheck, test:server
-  **Area:** compiler
-  **Filed (Architect, LT-480 review, 2026-10-10):** LT-480 moved the catalog pipeline from
-  `server/effects/i18n.ts` to `server/compiler/i18n-catalog.ts` but kept the generated module's
-  embedded comment — `/** Formatting configuration folded into every record (see effects/i18n.ts). */`
-  (`i18n-catalog.ts`, `writeI18nModule`) — byte-for-byte, because the task's verification bar was
-  byte-identity of every regenerated artifact and a golden re-pin is not a free edit.
-
-  **Task:** change the comment's provenance string to name `compiler/i18n-catalog.ts`, rebuild the
-  corpus, and re-pin the goldens the regenerated `i18n.ts` moves (`server.golden.test.ts` and any
-  snapshot carrying the module). No other byte changes: if the rebuild moves anything else, stop and
-  write it in `NOTES.md`.
-
-  **Channel/tier:** none — a comment inside a gitignored generated artifact.
-  **Verification:** full gates; the only diff in the regenerated tree is the comment line.
 
 ### W — writer copy
 
