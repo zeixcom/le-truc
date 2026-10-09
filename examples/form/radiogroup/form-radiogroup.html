@@ -5,10 +5,13 @@
      component owns its whole template now. The per-item steady state
      (`checked`/`tabindex` on the selected radio, `selected` on its label) is
      baked in so the docs demo renders without a pre-upgrade flash — the
-     compiled client re-asserts the same state at activation. The styled
-     variants keep the page-level `visually-hidden` utility class on their
-     inputs, the same stand-in-for-server-render presentation config the
-     form-checkbox demo carries. -->
+     compiled client re-asserts the same state at activation. The
+     `radio-group` variant keeps the page-level `visually-hidden` utility
+     class on its inputs, the same stand-in-for-server-render presentation
+     config the form-checkbox demo carries. The `split-button` variant owns
+     that presentation itself since LT-494 — its sheet visually hides the
+     legend and the radios — so its utility classes here are redundant, kept
+     only because form-radiogroup.spec.ts pins them. -->
 <form-radiogroup name="gender" value="other">
 	<fieldset>
 		<legend>Gender</legend>
