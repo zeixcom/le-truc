@@ -11,7 +11,10 @@
      text arrives via module-todo's per-item truc:pass into host.value. Since
      LT-467 the remaining count is module-todo's own ICU message (the `=0` arm
      folds server-side); the root `lang` is the client evaluator's locale, and
-     at the source locale no `i18n` attribute is written. -->
+     at the source locale no `i18n` attribute is written. Since LT-489 the
+     remove button is the composed BasicButton — its render adds the
+     empty badge span (hidden by `.badge:empty`), and the `onClick`
+     handler arg binds per item in the client's bindItem scope. -->
 <module-todo lang="en">
 	<form action="#">
 		<form-textbox name="add-todo" value="">
@@ -72,6 +75,7 @@
 					aria-label="Remove"
 				>
 					<span class="label">✕</span>
+					<span class="badge"></span>
 				</button>
 			</basic-button>
 		</li>
