@@ -1,0 +1,52 @@
+{
+	// The `@zeix/le-truc-compiler` package build (LT-254, ADR 0034).
+	//
+	// Emits JS plus declarations for the whole compiler — both front ends,
+	// the shared pipeline, the harness — from `server/compiler/` into
+	// `compiler/dist/`, the directory the package manifest's `exports` map
+	// points at. The sources are written for bundler-style extensionless
+	// imports; `scripts/build-compiler.ts` normalizes the emitted relative
+	// specifiers to `.js` after tsc runs, which is what makes the output
+	// node-runnable as plain ESM.
+	"compilerOptions": {
+		"lib": ["ESNext", "DOM"],
+		"target": "ES2022",
+		// `preserve` is the one module setting that allows bundler resolution
+		// AND emit: the emitted files keep their ESM import syntax.
+		"module": "preserve",
+		"moduleResolution": "bundler",
+		"verbatimModuleSyntax": true,
+		"erasableSyntaxOnly": true,
+		"isolatedModules": true,
+		"types": ["node"],
+
+		"strict": true,
+		"skipLibCheck": true,
+		"noUncheckedIndexedAccess": true,
+		"exactOptionalPropertyTypes": true,
+		"useUnknownInCatchVariables": true,
+		"noFallthroughCasesInSwitch": true,
+		"forceConsistentCasingInFileNames": true,
+
+		"noEmit": false,
+		"declaration": true,
+		"outDir": "./compiler/dist",
+		"rootDir": "./server/compiler",
+		// The runtime peer resolves to the repo's committed declaration
+		// build (`types/`) — a `.d.ts`, so it adds nothing to the emit; the
+		// alternative (mapping to `index.ts`) would drag every runtime
+		// source outside `rootDir` and fail TS6059.
+		"paths": {
+			"@zeix/le-truc": ["./types/index.d.ts"]
+		}
+	},
+	"include": ["./server/compiler/**/*.ts"],
+	"exclude": [
+		"node_modules",
+		// The two authored-surface ambient profiles declare the same global
+		// JSX vocabulary as each other; the compiler's own program needs
+		// neither (they type authored sources, not compiler code).
+		"server/compiler/frontend/tsx/host-profile.d.ts",
+		"server/compiler/frontend/tsrx/globals.d.ts"
+	]
+}

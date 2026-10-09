@@ -13,15 +13,17 @@
 export const DEFAULT_OUT_DIR = 'server/generated/components'
 
 /**
- * Specifier the generated SERVER modules import the render harness from.
+ * Specifier the generated SERVER modules (and the generated `i18n` module)
+ * import the render harness from.
  *
- * The repo default is the relative path from the default output root back to
- * `server/compiler/runtime.ts`. An installing project has no such path and
- * must set `runtimeImport` to wherever the harness is importable from in its
- * own tree. It becomes a package specifier once LT-254 publishes the
- * compiler, at which point this default flips and consumers stop setting it.
+ * The default is the published package's own `./runtime` subpath (LT-254,
+ * ADR 0034 s1): a consumer never sets `runtimeImport`. This repo is the one
+ * consumer that must — its harness is the in-tree `server/compiler/runtime`
+ * source, not an installed package — so its `le-truc.config.json` pins the
+ * repo-relative specifier the generated modules used before publication
+ * (ADR 0036 s2's exception, made deliberate by the same task).
  */
-export const DEFAULT_RUNTIME_IMPORT = '../../compiler/runtime'
+export const DEFAULT_RUNTIME_IMPORT = '@zeix/le-truc-compiler/runtime'
 
 /* === The CSS target (ADR 0033 s5, LT-304) === */
 

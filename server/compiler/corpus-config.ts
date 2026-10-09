@@ -166,7 +166,13 @@ export type CorpusConfig = {
 	i18nDir: string
 	/** Locales the corpus builds for; the first is the default page locale. */
 	locales: readonly string[]
-	runtimeImport: string
+	/**
+	 * Specifier the generated server modules import the render harness from.
+	 * Optional in the hand-built form: omitted, the published package's own
+	 * `./runtime` subpath applies (LT-254) — a consumer never sets it. The
+	 * loader always fills it, from the file's value or that same default.
+	 */
+	runtimeImport?: string
 	/** Surface a variant set serves with no override (ADR 0039). */
 	variantSurface: VariantSurface
 	/** Per-tag variant-surface overrides (ADR 0039). */
@@ -476,6 +482,9 @@ export const validateVariantOverrides = (
 /** The emitter-facing projection of a configuration. */
 export const emitPathsFor = (config: CorpusConfig): EmitPaths => ({
 	outDirPrefix: outDirPrefix(config.root, config.outDir),
-	runtimeImport: config.runtimeImport,
+	// The hand-built form may omit `runtimeImport` (LT-254): the default is
+	// the published harness subpath, applied here rather than at every emit
+	// call site.
+	runtimeImport: config.runtimeImport ?? DEFAULT_RUNTIME_IMPORT,
 	cssTargets: config.cssTargets,
 })

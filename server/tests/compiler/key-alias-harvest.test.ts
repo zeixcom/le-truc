@@ -18,7 +18,10 @@ import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
 import { HarvestWitnessError, witnessHarvest } from '../../compiler/runtime'
 import { createSimulationRealm } from '../../compiler/sim/realm'
-import { createGeneratedDir } from '../helpers/generated-corpus'
+import {
+	createGeneratedDir,
+	REPO_EMIT_PATHS,
+} from '../helpers/generated-corpus'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const FILE = 'server/tests/compiler/fixtures/c-alias'
@@ -119,8 +122,22 @@ export function C({ rows = [] }: { rows?: Ticker[] }, { expose }: FactoryContext
 
 const compile = (surface: Surface, source: string, tag: string) =>
 	surface === 'tsrx'
-		? compileComponent(source, `${FILE}.tsrx`, new Set([tag]))
-		: compileComponentTsx(source, `${FILE}.tsx`, new Set([tag]))
+		? compileComponent(
+				source,
+				`${FILE}.tsrx`,
+				new Set([tag]),
+				undefined,
+				undefined,
+				REPO_EMIT_PATHS,
+			)
+		: compileComponentTsx(
+				source,
+				`${FILE}.tsx`,
+				new Set([tag]),
+				undefined,
+				undefined,
+				REPO_EMIT_PATHS,
+			)
 
 /** A generated module without its provenance header. */
 const body = (code: string | undefined): string =>

@@ -29,7 +29,10 @@
  */
 
 import { readFileSync } from 'node:fs'
-import { parse } from 'css-tree/dist/csstree.esm.js'
+// The exports-map-compatible subpath (LT-254): css-tree maps `./dist/*` to
+// `./dist/*.js`, so the `.js`-suffixed spelling resolves to a doubled
+// suffix under Node's exports resolution.
+import { parse } from 'css-tree/dist/csstree.esm'
 import { Features, transform } from 'lightningcss-wasm'
 import ts from 'typescript'
 import { features } from 'web-features'

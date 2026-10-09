@@ -40,7 +40,7 @@
  * unreadable.
  */
 
-import type { SimRuntime } from '../simulation/contract.ts'
+import type { SimRuntime } from '../simulation/contract'
 
 export type { SimRuntime }
 

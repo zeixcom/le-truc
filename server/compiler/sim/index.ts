@@ -23,9 +23,9 @@
 import {
 	SIMULATION_SEAM_VERSION,
 	type SimulationProvider,
-} from '../simulation/contract.ts'
-import { CLASSIFIED_DIAGNOSTICS } from './classifications.ts'
-import { createSimulationRealm } from './realm.ts'
+} from '../simulation/contract'
+import { CLASSIFIED_DIAGNOSTICS } from './classifications'
+import { createSimulationRealm } from './realm'
 
 /** The seam handshake, and the only thing the compiler imports from here. */
 export const simulationProvider: SimulationProvider = {
@@ -40,8 +40,8 @@ export {
 	drainToQuiescence,
 	type QuiescenceResult,
 	SimulationBoundaryError,
-} from './boundary.ts'
-export { CLASSIFIED_DIAGNOSTICS } from './classifications.ts'
+} from './boundary'
+export { CLASSIFIED_DIAGNOSTICS } from './classifications'
 export {
 	detectRuntime,
 	NETWORK_GLOBALS,
@@ -50,10 +50,10 @@ export {
 	type SimPatch,
 	type SimRuntime,
 	STUB_GLOBALS,
-} from './patch-table.ts'
+} from './patch-table'
 export {
 	childrenFirstOrder,
 	createSimulationRealm,
 	type JsdomSimulationRealm,
 	type RecordedDefinition,
-} from './realm.ts'
+} from './realm'

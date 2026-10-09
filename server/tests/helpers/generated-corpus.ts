@@ -16,8 +16,22 @@
 
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import * as path from 'node:path'
+import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../compiler/emit-paths'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
+
+/**
+ * Emit paths whose harness import stays repo-relative. The published
+ * default (LT-254) is the package specifier `@zeix/le-truc-compiler/runtime`,
+ * which plain-tsc spawns (`--ignoreConfig`, no `paths`) cannot resolve — the
+ * tests that typecheck their emitted modules with such a spawn pin the
+ * relative specifier instead, which resolves from this helper's depth (see
+ * `BASE` below).
+ */
+export const REPO_EMIT_PATHS: EmitPaths = {
+	...DEFAULT_EMIT_PATHS,
+	runtimeImport: '../../compiler/runtime',
+}
 
 /**
  * Sibling of the real `server/generated/components/`, NOT an OS temp dir: emitted

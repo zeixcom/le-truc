@@ -12,7 +12,7 @@
  * `css.ts` and this file. Runtime resolution is unaffected — Bun loads
  * the real bundle.
  */
-declare module 'css-tree/dist/csstree.esm.js' {
+declare module 'css-tree/dist/csstree.esm' {
 	/** A source position css-tree records with `positions: true`. */
 	export type CssTreePosition = {
 		/** 0-based offset within the parsed text. */

@@ -7,9 +7,11 @@
  * exports here are typed stubs for `tsc` and editors; each throws when a
  * source reaches it uncompiled.
  *
- * The package does not exist yet (LT-254): in-repo, the specifier resolves
- * to this file through a `paths` entry in each tsconfig that checks
- * authored `.tsx` sources.
+ * In the published package this file is the `./macros` subpath (LT-254) —
+ * it must resolve without loading any of the compiler's dependencies, so
+ * it stays import-free. In-repo, the specifier resolves to this source
+ * through a `paths` entry in each tsconfig that checks authored `.tsx`
+ * sources.
  */
 
 /**

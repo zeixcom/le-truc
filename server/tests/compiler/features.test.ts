@@ -624,7 +624,14 @@ export function C({}: {})
 		)
 		expect(diagnostics).toEqual([])
 		if (!compiled) throw new Error('fixture must compile')
-		expect(compiled.serverCode).not.toContain('@zeix/le-truc')
+		// The server module never imports the runtime library itself — its
+		// harness import is the compiler package's `./runtime` subpath
+		// (LT-254), so the bare-package specifier with its closing quote is
+		// the exact needle.
+		expect(compiled.serverCode).not.toContain("from '@zeix/le-truc'")
+		expect(compiled.serverCode).toContain(
+			"from '@zeix/le-truc-compiler/runtime'",
+		)
 		ensureEmitted('feat-async-task-driver', compiled.serverCode)
 		const html = await render('feat-async-task-driver', {})
 		expect(html).toContain('data-key="nil"')

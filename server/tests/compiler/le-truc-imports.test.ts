@@ -216,8 +216,10 @@ describe('sub-design 16 — generated-module placement', () => {
 		)
 		const code = component?.serverCode ?? ''
 		// createCell comes from the runtime harness (plain-value shim), not
-		// from a re-emitted authored import — no duplicate binding.
+		// from a re-emitted authored import — no duplicate binding. The
+		// harness specifier is the published package's `./runtime` subpath
+		// (LT-254's default).
 		expect(code).not.toContain("import { createCell } from '@zeix/le-truc'")
-		expect(code).toContain("from '../../compiler/runtime'")
+		expect(code).toContain("from '@zeix/le-truc-compiler/runtime'")
 	})
 })

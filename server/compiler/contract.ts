@@ -4,8 +4,10 @@
  *
  * A consumer configures a corpus — a `CorpusConfig` hand-built, or their
  * `le-truc.config.json` resolved by the package's loader
- * (`corpus-scan.ts`'s `loadCorpusConfig`, internal until LT-254 decides
- * the exports map) — and hands it to `compileCorpus`: the one entry
+ * (`corpus-scan.ts`'s `loadCorpusConfig`, decided at LT-254 to stay
+ * internal: the exports map publishes the corpus pass and its types only,
+ * so a consumer hand-builds the config or wraps the loader in their own
+ * runner) — and hands it to `compileCorpus`: the one entry
  * point, which scans the sources, compiles the corpus, writes the
  * artifacts to the configured `outDir`, and returns the diagnostics and a
  * summary. The artifacts are files, not return values: the generated
@@ -29,8 +31,9 @@
  * seam is not built yet (LT-376).
  *
  * The re-exports below are EXACTLY the set published as
- * `@zeix/le-truc-compiler` — the `exports` map entry and the version stamp
- * ride LT-254 and are mechanical once this set is named.
+ * `@zeix/le-truc-compiler` — the root entry of the `exports` map LT-254
+ * shipped, beside the `/macros` marker subpath and the `/runtime` harness
+ * subpath the generated server modules import.
  * `contract.test.ts` pins the set: widening it is a public-API decision and
  * shrinking it is a breaking one, and both belong in review, not in a
  * drive-by re-export.
@@ -38,7 +41,13 @@
  * ## Stability policy
  *
  * From the first publish, semantic versioning applies to this set and to
- * the generated-module API.
+ * the generated-module API. The two authored input surfaces carry
+ * different stability labels (ADR 0034 s2, LT-254): **`.tsx` is stable
+ * from the first publish; `.tsrx` is experimental** — it compiles and
+ * ships, and it may change or be removed in any minor release while so
+ * labeled. There is no `exports`-map gating for this: the front end is
+ * dispatched per file extension inside `compileCorpus`, so there is no
+ * `.tsrx` entry point to gate.
  *
  * - Every member of the set: new `DiagnosticCode` members are additive
  *   (minor); renames, removals, and tightened required shapes are major.

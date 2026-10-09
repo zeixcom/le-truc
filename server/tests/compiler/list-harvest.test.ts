@@ -31,7 +31,10 @@ import {
 	findSpanForGeneratedOffset,
 	type SourceSpan,
 } from '../../compiler/spans'
-import { createGeneratedDir } from '../helpers/generated-corpus'
+import {
+	createGeneratedDir,
+	REPO_EMIT_PATHS,
+} from '../helpers/generated-corpus'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 const FILE = 'server/tests/compiler/fixtures/c-list'
@@ -105,8 +108,22 @@ const compile = (surface: Surface, tag: string, parts: Parts) => {
 	const source = sourceOf(surface, tag, parts)
 	const result =
 		surface === 'tsrx'
-			? compileComponent(source, `${FILE}.tsrx`, new Set([tag]))
-			: compileComponentTsx(source, `${FILE}.tsx`, new Set([tag]))
+			? compileComponent(
+					source,
+					`${FILE}.tsrx`,
+					new Set([tag]),
+					undefined,
+					undefined,
+					REPO_EMIT_PATHS,
+				)
+			: compileComponentTsx(
+					source,
+					`${FILE}.tsx`,
+					new Set([tag]),
+					undefined,
+					undefined,
+					REPO_EMIT_PATHS,
+				)
 	return { source, ...result }
 }
 

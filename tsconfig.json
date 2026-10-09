@@ -26,11 +26,18 @@
 		// instance of the library inside the bundle (two specifiers —
 		// '@zeix/le-truc' and a relative index path — duplicate it, which
 		// splits the library's internal WeakMaps and breaks pass() across
-		// the boundary). The compile-time markers' subpath resolves to its
-		// in-repo source until the compiler package exists (LT-442, LT-254).
+		// the boundary). The compiler package's two subpaths resolve to
+		// their in-repo sources the same way (LT-442, LT-254): the package
+		// is assembled from this tree but never installed into it, so
+		// `@zeix/le-truc-compiler/macros` (the compile-time markers) and
+		// `@zeix/le-truc-compiler/runtime` (the value harness the generated
+		// server modules import under the published default) both point at
+		// `server/compiler/` — Bun honors these paths at runtime, not just
+		// under tsc.
 		"paths": {
 			"@zeix/le-truc": ["./index.ts"],
 			"@zeix/le-truc-compiler/macros": ["./server/compiler/macros.ts"],
+			"@zeix/le-truc-compiler/runtime": ["./server/compiler/runtime.ts"],
 		},
 
 		// No emit — use tsconfig.build.json for declarations

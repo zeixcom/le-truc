@@ -33,7 +33,10 @@ import type {
 	InternalRegistryEntry,
 } from '../../compiler/registry'
 import { compileCorpus } from '../../corpus-compile'
-import { createGeneratedDir } from '../helpers/generated-corpus'
+import {
+	createGeneratedDir,
+	REPO_EMIT_PATHS,
+} from '../helpers/generated-corpus'
 import { loadCorpus } from './corpus-fixture'
 import { lineAt, textAt } from './located'
 
@@ -1337,6 +1340,9 @@ export function ${name}({ count, i18n: { t } }: { count: number; i18n: I18n<type
 			typedSource(name, template),
 			`examples/x/${tag}.tsrx`,
 			new Set(),
+			undefined,
+			undefined,
+			REPO_EMIT_PATHS,
 		)
 		if (!component) throw new Error(JSON.stringify(diagnostics))
 		return component
@@ -1367,30 +1373,20 @@ export function ${name}({ count, i18n: { t } }: { count: number; i18n: I18n<type
 		),
 	)
 	const typecheck = (file: string) => {
+		// A per-file project extending the ROOT tsconfig, not bare CLI
+		// flags: the emitted module chains into `runtime.ts`, whose
+		// runtime-library import ('@zeix/le-truc', LT-254) resolves through
+		// the root config's `paths` entry — `--ignoreConfig` cannot see it.
+		const project = dir.emit(
+			`tsconfig.${file}.json`,
+			JSON.stringify({
+				extends: '../../../tsconfig.json',
+				include: [],
+				files: [file],
+			}),
+		)
 		const proc = Bun.spawnSync(
-			[
-				'bunx',
-				'tsc',
-				'--ignoreConfig',
-				'--noEmit',
-				'--pretty',
-				'false',
-				'--strict',
-				'--noUncheckedIndexedAccess',
-				'--target',
-				'esnext',
-				'--module',
-				'esnext',
-				'--moduleResolution',
-				'bundler',
-				'--allowImportingTsExtensions',
-				'--lib',
-				'esnext,dom',
-				'--skipLibCheck',
-				'--types',
-				'node',
-				join(dir.relativePath, file),
-			],
+			['bunx', 'tsc', '-p', project, '--pretty', 'false'],
 			{ cwd: join(import.meta.dir, '../../..') },
 		)
 		return `${proc.stdout.toString()}${proc.stderr.toString()}`

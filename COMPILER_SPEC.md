@@ -727,11 +727,11 @@ Illustrative, not part of any decision: a first read of each source format as a 
 
 ## Appendix B — Distance from today
 
-As of 2026-10-06, for orientation only; it ages quickly. The current architecture is described in `server/compiler/LE_TRUC_COMPILER.md`.
+As of 2026-10-10, for orientation only; it ages quickly. The current architecture is described in `server/compiler/LE_TRUC_COMPILER.md`.
 
 | § | Progress | Built | Partial or missing |
 | --- | --- | --- | --- |
-| 2 Pipeline | Partial | One IR, shared pipeline, two-pass corpus | Partial: the corpus pass lives in `server/`, outside the package (LT-480). Missing: incremental API (a later minor, D-32), input source maps (LT-376), output source maps (LT-247, parked), dev-loop plugins (O-8) |
+| 2 Pipeline | Partial | One IR, shared pipeline, the two-pass corpus pass inside the package (LT-480) and published through it (LT-254: `@zeix/le-truc-compiler`, both surfaces, `./macros` and `./runtime` subpaths, JS + declarations) | Missing: incremental API (a later minor, D-32), input source maps (LT-376), output source maps (LT-247, parked), dev-loop plugins (O-8) |
 | 3.1 Module shape | Done | Typed factory context; root-is-host enforced (LTC060, LT-375) |  |
 | 3.2 Shadow mode | Missing |  | Missing: unbuilt, unscheduled |
 | 3.3 Bindings | Done | All |  |
@@ -747,4 +747,4 @@ As of 2026-10-06, for orientation only; it ages quickly. The current architectur
 | 9 HTML | Partial | SSG | Missing: template emission (LT-257, release-gating) |
 | 10 Client | Done | All |  |
 | 11 Diagnostics | Partial | ~77 codes; record is `{ code, severity, message, location, related, fix? }` (ADR 0044 s1, LT-371) | Partial: terminal only |
-| 12 Public contract | Partial | Ruled (D-32, 2026-10-06) | Missing: the contract reshape (LT-480), then the publish (LT-254) |
+| 12 Public contract | Partial | Ruled (D-32, 2026-10-06), reshaped (LT-480), stood up as `@zeix/le-truc-compiler` (LT-254: manifest, `exports` map, runtime peer floor, `check:peer` + `check:package`) | Missing: the `npm publish` act itself and the pioneer-gated release (ADR 0034 s6); the no-TypeScript-type declaration pin (LT-377) |

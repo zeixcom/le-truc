@@ -20,7 +20,10 @@ import {
 	findSpanForGeneratedOffset,
 	type SourceSpan,
 } from '../../compiler/spans'
-import { createGeneratedDir } from '../helpers/generated-corpus'
+import {
+	createGeneratedDir,
+	REPO_EMIT_PATHS,
+} from '../helpers/generated-corpus'
 
 const ROOT = path.resolve(import.meta.dir, '../../..')
 
@@ -204,8 +207,22 @@ for (const [tag, fixture] of Object.entries(FIXTURES)) {
 	const registry = new Set([tag])
 	const { component, diagnostics } =
 		fixture.surface === 'tsrx'
-			? compileComponent(fixture.source, `${tag}.tsrx`, registry)
-			: compileComponentTsx(fixture.source, `${tag}.tsx`, registry)
+			? compileComponent(
+					fixture.source,
+					`${tag}.tsrx`,
+					registry,
+					undefined,
+					undefined,
+					REPO_EMIT_PATHS,
+				)
+			: compileComponentTsx(
+					fixture.source,
+					`${tag}.tsx`,
+					registry,
+					undefined,
+					undefined,
+					REPO_EMIT_PATHS,
+				)
 	const errors = diagnostics.filter(d => d.severity === 'error')
 	if (!component || errors.length > 0) {
 		compileErrors.push(`${tag}: ${errors.map(d => d.message).join('; ')}`)
