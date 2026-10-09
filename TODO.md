@@ -186,7 +186,7 @@ LTC056 is LT-358's).
 
 ### C2 — role writers
 
-- [ ] LT-512: A composed child's `children` shape is not a clash for a reference into the owner's own region; hand-authored markup mirrors the render. — blocked ⛔
+- [ ] LT-512: A composed child's `children` shape is not a clash for a reference into the owner's own region; hand-authored markup mirrors the render.
   **Area:** compiler
   **Needs:** LT-474, LT-478
   **Gates:** test:server, typecheck, check:corpus, check:contract, test:variants
@@ -226,3 +226,11 @@ LTC056 is LT-358's).
   query whose emitted form changes; each must be a dropped exclusion of a child that renders
   `{children}`, and nothing else.
   **Channel/tier:** none. A precision fix to emitted reference selectors; no new check.
+
+  **Ruling (owner, 2026-10-09, on the contributor's block; option (a)):** the drop applies only where it is sound. A composed child's `children` shape stops counting as a clash only for a reference whose target sits in a compose site's content. That target's count is the region probe, which materializes every site's content, and the `excludeUnlessOwned` re-include re-admits region content. A reference whose target is in the template proper (`overlay`, `copy`, and the effect, loop, list and harvest `first()` paths) keeps today's blanket clash. Its count is the plain probe, which never sees compose content, so the shape is the only thing excluding a matching element the parent passes. Dropping it there would bind the wrong element in programs that work today. **Rejected:** the filed one-liner, for that miscompile; and a content-directed clash per site, a precision upgrade with no current consumer (its nested-composition, `{children}`-forward and unregistered-source corners would need a design).
+  **The Do list changes accordingly:**
+  - Item 1: module-codeblock's `first('code')` ships as plain `code`. **Waived:** `copy`/`overlay` keep `:not(module-scrollarea *)`, which is marker-free and burdens no hand-authored markup. The LT-498 handler-arg refusal (`composedChildMayMatch`) is unchanged for template-proper targets.
+  - Item 2's pins become: a region-content reference inside a child whose own markup cannot match ships the authored selector; one inside a child whose own markup can match keeps the region-aware exclusion; and a template-proper reference beside a compose site whose passed content holds a match keeps its exclusion, so the `button.overlay` probe binds the parent's own element. Both surfaces.
+  - **Tests that move with it:** the `analysis.test.ts` pin "raw `children` in the child is unknown markup — every candidate clashes" changes (its child is composed with no content passed, so the drop is sound there), and `probe-differential.test.ts`'s re-encoding of `composedEmitter` moves in lockstep.
+  - Item 3 (docs) and LT-478's wrappers in the fixture, the fence schema and the fragment template stand.
+  - The Check's report of changed corpus queries now expects only region-content references to change.
