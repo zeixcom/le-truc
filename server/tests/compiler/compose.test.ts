@@ -2121,3 +2121,123 @@ export function BasicParent({}: {}) {
 		}
 	})
 })
+
+describe('a pass entry on a boundary compose root in a list item refuses setup-const reads (LT-483)', () => {
+	// The pending/err compose roots' pass entries rode `badFreeNames`, the
+	// host-level rule, where the ok arm's constructs now read
+	// `fx.scopeBadNames` (LT-483): inside a reactive-list item the entry is
+	// LTC005's list-body face, like a pass on a composed child anywhere else
+	// in an item. The probe compiled clean BEFORE the alignment — the const
+	// was emitted and worked — so the point is the uniform authoring rule.
+	const valueChild = `export function ValueChild({}: {})
+	@{
+		expose({ value: '' })
+			<value-child>{host.value}
+				<style>@scope {
+	:scope {
+		  display: block;
+		}
+	}</style>
+			</value-child>
+	}`
+	const valueChildTsx = `export function ValueChild({}: {}) {
+	expose({ value: '' })
+	return <value-child>{host.value}</value-child>
+}`
+	const compileValueChild = () => {
+		const { component, diagnostics } = compileComponent(
+			valueChild,
+			'examples/child/value-child.tsrx',
+			new Set(['value-child']),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		return component
+	}
+	const compileValueChildTsxEntry = (): RegistryEntry => {
+		const { component, diagnostics } = compileComponentTsx(
+			valueChildTsx,
+			'examples/child/value-child.tsx',
+			new Set(['value-child']),
+		)
+		if (!component)
+			throw new Error(`child must compile: ${JSON.stringify(diagnostics)}`)
+		return component.entry
+	}
+
+	const ITEM_PARENT_TSRX = `import { createList, deriveCell } from '@zeix/le-truc'
+import { ValueChild } from '../child/value-child.tsrx'
+
+export function BasicParent({}: {})
+	@{
+		const items = createList<string>(['a'], { keyConfig: s => s })
+		const data = deriveCell(async () => 'x')
+		const label = 'loading'
+		expose({})
+			<basic-parent>
+				<ul class="list">
+					@for (const item of items) {
+						<li>
+							@try {
+								<b class="value">{data}</b>
+							} @pending {
+								<ValueChild truc:pass={{ value: () => label }} />
+							} @catch (e) {
+								<i class="error">{e.message}</i>
+							}
+						</li>
+					}
+				</ul>
+			</basic-parent>
+	}`
+	const ITEM_PARENT_TSX = `import { createList, deriveCell } from '@zeix/le-truc'
+import { ValueChild } from '../child/value-child.tsx'
+
+export function BasicParent({}: {}) {
+	const items = createList<string>(['a'], { keyConfig: s => s })
+	const data = deriveCell(async () => 'x')
+	const label = 'loading'
+	expose({})
+	return <basic-parent>
+		<ul class="list">
+			{items.map(item => (
+				<li><truc:try
+					pending={<ValueChild truc:pass={{ value: () => label }} />}
+					catch={e => <i class="error">{e.message}</i>}><b class="value">{data}</b></truc:try></li>
+			))}
+		</ul>
+	</basic-parent>
+}`
+
+	test('a pending compose root’s pass entry reading a setup const is LTC005, on both surfaces', () => {
+		const childComponent = compileValueChild()
+		for (const surface of ['tsrx', 'tsx'] as const) {
+			const { component, diagnostics } =
+				surface === 'tsrx'
+					? compileComponent(
+							ITEM_PARENT_TSRX,
+							'examples/parent/basic-parent.tsrx',
+							new Set(['value-child']),
+							undefined,
+							composeRegistryOf(childComponent.entry),
+						)
+					: compileComponentTsx(
+							ITEM_PARENT_TSX,
+							'examples/parent/basic-parent.tsx',
+							new Set(['value-child']),
+							undefined,
+							new Map([
+								[
+									compileValueChildTsxEntry().source,
+									compileValueChildTsxEntry(),
+								],
+							]),
+						)
+			expect(component).toBeNull()
+			expect(diagnostics.map(d => d.code)).toEqual(['LTC005'])
+			expect(diagnostics[0]?.message).toContain(
+				'Pass entry `value` references `label`, which a list body cannot read',
+			)
+		}
+	})
+})
