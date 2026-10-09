@@ -220,46 +220,6 @@ LTC056 is LT-358's).
   **Verification:** the check fails on a planted `ts.Node` in a public type; full gates.
 
 
-### X — compiler, analysis passes
-
-- [ ] LT-493: module-splitview composes `<ModuleScrollarea>` for its panes.
-  **Area:** examples
-  **Needs:** LT-492
-  **Gates:** check:corpus, test:variants, test:server, typecheck
-  **Area:** examples
-  **Needs:** LT-492
-  **Filed (Architect, 2026-10-07, from LT-463's review):** module-splitview's panes are LT-463's
-  last named scrollarea site. The conversion was reverted there because `truc:html` inside
-  composed children was LTC011-refused, and LT-492 lifts that refusal.
-  **Change:** in `module-splitview.tsx`, each pane's `<module-scrollarea>` becomes
-  `<ModuleScrollarea …>` with its `<div truc:html={…}/>` as children. Leave the `.ts` twin as it is,
-  and keep the CSS byte-identical. Update the source header to name the composition (LT-463,
-  LT-492).
-  **Check:** `check:corpus` green; `bun run test:component module-splitview` green on all
-  surfaces.
-  **Channel/tier:** none — corpus conversion.
-
-### B — module-todo and BasicButton
-
-- [ ] LT-514: Form components and BasicButton take their visible label as non-interactive children. — in progress ⚙
-  **Area:** examples
-  **Needs:** LT-477, LT-479, LT-489, LT-494
-  **Gates:** check:corpus, test:variants, typecheck, test:server, build:docs
-  **Area:** examples
-  **Filed (Architect, 2026-10-09; owner ruling on BasicButton, this session):** LT-479 lets FormCheckbox take its label as children. This task does the same for the other corpus components whose visible label is a `string` arg rendered as a text node, where the raw HTML element would accept phrasing content. The pattern is ADR 0048 s4: `children?: Children<{}, 'non-interactive'>`. LT-479 keeps a reactive `label` beside the children for FormCheckbox; here only BasicButton keeps one (item 2), because no form component in item 1 exposes its label. Change every member of each variant set (ADR 0039) and keep the CSS byte-identical.
-  1. **Form components: `label` (`legend`) becomes `children`.** Remove the string arg and insert `{children}` where the arg was rendered:
-     - `form-textbox`, `form-combobox` (both the `.tsrx` and the `.tsx` member) and `form-tokenbox`: `<label for={inputId}>{label}</label>`.
-     - `form-spinbutton`: the label is optional, so `@if (label)` becomes a test on `children`.
-     - `form-radiogroup`: `<legend>{legend}</legend>`. The options' `option.label` is list-item data and stays a string.
-     None of these components exposes its label, so the change touches no client code.
-  2. **BasicButton gets both.** `label` stays as the reactive text prop: it is exposed, and module-ticker's `.ts` twin `pass()`es it at runtime. Add `children?: Children<{}, 'non-interactive'>` for rich static content such as an icon plus text. `span.label` renders the passed children when present, otherwise `{label}`. Writing `label` at runtime replaces the rich content with text; document this on the arg's JSDoc. Existing `label=` compose sites stay valid.
-  3. **Compose sites.** Move every compiled compose site of a form component in item 1 from `label=`/`legend=` to passed children: the `examples/` sources and `server/tests/compiler/imported-setup-helper.test.ts`. Page-authored `.html` markup is unaffected.
-  4. **Out of scope:** `aria-label`-style args (`form-listbox`'s `ariaLabel`), `description` args (a description may legitimately hold a link, and a component has only one `children` region), and the card components' `label`.
-
-  **Channel/tier:** no new check. LTC085 (LT-477) already refuses interactive content at these compose sites. Any remaining interactive site is a `NOTES.md` entry, not a workaround.
-  **Check:** `test:component` for each changed component and its composers is unchanged. `check:corpus` and `test:variants` stay green.
-  **Sequence (Architect, 2026-10-09):** LT-514 runs after LT-494, which first composes module-todo's `<FormRadiogroup legend={t.filter} …>`; item 3 then moves that site's `legend` to children. It also runs after LT-489, which reshapes BasicButton's props (`variant`/`kind`/`size`), so BasicButton's API changes in one order.
-
 ### Design gates
 
 - [ ] LT-516: Design session — amend ADR 0043 for the corpus template emission must now carry (the `Try` boundary, reactive lists, passed children), and split LT-257.
