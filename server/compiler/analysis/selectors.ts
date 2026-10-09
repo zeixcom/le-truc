@@ -751,6 +751,16 @@ const selectorCandidates = (
  * child of unknown markup could match, or the region re-include would admit
  * a match. `skipSource` leaves out the compose sites of one source: a
  * compose site's own child is the element addressed, not a clash (LT-498).
+ *
+ * A child's `children` shape — the content this component passes at the
+ * child's sites (ADR 0048 s1) — counts as a clash only for a target in the
+ * template proper: that target's count is the plain probe, which never sees
+ * compose content, so the flat exclusion is the only thing keeping a
+ * matching passed element out of the query. For a target in a compose
+ * site's content the shape never clashes (LT-512, owner ruling
+ * 2026-10-09): the count is the region probe, which materializes the
+ * content, and the region-form exclusion's re-include re-admits it — only
+ * the child's own markup can clash there.
  */
 const composedEmitter = (
 	tree: TemplateNode,
@@ -791,7 +801,14 @@ const composedEmitter = (
 			(child, index) =>
 				sites[index]?.source !== skipSource &&
 				(child.tag === null ||
-					child.shapes.some(shape => mayMatchShape(shape, base))),
+					child.shapes.some(
+						// The `children` shape is the passed content, not the
+						// child's markup: a clash only from the template proper
+						// (see the docstring).
+						shape =>
+							(shape.kind !== 'children' || !owner) &&
+							mayMatchShape(shape, base),
+					)),
 		)
 		if (clashing.length === 0) return { clean: true, emit: base }
 		if (clashing.some(child => child.tag === null)) return null
