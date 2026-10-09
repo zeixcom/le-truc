@@ -1,26 +1,36 @@
 /**
  * The compiler's designated public API (LT-265, ADR 0032 amended
- * 2026-09-19; the IR left it at LT-370, ADR 0034 s8, D-25).
+ * 2026-09-19; reshaped to the D-32 ruling at LT-480, owner 2026-10-06).
  *
- * A consumer hands an authored `.tsx` source to the bundled front end and
- * gets back a `CompileFileResult`: the diagnostics and, unless an error
- * refused the component, the three artifacts, the registry entry and the
- * span tables. This module names the symbols of that
- * exchange; the narrative contract document lives with the compiler docs
+ * A consumer configures a corpus — a `CorpusConfig` hand-built, or their
+ * `le-truc.config.json` resolved by the package's loader
+ * (`corpus-scan.ts`'s `loadCorpusConfig`, internal until LT-254 decides
+ * the exports map) — and hands it to `compileCorpus`: the one entry
+ * point, which scans the sources, compiles the corpus, writes the
+ * artifacts to the configured `outDir`, and returns the diagnostics and a
+ * summary. The artifacts are files, not return values: the generated
+ * `*.server.ts`/`*.client.ts`/`*.css` per component, `registry.json` (the
+ * public projection of `RegistryEntry` — that projection IS the file's
+ * schema), the `i18n` module, and `tsrx-imports.d.ts` where the corpus
+ * carries `.tsrx` sources. This module names the symbols of that exchange;
+ * the narrative contract document lives with the compiler docs
  * (LE_TRUC_COMPILER.md § 2).
  *
- * The IR is NOT here. It is the lowering — internal, and it may change in
- * any release (ADR 0034 s8). So is `compileFromIR`, the shared pipeline
- * entry both in-repo front ends call: it is the anti-drift seam of ADR 0032
- * sub-design 6, not an extension point. The external extension point is
- * source-to-source — an adapter that translates another component format
- * into host-profile `.tsx` (ADR 0032 s6); that seam is not built yet
- * (LT-376).
+ * The per-file front end is NOT here. `compileComponentTsx` stays internal
+ * — exported from `frontend/tsx/index.ts` for the corpus pass and the
+ * tests — because a component's artifacts depend on other components:
+ * compose legality, tier contamination over the compose graph, variant
+ * sets. A per-file entry point would hand every consumer that orchestration
+ * to rebuild, and one that skips the contamination fixpoint ships wrong
+ * tiers without an error (D-32). The IR is not here either — it is the
+ * lowering, internal, and it may change in any release (ADR 0034 s8). The
+ * external extension point is source-to-source: an adapter translates
+ * another component format into host-profile `.tsx` (ADR 0032 s6); that
+ * seam is not built yet (LT-376).
  *
  * The re-exports below are EXACTLY the set published as
  * `@zeix/le-truc-compiler` — the `exports` map entry and the version stamp
- * ride LT-254 and are mechanical once this set is named. Which entry points
- * and result types belong here is the D-32 design session's call.
+ * ride LT-254 and are mechanical once this set is named.
  * `contract.test.ts` pins the set: widening it is a public-API decision and
  * shrinking it is a breaking one, and both belong in review, not in a
  * drive-by re-export.
@@ -28,12 +38,21 @@
  * ## Stability policy
  *
  * From the first publish, semantic versioning applies to this set and to
- * nothing else — everything else under `server/compiler/` is internal and
- * may change in any release, including a patch release.
+ * the generated-module API.
  *
- * - Every member of the set: new `DiagnosticCode` members and new
- *   `RoutingSignalOrigin` members are additive (minor); renames, removals,
- *   and tightened required shapes are major.
+ * - Every member of the set: new `DiagnosticCode` members are additive
+ *   (minor); renames, removals, and tightened required shapes are major.
+ * - The generated-module API, by name and signature, never by bytes:
+ *   - `render<Name>` in each `*.server.ts` — including its optional second
+ *     parameter, the content owner's tag (LT-472);
+ *   - the client module's default export;
+ *   - the `i18n` module's shape (`I18n<T>`, `i18nRecord`, the locale
+ *     constants);
+ *   - the `registry.json` schema — the public projection of `RegistryEntry`.
+ *
+ *   A rename, a removal or a tightened signature among these is a major.
+ *   `argsFromAttrs` is internal: only the compiler's own composition and
+ *   audit code calls it; making it public later is a minor.
  * - Emitted artifact BYTES are not part of the contract. The
  *   `*.server.ts`/`*.client.ts`/`*.css` bytes are pinned by in-repo goldens
  *   only; stability covers the typed contract and behavior, never byte
@@ -42,22 +61,35 @@
  *   reused; the spent-number ledger is `VOCABULARY_LEDGER.md` (ADR 0028
  *   sub-design 1, as amended — the `LTC###` default, the six `TSRX###`
  *   `.tsrx`-grammar exceptions).
- * - `compileComponentTsx` is the bundled `.tsx` front end — the only front
- *   end published at 3.0 (ADR 0034 s2). The `.tsrx` shell's
- *   `compileComponent` is deliberately absent: it stays repo-internal until
- *   `@tsrx/core` reaches 1.0.
+ * - Everything else under `server/compiler/` is internal and may change in
+ *   any release, including a patch release — the IR and `compileFromIR`
+ *   included, and `compileComponentTsx` with them.
  *
  * Component-model connectors (React, Vue, Solid) are THIRD-PARTY by name
  * (ADR 0032, 2026-09-19): the engineering risk of tracking a target
  * framework's minor versions transfers with ownership, the reputational
  * risk does not. This contract is documentation and naming, not a plugin
  * API — no registry, no lifecycle hooks, no discovery mechanism. The
- * refusal vocabularies are closed in the same spirit (owner ruling,
- * 2026-09-21): `DiagnosticCode` and `RoutingSignalOrigin` are the
- * compiler's.
+ * refusal vocabulary is closed in the same spirit (owner ruling,
+ * 2026-09-21): `DiagnosticCode` is the compiler's.
  */
 
-/* === The refusal channels — how a compile fails honestly === */
+/* === The corpus entry point and its exchange types === */
+
+export type { CorpusResult, CorpusSummary } from './corpus'
+export { compileCorpus } from './corpus'
+export type {
+	CorpusConfig,
+	CorpusConfigInput,
+} from './corpus-config'
+
+/* === The registry the run wrote === */
+
+/** The registry entry's per-prop kind vocabulary (`entry.exposedProps`). */
+export type { ExposeKind } from './ir'
+export type { RegistryEntry } from './registry'
+
+/* === The refusal channel — how a compile fails honestly === */
 
 // The record's location, fix and edit shapes are named because
 // `CompileDiagnostic` names them (ADR 0044 s1).
@@ -68,28 +100,4 @@ export type {
 	DiagnosticFix,
 	DiagnosticLocation,
 } from './diagnostics'
-export type {
-	EvaluationTier,
-	Resolution,
-	RoutingSignal,
-	RoutingSignalOrigin,
-	UnresolvableLimb,
-} from './tier'
-
-/* === The compile result and its three artifacts === */
-
-/** The registry entry's per-prop kind vocabulary (`entry.exposedProps`). */
-export type { ExposeKind } from './ir'
-export type { CompiledComponent, CompileFileResult } from './pipeline'
-/** The registry entry's per-handler-arg placement (`entry.handlerArgs`). */
-export type { HandlerPlacement, RegistryEntry } from './registry'
-export type { SourceSpan } from './spans'
-
-/* === The emit-path facts a consumer threads through === */
-
-export type { EmitPaths } from './emit-paths'
-export { DEFAULT_EMIT_PATHS } from './emit-paths'
-
-/* === The bundled front end === */
-
-export { compileComponentTsx } from './frontend/tsx/index'
+export type { EvaluationTier } from './tier'

@@ -17,7 +17,7 @@
  */
 
 import type { TemplateNode } from '../ir'
-import type { RegistryEntry } from '../registry'
+import type { InternalRegistryEntry } from '../registry'
 import { childNodes, someNode } from '../walk'
 
 /* === Types === */
@@ -96,7 +96,7 @@ export const interactiveDescribeOf = (element: ElementNode): string | null => {
  */
 export const interactiveBySource = (
 	source: string,
-	registry: ReadonlyMap<string, RegistryEntry>,
+	registry: ReadonlyMap<string, InternalRegistryEntry>,
 	seen: ReadonlySet<string>,
 ): boolean => {
 	if (seen.has(source)) return false
@@ -125,7 +125,7 @@ export const interactiveBySource = (
  */
 export const templateInteractiveOf = (
 	root: TemplateNode,
-	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry?: ReadonlyMap<string, InternalRegistryEntry>,
 ): boolean =>
 	someNode(root, node => {
 		if (node.kind === 'element') return interactiveDescribeOf(node) !== null
@@ -145,7 +145,7 @@ export const templateInteractiveOf = (
  */
 export const findInteractiveContent = (
 	children: readonly TemplateNode[],
-	composeRegistry: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry: ReadonlyMap<string, InternalRegistryEntry>,
 ): InteractiveFinding | null => {
 	for (const child of children) {
 		if (child.kind === 'compose') {

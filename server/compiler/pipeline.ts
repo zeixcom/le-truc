@@ -38,7 +38,7 @@ import { DEFAULT_EMIT_PATHS, type EmitPaths } from './emit-paths'
 import { emitServerModule } from './emit-server'
 import { checkFoldInputs } from './fold-inputs'
 import type { ComponentIR } from './ir'
-import type { RegistryEntry } from './registry'
+import type { InternalRegistryEntry } from './registry'
 import type { SourceSpan } from './spans'
 import { authoredRange } from './template-output'
 import { classifyTier, type LocalRoutingSignal, locateSignal } from './tier'
@@ -47,7 +47,7 @@ import { collectComposeElements } from './walk'
 /* === Types === */
 
 export type CompiledComponent = {
-	entry: RegistryEntry
+	entry: InternalRegistryEntry
 	/** Generated server render module source. */
 	serverCode: string
 	/** Generated client `defineComponent` module source. */
@@ -106,7 +106,7 @@ export const compileFromIR = (
 	filename: string,
 	registry: ReadonlySet<string>,
 	childImports?: ReadonlyMap<string, string>,
-	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry?: ReadonlyMap<string, InternalRegistryEntry>,
 	emitPaths: EmitPaths = DEFAULT_EMIT_PATHS,
 ): CompileFileResult => {
 	// Every return publishes the stages' diagnostics against the file the

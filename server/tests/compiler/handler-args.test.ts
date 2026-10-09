@@ -20,7 +20,7 @@ import { describe, expect, test } from 'bun:test'
 import ts from 'typescript'
 import { compileComponent } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
-import type { RegistryEntry } from '../../compiler/registry'
+import type { InternalRegistryEntry } from '../../compiler/registry'
 
 const CHILD_TSX = `export function BasicChild(
 	{ label, onPress }: { label: string; onPress?: (e: MouseEvent) => void },
@@ -47,7 +47,11 @@ const CHILD_TSRX = `export function BasicChild({ label, onPress }: { label: stri
 
 const CHILD_PATH = 'examples/child/basic-child.tsx'
 
-const entryOf = (source: string, path: string, tsx = true): RegistryEntry => {
+const entryOf = (
+	source: string,
+	path: string,
+	tsx = true,
+): InternalRegistryEntry => {
 	const { component, diagnostics } = tsx
 		? compileComponentTsx(source, path, new Set())
 		: compileComponent(source, path, new Set())
@@ -56,7 +60,7 @@ const entryOf = (source: string, path: string, tsx = true): RegistryEntry => {
 	return component.entry
 }
 
-const registryOf = (...entries: RegistryEntry[]) =>
+const registryOf = (...entries: InternalRegistryEntry[]) =>
 	new Map(entries.map(e => [e.source, e]))
 
 const parentTsx = (body: string, setup = '', pre = '', ctx = '') => `${pre}
@@ -75,7 +79,7 @@ export function BasicParent({}: {}${ctx}) {
 
 const compileParent = (
 	source: string,
-	registry: Map<string, RegistryEntry>,
+	registry: Map<string, InternalRegistryEntry>,
 ) => {
 	const result = compileComponentTsx(
 		source,

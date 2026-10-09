@@ -67,7 +67,7 @@ import type {
 	RenderedShape,
 	TemplateNode,
 } from '../../compiler/ir'
-import type { RegistryEntry } from '../../compiler/registry'
+import type { InternalRegistryEntry } from '../../compiler/registry'
 import {
 	elseOf,
 	isIf,
@@ -543,7 +543,7 @@ const runDifferential = (compiled: readonly Compiled[]): void => {
 	// sources and registers entries. Keyed by the source TEXT until
 	// LT-517, so every `composedShapesFor` lookup missed on both sides and
 	// each child resolved as unknown markup.
-	const registry: ReadonlyMap<string, RegistryEntry> = new Map(
+	const registry: ReadonlyMap<string, InternalRegistryEntry> = new Map(
 		compiled.map(({ path, component: c }) => {
 			const region = childrenRegionOfComponent(c)
 			return [
@@ -559,7 +559,7 @@ const runDifferential = (compiled: readonly Compiled[]): void => {
 					exposedProps: {},
 					renderedShapes: renderedShapesOf(c),
 					...(region ? { childrenRegion: region } : {}),
-				} as unknown as RegistryEntry,
+				} as unknown as InternalRegistryEntry,
 			]
 		}),
 	)

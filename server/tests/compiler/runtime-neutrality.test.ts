@@ -8,6 +8,14 @@
  * `node:path`. Third-party dependencies are out of scope: what a package
  * requires at load is a dependency fact, not the compiler's.
  *
+ * Since LT-480 (D-32) the directory also owns a FILE-SYSTEM seam — the
+ * corpus entry point discovers sources and writes artifacts — and that seam
+ * may import the portable `node:` built-ins it needs (`node:fs`,
+ * `node:fs/promises`, `node:crypto`), exactly as ADR 0038's runtime seam
+ * always could. The carve-out is per module and deliberate: a new `node:`
+ * import anywhere else still fails, and widening the seam's list is a
+ * review-visible decision, not a drive-by.
+ *
  * The scan parses every non-test `.ts` under the directory and runs the
  * shared estree walk (`walkNodes`), so a static import, a re-export, an
  * `import x = require(…)`, a `require(…)` call and a dynamic `import(…)` are
@@ -29,8 +37,20 @@ import { identifierName, isNode, walkNodes } from '../../compiler/ast-utils'
 
 const COMPILER_DIR = path.resolve(import.meta.dir, '../../compiler')
 
-/** The one built-in the compiler may import. */
+/** The one built-in every compiler module may import. */
 const ALLOWED_BUILTINS: ReadonlySet<string> = new Set(['node:path'])
+
+/**
+ * The file-system seam's own built-ins (D-32, LT-480): the corpus entry
+ * point's discovery and artifact writes live behind `fs.ts` and the catalog
+ * pipeline (`i18n-catalog.ts`), and only these modules may reach past
+ * `node:path`. Every member is a portable `node:` API — implemented by Bun,
+ * Node and Deno alike — which is the neutrality this gate guards.
+ */
+const SEAM_MODULE_BUILTINS: Readonly<Record<string, readonly string[]>> = {
+	'fs.ts': ['node:fs', 'node:fs/promises'],
+	'i18n-catalog.ts': ['node:crypto'],
+}
 
 const BUILTINS: ReadonlySet<string> = new Set(builtinModules)
 
@@ -62,9 +82,13 @@ const staticString = (
 }
 
 /** Why `specifier` is not runtime-neutral, or null when it is. */
-const specifierViolation = (specifier: string | null): string | null => {
+const specifierViolation = (
+	specifier: string | null,
+	file: string,
+): string | null => {
 	if (specifier === null) return 'non-static module specifier'
 	if (ALLOWED_BUILTINS.has(specifier)) return null
+	if (SEAM_MODULE_BUILTINS[file]?.includes(specifier)) return null
 	if (
 		specifier.startsWith('node:') ||
 		specifier.startsWith('bun:') ||
@@ -110,7 +134,10 @@ const neutralityViolations = (source: string, filePath: string): string[] => {
 		out.push(`${line}: ${reason}`)
 	}
 	const checkSpecifier = (node: AstNode, specifier: unknown): void => {
-		const reason = specifierViolation(staticString(specifier, constants))
+		const reason = specifierViolation(
+			staticString(specifier, constants),
+			filePath,
+		)
 		if (reason) report(node, reason)
 	}
 	// Identifiers that name a property or key rather than read a binding.

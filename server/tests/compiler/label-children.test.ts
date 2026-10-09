@@ -16,28 +16,31 @@
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { pathToFileURL } from 'node:url'
-import type { ComponentRegistry } from '../../compiler/registry'
+import {
+	collectCorpusSources,
+	loadCorpusConfig,
+} from '../../compiler/corpus-scan'
+import type { InternalComponentRegistry } from '../../compiler/registry'
 import {
 	createSimulationRealm,
 	type JsdomSimulationRealm,
 } from '../../compiler/sim/realm'
 import { compileCorpus } from '../../corpus-compile'
-import { collectCorpusSources, loadCorpusConfig } from '../../corpus-sources'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 
 const generated = createGeneratedDir('label-children')
 afterAll(() => generated.cleanup())
 
 const config = loadCorpusConfig()
-const buttonFile = collectCorpusSources(config).find(file =>
+const buttonFile = (await collectCorpusSources(config)).find(file =>
 	file.filename.endsWith('/basic-button.tsrx'),
 )
 if (!buttonFile) throw new Error('basic-button.tsrx not found')
 
 const compiled = await compileCorpus([buttonFile], generated.path)
 const registry = JSON.parse(
-	await Bun.file(`${generated.path}/registry.json`).text(),
-) as ComponentRegistry
+	await Bun.file(`${generated.path}/registry.internal.json`).text(),
+) as InternalComponentRegistry
 const info = compiled.find(entry => entry.tag === 'basic-button')
 if (!info) throw new Error('basic-button did not compile')
 

@@ -43,7 +43,7 @@
  */
 import { afterAll, describe, expect, test } from 'bun:test'
 import { pathToFileURL } from 'node:url'
-import type { ComponentRegistry } from '../../compiler/registry'
+import type { InternalComponentRegistry } from '../../compiler/registry'
 import { createSimulationRealm } from '../../compiler/sim/realm'
 import { compileCorpus } from '../../corpus-compile'
 import { createGeneratedDir } from '../helpers/generated-corpus'
@@ -55,8 +55,8 @@ afterAll(() => generated.cleanup())
 
 const compiled = await compileCorpus(await loadCorpus(), generated.path)
 const registry = JSON.parse(
-	await Bun.file(`${generated.path}/registry.json`).text(),
-) as ComponentRegistry
+	await Bun.file(`${generated.path}/registry.internal.json`).text(),
+) as InternalComponentRegistry
 
 const realm = createSimulationRealm({
 	composesTags: tag => registry[tag]?.composesTags ?? [],

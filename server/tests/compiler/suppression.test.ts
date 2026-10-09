@@ -261,7 +261,7 @@ describe('the compile-time suppression record', () => {
 		}
 	})
 
-	test('the records are plain data — they ride registry.json', () => {
+	test('the records are plain data — they ride the internal registry', () => {
 		for (const entry of [
 			simulated.component?.entry,
 			simulatedRoot.component?.entry,

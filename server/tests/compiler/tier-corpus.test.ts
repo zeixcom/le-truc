@@ -17,7 +17,7 @@
 
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test'
 import { tierCensus } from '../../compiler/census'
-import type { ComponentRegistry } from '../../compiler/registry'
+import type { InternalComponentRegistry } from '../../compiler/registry'
 import { compileCorpus } from '../../corpus-compile'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { loadCorpus } from './corpus-fixture'
@@ -30,12 +30,12 @@ afterAll(() => generated.cleanup())
 // parity file joined the run) registration landed after the run completed
 // and the whole block silently never executed. Register synchronously; the
 // corpus compile is setup, and setup belongs inside the lifecycle.
-let registry: ComponentRegistry
+let registry: InternalComponentRegistry
 beforeAll(async () => {
 	await compileCorpus(await loadCorpus(), generated.path)
 	registry = JSON.parse(
-		await Bun.file(`${generated.path}/registry.json`).text(),
-	) as ComponentRegistry
+		await Bun.file(`${generated.path}/registry.internal.json`).text(),
+	) as InternalComponentRegistry
 })
 
 describe('tier assignment over the migrated corpus', () => {

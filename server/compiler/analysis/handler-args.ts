@@ -5,7 +5,7 @@
  * (`<BasicButton class="remove" onClick={e => items.remove(k)} />`).
  *
  * Two halves, one record. The child's half publishes where each arg lands
- * (`handlerPlacementsOf` → `RegistryEntry.handlerArgs`): a selector proven
+ * (`handlerPlacementsOf` → `InternalRegistryEntry.handlerArgs`): a selector proven
  * unique under its host, or the composed child it forwards the arg to. The
  * parent's half resolves a compose site's handler through that record,
  * recursively across forwards (`resolveHandlerPlacements`), and joins the
@@ -16,7 +16,7 @@
 
 import { diagnostic, type LocalDiagnostic } from '../diagnostics'
 import type { ComponentIR, ComposedMarkup, TemplateNode } from '../ir'
-import type { HandlerPlacement, RegistryEntry } from '../registry'
+import type { HandlerPlacement, InternalRegistryEntry } from '../registry'
 import { childNodes } from '../walk'
 import {
 	allComposeNodes,
@@ -192,9 +192,9 @@ export const joinSelector = (prefix: string, relative: string): string => {
  * discovery tolerance); a forwarding cycle stops at the repeat.
  */
 export const resolveHandlerPlacements = (
-	entry: RegistryEntry,
+	entry: InternalRegistryEntry,
 	arg: string,
-	registry: ReadonlyMap<string, RegistryEntry>,
+	registry: ReadonlyMap<string, InternalRegistryEntry>,
 	seen: ReadonlySet<string> = new Set([entry.source]),
 ): ResolvedPlacement[] => {
 	const resolved: ResolvedPlacement[] = []

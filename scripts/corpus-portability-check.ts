@@ -39,8 +39,10 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT_DIR_NAME = 'out'
 
 /**
- * The entry the bundle is built from. It pins the configuration to the
- * repo's defaults with ONE twist — the output root comes from the
+ * The entry the bundle is built from, through the PUBLISHED corpus entry
+ * point (D-32, LT-480): the same `compileCorpus(config)` an installing
+ * project calls, which scans the sources itself. It pins the configuration
+ * to the repo's defaults with ONE twist — the output root comes from the
  * environment — so each runtime writes its own scratch tree for the diff.
  * The project ROOT is baked in as a literal at bundle time: a module-relative
  * anchor cannot see through the bundle, and the configuration's own contract
@@ -48,16 +50,13 @@ const OUT_DIR_NAME = 'out'
  * config file) is root-by-value, not root-by-module-location.
  */
 const ENTRY = `
-import { collectCorpusSources } from '${ROOT}/server/corpus-sources'
-import { compileCorpus } from '${ROOT}/server/corpus-compile'
+import { compileCorpus } from '${ROOT}/server/compiler/contract'
 import { resolveCorpusConfig } from '${ROOT}/server/compiler/corpus-config'
 
 const outDir = process.env.CORPUS_PORTABILITY_OUT
 if (!outDir) throw new Error('CORPUS_PORTABILITY_OUT is not set')
 const config = { ...resolveCorpusConfig('${ROOT}'), outDir }
-const files = collectCorpusSources(config)
-if (files.length === 0) throw new Error('no corpus sources matched')
-await compileCorpus(files, config)
+await compileCorpus(config)
 `
 
 const RUNTIMES: ReadonlyArray<{
@@ -168,10 +167,7 @@ try {
 		'lightningcss-wasm',
 		'lightningcss_node.wasm',
 	)
-	copyFileSync(
-		wasmAsset,
-		join(dirname(bundle), 'lightningcss_node.wasm'),
-	)
+	copyFileSync(wasmAsset, join(dirname(bundle), 'lightningcss_node.wasm'))
 
 	// 2. Run the identical bundle under every runtime on PATH.
 	const results = new Map<string, string>()

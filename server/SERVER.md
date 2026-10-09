@@ -76,7 +76,7 @@ Deliberate properties:
 
 - **One glob grammar.** `glob.ts` holds the shared translator both implementations use for scanning and matching, so a consumer's configured globs cannot match one file set under Bun and another under Node. Supported: `*`, `?`, `**/`, a trailing `**`, literals — not braces or character classes. Scans are sorted and skip dot entries unless an explicit-dot pattern segment (`.env`, `.hidden/*.ts`, `**/.rc`) matches them — Bun.Glob's scanner rule, which the Node walk reproduces. Matching applies the same dot rule, a trailing `**` included, so a watcher filter cannot admit a file the scanner would never yield.
 - **No Bun.* outside the seam** on the build path — the exceptions are the HTTP dev server (`serve.ts`/`dev.ts`/`routes.ts`, repo tooling) and intentionally Bun-only scripts (`sim-portability-check.ts`, `corpus-portability-check.ts`, `substrate-evaluation.ts` with its `lib/substrate-probe.ts`, `contract-check.ts`, `measure-size-bet.ts`, `codemod-react-jsx.ts`).
-- **`compileCorpus` lives outside `server/effects/`** (`server/corpus-compile.ts`): importing it must not drag the reactive machinery, the watchers, or a repo-shaped module graph. `server/effects/compile.ts` is the docs build's thin reactive wrapper around it.
+- **The corpus pass lives in the compiler package** (`server/compiler/corpus.ts`, the published `compileCorpus` — LT-480): importing it must not drag the reactive machinery, the watchers, or a repo-shaped module graph. `server/corpus-compile.ts` is the repo's thin fail-on-error wrapper (the scripts and tests call it); `server/effects/compile.ts` is the docs build's reactive wrapper.
 - **Anchors are portable.** Module-relative roots use `dirname(fileURLToPath(import.meta.url))` wherever repo-anchoring is by design (the site config, the in-repo defaults); configuration-relative paths come from the resolved `CorpusConfig` — never from a module's location (the i18n lesson: `simulateCorpus` takes `root`, defaulting to the configured corpus root).
 - **The gate:** `bun run check:portability` bundles the corpus build once and runs it under Bun, Node and Deno, diffing the emitted trees byte-for-byte. Module resolution rides the bundle (the source graph's extensionless imports are a bundler-facing fact the packaging step will normalize); what the check proves is that the build behaves identically once the graph is resolvable.
 
@@ -266,12 +266,15 @@ repo's: they are a project's, read from a `le-truc.config.json` at its root,
 and this repo's paths are the DEFAULTS — which is why the docs build carries
 no config file. The surface, the field table, and the output-root depth rule
 are documented in `server/compiler/LE_TRUC_COMPILER.md` § 7.1; the resolution
-lives in `server/compiler/corpus-config.ts` (pure) and the globbing in
-`server/corpus-sources.ts`, through the runtime seam since LT-267. The
-compile itself lives in `server/corpus-compile.ts` — deliberately outside
-`server/effects/`, so a consumer imports the build path without the reactive
-machinery — and `server/effects/compile.ts` (`compileEffect`) is the docs
-build's reactive wrapper around it.
+and the globbing live in `server/compiler/corpus-config.ts` +
+`server/compiler/corpus-scan.ts`, over the package's own file-system seam
+(`server/compiler/fs.ts`) since LT-267/LT-480 — this repo's paths
+(`REPO_ROOT`, `REPO_CONFIG`, `GENERATED_DIR`) stay in
+`server/corpus-sources.ts`. The compile itself lives in
+`server/compiler/corpus.ts` — the published corpus entry point, importable
+without the reactive machinery — with `server/corpus-compile.ts` as the
+repo's thin fail-on-error wrapper and `server/effects/compile.ts`
+(`compileEffect`) as the docs build's reactive wrapper.
 
 The inlined TSRX compiler (ADR 0024) compiles isomorphic single-file `.tsrx` components — server args, signals, `expose()`, markup, event handlers, and scoped styles in one source — into the split compiler's two halves. The server module re-declares the `@{ }` setup against the runtime harness (`server/compiler/runtime.ts`) and renders HTML strings; the client module is a generated factory importing solely from `@zeix/le-truc`. Extension activation is declared as `export const config` in the source; the compiler validates it, auto-imports the extension factories, and carries `expose()`/`defineMethod()` as ambients. `bun run build:cem` runs `scripts/build-corpus.ts` before `cem analyze` so `@zeix/cem-plugin-le-truc` reads the generated clients unchanged. Errors fail the build; `@for` over a non-List reactive source logs `LTC001` and skips the file.
 

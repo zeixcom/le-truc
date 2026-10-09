@@ -1,5 +1,6 @@
 /**
- * The designated export surface pin (LT-265, ADR 0032 amended 2026-09-19).
+ * The designated export surface pin (LT-265, ADR 0032 amended 2026-09-19;
+ * reshaped to the D-32 ruling at LT-480).
  *
  * `server/compiler/contract.ts` names the exact symbol set the published
  * `@zeix/le-truc-compiler` package will carry (`exports` entry rides LT-254).
@@ -15,34 +16,32 @@ import { describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import * as designated from '../../compiler/contract'
 
-const DESIGNATED_VALUES = ['DEFAULT_EMIT_PATHS', 'compileComponentTsx'].sort()
+/** The one published entry point: the corpus pass (D-32). */
+const DESIGNATED_VALUES = ['compileCorpus'].sort()
 
 /**
- * No IR type and no `compileFromIR` (LT-370, ADR 0034 s8): the IR is the
- * lowering and internal. `SourceSpan` and `ExposeKind` stay because public
- * result types name them (`CompiledComponent`'s span tables,
- * `RegistryEntry.exposedProps`); so do the diagnostic record's
- * `DiagnosticLocation`, `DiagnosticFix` and `DiagnosticEdit` (ADR 0044 s1,
- * LT-371).
+ * The D-32 set: the corpus entry point's exchange types, the public
+ * `RegistryEntry` projection and its `ExposeKind` vocabulary, the five
+ * diagnostic record shapes, and `EvaluationTier` (the registry entry's
+ * `tier`). The per-file front end (`compileComponentTsx`,
+ * `CompileFileResult`, `CompiledComponent`, `SourceSpan`, `EmitPaths`,
+ * `DEFAULT_EMIT_PATHS`) left with LT-480, as did `HandlerPlacement`
+ * (handler args are internal, ruling 4) and the `RoutingSignal` family —
+ * no public type names them once `routingSignals` left `RegistryEntry`.
  */
 const DESIGNATED_TYPES = [
 	'CompileDiagnostic',
-	'CompiledComponent',
-	'CompileFileResult',
+	'CorpusConfig',
+	'CorpusConfigInput',
+	'CorpusResult',
+	'CorpusSummary',
 	'DiagnosticCode',
 	'DiagnosticEdit',
 	'DiagnosticFix',
 	'DiagnosticLocation',
-	'EmitPaths',
 	'EvaluationTier',
 	'ExposeKind',
-	'HandlerPlacement',
 	'RegistryEntry',
-	'Resolution',
-	'RoutingSignal',
-	'RoutingSignalOrigin',
-	'SourceSpan',
-	'UnresolvableLimb',
 ].sort()
 
 describe('designated export surface', () => {

@@ -18,7 +18,7 @@
 
 import { DEFAULT_EMIT_PATHS, type EmitPaths } from '../../emit-paths'
 import { type CompileFileResult, compileFromIR } from '../../pipeline'
-import type { RegistryEntry } from '../../registry'
+import type { InternalRegistryEntry } from '../../registry'
 import { compileSource } from './compiler'
 
 /* === Exported Functions === */
@@ -35,7 +35,7 @@ export const compileComponent = (
 	 * during registry-discovery passes (composition isn't validated yet, the
 	 * same tolerance an empty `registry` gets for raw-tag `pass()` dispatch).
 	 */
-	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry?: ReadonlyMap<string, InternalRegistryEntry>,
 	/**
 	 * What the CONFIGURED output root implies for the emitted specifiers
 	 * (LT-255, `emit-paths.ts`): the `../` prefix back to the project root for
@@ -77,7 +77,12 @@ export type {
 	CompiledComponent,
 	CompileFileResult,
 } from '../../pipeline'
-export type { ComponentRegistry, RegistryEntry } from '../../registry'
+export type {
+	ComponentRegistry,
+	InternalComponentRegistry,
+	InternalRegistryEntry,
+	RegistryEntry,
+} from '../../registry'
 export { registryJson } from '../../registry'
 export type { SourceSpan } from '../../spans'
 export {

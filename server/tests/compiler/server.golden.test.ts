@@ -22,7 +22,7 @@ import * as fs from 'node:fs'
 import * as path from 'node:path'
 import { dedentCss } from '../../compiler/css'
 import { compileComponent } from '../../compiler/frontend/tsrx'
-import { collectI18n, writeI18nModule } from '../../effects/i18n'
+import { collectI18n, writeI18nModule } from '../../compiler/i18n-catalog'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { CORPUS_ARGS } from './corpus-args'
 
@@ -130,14 +130,18 @@ ensureEmitted('c-el', seeded.component.serverCode)
 // it from the same six compiled entries (ADR 0030 sub-design 2).
 await writeI18nModule(
 	generated.path,
-	await collectI18n([
-		counter.component.entry,
-		tabgroup.component.entry,
-		formTextbox.component.entry,
-		basicButton.component.entry,
-		moduleList.component.entry,
-		formCheckbox.component.entry,
-	]),
+	await collectI18n(
+		[
+			counter.component.entry,
+			tabgroup.component.entry,
+			formTextbox.component.entry,
+			basicButton.component.entry,
+			moduleList.component.entry,
+			formCheckbox.component.entry,
+		],
+		undefined,
+		path.join(ROOT, 'i18n'),
+	),
 )
 
 const render = async (

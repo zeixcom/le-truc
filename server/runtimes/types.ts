@@ -2,12 +2,14 @@
  * The runtime seam (LT-267).
  *
  * The build's file IO and process spawning go through this interface so the
- * corpus compile — the published package's own build path — is not Bun-only.
- * Two implementations exist: `bun.ts` (Bun.file / Bun.write / Bun.spawn /
- * Bun.Glob) and `node.ts` (node:fs / node:child_process), selected once at
- * module load (`index.ts`). `server/compiler/` stays free of this module and
- * of every runtime-specific API: it is pure computation over strings (ADR
- * 0036 s4), and the emitted `.ts`/`.css` files — the interface consumers
+ * repo's build system — the dev server and the reactive effects — is not
+ * Bun-only. Two implementations exist: `bun.ts` (Bun.file / Bun.write /
+ * Bun.spawn / Bun.Glob) and `node.ts` (node:fs / node:child_process),
+ * selected once at module load (`index.ts`). Since LT-480 (D-32) the
+ * compiler package owns its own file-system seam
+ * (`server/compiler/fs.ts`) instead of importing this one; this module
+ * serves the repo side. Everything here stays runtime-neutral all the
+ * same, and the emitted `.ts`/`.css` files — the interface consumers
  * actually get — are standard output any bundler takes.
  *
  * Glob PATTERN semantics are deliberately NOT per-runtime: `glob.ts` holds

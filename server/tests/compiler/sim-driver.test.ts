@@ -51,7 +51,7 @@ import { join, relative } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { formatSimReport, reportDiagnostics } from '../../compiler/build-report'
 import { tierCensus } from '../../compiler/census'
-import type { ComponentRegistry } from '../../compiler/registry'
+import type { InternalComponentRegistry } from '../../compiler/registry'
 import { CLASSIFIED_DIAGNOSTICS } from '../../compiler/sim/classifications'
 import {
 	createSimulationRealm,
@@ -76,8 +76,8 @@ afterAll(() => generated.cleanup())
 
 const compiled = await compileCorpus(await loadCorpus(), generated.path)
 const registry = JSON.parse(
-	await Bun.file(`${generated.path}/registry.json`).text(),
-) as ComponentRegistry
+	await Bun.file(`${generated.path}/registry.internal.json`).text(),
+) as InternalComponentRegistry
 
 // One realm for the whole corpus (ADR 0027 sub-design 2/10): disposed once,
 // after every render this file will ever do — never between them (LT-152

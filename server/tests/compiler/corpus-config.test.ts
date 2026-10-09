@@ -25,15 +25,15 @@ import {
 	validateVariantOverrides,
 } from '../../compiler/corpus-config'
 import {
-	DEFAULT_CSS_TARGETS,
-	DEFAULT_EMIT_PATHS,
-} from '../../compiler/emit-paths'
-import {
 	collectCorpusSources,
 	collectSiblingModules,
 	loadCorpusConfig,
-	REPO_ROOT,
-} from '../../corpus-sources'
+} from '../../compiler/corpus-scan'
+import {
+	DEFAULT_CSS_TARGETS,
+	DEFAULT_EMIT_PATHS,
+} from '../../compiler/emit-paths'
+import { REPO_ROOT } from '../../corpus-sources'
 
 /** A throwaway project tree outside the repo, cleaned up by the caller. */
 const scratchProject = (files: Record<string, string>): string => {
@@ -61,6 +61,14 @@ describe('the defaults are this repo, not the mechanism', () => {
 		expect(config.outDir).toBe(path.join(REPO_ROOT, DEFAULT_OUT_DIR))
 		expect(config.runtimeImport).toBe(DEFAULT_RUNTIME_IMPORT)
 		expect(emitPathsFor(config)).toEqual(DEFAULT_EMIT_PATHS)
+	})
+
+	test('the default locales are this repo’s site locales (LT-480)', () => {
+		// The generated i18n module enumerates them (`I18N_LOCALES`) and the
+		// first is the default page locale — deliberately NOT derived from
+		// the catalogs on disk, which carry locales the site does not build.
+		const config = resolveCorpusConfig(REPO_ROOT)
+		expect(config.locales).toEqual(['en', 'de'])
 	})
 
 	test('the repo needs no config file — none is found above it', () => {
@@ -117,7 +125,7 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		expect(() =>
 			resolveCorpusConfig('/p', untrusted({ outdir: 'build' })),
 		).toThrow(
-			/unknown key "outdir" — accepted keys are: sources, siblingModules, outDir, i18nDir, runtimeImport, variantSurface, variantOverrides, cssTargets. Did you mean "outDir"\?/,
+			/unknown key "outdir" — accepted keys are: sources, siblingModules, outDir, i18nDir, locales, runtimeImport, variantSurface, variantOverrides, cssTargets. Did you mean "outDir"\?/,
 		)
 		expect(() =>
 			resolveCorpusConfig('/p', untrusted({ emitting: 'build' })),
@@ -153,6 +161,21 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		).toThrow(/"sources\[1\]" must be a non-empty string — received 42/)
 	})
 
+	test('locales must be a non-empty array of non-empty strings (LT-480)', () => {
+		// The first locale is the default page locale, so an empty list has
+		// no meaning; a non-string entry would land in the generated module.
+		expect(() => resolveCorpusConfig('/p', untrusted({ locales: [] }))).toThrow(
+			/"locales" must list at least one locale \(the first is the default page locale\)\./,
+		)
+		expect(() =>
+			resolveCorpusConfig('/p', untrusted({ locales: ['en', 4] })),
+		).toThrow(/"locales\[1\]" must be a non-empty string — received 4\./)
+		const config = resolveCorpusConfig('/p', {
+			locales: ['fr', 'de'],
+		})
+		expect(config.locales).toEqual(['fr', 'de'])
+	})
+
 	test('path and string fields must be non-empty strings', () => {
 		expect(() => resolveCorpusConfig('/p', untrusted({ outDir: 42 }))).toThrow(
 			/"outDir" must be a non-empty string — received 42/,
@@ -169,7 +192,7 @@ describe('the config file is validated, not trusted (LT-273)', () => {
 		for (const value of [null, 'src/**', 42, []]) {
 			expect(() => resolveCorpusConfig('/p', untrusted(value))).toThrow(
 				new RegExp(
-					`expected a JSON object with keys drawn from: sources, siblingModules, outDir, i18nDir, runtimeImport, variantSurface, variantOverrides, cssTargets — received ${JSON.stringify(value) ?? String(value)}`.replace(
+					`expected a JSON object with keys drawn from: sources, siblingModules, outDir, i18nDir, locales, runtimeImport, variantSurface, variantOverrides, cssTargets — received ${JSON.stringify(value) ?? String(value)}`.replace(
 						/[.*+?^${}()|[\]\\]/g,
 						'\\$&',
 					),
@@ -310,8 +333,12 @@ describe('the config search stops at the project boundary (LT-273)', () => {
 		})
 		try {
 			const config = loadCorpusConfig(path.join(outer, 'checkout', 'src'))
-			// The repo defaults, not the stray file's root.
-			expect(config.root).toBe(REPO_ROOT)
+			// The checkout's own boundary, not the stray file's root: the
+			// defaults resolve at the nearest project marker (LT-480).
+			expect(config.root).toBe(path.join(outer, 'checkout'))
+			expect(config.outDir).toBe(
+				path.join(outer, 'checkout', 'server', 'generated', 'components'),
+			)
 		} finally {
 			fs.rmSync(outer, { recursive: true, force: true })
 		}
@@ -324,7 +351,7 @@ describe('the config search stops at the project boundary (LT-273)', () => {
 		})
 		try {
 			const config = loadCorpusConfig(path.join(outer, 'checkout'))
-			expect(config.root).toBe(REPO_ROOT)
+			expect(config.root).toBe(path.join(outer, 'checkout'))
 		} finally {
 			fs.rmSync(outer, { recursive: true, force: true })
 		}
@@ -347,7 +374,7 @@ describe('the config search stops at the project boundary (LT-273)', () => {
 })
 
 describe('a project outside this repo', () => {
-	test('is configured by its own file, found by walking up', () => {
+	test('is configured by its own file, found by walking up', async () => {
 		const root = scratchProject({
 			[CONFIG_FILENAME]: JSON.stringify({
 				sources: ['src/**/*.tsx'],
@@ -368,7 +395,7 @@ describe('a project outside this repo', () => {
 				path.join(path.resolve(root), 'build', 'le-truc'),
 			)
 
-			const sources = collectCorpusSources(config)
+			const sources = await collectCorpusSources(config)
 			expect(sources.map(f => f.filename)).toEqual([
 				'src/widgets/scratch-greeting.tsx',
 			])
@@ -389,7 +416,7 @@ describe('a project outside this repo', () => {
 		}
 	})
 
-	test('overlapping source globs compile each file once', () => {
+	test('overlapping source globs compile each file once', async () => {
 		// Two globs matching the same file would otherwise look to the
 		// duplicate-tag check (LTC048) like two files declaring one tag.
 		const root = scratchProject({
@@ -400,7 +427,7 @@ describe('a project outside this repo', () => {
 		})
 		try {
 			const config = loadCorpusConfig(root)
-			expect(collectCorpusSources(config)).toHaveLength(1)
+			expect(await collectCorpusSources(config)).toHaveLength(1)
 		} finally {
 			fs.rmSync(root, { recursive: true, force: true })
 		}

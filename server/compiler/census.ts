@@ -12,8 +12,8 @@
  * ## Why this is not in `sim/`
  *
  * It never was simulation. `tierCensus` reads the registry, `translationCensus`
- * reads catalog gaps, and its three importers — `server/effects/i18n.ts`,
- * `server/effects/compile.ts` and `scripts/check-corpus.ts` — simulate nothing.
+ * reads catalog gaps, and its three importers — `server/compiler/i18n-catalog.ts`,
+ * `server/compiler/corpus.ts` and `scripts/check-corpus.ts` — simulate nothing.
  * Sharing a module with the realm's diagnostic classification was history,
  * and it was also what made the census unavailable to a build with no
  * substrate installed (ADR 0034 sub-design 5). The census must print with
@@ -67,8 +67,8 @@ export type Census = {
 
 /**
  * The registry face the tier census reads: one component's final tier and
- * the reasons behind it. Structural, so a parsed `registry.json` entry
- * satisfies it without importing the registry module.
+ * the reasons behind it. Structural, so a parsed `registry.internal.json`
+ * entry satisfies it without importing the registry module.
  */
 export type TierCensusSubject = {
 	tag: string

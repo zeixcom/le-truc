@@ -83,9 +83,12 @@
  * ([M28](REQUIREMENTS.md#m28-distribution-and-dependency-weight)). The pass
  * then routes the Simulated-tier components Static, appends an
  * `unavailable-substrate` routing signal to each (the census prints it),
- * and rewrites the registry so the tier census reports the outcome; the
- * resolver's narrowed catch (`isSubstrateAbsence`) is what keeps a broken
- * substrate from masquerading as this benign configuration.
+ * and rewrites BOTH registries the corpus pass wrote — the public
+ * `registry.json` (whose schema carries the flipped tier) and the internal
+ * `registry.internal.json` sidecar (which also carries the appended
+ * signal) — so the tier census reports the outcome; the resolver's
+ * narrowed catch (`isSubstrateAbsence`) is what keeps a broken substrate
+ * from masquerading as this benign configuration.
  */
 
 import { dirname, join } from 'node:path'
@@ -102,8 +105,9 @@ import {
 	tierCensus,
 } from '../compiler/census'
 import {
-	type ComponentRegistry,
-	type RegistryEntry,
+	type InternalComponentRegistry,
+	type InternalRegistryEntry,
+	internalRegistryJson,
 	registryJson,
 } from '../compiler/registry'
 import type {
@@ -115,7 +119,7 @@ import type {
 import { resolveSimulationProvider } from '../compiler/simulation/resolve'
 import type { EvaluationTier, RoutingSignal } from '../compiler/tier'
 import { LOCALES } from '../config'
-import { GENERATED_DIR, REPO_CONFIG } from '../corpus-compile'
+import { GENERATED_DIR, REPO_CONFIG } from '../corpus-sources'
 import { io } from '../runtimes'
 
 /* === Types === */
@@ -153,8 +157,12 @@ export type SimulationPassResult = {
 }
 
 export type SimulationPassOptions = {
-	/** Defaults to the registry the pipeline just wrote. */
-	registry?: ComponentRegistry
+	/**
+	 * Defaults to the compile's own record the pipeline just wrote
+	 * (`registry.internal.json`, LT-480 — the pass reads routing facts the
+	 * public registry projection no longer carries).
+	 */
+	registry?: InternalComponentRegistry
 	/** Defaults to `server/generated/components/`. */
 	generatedDir?: string
 	/**
@@ -181,12 +189,15 @@ export type SimulationPassOptions = {
 	 */
 	resolveProvider?: () => Promise<SimulationProvider | null>
 	/**
-	 * Seam for tests: defaults to rewriting `generatedDir/registry.json` with
-	 * the re-routed entries, so the tier census — which reads the registry —
-	 * reports the routing outcome. Called only when a reroute happened; a
-	 * build with the substrate present never touches the written registry.
+	 * Seam for tests: defaults to rewriting BOTH registries under
+	 * `generatedDir` — `registry.json` (public projection, flipped tier)
+	 * and `registry.internal.json` (internal record, flipped tier plus the
+	 * appended substrate signal) — so the tier census, which reads the
+	 * internal record, reports the routing outcome. Called only when a
+	 * reroute happened; a build with the substrate present never touches
+	 * the written registries.
 	 */
-	writeRegistry?: (registry: ComponentRegistry) => Promise<void>
+	writeRegistry?: (registry: InternalComponentRegistry) => Promise<void>
 	/** Seam for tests: defaults to reading `subject.markupPath`. */
 	readMarkup?: (subject: SimulationSubject) => Promise<string | null>
 	log?: (message: string) => void
@@ -235,7 +246,7 @@ export const gateOnSimReport = (report: SimReport) => {
 
 /** Registry entries that need the realm, in registry order. */
 const simulationSubjects = (
-	registry: ComponentRegistry,
+	registry: InternalComponentRegistry,
 	generatedDir: string,
 	root: string,
 ): {
@@ -244,7 +255,7 @@ const simulationSubjects = (
 } => {
 	const subjects: SimulationSubject[] = []
 	const skipped: SimulationPassResult['skipped'] = []
-	for (const entry of Object.values(registry) as RegistryEntry[]) {
+	for (const entry of Object.values(registry) as InternalRegistryEntry[]) {
 		if (entry.tier !== 'simulated') {
 			skipped.push({ tag: entry.tag, tier: entry.tier })
 			continue
@@ -282,7 +293,7 @@ const simulationSubjects = (
  */
 const loadClosure = (
 	subjects: readonly SimulationSubject[],
-	registry: ComponentRegistry,
+	registry: InternalComponentRegistry,
 	generatedDir: string,
 ): Array<{ tag: string; clientModulePath: string }> => {
 	const visited = new Set<string>()
@@ -353,11 +364,16 @@ export const simulateCorpus = async ({
 	createRealm,
 	classifications,
 	resolveProvider = resolveSimulationProvider,
-	writeRegistry = async reroutedEntries =>
-		io.writeTextFile(
+	writeRegistry = async reroutedEntries => {
+		await io.writeTextFile(
 			join(generatedDir, 'registry.json'),
-			registryJson(Object.values(reroutedEntries) as RegistryEntry[]),
-		),
+			registryJson(Object.values(reroutedEntries) as InternalRegistryEntry[]),
+		)
+		await io.writeTextFile(
+			join(generatedDir, 'registry.internal.json'),
+			internalRegistryJson(Object.values(reroutedEntries)),
+		)
+	},
 	readMarkup = async subject => {
 		if (!(await io.fileExists(subject.markupPath))) return null
 		return await io.readTextFile(subject.markupPath)
@@ -365,11 +381,11 @@ export const simulateCorpus = async ({
 	log = message => console.log(message),
 }: SimulationPassOptions = {}): Promise<SimulationPassResult> => {
 	const started = performance.now()
-	const entries: ComponentRegistry =
+	const entries: InternalComponentRegistry =
 		registry ??
 		(JSON.parse(
-			await io.readTextFile(join(generatedDir, 'registry.json')),
-		) as ComponentRegistry)
+			await io.readTextFile(join(generatedDir, 'registry.internal.json')),
+		) as InternalComponentRegistry)
 	const { subjects, skipped } = simulationSubjects(entries, generatedDir, root)
 
 	const simulated: string[] = []

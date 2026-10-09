@@ -15,7 +15,7 @@ import { afterAll, describe, expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { pathToFileURL } from 'node:url'
-import type { ComponentRegistry } from '../../compiler/registry'
+import type { InternalComponentRegistry } from '../../compiler/registry'
 import {
 	createSimulationRealm,
 	type JsdomSimulationRealm,
@@ -49,8 +49,8 @@ const renderName = (tag: string): string => `render${pascal(tag)}`
 const compileSubset = async (tags: readonly string[]) => {
 	const compiled = await compileCorpus(only(tags), generated.path)
 	const registry = JSON.parse(
-		await Bun.file(`${generated.path}/registry.json`).text(),
-	) as ComponentRegistry
+		await Bun.file(`${generated.path}/registry.internal.json`).text(),
+	) as InternalComponentRegistry
 	return { compiled, registry }
 }
 
@@ -68,7 +68,7 @@ const serverMarkupOf = async (
 }
 
 const loadRealm = async (
-	registry: ComponentRegistry,
+	registry: InternalComponentRegistry,
 	infos: readonly Compiled[number][],
 ): Promise<JsdomSimulationRealm> => {
 	const realm = createSimulationRealm({
@@ -89,8 +89,8 @@ const pluralizeCompiled = await compileCorpus(
 	generated.path,
 )
 const pluralizeRegistry = JSON.parse(
-	await Bun.file(`${generated.path}/registry.json`).text(),
-) as ComponentRegistry
+	await Bun.file(`${generated.path}/registry.internal.json`).text(),
+) as InternalComponentRegistry
 const pluralizeInfo = pluralizeCompiled.find(entry => entry.tag === 'c-plural')
 if (!pluralizeInfo) throw new Error('c-plural did not compile')
 const pluralizeRealm = await loadRealm(pluralizeRegistry, [pluralizeInfo])

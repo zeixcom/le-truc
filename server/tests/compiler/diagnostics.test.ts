@@ -11,7 +11,7 @@ import { namesDeclaredRole } from '../../compiler/first-refs'
 import { assertFoldScopeClosed } from '../../compiler/fold-inputs'
 import { compileComponent, compileSource } from '../../compiler/frontend/tsrx'
 import { compileComponentTsx } from '../../compiler/frontend/tsx'
-import type { RegistryEntry } from '../../compiler/registry'
+import type { InternalRegistryEntry } from '../../compiler/registry'
 import { createSimulationRealm } from '../../compiler/sim/realm'
 import { createGeneratedDir } from '../helpers/generated-corpus'
 import { lineAt, textAt } from './located'
@@ -1409,7 +1409,7 @@ export function BasicParent({ title }: { title: string })
 }</style>
 			</basic-parent>
 	}`
-		const composeRegistry = new Map<string, RegistryEntry>([
+		const composeRegistry = new Map<string, InternalRegistryEntry>([
 			[child.entry.source, child.entry],
 		])
 		const { component, diagnostics } = compileComponent(
@@ -1496,7 +1496,9 @@ export function BasicParent({ title }: { title: string })
 			'examples/parent/basic-parent.tsrx',
 			new Set(),
 			undefined,
-			new Map<string, RegistryEntry>([[child.entry.source, child.entry]]),
+			new Map<string, InternalRegistryEntry>([
+				[child.entry.source, child.entry],
+			]),
 		)
 		expect(component).toBeNull()
 		const hit = diagnostics.find(d => d.code === 'LTC006')

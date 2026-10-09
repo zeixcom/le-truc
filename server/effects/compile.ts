@@ -3,14 +3,14 @@
  *
  * Watches every authored `.tsrx` AND `.tsx` source the CONFIGURED source
  * globs select (dual front end, ADR 0032 sub-design 6; LT-202) and re-runs
- * the corpus compile on every change. The compile itself lives in
- * `server/corpus-compile.ts` (LT-267) — deliberately outside the effects
- * directory, because it is the published package's build path and must be
- * importable without the reactive machinery; this module is the docs
- * build's reactive wrapper around it and nothing else.
+ * the corpus compile on every change. The compile itself lives in the
+ * compiler package (`server/compiler/corpus.ts`, LT-480) — importable
+ * without the reactive machinery; the in-repo shorthand wrapper
+ * (`server/corpus-compile.ts`) keeps the repo's fail-on-error contract.
+ * This module is the docs build's reactive wrapper and nothing else.
  */
 
-import { compileCorpus } from '../corpus-compile'
+import { compileCorpus, REPO_CONFIG } from '../corpus-compile'
 import { componentFiles } from '../file-signals'
 import { createBuildEffect } from './build-effect'
 
@@ -22,7 +22,7 @@ export const compileEffect = (onRebuild?: () => void) =>
 		[componentFiles.sources],
 		async ([files]) => {
 			console.log('🔄 Compiling corpus components...')
-			await compileCorpus(files)
+			await compileCorpus(files, REPO_CONFIG)
 		},
 		onRebuild,
 	)

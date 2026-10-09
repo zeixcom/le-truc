@@ -26,7 +26,7 @@ import type {
 	ReconcileForIR,
 	TemplateNode,
 } from '../ir'
-import type { RegistryEntry } from '../registry'
+import type { InternalRegistryEntry } from '../registry'
 import type { SuppressedSite } from '../simulation/contract.ts'
 import type { LocalRoutingSignal } from '../tier'
 import {
@@ -666,7 +666,7 @@ export const analyzeClient = (
 	component: ComponentIR,
 	registry: ReadonlySet<string>,
 	diagnostics: LocalDiagnostic[],
-	composeRegistry?: ReadonlyMap<string, RegistryEntry>,
+	composeRegistry?: ReadonlyMap<string, InternalRegistryEntry>,
 ): ClientPlan => {
 	const source = component.source
 	const queries: QueryPlan[] = []

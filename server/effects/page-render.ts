@@ -46,8 +46,11 @@ import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { type DefaultTreeAdapterMap, parseFragment } from 'parse5'
 import { composeHostAttrs } from '../compiler/compose-attrs'
-import type { ComponentRegistry, RegistryEntry } from '../compiler/registry'
-import { GENERATED_DIR } from '../corpus-compile'
+import type {
+	InternalComponentRegistry,
+	InternalRegistryEntry,
+} from '../compiler/registry'
+import { GENERATED_DIR } from '../corpus-sources'
 import { io } from '../runtimes'
 
 /* === Types === */
@@ -84,8 +87,12 @@ export type PageOccurrencesResult = {
 }
 
 export type RenderPageOccurrencesOptions = {
-	/** Defaults to the registry the pipeline wrote (`generatedDir/registry.json`). */
-	registry?: ComponentRegistry
+	/**
+	 * Defaults to the compile's own record (`generatedDir/registry.internal.json`,
+	 * LT-480): the render reads i18n declarations the public registry
+	 * projection no longer carries.
+	 */
+	registry?: InternalComponentRegistry
 	/** Defaults to `server/generated/components/`. */
 	generatedDir?: string
 	/**
@@ -137,10 +144,10 @@ const resolveOccurrenceLocale = (el: P5Element): string | null => {
 
 /** Registry entries the walk's jurisdiction covers, keyed by tag. */
 const qualifyingEntries = (
-	registry: ComponentRegistry,
-): Map<string, RegistryEntry> => {
-	const entries = new Map<string, RegistryEntry>()
-	for (const entry of Object.values(registry) as RegistryEntry[]) {
+	registry: InternalComponentRegistry,
+): Map<string, InternalRegistryEntry> => {
+	const entries = new Map<string, InternalRegistryEntry>()
+	for (const entry of Object.values(registry) as InternalRegistryEntry[]) {
 		// Only components whose SERVER bytes the locale determines — the
 		// reserved-record declarers (folded catalog words, the
 		// materialized root `lang`). A `lang`-arg component
@@ -203,11 +210,11 @@ export const renderPageOccurrences = async (
 		resolveModule,
 	}: RenderPageOccurrencesOptions = {},
 ): Promise<PageOccurrencesResult> => {
-	const entries: ComponentRegistry =
+	const entries: InternalComponentRegistry =
 		registry ??
 		(JSON.parse(
-			await io.readTextFile(join(generatedDir, 'registry.json')),
-		) as ComponentRegistry)
+			await io.readTextFile(join(generatedDir, 'registry.internal.json')),
+		) as InternalComponentRegistry)
 	const qualified = qualifyingEntries(entries)
 	if (qualified.size === 0) return { html, rendered: [], skipped: [] }
 
@@ -244,7 +251,7 @@ export const renderPageOccurrences = async (
 
 	const renderOccurrence = async (
 		el: P5Element,
-		entry: RegistryEntry,
+		entry: InternalRegistryEntry,
 	): Promise<void> => {
 		const tag = entry.tag
 		const location = el.sourceCodeLocation
