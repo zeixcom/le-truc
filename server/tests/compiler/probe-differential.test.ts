@@ -13,6 +13,14 @@
  * arms, `@try` with and without `@pending` (the max-vs-sum crux), nested
  * exclusivity, compose sites inside arms, void elements.
  *
+ * LT-517: the synthetic registry handed to `composedShapesFor` is keyed by
+ * the path compose nodes carry — the filename each component was compiled
+ * with, the same repo-relative key `compileCorpus` registers entries under.
+ * (It was keyed by the source TEXT until LT-517, so every lookup missed and
+ * the composed leg agreed trivially since LT-379.) The corpus leg guards
+ * non-vacuity: at least one compose lookup must hit a registered entry with
+ * a known tag.
+ *
  * Compared, per component:
  * - `resolveSelector` / `selectorFor` / `resolveExclusiveSelectorIn` for
  *   every element (incl. loop-output scoping via `resolveSelectorIn`),
@@ -38,6 +46,7 @@ import type {
 import {
 	allComposeNodes,
 	type ComposeNode,
+	childrenRegionOfComponent,
 	composedShapesFor,
 	composeNodesBySource,
 	countComposeBySource,
@@ -118,6 +127,46 @@ const refCountForSelector = (node: TemplateNode, selector: string): number => {
 	let count = refMatchesSelector(node, selector) ? 1 : 0
 	for (const child of node.children)
 		count += refCountForSelector(child, selector)
+	return count
+}
+
+/**
+ * The region probe's hand cascade (LT-517, mirror of
+ * `probeCountWithRegions`): `refCountForSelector` with every compose site's
+ * content entered — the content is the composing component's own markup
+ * (ADR 0048 s1), materialized in place at the site. The count for an
+ * element inside a Children Region, whose emitted query re-includes the
+ * owner's regions.
+ */
+const refCountWithRegions = (node: TemplateNode, selector: string): number => {
+	if (node.kind === 'conditional')
+		return Math.max(
+			...node.arms.map(arm =>
+				arm.children.reduce(
+					(sum, child) => sum + refCountWithRegions(child, selector),
+					0,
+				),
+			),
+		)
+	if (node.kind === 'try')
+		return Math.max(
+			...[
+				node.children,
+				node.catchChildren,
+				...(node.pendingChildren ? [node.pendingChildren] : []),
+			].map(arm =>
+				arm.reduce((sum, c) => sum + refCountWithRegions(c, selector), 0),
+			),
+		)
+	if (node.kind === 'compose')
+		return node.children.reduce(
+			(sum, child) => sum + refCountWithRegions(child, selector),
+			0,
+		)
+	if (!isElement(node)) return 0
+	let count = refMatchesSelector(node, selector) ? 1 : 0
+	for (const child of node.children)
+		count += refCountWithRegions(child, selector)
 	return count
 }
 
@@ -247,6 +296,39 @@ const refAuthoredSelectorOf = (element: ElementNode): string | null => {
 	return selector && REF_GRAMMAR.test(selector) ? selector : null
 }
 
+/**
+ * The compose site whose content holds `target` under `tree`, or null —
+ * the mirror of `enclosingComposeOf` (selectors.ts).
+ */
+const refEnclosingComposeOf = (
+	tree: TemplateNode,
+	target: TemplateNode,
+): ComposeNode | null => {
+	let found: ComposeNode | null = null
+	walkTemplate(tree, node => {
+		if (found || node.kind !== 'compose') return
+		if (node.children.some(child => someNode(child, n => n === target)))
+			found = node
+	})
+	return found
+}
+
+/**
+ * The region-form exclusion (LT-517, mirror of `excludeUnlessOwned`):
+ * `base` narrowed by `:not(<tag> *)` per clashing composed child, except
+ * inside a region `owner` owns — where only the terms rebased on the
+ * region still exclude.
+ */
+const refExcludeUnlessOwned = (
+	owner: string,
+	tags: readonly string[],
+): string => {
+	const region = `[data-children="${owner}"]`
+	const outer = tags.map(tag => `${tag} *`).join(', ')
+	const inner = tags.map(tag => `${region} ${tag} *`).join(', ')
+	return `:not(:is(${outer}):not(:is(${region} *):not(:is(${inner}))))`
+}
+
 const refSelectorCandidates = (
 	tree: TemplateNode,
 	element: ElementNode,
@@ -258,25 +340,67 @@ const refSelectorCandidates = (
 		...refDiscriminatorCandidates(element),
 	].filter((s): s is string => s !== null)
 	const authored = refAuthoredSelectorOf(element)
+	const region = refEnclosingComposeOf(tree, element)
 	if (!composed) {
 		const synthesized = bases.map(base => ({ base, emit: base }))
 		return authored
 			? [{ base: authored, emit: authored }, ...synthesized]
 			: synthesized
 	}
-	const children = refAllComposeNodes(tree).map(
-		node => composed.get(node.source) ?? { tag: null, shapes: [] as const },
+	const sites = refAllComposeNodes(tree)
+	const children = sites.map(
+		node =>
+			composed.get(node.source) ?? {
+				tag: null,
+				shapes: [] as const,
+				region: null,
+				owner: '',
+			},
 	)
+	const owner = region ? composed.get(region.source) : undefined
+	/**
+	 * An element inside a Children Region is reached through the
+	 * re-include clause, which admits everything in every region this
+	 * component owns: the content it passes and whatever a child renders
+	 * there besides it. `base` is safe only when no such markup could match
+	 * it, and only when the element's own compose site marks the region at
+	 * all. (Mirror of `composedEmitter`'s `regionSafe`.)
+	 */
+	const regionSafe = (base: string, site: ComposeNode): boolean =>
+		sites.every((node, index) => {
+			if (node.children.length === 0) return true
+			const markup = children[index] as ComposedMarkupRef
+			if (markup.region === null) return node !== site
+			return !markup.region.some(shape => refMayMatchShape(shape, base))
+		})
 	const emitFor = (base: string): { clean: boolean; emit: string } | null => {
+		if (owner && !regionSafe(base, region as ComposeNode)) return null
 		const clashing = children.filter(
 			child =>
 				child.tag === null ||
-				child.shapes.some(shape => refMayMatchShape(shape, base)),
+				child.shapes.some(
+					// The `children` shape is the passed content, not the child's
+					// markup: a clash only for a target in the template proper
+					// (LT-512, owner ruling 2026-10-09) — for a region-content
+					// target the count is the region probe and the region-form
+					// exclusion's re-include re-admits it.
+					shape =>
+						(shape.kind !== 'children' || !owner) &&
+						refMayMatchShape(shape, base),
+				),
 		)
 		if (clashing.length === 0) return { clean: true, emit: base }
 		if (clashing.some(child => child.tag === null)) return null
-		const tags = [...new Set(clashing.map(child => `${child.tag} *`))]
-		return { clean: false, emit: `${base}:not(${tags.join(', ')})` }
+		const tags = [...new Set(clashing.map(child => child.tag as string))]
+		if (!owner)
+			return {
+				clean: false,
+				emit: `${base}:not(${tags.map(tag => `${tag} *`).join(', ')})`,
+			}
+		return {
+			clean: false,
+			emit: `${base}${refExcludeUnlessOwned(owner.owner, tags)}`,
+		}
 	}
 	const clean: Array<{ base: string; emit: string }> = []
 	const excluded: Array<{ base: string; emit: string }> = []
@@ -296,6 +420,10 @@ const refSelectorCandidates = (
 type ComposedMarkupRef = {
 	tag: string | null
 	shapes: readonly RenderedShape[]
+	/** What the child renders in the parent's Children Region besides the content. */
+	region: readonly RenderedShape[] | null
+	/** The composing parent's tag: the owner its regions are marked with. */
+	owner: string
 }
 
 const refResolveSelectorIn = (
@@ -304,9 +432,14 @@ const refResolveSelectorIn = (
 	composed?: ReadonlyMap<string, ComposedMarkupRef>,
 ): { selector: string; unique: boolean } => {
 	const candidates = refSelectorCandidates(tree, element, composed)
+	// A region-content target's count is the region probe: compose-site
+	// content is materialized at the site (LT-517, mirror of
+	// `selectorCandidates`' `probeCountWithRegions` branch).
+	const countOf = refEnclosingComposeOf(tree, element)
+		? refCountWithRegions
+		: refCountForSelector
 	for (const { base, emit } of candidates) {
-		if (refCountForSelector(tree, base) === 1)
-			return { selector: emit, unique: true }
+		if (countOf(tree, base) === 1) return { selector: emit, unique: true }
 	}
 	return { selector: candidates[0]?.emit ?? element.tag, unique: false }
 }
@@ -318,8 +451,11 @@ const refResolveExclusiveSelectorIn = (
 	composed?: ReadonlyMap<string, ComposedMarkupRef>,
 ): { selector: string; unique: boolean } => {
 	const candidates = refSelectorCandidates(tree, element, composed)
+	const countOf = refEnclosingComposeOf(tree, element)
+		? refCountWithRegions
+		: refCountForSelector
 	for (const { base, emit } of candidates) {
-		if (refCountForSelector(tree, base) !== 1) continue
+		if (countOf(tree, base) !== 1) continue
 		if (refMatchesUnder(clash, base)) continue
 		return { selector: emit, unique: true }
 	}
@@ -397,25 +533,37 @@ const compareResolved = (
 		)
 }
 
-const runDifferential = (components: ComponentIR[]): void => {
-	// A stable id per compose node for identity comparison.
+/** One compiled component, with the filename the harness compiled it by. */
+type Compiled = { path: string; component: ComponentIR }
+
+const runDifferential = (compiled: readonly Compiled[]): void => {
+	// LT-517: keyed by the path compose nodes carry — the filename each
+	// component was compiled with, resolved exactly the way
+	// `scripts/build-corpus.ts` (via `compileCorpus`) resolves compose
+	// sources and registers entries. Keyed by the source TEXT until
+	// LT-517, so every `composedShapesFor` lookup missed on both sides and
+	// each child resolved as unknown markup.
 	const registry: ReadonlyMap<string, RegistryEntry> = new Map(
-		components.map(c => [
-			c.source,
-			{
-				tag: c.tag,
-				name: c.name,
-				source: c.source,
-				serverModule: '',
-				clientModule: '',
-				css: '',
-				propsType: null,
-				exposedProps: {},
-				renderedShapes: renderedShapesOf(c),
-			} as unknown as RegistryEntry,
-		]),
+		compiled.map(({ path, component: c }) => {
+			const region = childrenRegionOfComponent(c)
+			return [
+				path,
+				{
+					tag: c.tag,
+					name: c.name,
+					source: path,
+					serverModule: '',
+					clientModule: '',
+					css: '',
+					propsType: null,
+					exposedProps: {},
+					renderedShapes: renderedShapesOf(c),
+					...(region ? { childrenRegion: region } : {}),
+				} as unknown as RegistryEntry,
+			]
+		}),
 	)
-	for (const component of components)
+	for (const { component } of compiled)
 		(component as { composedShapes?: unknown }).composedShapes =
 			composedShapesFor(component.root, registry)
 
@@ -425,7 +573,7 @@ const runDifferential = (components: ComponentIR[]): void => {
 	let composeCount = 0
 	let selectorQueries = 0
 
-	for (const component of components) {
+	for (const { component } of compiled) {
 		const { root } = component
 		const shapes = component.composedShapes
 		const tag = component.tag
@@ -592,7 +740,7 @@ const runDifferential = (components: ComponentIR[]): void => {
 	}
 
 	console.log(
-		`[LT-379 pin] components=${components.length} elements=${elementCount} ` +
+		`[LT-379 pin] components=${compiled.length} elements=${elementCount} ` +
 			`control-nodes=${controlCount} loops=${loopCount} compose-sites=${composeCount} ` +
 			`selector-queries=${selectorQueries} mismatches=${mismatches.length}`,
 	)
@@ -644,13 +792,30 @@ const buildRole = (el: ElementNode): string => {
 
 test('differential pin: hand cascades vs the probe-backed engine over the corpus', async () => {
 	const files = await loadCorpus()
-	const components: ComponentIR[] = []
+	const compiled: Compiled[] = []
 	for (const file of files) {
-		const { component } = compileCorpusSource(file.content, file.path)
-		if (component) components.push(component as ComponentIR)
+		// The repo-relative filename, the one `compileCorpus` compiles by —
+		// compose sources resolve against it to exactly the registry keys.
+		const { component } = compileCorpusSource(file.content, file.filename)
+		if (component)
+			compiled.push({
+				path: file.filename,
+				component: component as ComponentIR,
+			})
 	}
-	expect(components.length).toBeGreaterThan(15)
-	runDifferential(components)
+	expect(compiled.length).toBeGreaterThan(15)
+	runDifferential(compiled)
+	// Non-vacuity (LT-517): the composed comparison is only a pin when the
+	// registry RESOLVES children — at least one compose lookup must hit a
+	// registered entry with a known tag, or the leg agrees trivially on
+	// unknown markup everywhere.
+	expect(
+		compiled.some(({ component }) =>
+			[...(component.composedShapes ?? new Map()).values()].some(
+				markup => markup.tag !== null,
+			),
+		),
+	).toBeTrue()
 	expect(mismatches).toEqual([])
 }, 120_000)
 
@@ -862,7 +1027,12 @@ export function ProbeCompose({ alt }: { alt: boolean })
 test('differential pin: synthetic switch/try/pending/nested/compose', () => {
 	const child = compileCorpusSource(CHILD, 'examples/child/basic-child.tsrx')
 	if (!child.component) throw new Error('child must compile')
-	const components: ComponentIR[] = [child.component as ComponentIR]
+	const compiled: Compiled[] = [
+		{
+			path: 'examples/child/basic-child.tsrx',
+			component: child.component as ComponentIR,
+		},
+	]
 	let htmlCorrected: ComponentIR | null = null
 	let tableImplied: ComponentIR | null = null
 	for (const [path, content] of SYNTHETICS) {
@@ -877,9 +1047,9 @@ test('differential pin: synthetic switch/try/pending/nested/compose', () => {
 			tableImplied = component as ComponentIR
 			continue
 		}
-		components.push(component as ComponentIR)
+		compiled.push({ path, component: component as ComponentIR })
 	}
-	runDifferential(components)
+	runDifferential(compiled)
 	expect(mismatches).toEqual([])
 
 	// probe-html is pinned SEPARATELY, as the record of the one divergence
@@ -892,9 +1062,9 @@ test('differential pin: synthetic switch/try/pending/nested/compose', () => {
 	// authors content-model-violating nesting, so this is a
 	// latent-unsoundness note, not a corpus divergence.
 	// LT-382: the table/select arms count by the max rule, explicitly.
-	const table = components.find(c =>
-		someNode(c.root, n => isElement(n) && n.tag === 'probe-table'),
-	)
+	const table = compiled
+		.map(entry => entry.component)
+		.find(c => someNode(c.root, n => isElement(n) && n.tag === 'probe-table'))
 	if (!table) throw new Error('probe-table must compile')
 	for (const selector of [
 		'tr.row',
