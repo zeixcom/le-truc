@@ -54,16 +54,21 @@ iteration.
 **The chain.**
 - **R — the package** — P1; the contract reshape runs alone in the contract files (ruling 6).
   LT-480 → LT-254 → LT-377.
-- **X — compiler, analysis passes** — one at a time (ruling 4), ending in the splitview
-  conversion the `truc:html` lift unblocks. LT-483 → LT-492 → LT-493.
-- **B — module-todo and BasicButton** — ruling 5. LT-489 → LT-494 → LT-514.
-- **D — test harness** — beside everything. LT-517 (the probe differential's composed leg).
-- **W — writer copy** — beside everything; area `docs`, a `writer` session. LT-518 (the copy
-  LT-461 and LT-498 deferred, and three stale compiler-doc facts from the eighth prune).
+- **X — compiler, analysis passes** — one at a time (ruling 4). ~~LT-483~~ → ~~LT-492~~ →
+  ~~LT-493~~ → LT-519 → LT-520. (LT-519 joined by owner instruction, 2026-10-09: filed from
+  LT-492's review after the chain was written; P6 band remainder, needs satisfied. LT-520
+  filed 2026-10-10 from LT-514's review — the decorated-candidate precision gap; it follows
+  LT-519 by `needs:` so the track stays one-at-a-time, and it re-pins the module-todo
+  snapshots LT-519's legs sit beside.)- **B — module-todo and BasicButton** — ruling 5. ~~LT-489~~ → ~~LT-494~~ → ~~LT-514~~
+  (integrated 2026-10-09/10; the band's conversions are done).
+- **D — test harness** — beside everything. ~~LT-517~~ (the probe differential's composed
+  leg, integrated 2026-10-09).
+- **W — writer copy** — beside everything; area `docs`, a `writer` session. ~~LT-518~~
+  (landed 2026-10-09).
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-516 (ADR 0043 amendment, LT-257's split) and LT-484 (boundary arm-root parity). Neither
   holds the iteration open beyond its own ruling: each ends in an amended ADR or a recorded
-  refusal, plus banded follow-up tasks.
+  refusal, plus banded follow-up tasks. Both still owed (2026-10-10).
 
 **Deliberately not here.** LT-259, LT-260, LT-257 and LT-261 (ruling 2). The rest of P2b,
 including LT-381 (it changes the census by design and needs the owner's sign-off) and LT-246.
@@ -89,7 +94,13 @@ ruling 7 excepts. The translation census has 0 gaps across 6 locales. `server/co
 83 modules and 41.4k lines (every `.ts` file except `*.test.ts`, the same net as the 2026-10-06
 measurement).
 
-**Next free task ID: LT-519.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Status 2026-10-10 (Architect).** Tracks B, D and W are integrated and reviewed; track X has
+LT-519 → LT-520 left; track R is untouched. **Pickable today: LT-480** (R, alone in the
+contract files), **then LT-519** (X), **then LT-520** (X, gated on LT-519). LT-516 and LT-484
+are design sessions with the owner — a contributor session does not pick them. The writer
+changelog sweep runs when the iteration closes, not per task.
+
+**Next free task ID: LT-521.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -219,6 +230,67 @@ LTC056 is LT-358's).
   **Channel/tier:** none (a build check).
   **Verification:** the check fails on a planted `ts.Node` in a public type; full gates.
 
+
+### X — compiler, analysis passes
+
+- [ ] LT-519: A `first()` into a compose site inside an arm, a loop body or a server-rendered branch compiles with a dangling query — the client references an undeclared local. — in progress ⚙
+  **Area:** compiler
+  **Needs:** LT-492
+  **Gates:** test:server, check:corpus
+  **Area:** compiler
+  **Filed (Architect, 2026-10-09, from LT-492's review — its doubt 1, pre-existing there):**
+  `planContentConstructs` runs only from the host-level walk (`emitTopEffects`'
+  compose branch). A compose site inside an arm, a reactive-list or server-data
+  loop body, or a server-rendered branch never plans its content `first()`
+  references: the authored setup statement (`const mark = first('span.x', …)`) is
+  dropped from the generated client, while any authored statement reading `mark`
+  emits verbatim — the client references an undeclared local and throws
+  `ReferenceError` at connect. Probed on LT-492's branch (parent with
+  `@if (open) { <ChildPre><span class="x">hi</span></ChildPre> }`): diagnostics
+  empty, `watch(() => true, () => { mark.title = 'marked' })` emitted with no
+  `mark` declaration. LT-492's scoped refusal covers reactive `truc:html` only;
+  this is the `first()` ref shape.
+  **Change:** extend `validateArmSetPlacement`'s whole-template checkpoint — the
+  same walk that refuses a reactive `truc:html` in composed content at a scoped
+  site — to refuse a content element carrying a `first()` reference whose compose
+  site sits in an arm, a loop body or a server-rendered branch, LTC005's
+  arm/branch face, naming the enclosure (the `truc:html` refusal's per-enclosure
+  wording and fixes are the template). Planning the query instead (maybe-guarded,
+  the branch-held-query shape) is a design alternative — take it to `Area:
+  design` only if refusal proves wrong for an existing corpus shape; none is
+  known today.
+  **Check:** both-surface pins for the arm and branch enclosures at minimum (the
+  shared-walk argument covers the loop bodies), plus one leg asserting the
+  host-direct site still plans (the existing LT-472 legs already do; do not
+  re-pin them). `test:server`, `check:corpus` green.
+  **Channel/tier:** compiler check, tier 1 Prevented — LTC005's existing arm/branch
+  face, extended wording in `skills/le-truc/references/errors.md`.
+
+- [ ] LT-520: Selector synthesis drops the class discriminator among exclusion-decorated candidates — prefer precision when no candidate is clean.
+  **Area:** compiler
+  **Needs:** LT-519
+  **Gates:** test:server
+  **Area:** compiler
+  **Filed (Architect, 2026-10-10, from LT-514's review — its flagged synthesis gap):** once a
+  composed child accepts open children (`Children<{}, …>`), its passed content is unknown
+  markup, so every selector candidate for a parent's own element "could match" inside it and
+  needs the `:not(<child> *)` decoration. The candidate chooser
+  (`selectorCandidates`/`resolveSelectorIn` in `server/compiler/analysis/selectors.ts`) takes
+  the FIRST unique decorated candidate, and the bare tag precedes the class discriminator in
+  candidate order — so module-todo's `p` query synthesized as
+  `p:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)` where
+  `p.remaining:not(…)` was available and strictly more precise (LT-514 re-pinned the parity
+  snapshot with the coarse form). Correct today — module-todo has exactly one `p` — but a
+  second `p` in the parent's own template would break the bare tag's uniqueness where the
+  discriminated form would survive.
+  **Change:** when no candidate is clean and several decorated candidates are unique, prefer
+  the most precise base (id > data-* / class discriminators > bare tag), not the first in
+  candidate order. The exclusion set is unaffected — only the base selector changes.
+  **Check:** the module-todo parity/client snapshots re-pin to the discriminated form (both
+  surfaces); no other snapshot moves. `test:server` green.
+  **Channel/tier:** none — emission quality; no check added or narrowed.
+  **Sequence (Architect, 2026-10-10):** runs after LT-519 (`needs:`) — track X stays one at a
+  time (ruling 4), and its module-todo snapshot re-pins sit beside LT-519's new legs.
 
 ### Design gates
 

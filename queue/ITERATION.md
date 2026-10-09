@@ -54,16 +54,21 @@ iteration.
 **The chain.**
 - **R — the package** — P1; the contract reshape runs alone in the contract files (ruling 6).
   LT-480 → LT-254 → LT-377.
-- **X — compiler, analysis passes** — one at a time (ruling 4), ending in the splitview
-  conversion the `truc:html` lift unblocks. LT-483 → LT-492 → LT-493.
-- **B — module-todo and BasicButton** — ruling 5. LT-489 → LT-494 → LT-514.
-- **D — test harness** — beside everything. LT-517 (the probe differential's composed leg).
-- **W — writer copy** — beside everything; area `docs`, a `writer` session. LT-518 (the copy
-  LT-461 and LT-498 deferred, and three stale compiler-doc facts from the eighth prune).
+- **X — compiler, analysis passes** — one at a time (ruling 4). ~~LT-483~~ → ~~LT-492~~ →
+  ~~LT-493~~ → LT-519 → LT-520. (LT-519 joined by owner instruction, 2026-10-09: filed from
+  LT-492's review after the chain was written; P6 band remainder, needs satisfied. LT-520
+  filed 2026-10-10 from LT-514's review — the decorated-candidate precision gap; it follows
+  LT-519 by `needs:` so the track stays one-at-a-time, and it re-pins the module-todo
+  snapshots LT-519's legs sit beside.)- **B — module-todo and BasicButton** — ruling 5. ~~LT-489~~ → ~~LT-494~~ → ~~LT-514~~
+  (integrated 2026-10-09/10; the band's conversions are done).
+- **D — test harness** — beside everything. ~~LT-517~~ (the probe differential's composed
+  leg, integrated 2026-10-09).
+- **W — writer copy** — beside everything; area `docs`, a `writer` session. ~~LT-518~~
+  (landed 2026-10-09).
 - **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
   LT-516 (ADR 0043 amendment, LT-257's split) and LT-484 (boundary arm-root parity). Neither
   holds the iteration open beyond its own ruling: each ends in an amended ADR or a recorded
-  refusal, plus banded follow-up tasks.
+  refusal, plus banded follow-up tasks. Both still owed (2026-10-10).
 
 **Deliberately not here.** LT-259, LT-260, LT-257 and LT-261 (ruling 2). The rest of P2b,
 including LT-381 (it changes the census by design and needs the owner's sign-off) and LT-246.
@@ -89,7 +94,13 @@ ruling 7 excepts. The translation census has 0 gaps across 6 locales. `server/co
 83 modules and 41.4k lines (every `.ts` file except `*.test.ts`, the same net as the 2026-10-06
 measurement).
 
-**Next free task ID: LT-519.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Status 2026-10-10 (Architect).** Tracks B, D and W are integrated and reviewed; track X has
+LT-519 → LT-520 left; track R is untouched. **Pickable today: LT-480** (R, alone in the
+contract files), **then LT-519** (X), **then LT-520** (X, gated on LT-519). LT-516 and LT-484
+are design sessions with the owner — a contributor session does not pick them. The writer
+changelog sweep runs when the iteration closes, not per task.
+
+**Next free task ID: LT-521.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

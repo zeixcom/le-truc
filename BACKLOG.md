@@ -606,62 +606,6 @@ splitview panes it unblocks (LT-492 → LT-493), FormRadiogroup's `.split-button
 after LT-489 and LT-494). LT-517 makes the probe differential's composed leg live. Ordering
 matters only where two tasks edit module-todo: LT-489 → LT-494 → LT-514.
 
-
-- [ ] LT-519: A `first()` into a compose site inside an arm, a loop body or a server-rendered branch compiles with a dangling query — the client references an undeclared local.
-  **Area:** compiler
-  **Needs:** LT-492
-  **Gates:** test:server, check:corpus
-  **Area:** compiler
-  **Filed (Architect, 2026-10-09, from LT-492's review — its doubt 1, pre-existing there):**
-  `planContentConstructs` runs only from the host-level walk (`emitTopEffects`'
-  compose branch). A compose site inside an arm, a reactive-list or server-data
-  loop body, or a server-rendered branch never plans its content `first()`
-  references: the authored setup statement (`const mark = first('span.x', …)`) is
-  dropped from the generated client, while any authored statement reading `mark`
-  emits verbatim — the client references an undeclared local and throws
-  `ReferenceError` at connect. Probed on LT-492's branch (parent with
-  `@if (open) { <ChildPre><span class="x">hi</span></ChildPre> }`): diagnostics
-  empty, `watch(() => true, () => { mark.title = 'marked' })` emitted with no
-  `mark` declaration. LT-492's scoped refusal covers reactive `truc:html` only;
-  this is the `first()` ref shape.
-  **Change:** extend `validateArmSetPlacement`'s whole-template checkpoint — the
-  same walk that refuses a reactive `truc:html` in composed content at a scoped
-  site — to refuse a content element carrying a `first()` reference whose compose
-  site sits in an arm, a loop body or a server-rendered branch, LTC005's
-  arm/branch face, naming the enclosure (the `truc:html` refusal's per-enclosure
-  wording and fixes are the template). Planning the query instead (maybe-guarded,
-  the branch-held-query shape) is a design alternative — take it to `Area:
-  design` only if refusal proves wrong for an existing corpus shape; none is
-  known today.
-  **Check:** both-surface pins for the arm and branch enclosures at minimum (the
-  shared-walk argument covers the loop bodies), plus one leg asserting the
-  host-direct site still plans (the existing LT-472 legs already do; do not
-  re-pin them). `test:server`, `check:corpus` green.
-  **Channel/tier:** compiler check, tier 1 Prevented — LTC005's existing arm/branch
-  face, extended wording in `skills/le-truc/references/errors.md`.
-
-- [ ] LT-520: Selector synthesis drops the class discriminator among exclusion-decorated candidates — prefer precision when no candidate is clean.
-  **Area:** compiler
-  **Gates:** test:server
-  **Area:** compiler
-  **Filed (Architect, 2026-10-10, from LT-514's review — its flagged synthesis gap):** once a
-  composed child accepts open children (`Children<{}, …>`), its passed content is unknown
-  markup, so every selector candidate for a parent's own element "could match" inside it and
-  needs the `:not(<child> *)` decoration. The candidate chooser
-  (`selectorCandidates`/`resolveSelectorIn` in `server/compiler/analysis/selectors.ts`) takes
-  the FIRST unique decorated candidate, and the bare tag precedes the class discriminator in
-  candidate order — so module-todo's `p` query synthesized as
-  `p:not(form-textbox *, basic-button *, form-inplace-edit *, form-radiogroup *)` where
-  `p.remaining:not(…)` was available and strictly more precise (LT-514 re-pinned the parity
-  snapshot with the coarse form). Correct today — module-todo has exactly one `p` — but a
-  second `p` in the parent's own template would break the bare tag's uniqueness where the
-  discriminated form would survive.
-  **Change:** when no candidate is clean and several decorated candidates are unique, prefer
-  the most precise base (id > data-* / class discriminators > bare tag), not the first in
-  candidate order. The exclusion set is unaffected — only the base selector changes.
-  **Check:** the module-todo parity/client snapshots re-pin to the discriminated form (both
-  surfaces); no other snapshot moves. `test:server` green.
-  **Channel/tier:** none — emission quality; no check added or narrowed.
 ## P7 — Backlog (not scheduled)
 
 Owner-parked designs, explicit 3.0 non-goals, and items gated on a real need. The non-goals
