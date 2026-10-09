@@ -1322,3 +1322,17 @@ Full entry text: `git log -p -- DONE.md`.
   **Area:** compiler
   **Changed:** Removed six dead 2.x selectors: form-combobox's `> button` (top level and under `:where(:scope):focus-within`, both surfaces), form-spinbutton's `.buttons` rule, and module-coloreditor's `.hue`/`.lightness`/`.chroma` (`.tsx`, and the `.ts` twin's `.css`, where they are dead too). Kept: form-spinbutton's `fieldset > input` and `fieldset > button`, because `docs-src/pages/data-flow.md`'s live module-catalog demo authors a `<fieldset>` with direct `<button>`/`<input>` children inside `<form-spinbutton>`. Lowered CSS −3,352 bytes. The computed-style diff of all 98 served pages shows zero differences; `check:corpus` output is byte-identical to `v3`.
   **Review:** Approved (2026-10-08). The kept spinbutton chains are page-authored markup, the case ruling 15 names: they join LT-506's allowlist. The handoff noted twin-era sheets left behind with no twin to serve them; a scan finds 22 such files across `examples/`, filed as LT-511. Queue fix by the reviewer: the entry carried `status: done` instead of `pending-review`.
+
+- [x] LT-512: A composed child's `children` shape is not a clash for a reference into the owner's own region; hand-authored markup mirrors the render. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-474, LT-478
+  **Gates:** test:server, typecheck, check:corpus, check:contract, test:variants
+  **Area:** compiler
+  **Ruling (owner, 2026-10-09, option (a)):** the `children` shape stops counting as a clash only for a reference whose target sits in a compose site's content. There the region probe counts the content and the `excludeUnlessOwned` re-include re-admits it. A reference in the template proper keeps the blanket clash, because the plain probe never sees compose content. **Rejected:** the blanket drop (it binds a passed element instead of the parent's own) and a per-site content-directed clash (no consumer). **Waived:** `copy`/`overlay` keep `:not(module-scrollarea *)`.
+  **Changed:**
+  - **`composedEmitter`** (`server/compiler/analysis/selectors.ts`) skips the `children` shape exactly when `owner` is set, which is the region-form branch. `regionSafe`, the LTC007 region drop and the LT-498 handler-arg refusal are unchanged.
+  - **Corpus:** one emitted query changed. module-codeblock's `first('code')` ships as plain `code`, so it no longer depends on the marker. The other 152 queries are byte-identical.
+  - **Pins:** three in `children-region.test.ts`, each on both surfaces: a region reference where the child cannot match, one where it can, and a template-proper reference beside compose content. `analysis.test.ts` adds the `button.overlay` probe.
+  - **Docs:** HOST_PROFILE § Element references states the boundary and that hand-authored markup mirrors the render. LT-478's wrappers stay.
+
+  **Review:** Approved (2026-10-09), no rework. Accepted deviation: the ruling's "tests that move with it" was wrong. The `analysis.test.ts` pin targets the template proper and is unchanged, and the differential's composed leg is vacuous (follow-up LT-517). Verified: an unmarked second compose site with matching content still refuses through the uniqueness count rather than mis-binding. The stale `types/src/component.d.ts` (from LT-476) is regenerated on `v3` separately.

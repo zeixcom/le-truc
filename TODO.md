@@ -172,7 +172,7 @@ translation census has 0 gaps across 6 locales. `server/compiler/` has 79 module
 lines. That count covers every `.ts` file except `*.test.ts`, which is a wider net than the 30.4k
 figure from 2026-10-02, so compare the closing measurement with this one only.
 
-**Next free task ID: LT-517.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Next free task ID: LT-518.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is
@@ -184,53 +184,4 @@ LTC056 is LT-358's).
 
 <!-- entries -->
 
-### C2 — role writers
 
-- [ ] LT-512: A composed child's `children` shape is not a clash for a reference into the owner's own region; hand-authored markup mirrors the render.
-  **Area:** compiler
-  **Needs:** LT-474, LT-478
-  **Gates:** test:server, typecheck, check:corpus, check:contract, test:variants
-  **Area:** compiler
-  **Needs:** LT-474, LT-478
-  **Filed (Architect, 2026-10-08; LT-478 review):** after LT-478, module-codeblock's
-  `first('code')` compiles to
-  `code:not(:is(module-scrollarea *):not(:is([data-children="module-codeblock"] *):not(…)))`,
-  so hand-authored codeblock markup must carry scrollarea's `data-children` wrapper or the
-  component loses enhancement (`module-codeblock.html`, `server/schema/fence.markdoc.ts` and
-  `server/templates/fragments.ts` now do). Scrollarea's own markup is one `<div>` and can never
-  match `code`. The exclusion comes from `composedEmitter`
-  (`server/compiler/analysis/selectors.ts`): `mayMatchShape` answers true for every non-element
-  shape, so scrollarea's `children` shape counts as a clash. At a compose site in this
-  component's template, that shape stands for the content this component passes, which is its
-  own markup: the template and region probe already count it, and `regionSafe` already checks
-  the re-include.
-  **Do:**
-  1. In `composedEmitter`'s clash test, a composed child's `children` shape does not count as a
-     clash. Its `element`, `any` and unregistered (`tag === null`) cases stay as they are, and
-     so does `regionSafe`. module-codeblock's `first('code')` then ships as plain `code`, and its
-     `copy`/`overlay` queries drop `module-scrollarea *` from their exclusions. Uniqueness is
-     unchanged: the candidate must still verify over the template plus every compose site's
-     content.
-  2. Pin it: a parent reference into its own region inside a child whose own markup cannot match
-     ships the authored selector, and one inside a child whose own markup can match keeps the
-     region-aware exclusion. Both surfaces.
-  3. **Docs.** HOST_PROFILE § Element references gains one sentence: hand-authored markup for a
-     compiled component mirrors its server render, `data-children` markers and a composed
-     child's wrapper elements included. The query no longer depends on the marker where no
-     clash exists, but the child's own client may still depend on its wrapper (scrollarea
-     observes its `<div>`). Keep LT-478's wrappers in the fixture, the fence schema and the
-     fragment template.
-  **Check:** the generated module-codeblock client queries `code` with no exclusion, and the
-  `module-codeblock` component spec passes against the fixture with and without the
-  `data-children` attribute on the wrapper (a temporary edit, not committed). Report every corpus
-  query whose emitted form changes; each must be a dropped exclusion of a child that renders
-  `{children}`, and nothing else.
-  **Channel/tier:** none. A precision fix to emitted reference selectors; no new check.
-
-  **Ruling (owner, 2026-10-09, on the contributor's block; option (a)):** the drop applies only where it is sound. A composed child's `children` shape stops counting as a clash only for a reference whose target sits in a compose site's content. That target's count is the region probe, which materializes every site's content, and the `excludeUnlessOwned` re-include re-admits region content. A reference whose target is in the template proper (`overlay`, `copy`, and the effect, loop, list and harvest `first()` paths) keeps today's blanket clash. Its count is the plain probe, which never sees compose content, so the shape is the only thing excluding a matching element the parent passes. Dropping it there would bind the wrong element in programs that work today. **Rejected:** the filed one-liner, for that miscompile; and a content-directed clash per site, a precision upgrade with no current consumer (its nested-composition, `{children}`-forward and unregistered-source corners would need a design).
-  **The Do list changes accordingly:**
-  - Item 1: module-codeblock's `first('code')` ships as plain `code`. **Waived:** `copy`/`overlay` keep `:not(module-scrollarea *)`, which is marker-free and burdens no hand-authored markup. The LT-498 handler-arg refusal (`composedChildMayMatch`) is unchanged for template-proper targets.
-  - Item 2's pins become: a region-content reference inside a child whose own markup cannot match ships the authored selector; one inside a child whose own markup can match keeps the region-aware exclusion; and a template-proper reference beside a compose site whose passed content holds a match keeps its exclusion, so the `button.overlay` probe binds the parent's own element. Both surfaces.
-  - **Tests that move with it:** the `analysis.test.ts` pin "raw `children` in the child is unknown markup — every candidate clashes" changes (its child is composed with no content passed, so the drop is sound there), and `probe-differential.test.ts`'s re-encoding of `composedEmitter` moves in lockstep.
-  - Item 3 (docs) and LT-478's wrappers in the fixture, the fence schema and the fragment template stand.
-  - The Check's report of changed corpus queries now expects only region-content references to change.
