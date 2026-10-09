@@ -94,11 +94,11 @@ ruling 7 excepts. The translation census has 0 gaps across 6 locales. `server/co
 83 modules and 41.4k lines (every `.ts` file except `*.test.ts`, the same net as the 2026-10-06
 measurement).
 
-**Status 2026-10-10, after LT-519's review (Architect).** Tracks B, D, W and LT-519 are
-integrated and reviewed; track X has LT-520 left (now pickable — its `needs:` is satisfied);
-track R is untouched. **Pickable today: LT-480** (R, alone in the contract files) and
-**LT-520** (X). LT-516 and LT-484 are design sessions with the owner — a contributor session
-does not pick them. The writer changelog sweep runs when the iteration closes, not per task.
+**Status 2026-10-10, after LT-520's review (Architect).** Tracks B, D, W and all of X
+(LT-483 → LT-492 → LT-493 → LT-519 → LT-520) are integrated and reviewed. Track R is open:
+**LT-480** (already claimed ⚙), then LT-254, then LT-377. LT-516 and LT-484 are design
+sessions with the owner — a contributor session does not pick them; they are the only
+non-R work left. The writer changelog sweep runs when the iteration closes, not per task.
 
 **Next free task ID: LT-521.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
