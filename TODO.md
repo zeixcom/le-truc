@@ -94,11 +94,11 @@ ruling 7 excepts. The translation census has 0 gaps across 6 locales. `server/co
 83 modules and 41.4k lines (every `.ts` file except `*.test.ts`, the same net as the 2026-10-06
 measurement).
 
-**Status 2026-10-10 (Architect).** Tracks B, D and W are integrated and reviewed; track X has
-LT-519 → LT-520 left; track R is untouched. **Pickable today: LT-480** (R, alone in the
-contract files), **then LT-519** (X), **then LT-520** (X, gated on LT-519). LT-516 and LT-484
-are design sessions with the owner — a contributor session does not pick them. The writer
-changelog sweep runs when the iteration closes, not per task.
+**Status 2026-10-10, after LT-519's review (Architect).** Tracks B, D, W and LT-519 are
+integrated and reviewed; track X has LT-520 left (now pickable — its `needs:` is satisfied);
+track R is untouched. **Pickable today: LT-480** (R, alone in the contract files) and
+**LT-520** (X). LT-516 and LT-484 are design sessions with the owner — a contributor session
+does not pick them. The writer changelog sweep runs when the iteration closes, not per task.
 
 **Next free task ID: LT-521.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
@@ -114,7 +114,7 @@ LTC056 is LT-358's).
 
 ### R — the package
 
-- [ ] LT-480: Reshape the compiler's public contract to the D-32 ruling — the corpus entry point moves into the compiler, `RegistryEntry` narrows to a public projection, and the stability policy names the generated-module API.
+- [ ] LT-480: Reshape the compiler's public contract to the D-32 ruling — the corpus entry point moves into the compiler, `RegistryEntry` narrows to a public projection, and the stability policy names the generated-module API. — in progress ⚙
   **Area:** compiler
   **Needs:** LT-471
   **Gates:** typecheck, test:server, check:contract, check:corpus, build:docs
@@ -232,39 +232,6 @@ LTC056 is LT-358's).
 
 
 ### X — compiler, analysis passes
-
-- [ ] LT-519: A `first()` into a compose site inside an arm, a loop body or a server-rendered branch compiles with a dangling query — the client references an undeclared local. — in progress ⚙
-  **Area:** compiler
-  **Needs:** LT-492
-  **Gates:** test:server, check:corpus
-  **Area:** compiler
-  **Filed (Architect, 2026-10-09, from LT-492's review — its doubt 1, pre-existing there):**
-  `planContentConstructs` runs only from the host-level walk (`emitTopEffects`'
-  compose branch). A compose site inside an arm, a reactive-list or server-data
-  loop body, or a server-rendered branch never plans its content `first()`
-  references: the authored setup statement (`const mark = first('span.x', …)`) is
-  dropped from the generated client, while any authored statement reading `mark`
-  emits verbatim — the client references an undeclared local and throws
-  `ReferenceError` at connect. Probed on LT-492's branch (parent with
-  `@if (open) { <ChildPre><span class="x">hi</span></ChildPre> }`): diagnostics
-  empty, `watch(() => true, () => { mark.title = 'marked' })` emitted with no
-  `mark` declaration. LT-492's scoped refusal covers reactive `truc:html` only;
-  this is the `first()` ref shape.
-  **Change:** extend `validateArmSetPlacement`'s whole-template checkpoint — the
-  same walk that refuses a reactive `truc:html` in composed content at a scoped
-  site — to refuse a content element carrying a `first()` reference whose compose
-  site sits in an arm, a loop body or a server-rendered branch, LTC005's
-  arm/branch face, naming the enclosure (the `truc:html` refusal's per-enclosure
-  wording and fixes are the template). Planning the query instead (maybe-guarded,
-  the branch-held-query shape) is a design alternative — take it to `Area:
-  design` only if refusal proves wrong for an existing corpus shape; none is
-  known today.
-  **Check:** both-surface pins for the arm and branch enclosures at minimum (the
-  shared-walk argument covers the loop bodies), plus one leg asserting the
-  host-direct site still plans (the existing LT-472 legs already do; do not
-  re-pin them). `test:server`, `check:corpus` green.
-  **Channel/tier:** compiler check, tier 1 Prevented — LTC005's existing arm/branch
-  face, extended wording in `skills/le-truc/references/errors.md`.
 
 - [ ] LT-520: Selector synthesis drops the class discriminator among exclusion-decorated candidates — prefer precision when no candidate is clean.
   **Area:** compiler

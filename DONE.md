@@ -600,3 +600,44 @@ Full entry text: `git log -p -- DONE.md`.
   **Channel/tier:** none (copy).
 
   **Changed:** copy pass landed — LTC081's `read` face says "raw element" (a placement publishes on an owned custom tag too, so "native element" was wrong; HOST_PROFILE's LTC081 bullet follows), and its `in-loop` face states the consequence (only the first item's element would get the one listener); `errors.md`'s LTC007 row now carries the LT-496/LT-498 compose-site faces (scope words, the forward's tag-unknown clause, the per-shape class fixes) and the LTC005 row gains the LT-461 parent-side face (a handler arg on a composed child where no mount binds it); `LE_TRUC_COMPILER.md`'s census re-pinned to 36 of 43 Folded against `check:corpus` (7 Simulated, enumerated from the fresh census; `module-lazyload` listed Folded with the nil-arm reason) and the Static-tier census line to 36/7/0; `VOCABULARY_LEDGER.md` records LTC082 as released unused (LT-136) in both mentions. Message pins held, so no test changed. Gates: test:server 3662/0, check:links 775/775.
+
+- [x] LT-519: A `first()` into a compose site inside an arm, a loop body or a server-rendered branch compiles with a dangling query — the client references an undeclared local. — reviewed ✓
+  **Area:** compiler
+  **Needs:** LT-492
+  **Gates:** test:server, check:corpus
+  **Area:** compiler
+  **Filed (Architect, 2026-10-09, from LT-492's review — its doubt 1, pre-existing there):**
+  `planContentConstructs` runs only from the host-level walk (`emitTopEffects`'
+  compose branch). A compose site inside an arm, a reactive-list or server-data
+  loop body, or a server-rendered branch never plans its content `first()`
+  references: the authored setup statement (`const mark = first('span.x', …)`) is
+  dropped from the generated client, while any authored statement reading `mark`
+  emits verbatim — the client references an undeclared local and throws
+  `ReferenceError` at connect. Probed on LT-492's branch (parent with
+  `@if (open) { <ChildPre><span class="x">hi</span></ChildPre> }`): diagnostics
+  empty, `watch(() => true, () => { mark.title = 'marked' })` emitted with no
+  `mark` declaration. LT-492's scoped refusal covers reactive `truc:html` only;
+  this is the `first()` ref shape.
+  **Change:** extend `validateArmSetPlacement`'s whole-template checkpoint — the
+  same walk that refuses a reactive `truc:html` in composed content at a scoped
+  site — to refuse a content element carrying a `first()` reference whose compose
+  site sits in an arm, a loop body or a server-rendered branch, LTC005's
+  arm/branch face, naming the enclosure (the `truc:html` refusal's per-enclosure
+  wording and fixes are the template). Planning the query instead (maybe-guarded,
+  the branch-held-query shape) is a design alternative — take it to `Area:
+  design` only if refusal proves wrong for an existing corpus shape; none is
+  known today.
+  **Check:** both-surface pins for the arm and branch enclosures at minimum (the
+  shared-walk argument covers the loop bodies), plus one leg asserting the
+  host-direct site still plans (the existing LT-472 legs already do; do not
+  re-pin them). `test:server`, `check:corpus` green.
+  **Channel/tier:** compiler check, tier 1 Prevented — LTC005's existing arm/branch
+  face, extended wording in `skills/le-truc/references/errors.md`.
+
+  **Changed:** `validateArmSetPlacement`'s whole-template checkpoint (the LT-492 walk) now also refuses a compose-content element carrying a `first()` reference when the compose site sits in an arm, a loop body or a server-rendered branch — LTC005's arm/branch face, extended wording in `skills/le-truc/references/errors.md`. Previously the authored `const mark = first(…)` was dropped from the generated client while statements reading `mark` emitted verbatim: a `ReferenceError` at connect (probed on all enclosures before the fix; the dangles were the server-data loop body and both server-branch spellings).
+
+  **How:** the checkpoint's composed-content walk gained a second subject beside the reactive `truc:html` refusal: the synthetic ref attribute the raw `first()` resolution attaches. Per-enclosure fix clauses live in a `contentRefFix` helper beside `serverBranchFix` (same file, `server/compiler/analysis/effects.ts`). In a reactive arm or a reactive-list item the new face never fires — the raw resolution refuses the reference first and attaches no ref attr — so one mistake is never reported twice; those enclosures' pins assert the raw face's message ("inside a reactive conditional's arm" / "inside a reactive-list loop body"). A content element carrying both a ref and a reactive `truc:html` gets the truc:html refusal only. No emission changed, no new diagnostic code, census unchanged (43 entries, 0 translation gaps).
+
+  **Check:** `test:server` 3733 pass / 0 fail (the first run's 27 serve failures were the fresh worktree's missing `docs/` — `build:docs` then re-run); `check:corpus` exit 0; `typecheck` exit 0; `check:contract` ✓; `lint:server` clean with no residue; `build:docs` + `check:links` ✓ (776 links). Pins: arm and server-rendered branch on both surfaces, server-data loop body and server-only `try` on `.tsrx` (the shared-walk argument; the `.tsx` server-only `try` spells differently), asserting component-null plus the per-face message; the LT-472 host-direct legs pass untouched, not re-pinned. Reviewer note: typecheck's standing LTC087 warning on `examples/test/scoping/css-probe.tsx` predates this branch — verified present at HEAD via stash — so the warning baseline question is LT-520's or the iteration bookkeeping's, not this task's.
+
+  **Review:** ✓ (2026-10-10). The refusal verified in the checkpoint's walk: the ref subject is the synthetic attr the raw resolution attaches, the truc:html clause is verbatim-preserved, and the no-double-report design holds — where the raw path refuses first (a reactive arm, a list item) no attr exists, and the arm pins honestly assert the raw face's message. `contentRefFix`'s clauses improve on the filed "wording as template": they reason about a stale REFERENCE per enclosure ("a reference taken at connect goes stale", "could only ever bind one item's"), accurate to the ref semantics where the truc:html clauses speak of bindings — within the entry's intent. Pins match the Check's spec (arm and branch both surfaces, server-data loop and server-only try on `.tsrx`, the LT-472 host-direct legs untouched), and errors.md's new sentence records the dual refusal paths honestly. Gates re-run in the worktree: build:docs, `test:server` 3733/0 — the count reconciles exactly (post-LT-514-merge v3 was 3727: the branch's 3717 predating LT-492's integration, plus LT-492's 10 legs; +6 here), `typecheck` 0, `check:corpus` 0 (baseline 1 standing, census 36/7/0), `lint:server`, `check:contract`, `check:links` 776/776. One correction to the Check's reviewer note: the standing css-probe warning is **LTC088** (`.probe-global`, the fixture's deliberate global-rule probe), not LTC087 — verified present at HEAD, uncounted as a test-fixture warning; correctly out of scope here. No nits.
