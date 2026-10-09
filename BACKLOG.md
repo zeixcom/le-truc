@@ -546,14 +546,12 @@ handler-args design in P6 and carries only its tombstone.
 
 ## P6 — Cleanup round and the composition batch
 
-The cleanup round the first publish waits for (see P1). Its standing cleanup items and the
-composition batch (LT-463 on the compose enablers and ADR 0048's children contract) closed on
-2026-10-09. The remainder is the conversions LT-463 left raw, each on its own ruling:
-BasicButton's orthogonal server args (LT-489), `truc:html` in composed children and the
-splitview panes it unblocks (LT-492 → LT-493), FormRadiogroup's `.split-button` presentation
-(LT-494), and the label-as-children sweep over the form components and BasicButton (LT-514,
-after LT-489 and LT-494). LT-517 makes the probe differential's composed leg live. Ordering
-matters only where two tasks edit module-todo: LT-489 → LT-494 → LT-514.
+**Empty (2026-10-10).** The cleanup round the first publish waited for closed in two passes:
+the standing items and the composition batch (LT-463, ADR 0048) on 2026-10-09, and the
+remainder — LT-489, LT-492 → LT-493, LT-494, LT-514, LT-517, LT-518 — in the "first package
+and the P6 remainder" iteration (2026-10-10, ninth prune). The corpus a consumer meets in the
+first pre-release composes every site LT-463 named; no form component or BasicButton renders
+its visible label from a `string` arg.
 
 ## P7 — Backlog (not scheduled)
 
@@ -1012,53 +1010,6 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
   **Channel/tier:** none. A corpus gate over authored sheets and templates; its verdict depends on
   page markup and scripts the compiler never sees, so no `LTC` code.
 
-- [ ] LT-508: check:html — validate and axe-check every corpus component's server render.
-  **Area:** compiler
-  **Gates:** test:server, typecheck, check:corpus
-  **Area:** compiler
-  **Filed (Architect, 2026-10-08):** traces to REQUIREMENTS §4 Accessibility (the corpus's
-  server-rendered markup is valid HTML and passes the fragment-applicable axe-core rules; the
-  no-JS accessibility tree, ADR 0026). A probe run on 2026-10-08 rendered all 43 corpus tags and
-  found real defects (form-colorgraph's slider labelled by an id the render does not contain,
-  duplicate ids, `<meter>` without `value`), so the gate has something to catch.
-  **Context:**
-  1. **Shared render args.** Move the `ARGS` table out of
-     `server/tests/compiler/server-render-smoke.test.ts` into
-     `server/tests/compiler/corpus-args.ts` as an exported `CORPUS_RENDER_ARGS`; the smoke gate
-     imports it. One table feeds both gates. A tag absent from the table renders from `{}`.
-  2. **The gate.** `scripts/check-html.ts`, wired as `check:html` in `package.json`. It compiles
-     the corpus with `compileCorpus` into a per-run temporary directory (never `config.outDir`,
-     the LT-140 posture) and removes it on exit. Then it calls each tag's `render<Name>()` with
-     its args and wraps the markup as
-     `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>TAG</title></head><body><main>MARKUP</main></body></html>`.
-  3. **HTML conformance:** add `html-validate` as an exact-pinned devDependency and use its
-     programmatic API with the preset that checks conformance to the HTML standard only
-     (`html-validate:standard`; confirm the name against the pinned version). No stylistic rules.
-     Declare every registry tag as a custom element that accepts flow content, so a corpus tag
-     is never reported as unknown.
-  4. **Accessibility:** run axe-core (already a devDependency) inside a `jsdom` window
-     (`runScripts: 'outside-only'`, evaluate `node_modules/axe-core/axe.min.js`), with
-     `axe.run(document)`. Disable the rules that need real layout or a whole page:
-     `color-contrast`, `landmark-one-main`, `page-has-heading-one`, `region`. Count only
-     `violations`; `incomplete` is not a finding.
-  5. **Allowlist:** `scripts/check-html.allow.json`, an array of `{ tag, tool, rule, reason }`.
-     A finding the list doesn't match fails the gate, and so does an entry that matches no
-     finding (a stale allowance never lingers). Seed it with every finding HEAD produces, each
-     with the reason `untriaged at gate landing (LT-508)`. The Architect triages them at review
-     into corpus follow-ups.
-  6. **Output:** one line per finding, `TAG: <html-validate|axe>/<rule>: <message> (<selector>)`,
-     using html-validate's `selector` and axe's `node.target`. Exit non-zero on any failure.
-     Authored-source locations are LT-509's job.
-
-  Out of scope: the inert `<template data-arms|data-list>` content (LT-510) and hydrated or
-  interacted states (Playwright, the `runAxe()` fixture in `examples/test/fixtures/aria.ts`).
-  Not part of the compile step or `bun test`: like `check:corpus`, the gate stands alone.
-  **Check:** `bun run check:html` passes on HEAD with the seeded allowlist. A unit test under
-  `server/tests/` covers the allowlist matcher: an unmatched finding fails, a stale entry fails,
-  a matched finding passes. The handoff lists the seeded findings.
-  **Channel/tier:** none. A corpus gate over rendered output, not a runtime check. Its result
-  depends on render args the compiler never sees, so no `LTC` code.
-
 - [ ] LT-509: check:html reports findings at the authored source location (data-lt-src render annotation).
   **Area:** compiler
   **Needs:** LT-508
@@ -1129,50 +1080,6 @@ to the REQUIREMENTS §4 Accessibility bar for the corpus.
   test injects a list template whose item is valid only inside its container and asserts no
   finding, then one invalid in its container and asserts the finding.
   **Channel/tier:** none. A corpus gate; no runtime check and no `LTC` code.
-
-- [ ] LT-511: Corpus — delete hand-written component sheets that no twin serves.
-  **Area:** compiler
-  **Gates:** test:server, check:corpus, test:variants, build:docs, check:links
-  **Area:** compiler
-  **Filed (Architect, 2026-10-08; LT-507 review):** ADR 0033 s10 serves a folder's hand-written
-  `.css` only with its `.ts` twin, and `examples/main.css` imports the compiler's emitted sheet for
-  every compiled folder. 22 folders keep a `.css` with no `.ts` twin beside it, sheets from before
-  their twins were retired: basic-button, basic-gauge, basic-hello, card-blogpost, card-callout,
-  card-collapsible, card-colorscale, form-checkbox, form-colorgraph, form-combobox,
-  form-inplace-edit, form-listbox, form-radiogroup, form-spinbutton, form-textbox, form-tokenbox,
-  module-blogarchive, module-demo, module-list, module-tabgroup, section-hero and section-menu's
-  `chapter-nav.css`. They drift from the authored sheets (LT-504 and LT-507 edited the sources,
-  not these), and a reader can mistake one for the component's CSS.
-  **Do:** for each file, confirm that nothing reads it: no `@import`, spec, build or corpus script,
-  docs page (a source listing or `{% demo %}`), or `le-truc.config.json` entry. Delete the files
-  nothing reads. Report any that are read, and by what.
-  **Check:** `build:docs` and `check:links` green; `test:variants` and the component specs pass;
-  the served `docs/assets/main.css` is byte-identical to `v3`'s.
-  **Channel/tier:** none. Corpus housekeeping.
-
-- [ ] LT-513: module-cem-list addresses its passed content through declared roles, not inline reach-ins.
-  **Area:** examples
-  **Needs:** LT-474
-  **Gates:** test:server, typecheck, check:corpus, test:variants, build:docs, check:links
-  **Area:** examples
-  **Needs:** LT-474
-  **Filed (Architect, 2026-10-08; owner ruling on LT-474's survey):** module-cem-list (`.tsrx` and
-  `.tsx`) reaches into the content the `{% cem-list %}` tag renders (`server/schema/cem-list.markdoc.ts`)
-  through inline calls: `on(first('form-textbox'), …)` and an `all('card-collapsible')` in a watch
-  thunk. LTC083 checks declared references only, so the reach-in compiles. The reference corpus
-  should model ADR 0048 s2's contract rather than its gap. Extending verification to inline
-  literal-selector calls is not part of this task; it waits for a second case.
-  **Do:**
-  1. Declare the roles on cem-list's `children` prop, `Children<{ filter: 'form-textbox'; item:
-     'card-collapsible' }>` or names that read better, on both surfaces, identical.
-  2. Give the matching elements in the `{% cem-list %}` output the role classes.
-  3. Address them through declared references: `const filter = first('.filter', …)` and the items
-     through `all('.item')`, so LTC083 sees them. Required or optional per LT-474's rework.
-  4. Check every other page that authors cem-list content and add the classes there too.
-  **Check:** `check:corpus` clean; the cem-list docs page and its spec behave as before
-  (`test:component module-cem-list`, and the filter narrows the list on the built docs page).
-  Variant sets stay byte-identical.
-  **Channel/tier:** none. Corpus authoring under the existing LTC083.
 
 - [ ] LT-515: Lazy children in composed content — the reactive half of ADR 0048 s1's grant.
   **Area:** design

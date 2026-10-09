@@ -7,176 +7,99 @@ in this file; contributors claim and annotate only through `bun run scripts/queu
 are unique by construction — the filename is the ID; the "Next free task ID" line below
 allocates the next one.
 
-**Iteration opened 2026-10-09: the first package and the P6 remainder.** The previous
-iteration (the P6 cleanup round and the composition batch, opened 2026-10-06) closed on
-2026-10-09. The `writer` recorded it in `CHANGELOG.md [Unreleased]`, and its 38 entries are
-pruned (`queue/LEDGER.md`, eighth pass).
+**Iteration opened 2026-10-10: the two-repo split and template emission.** The previous
+iteration ("the first package and the P6 remainder", opened 2026-10-09) closed on 2026-10-10:
+all 18 entries reviewed and integrated, both design gates ruled (LT-516 → ADR 0043 amended;
+LT-484 → full parity, LT-530 filed; LT-523 → ADR 0049), the `writer` recorded it in
+`CHANGELOG.md [Unreleased]`, and the entries are pruned (`queue/LEDGER.md`, ninth pass).
 
-**Why now (Architect, 2026-10-09).** The first publish waited for the P6 cleanup round (owner,
-2026-09-19). That round has closed apart from the conversions LT-463 left raw. D-32 is ruled
-(LT-471), so P1 opens unblocked: LT-480 reshapes the contract and LT-254 publishes it. The P6
-remainder runs beside it and empties the band, so the corpus a consumer meets in the first
-pre-release composes every site LT-463 named. Template emission (LT-257) cannot be built
-against ADR 0043 as written, so its design session runs now and the build follows next
-iteration.
+**Why now (Architect, 2026-10-10).** The package stands (`@zeix/le-truc-compiler`, LT-254) but
+still compiles from this repo's own sources, and template emission — v3.0's other requirement
+(M27) — has its ruled interface (ADR 0043 as amended) and no emitter. ADR 0049 directs the
+split first ("the third front end is born in its final home"), so the iteration opens with the
+split chain and builds the emitter in the new repository. This repo keeps the corpus healthy
+ahead of the pioneers: the accessibility gate and two examples riders.
 
-**Rulings taken at planning (Architect with the owner, 2026-10-09).**
-1. **Scope: P1's package track, the P6 remainder, two design sessions and two P2b items.**
-   LT-480 → LT-254 → LT-377 build the package. LT-489, LT-492 → LT-493, LT-494 and LT-517 are
-   P6, and so is LT-518, the writer copy pass the eighth prune found owed. LT-514 moves from P7 to P6 and joins: it is the last label-as-children conversion and
-   needs only P6 work. LT-516 (ADR 0043 amendment) and LT-484 (async-boundary arm roots) are
-   design sessions. LT-483 joins from P2b (owner).
-2. **LT-259 and the pioneers stay out (owner).** The codemod's drift-cost metric is unruled,
-   and its check runs over the pioneer-1 project. It pairs with LT-260, which needs both
-   LT-254 and LT-259. LT-257 and LT-261 wait for LT-516's split.
-3. **The package is built, not published.** LT-254's check is `npm pack` into an empty
-   project. The first pre-release to the registry is an outward-facing act and waits for the
-   owner, after this iteration.
-4. **One compiler track at a time through the analysis passes** (track X): LT-483 → LT-492.
-   LT-483 edits `handleAsyncBoundary` in `analysis/effects.ts`, and LT-492 changes the
-   composed-content refusal and its lowering. Run in parallel, they would conflict at
-   integration. If LT-484's session rules parity, its compiler task joins track X after
-   LT-492.
-5. **module-todo and BasicButton change in one order** (track B): LT-489 → LT-494 → LT-514.
-   LT-489 and LT-494 both edit module-todo's two surfaces, and LT-514 then moves the sites
-   they compose to passed children (LT-514's sequence note).
-6. **LT-480 runs alone in the contract files.** It moves `compileCorpus` into
-   `server/compiler/` and narrows `RegistryEntry` (ruling 4: every compose-validation field is
-   internal). Tracks X and B do not edit `contract.ts`, `registry.ts` or `corpus-compile.ts`.
-   A task that finds it must, stops and writes it in `NOTES.md`.
-7. **Standing rulings carried from the last iteration.** Acceptance criteria are goals, not
-   constraints to satisfy by workaround: a contributor who can meet one only by bending the
-   design annotates the task `blocked` and writes the impasse into `NOTES.md` (ruling 8 of
-   2026-10-06). An `examples` task that edits a compiled source gates `test:server` and
-   `typecheck` (ruling 13 of 2026-10-06). Corpus-level checks stay in P7 (ruling 15 of
-   2026-10-06).
+**Rulings taken at planning (Architect with the owner, 2026-10-10).**
+1. **Scope: the two-repo spine plus corpus riders.** S — the split: LT-524 → LT-525 → LT-526.
+   E — emission, new repo: LT-527 → LT-528 → LT-529 (all `needs: LT-524`). P — parity, new
+   repo: LT-530 (`needs: LT-524`). G — the accessibility gate: LT-508 (`needs: LT-525`).
+   R — riders: LT-511, LT-513 (beside everything).
+2. **Prerequisite owner act before LT-524:** publish `@zeix/le-truc@3.0.0-next.1` to the
+   registry (LT-523's ruling) — the new repository types its peer against it and proves
+   `check:package` from there.
+3. **No compiler-source front window.** LT-524 mirrors the tree on a quiet checkout; no task
+   touches `server/compiler/`, `server/tests/compiler/` or `server/runtimes/` in this repo
+   after the mirror lands (work there diverges and is lost at LT-525). At cutover (LT-525's
+   review), compiler-internals tasks are re-pointed — the setup-const cluster
+   LT-459 → LT-333 → LT-458, LT-363, LT-369, LT-497 and the corpus-gate follow-ons
+   LT-506/LT-509/LT-510 — internals to the new repository's tracker (ADR 0049 s7),
+   corpus-level gates stay here consuming the linked package.
+4. **The emission chain builds only in the new repository** (ADR 0049 sequencing, LT-516's
+   split). LT-527 owns LTC057/LTC058/LTC090; the boundary fixture lands with it (no corpus
+   component uses `Try` yet).
+5. **LT-508 re-scoped at planning to consumer-side placement:** `CORPUS_RENDER_ARGS` lives
+   under `server/tests/` here, never the mirrored `server/tests/compiler/`, and the gate runs
+   post-cutover so its first green run doubles as an adoption proof (the entry carries the
+   note).
+6. **LT-259, LT-260 and LT-261 stay out (owner, carried):** the codemod's drift-cost metric
+   is unruled, the pioneers are external engagements timed by the owner, and pioneer 2 needs
+   LT-529 regardless.
+7. **Standing rulings carried from the 2026-10-06/-09 plannings:** acceptance criteria are
+   goals, not constraints to satisfy by workaround (a contributor who can meet one only by
+   bending the design annotates `blocked` and writes the impasse into `NOTES.md`); an
+   `examples` task that edits a compiled source gates `test:server` and `typecheck`; the
+   corpus-level checks stay standalone, never part of the compile step or `bun test`.
 
 **The chain.**
-- **R — the package** — P1; the contract reshape runs alone in the contract files (ruling 6).
-  ~~LT-480~~ → ~~LT-254~~ → ~~LT-377~~ — the track is complete. (LT-480 reviewed ✓ and integrated
-  2026-10-10, b482d527; LT-254 reviewed ✓ and integrated 2026-10-10, 560d91e9 — the package
-  stands up, both surfaces, `./macros` + `./runtime`, the peer floor under `check:peer`;
-  LT-377 reviewed ✓ and integrated 2026-10-10, 5a62171e — `check:contract`'s second phase pins
-  D-33 on the emitted `.d.ts`.) ~~LT-521~~ — LT-480's generated-comment golden re-pin —
-  reviewed ✓ and integrated 2026-10-10, 5c3fc619 (the re-pin proved vacuous: no golden carries
-  the string; exactly one regenerated line moved). The track is closed with no residue.
-- **X — compiler, analysis passes** — one at a time (ruling 4). ~~LT-483~~ → ~~LT-492~~ →
-  ~~LT-493~~ → ~~LT-519~~ → ~~LT-520~~. (LT-519 joined by owner instruction, 2026-10-09: filed from
-  LT-492's review after the chain was written; P6 band remainder, needs satisfied. LT-520
-  filed 2026-10-10 from LT-514's review — the decorated-candidate precision gap; it follows
-  LT-519 by `needs:` so the track stays one-at-a-time, and it re-pins the module-todo
-  snapshots LT-519's legs sit beside. Both reviewed ✓ and integrated 2026-10-10, c999cb2 and
-  9fd470f6.)
-- **B — module-todo and BasicButton** — ruling 5. ~~LT-489~~ → ~~LT-494~~ → ~~LT-514~~
-  (integrated 2026-10-09/10; the band's conversions are done).
-- **D — test harness** — beside everything. ~~LT-517~~ (the probe differential's composed
-  leg, integrated 2026-10-09).
-- **W — writer copy** — beside everything; area `docs`, a `writer` session. ~~LT-518~~
-  (landed 2026-10-09). LT-522 (filed 2026-10-10 from LT-254's review: the compiler package's
-  user-facing copy — README, §2 install passage, one experimental-label wording).
-- **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
-  ~~LT-516~~ (ADR 0043 amendment) ruled 2026-10-10 — D-28 closed: the `boundary` operation
-  with a three-state result arg, `loop` + `listTemplate` for reactive lists, capture-and-raw
-  children through the `composed-markup` context; LT-257 split into LT-527 → LT-528 → LT-529
-  (against the new repository, `needs: LT-524`). ~~LT-484~~ (boundary arm-root parity) ruled
-  2026-10-10 — full parity: the boundary's arms plan constructs like conditional arms
-  (ADR 0037 s3/s4 honored, the refusals were residue); **LT-530** builds it (new repo,
-  `needs: LT-524`, P2b; four refusal faces retire, none arrive, no ADR change). Both gates
-  have ruled: each ended in an amended ADR plus banded follow-up tasks. ~~LT-523~~ (the
-  compiler
-  repo split) ruled 2026-10-10 → ADR 0049; its chain LT-524 → LT-525 → LT-526 is staged as the
-  NEXT iteration's opening, after this one closes.
+- **S — the split** — P1; ADR 0049; this repo and the new one. LT-524 (bootstrap: fresh
+  history, the moved tree, mirrored fixture corpus, registry-typed peer, its own gates, public
+  from the first push) → LT-525 (cutover: consume `@zeix/le-truc-compiler`, delete the
+  in-tree compiler, re-point the docs build; goldens re-pin the harness import once, by
+  design) → LT-526 (publish and CI hardening: branch protection with required checks on both
+  repositories, the compiler's first pre-release — owner act, CHANGELOG entries).
+- **E — template emission** — P1; the new repository; `needs: LT-524`; ADR 0043 as amended.
+  LT-527 (the shared walk, operation layer, census routing, the boundary fixture, and the
+  test-only second target; LTC057/LTC058/LTC090) → LT-528 (the Twig target: syntax table,
+  exhaustive escaping map, one partial per component × locale, byte-equivalence on the real
+  engine) → LT-529 (the PHP CI job; coordinates with LT-526 if still open).
+- **P — boundary-arm parity** — P2b; the new repository; `needs: LT-524`; LT-484's ruling.
+  LT-530 (factor the conditional arm-content planner, thread it through
+  `handleAsyncBoundary`, retire `boundaryDeepConstructOf` and four refusal faces). Parallel to
+  E — it touches `analysis/effects.ts`, the emission chain adds new code.
+- **G — the accessibility gate** — needs LT-525 (post-cutover, consumer-side). LT-508
+  (`check:html`: html-validate + axe-core over every corpus component's server render, the
+  seeded allowlist triaged at review into corpus follow-ups).
+- **R — examples riders** — beside everything; this repo only. LT-511 (delete the 22 orphaned
+  hand-written sheets no twin serves), LT-513 (module-cem-list addresses its passed content
+  through declared roles).
 
-**Deliberately not here.** LT-259, LT-260, LT-527 → LT-528 → LT-529 (the emission chain,
-LT-257's split; ruling 2) and LT-261. The rest of P2b,
-including LT-381 (it changes the census by design and needs the owner's sign-off) and LT-246.
-LT-515 (lazy children in composed content) and the corpus-level checks stay in P7. P2–P5 stay
-where they are.
+**Deliberately not here.** LT-259, LT-260, LT-261 (ruling 6). The setup-const cluster,
+LT-363, LT-369, LT-497, LT-506, LT-509 and LT-510 (ruling 3 — re-pointed at cutover, not
+now). LT-381 (changes the census by design; owner sign-off when it enters). The design gates
+LT-310, LT-448, LT-450, LT-456 and LT-515 (need-gated, owner-timed). P2–P5 stay where they
+are.
 
-**Exit criterion.** Every chain task is reviewed and integrated, and both design sessions have
-ruled. `npm pack` of `@zeix/le-truc-compiler` installs into an empty project and builds a
-corpus through the published entry point — two `.tsx` components, one composing the other, plus one `.tsrx` component proving the experimental surface ships — with `@tsrx/core` only inside the compiler's own dependency closure
-(LT-254's check). `contract.test.ts` pins LT-480's set, and `registry.json` carries only the
-public projection. P6 is empty: module-splitview and module-todo compose every site LT-463
-named, and no corpus form component or BasicButton renders its visible label from a `string`
-arg where LT-514 moves it to children. The tier census and the warning baseline are unchanged
-from the opening measurement below, except where a task states a by-design change. `typecheck`,
-the server suite, `check:contract`, `check:corpus`, `test:variants`, `build:docs` and
-`check:links` are green on the closing commit. The net line count of `server/compiler/` is
-recorded against the opening measurement; LT-480 grows it by the code it moves in.
+**Exit criterion.** Every chain task is reviewed and integrated. Both repositories are real
+and green: `zeixcom/le-truc-compiler` is public with typecheck, suite, contract, package,
+peer and lint as required checks (ADR 0049 s7); le-truc consumes the compiler through `link:`
+in development and the pinned pre-release in CI, with no `server/compiler/` directory left.
+This repo's tier census (36/7/0), translation census (0 gaps) and compile-warning baseline
+(1 unique standing warning, module-dialog's LTC088) are unchanged from the opening
+measurement below, except where a task states a by-design change. In the new repository, the
+dump target's renders are byte-identical to SSG for every emittable fixture × locale, and the
+Twig equivalence corpus passes on the real engine. `check:html` is seeded and green in this
+repo. On this repo's closing commit: `typecheck`, `test:server`, `check:contract`,
+`check:corpus`, `test:variants`, `build:docs` and `check:links` are green.
 
-**Opening measurement (2b26f032):** `check:corpus` exits 0. The tier census has 43 entries:
+**Opening measurement (d7bcb68a):** `check:corpus` exits 0. The tier census has 43 entries:
 36 Folded, 7 Simulated, 0 Static. The compile-warning baseline is 1 unique standing warning,
-module-dialog's `body.scroll-lock` (LTC088), a deliberate component-bound page-wide rule that
-ruling 7 excepts. The translation census has 0 gaps across 6 locales. `server/compiler/` has
-83 modules and 41.4k lines (every `.ts` file except `*.test.ts`, the same net as the 2026-10-06
-measurement).
-
-**Status 2026-10-10, after LT-520's review (Architect).** Tracks B, D, W and all of X
-(LT-483 → LT-492 → LT-493 → LT-519 → LT-520) are integrated and reviewed. Track R is open:
-**LT-480** (already claimed ⚙), then LT-254, then LT-377. LT-516 and LT-484 are design
-sessions with the owner — a contributor session does not pick them; they are the only
-non-R work left. The writer changelog sweep runs when the iteration closes, not per task.
-
-**Status 2026-10-10, after LT-480's review (Architect).** LT-480 is reviewed ✓ and integrated
-(b482d527) — the contract is the D-32 shape: `compileCorpus` published, `RegistryEntry` the
-ten-field projection with the `registry.internal.json` sidecar, ADRs 0036 + 0038 amended.
-**Pickable now: LT-254** (publish the package — `npm pack` into an empty project; the contract
-set it builds on is pinned and green). LT-521 (the generated-comment golden re-pin, LT-480's
-residue) is pickable beside it — it touches no contract file. Then LT-377 closes track R.
-LT-516 and LT-484 remain design sessions with the owner, never `start-task` picks.
-
-**Status 2026-10-10, after LT-377's review (Architect).** Track R is complete: the contract
-reshape (LT-480), the package (LT-254) and the D-33 declaration pin (LT-377) are all
-reviewed ✓ and integrated. The iteration's remaining work is four items: **LT-521**
-(contributor pick — the golden re-pin above), **LT-522** (a `writer` session, the compiler
-package's user-facing copy), and the two design sessions with the owner, **LT-516** and
-**LT-484**. When the first two are integrated and both sessions have ruled, the iteration
-closes: the `writer` changelog sweep runs, and the exit criterion is verified on the closing
-commit. (`typecheck` reads green at HEAD again — the LT-480 pin-test TS2769 residue was fixed
-on v3 in LT-377's review session, a one-line assertion widening in
-`corpus-config.test.ts`.)
-
-**Status 2026-10-10, after LT-521's review (Architect).** Track R is closed with no residue
-(LT-521 reviewed ✓, integrated 5c3fc619). The iteration's remaining work is three items:
-**LT-522** (a `writer` session, the compiler package's user-facing copy) and the two design
-sessions with the owner, **LT-516** and **LT-484**. When LT-522 is integrated and both
-sessions have ruled, the iteration closes: the `writer` changelog sweep runs, and the exit
-criterion is verified on the closing commit. (`typecheck` reads green at HEAD — the LT-480
-pin-test TS2769 residue was fixed on v3 in LT-377's review session, and holds through
-LT-521's branch.)
-
-**Status 2026-10-10, after LT-522's review and the LT-523 session (Architect).** LT-522
-reviewed ✓ and integrated (409315c8) — the writer copy pass is in. LT-523 ruled the same day →
-ADR 0049: the compiler moves to its own repository (fresh history, `link:` dev loop, mirrored
-fixture corpus, public repo). The split chain LT-524 → LT-525 → LT-526 opens the NEXT
-iteration; LT-516's template-emission build tasks file against the new repository once the
-cutover lands. This iteration's remainder: the LT-516 and LT-484 sessions only — when both
-have ruled, the writer changelog sweep runs and the exit criterion is verified on the closing
-commit (typecheck is green at HEAD).
-
-**Status 2026-10-10, after the LT-516 session (Architect).** LT-516 ruled with the owner →
-ADR 0043 revised in place (D-28 closed: the `boundary` operation with a three-state result
-arg; `loop` + `listTemplate` for reactive lists; capture-and-raw children through the new
-`composed-markup` escaping context; key-alias confirmed as a census outcome). `COMPILER_SPEC`
-§9.2 carries the new mappings and D-28 is Ratified. LT-257 is pruned into LT-527 → LT-528 →
-LT-529 — the shared walk with the census folded in, the Twig target, the PHP CI job — all
-`needs: LT-524` and building in the new repository (ADR 0049 sequencing). The iteration's
-remainder: the LT-484 session only. When it has ruled, the writer changelog sweep runs and
-the exit criterion is verified on the closing commit.
-
-**Status 2026-10-10, after the LT-484 session (Architect) — both design gates have ruled.**
-LT-484 ruled with the owner → full parity: the async boundary's arms plan client constructs
-exactly like reactive-conditional arms (root constructs in every channel, nested elements
-through the arm scope's proved selectors, nested arm sets and lists through `planNested`);
-the value-channel disciplines stay; the refusals were residue of the channel-by-channel
-build-out, not a recorded decision — ADR 0037 s3/s4 already grant the vocabulary, so no ADR
-changes. **LT-530** builds it (new repo, `needs: LT-524`, P2b; four refusal faces retire,
-none arrive). Every chain task is integrated and both design sessions have ruled: the
-iteration is ready to close — the `writer` changelog sweep runs next (it consumes LT-516 and
-LT-484's records; LT-527 → LT-530 stay in the store for the next iteration, which opens with
-the split chain LT-524 → LT-525 → LT-526), then the exit criterion is verified on the closing
-commit.
+module-dialog's `body.scroll-lock` (LTC088), ruling-7-excepted (the css-probe LTC088 is a
+test-fixture warning, present at HEAD and uncounted — LT-519's review). The translation
+census has 0 gaps across 6 locales. `server/compiler/` has 87 modules and 43.5k lines (every
+`.ts` file except `*.test.ts`) — the last opening measurement of the in-tree compiler. All
+seven gates green at this commit (closing verification of the previous iteration:
+`test:server` 3743/0, `test:variants` 537, `check:links` 804).
 
 **Next free task ID: LT-531.** Next free diagnostic code: LTC091 (LTC090 is LT-527's; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
@@ -191,7 +114,144 @@ LTC056 is LT-358's).
 
 <!-- entries -->
 
-### Design gates
+### S — the split
+
+- [ ] LT-524: Bootstrap the `le-truc-compiler` repository — fresh history, the moved tree, mirrored fixture corpus, registry-typed peer, its own gates.
+  **Area:** compiler
+  **Needs:** LT-523
+  **Gates:** typecheck, test:server, check:contract, check:peer, check:package
+  **Area:** compiler
+  **Prerequisite (owner act, before this task): `@zeix/le-truc@3.0.0-next.1` on the registry** — the
+  new repository types its runtime peer against the published package and proves it from there.
+  **Context:** ADR 0049 (LT-523 session, 2026-10-10). The destination `../le-truc-compiler` exists,
+  empty. Fresh history: the first commit is the moved tree; `zeixcom/le-truc-compiler` is public
+  from the first push (owner act at the end of this task); le-truc is untouched by this task.
+  **Do:**
+  1. **Move per ADR 0049 s2**: `server/compiler/` (87 modules), `server/runtimes/` (the ADR 0038
+     seam), `server/tests/compiler/` with fixtures (97 files), the four package scripts
+     (`build:compiler`, `check:contract`, `check:peer`, `check:package`), `tsconfig.compiler.json`,
+     the `compiler/` assembly dir (it becomes the repository root — manifest, README, `src/` from
+     `server/compiler/`, rewire the build script's roots), and the compiler docs
+     (`LE_TRUC_COMPILER.md`, `HOST_PROFILE.md`, `VOCABULARY_LEDGER.md`, `COMPILER_SPEC.md`), plus
+     the simulation portability check.
+  2. **Mirror the fixture corpus** at the defaults' relative paths: `examples/**` (both surfaces,
+     composition sites, i18n catalogs) such that `sources`, `outDir`, `locales` defaults compile
+     the new repo's own tree (ADR 0049 s4). Corpus-level checks that live in le-truc (census,
+     goldens) are NOT recreated against the mirror; this corpus serves the moved unit tests and
+     the defaults' honesty.
+  3. **Registry-typed peer**: `@zeix/le-truc` becomes a devDependency; `tsconfig.compiler.json`'s
+     `paths` mapping to le-truc's committed `types/` is deleted. `check:peer` reads the export
+     list and version from the installed/registry package (ADR 0049 s5); the lockstep convention
+     (runtime publishes first) goes in its header.
+  4. **Repository posture** (ADR 0049 s7): MIT `LICENSE` in the first commit, CI workflows for the
+     six checks (typecheck, suite, contract, package, peer, biome), publish workflow present but
+     disabled, no queue tooling. `git init`, first commit, gates green in the new repo.
+  5. **Hand-off**: the owner creates `zeixcom/le-truc-compiler` (public) and pushes.
+
+  **Not in scope:** any change inside le-truc (LT-525), npm publish of the compiler (LT-526).
+  **Channel/tier:** none (repository structure).
+  **Verification:** all five gates green inside the new repository; `check:package` installs the
+  runtime peer FROM THE REGISTRY and compiles + renders the corpus; the defaults compile the
+  mirror with no config file.
+
+- [ ] LT-525: le-truc cutover — consume `@zeix/le-truc-compiler`, delete the in-tree compiler, re-point the docs build; goldens re-pin the harness import once, by design.
+  **Area:** compiler
+  **Needs:** LT-524
+  **Gates:** typecheck, test:server, check:corpus, check:links
+  **Area:** compiler
+  **Context:** ADR 0049 s3. With LT-524's repository live, le-truc stops compiling with its own
+  sources: the compiler becomes a devDependency — `link:../le-truc-compiler` for development, the
+  pinned registry pre-release in CI (state the exact mechanism in the annotation; one spelling in
+  `package.json`, the CI override documented in the workflow).
+  **Do:**
+  1. **Consume the package**: devDependency added; `corpus-compile.ts`, `corpus-sources.ts`,
+     `build-corpus`, `check-corpus`, the docs build, the dev server and `file-signals` import
+     `compileCorpus` (and the loader) from `@zeix/le-truc-compiler`. Root tsconfig `paths` entries
+     for `/macros` and `/runtime` are deleted (node_modules resolution).
+  2. **Delete the moved tree**: `server/compiler/`, `server/runtimes/`, `server/tests/compiler/`,
+     the four moved scripts, `tsconfig.compiler.json`, `compiler/`, the four moved docs files, the
+     moved check scripts from root `package.json`.
+  3. **Become a real consumer**: `le-truc.config.json` is deleted (its single field, the
+     `runtimeImport` pin, is the thing that flips — generated modules import
+     `@zeix/le-truc-compiler/runtime`); `REPO_EMIT_PATHS` in the test helpers reverts to the
+     package default; the goldens re-pin the harness import line — the ONE by-design golden
+     change of the cutover, byte-identity through the installed package thereafter (ADR 0049 s3).
+  4. **Rewire the prose**: AGENTS.md (HOST_PROFILE path), ARCHITECTURE.md (the assembly sentence),
+     REQUIREMENTS §5 ("built in-repo" → built in `zeixcom/le-truc-compiler`), SERVER.md/TESTS.md
+     path references, and every doc link into the moved files (the moved docs live in the new
+     repo; le-truc links point there).
+  5. **`scripts/lib/baseline.ts`'s `css-tree`/`lightningcss` imports** get a home: a le-truc
+     devDependency (preferred — no new public export) or an export from the package; rule it
+     inline and record why.
+
+  **Not in scope:** the new repository's contents (LT-524), publish/CI hardening (LT-526).
+  **Channel/tier:** none (build wiring).
+  **Verification:** all gates green through the INSTALLED/LINKED package; the docs build renders
+  the corpus identically except the re-pinned import line; no reference to `server/compiler`
+  survives outside git history.
+
+- [ ] LT-526: Publish and CI hardening — branch protection with required checks on both repositories, the compiler's first pre-release (owner act), CHANGELOG entries.
+  **Area:** server
+  **Needs:** LT-525
+  **Gates:** check:links
+  **Area:** server (repo tooling)
+  **Context:** ADR 0049 s7 + the release conventions. The split is code-complete after LT-525;
+  this task makes the two-repo machinery durable.
+  **Do:**
+  1. **Branch protection** on `zeixcom/le-truc` and `zeixcom/le-truc-compiler`: required checks
+     (the six compiler checks; le-truc's existing set), no direct pushes to the default branch.
+  2. **Compiler publish workflow enabled** with the NPM token secret; the **owner publishes
+     `@zeix/le-truc-compiler@3.0.0-next.1`** (runtime already on the registry from LT-524's
+     prerequisite — runtime first, always, per the lockstep convention).
+  3. **CHANGELOG entries** handed to `writer` for both repositories' `[Unreleased]`: the split
+     (ADR 0049), the cutover, the pre-releases.
+  4. **Convention note**: the lockstep rule (runtime publishes first; compiler CI verifies the
+     floor against the registry) recorded in the compiler README's release section.
+
+  **Not in scope:** pioneer-gated stable releases (ADR 0034 s6 stands), template emission.
+  **Channel/tier:** none.
+  **Verification:** protection rules live on both repos; the two packages install side by side
+  from the registry (`check:package` green against the published runtime); CHANGELOGs recorded.
+
+### E — template emission
+
+- [ ] LT-524: Bootstrap the `le-truc-compiler` repository — fresh history, the moved tree, mirrored fixture corpus, registry-typed peer, its own gates.
+  **Area:** compiler
+  **Needs:** LT-523
+  **Gates:** typecheck, test:server, check:contract, check:peer, check:package
+  **Area:** compiler
+  **Prerequisite (owner act, before this task): `@zeix/le-truc@3.0.0-next.1` on the registry** — the
+  new repository types its runtime peer against the published package and proves it from there.
+  **Context:** ADR 0049 (LT-523 session, 2026-10-10). The destination `../le-truc-compiler` exists,
+  empty. Fresh history: the first commit is the moved tree; `zeixcom/le-truc-compiler` is public
+  from the first push (owner act at the end of this task); le-truc is untouched by this task.
+  **Do:**
+  1. **Move per ADR 0049 s2**: `server/compiler/` (87 modules), `server/runtimes/` (the ADR 0038
+     seam), `server/tests/compiler/` with fixtures (97 files), the four package scripts
+     (`build:compiler`, `check:contract`, `check:peer`, `check:package`), `tsconfig.compiler.json`,
+     the `compiler/` assembly dir (it becomes the repository root — manifest, README, `src/` from
+     `server/compiler/`, rewire the build script's roots), and the compiler docs
+     (`LE_TRUC_COMPILER.md`, `HOST_PROFILE.md`, `VOCABULARY_LEDGER.md`, `COMPILER_SPEC.md`), plus
+     the simulation portability check.
+  2. **Mirror the fixture corpus** at the defaults' relative paths: `examples/**` (both surfaces,
+     composition sites, i18n catalogs) such that `sources`, `outDir`, `locales` defaults compile
+     the new repo's own tree (ADR 0049 s4). Corpus-level checks that live in le-truc (census,
+     goldens) are NOT recreated against the mirror; this corpus serves the moved unit tests and
+     the defaults' honesty.
+  3. **Registry-typed peer**: `@zeix/le-truc` becomes a devDependency; `tsconfig.compiler.json`'s
+     `paths` mapping to le-truc's committed `types/` is deleted. `check:peer` reads the export
+     list and version from the installed/registry package (ADR 0049 s5); the lockstep convention
+     (runtime publishes first) goes in its header.
+  4. **Repository posture** (ADR 0049 s7): MIT `LICENSE` in the first commit, CI workflows for the
+     six checks (typecheck, suite, contract, package, peer, biome), publish workflow present but
+     disabled, no queue tooling. `git init`, first commit, gates green in the new repo.
+  5. **Hand-off**: the owner creates `zeixcom/le-truc-compiler` (public) and pushes.
+
+  **Not in scope:** any change inside le-truc (LT-525), npm publish of the compiler (LT-526).
+  **Channel/tier:** none (repository structure).
+  **Verification:** all five gates green inside the new repository; `check:package` installs the
+  runtime peer FROM THE REGISTRY and compiles + renders the corpus; the defaults compile the
+  mirror with no config file.
 
 - [ ] LT-527: Template emission — the shared walk and operation layer, the census routing, the boundary fixture, and the test-only second target (ADR 0043 as amended; LT-257's build half, split by the LT-516 session). Builds in the le-truc-compiler repository.
   **Area:** compiler
@@ -304,6 +364,46 @@ LTC056 is LT-358's).
   **Check:** CI runs the three suites on the real engine and passes; a local run without
   `php` exits green with an explicit skip line; nothing in this repo changes.
 
+### P — boundary-arm parity
+
+- [ ] LT-524: Bootstrap the `le-truc-compiler` repository — fresh history, the moved tree, mirrored fixture corpus, registry-typed peer, its own gates.
+  **Area:** compiler
+  **Needs:** LT-523
+  **Gates:** typecheck, test:server, check:contract, check:peer, check:package
+  **Area:** compiler
+  **Prerequisite (owner act, before this task): `@zeix/le-truc@3.0.0-next.1` on the registry** — the
+  new repository types its runtime peer against the published package and proves it from there.
+  **Context:** ADR 0049 (LT-523 session, 2026-10-10). The destination `../le-truc-compiler` exists,
+  empty. Fresh history: the first commit is the moved tree; `zeixcom/le-truc-compiler` is public
+  from the first push (owner act at the end of this task); le-truc is untouched by this task.
+  **Do:**
+  1. **Move per ADR 0049 s2**: `server/compiler/` (87 modules), `server/runtimes/` (the ADR 0038
+     seam), `server/tests/compiler/` with fixtures (97 files), the four package scripts
+     (`build:compiler`, `check:contract`, `check:peer`, `check:package`), `tsconfig.compiler.json`,
+     the `compiler/` assembly dir (it becomes the repository root — manifest, README, `src/` from
+     `server/compiler/`, rewire the build script's roots), and the compiler docs
+     (`LE_TRUC_COMPILER.md`, `HOST_PROFILE.md`, `VOCABULARY_LEDGER.md`, `COMPILER_SPEC.md`), plus
+     the simulation portability check.
+  2. **Mirror the fixture corpus** at the defaults' relative paths: `examples/**` (both surfaces,
+     composition sites, i18n catalogs) such that `sources`, `outDir`, `locales` defaults compile
+     the new repo's own tree (ADR 0049 s4). Corpus-level checks that live in le-truc (census,
+     goldens) are NOT recreated against the mirror; this corpus serves the moved unit tests and
+     the defaults' honesty.
+  3. **Registry-typed peer**: `@zeix/le-truc` becomes a devDependency; `tsconfig.compiler.json`'s
+     `paths` mapping to le-truc's committed `types/` is deleted. `check:peer` reads the export
+     list and version from the installed/registry package (ADR 0049 s5); the lockstep convention
+     (runtime publishes first) goes in its header.
+  4. **Repository posture** (ADR 0049 s7): MIT `LICENSE` in the first commit, CI workflows for the
+     six checks (typecheck, suite, contract, package, peer, biome), publish workflow present but
+     disabled, no queue tooling. `git init`, first commit, gates green in the new repo.
+  5. **Hand-off**: the owner creates `zeixcom/le-truc-compiler` (public) and pushes.
+
+  **Not in scope:** any change inside le-truc (LT-525), npm publish of the compiler (LT-526).
+  **Channel/tier:** none (repository structure).
+  **Verification:** all five gates green inside the new repository; `check:package` installs the
+  runtime peer FROM THE REGISTRY and compiles + renders the corpus; the defaults compile the
+  mirror with no config file.
+
 - [ ] LT-530: Boundary-arm construct parity — the async boundary's arms plan client constructs exactly like reactive-conditional arms (ADR 0037 s3/s4 honored; LT-484's ruling). Builds in the le-truc-compiler repository.
   **Area:** compiler
   **Needs:** LT-524
@@ -349,43 +449,7 @@ LTC056 is LT-358's).
   server render and the zero-warning baseline are unchanged (client-written sites inside inert
   arm templates already bake empty); the four faces no longer fire anywhere in the corpus.
 
-- [ ] LT-524: Bootstrap the `le-truc-compiler` repository — fresh history, the moved tree, mirrored fixture corpus, registry-typed peer, its own gates.
-  **Area:** compiler
-  **Needs:** LT-523
-  **Gates:** typecheck, test:server, check:contract, check:peer, check:package
-  **Area:** compiler
-  **Prerequisite (owner act, before this task): `@zeix/le-truc@3.0.0-next.1` on the registry** — the
-  new repository types its runtime peer against the published package and proves it from there.
-  **Context:** ADR 0049 (LT-523 session, 2026-10-10). The destination `../le-truc-compiler` exists,
-  empty. Fresh history: the first commit is the moved tree; `zeixcom/le-truc-compiler` is public
-  from the first push (owner act at the end of this task); le-truc is untouched by this task.
-  **Do:**
-  1. **Move per ADR 0049 s2**: `server/compiler/` (87 modules), `server/runtimes/` (the ADR 0038
-     seam), `server/tests/compiler/` with fixtures (97 files), the four package scripts
-     (`build:compiler`, `check:contract`, `check:peer`, `check:package`), `tsconfig.compiler.json`,
-     the `compiler/` assembly dir (it becomes the repository root — manifest, README, `src/` from
-     `server/compiler/`, rewire the build script's roots), and the compiler docs
-     (`LE_TRUC_COMPILER.md`, `HOST_PROFILE.md`, `VOCABULARY_LEDGER.md`, `COMPILER_SPEC.md`), plus
-     the simulation portability check.
-  2. **Mirror the fixture corpus** at the defaults' relative paths: `examples/**` (both surfaces,
-     composition sites, i18n catalogs) such that `sources`, `outDir`, `locales` defaults compile
-     the new repo's own tree (ADR 0049 s4). Corpus-level checks that live in le-truc (census,
-     goldens) are NOT recreated against the mirror; this corpus serves the moved unit tests and
-     the defaults' honesty.
-  3. **Registry-typed peer**: `@zeix/le-truc` becomes a devDependency; `tsconfig.compiler.json`'s
-     `paths` mapping to le-truc's committed `types/` is deleted. `check:peer` reads the export
-     list and version from the installed/registry package (ADR 0049 s5); the lockstep convention
-     (runtime publishes first) goes in its header.
-  4. **Repository posture** (ADR 0049 s7): MIT `LICENSE` in the first commit, CI workflows for the
-     six checks (typecheck, suite, contract, package, peer, biome), publish workflow present but
-     disabled, no queue tooling. `git init`, first commit, gates green in the new repo.
-  5. **Hand-off**: the owner creates `zeixcom/le-truc-compiler` (public) and pushes.
-
-  **Not in scope:** any change inside le-truc (LT-525), npm publish of the compiler (LT-526).
-  **Channel/tier:** none (repository structure).
-  **Verification:** all five gates green inside the new repository; `check:package` installs the
-  runtime peer FROM THE REGISTRY and compiles + renders the corpus; the defaults compile the
-  mirror with no config file.
+### G — the accessibility gate
 
 - [ ] LT-525: le-truc cutover — consume `@zeix/le-truc-compiler`, delete the in-tree compiler, re-point the docs build; goldens re-pin the harness import once, by design.
   **Area:** compiler
@@ -423,25 +487,102 @@ LTC056 is LT-358's).
   the corpus identically except the re-pinned import line; no reference to `server/compiler`
   survives outside git history.
 
-- [ ] LT-526: Publish and CI hardening — branch protection with required checks on both repositories, the compiler's first pre-release (owner act), CHANGELOG entries.
-  **Area:** server
+- [ ] LT-508: check:html — validate and axe-check every corpus component's server render.
+  **Area:** compiler
   **Needs:** LT-525
-  **Gates:** check:links
-  **Area:** server (repo tooling)
-  **Context:** ADR 0049 s7 + the release conventions. The split is code-complete after LT-525;
-  this task makes the two-repo machinery durable.
-  **Do:**
-  1. **Branch protection** on `zeixcom/le-truc` and `zeixcom/le-truc-compiler`: required checks
-     (the six compiler checks; le-truc's existing set), no direct pushes to the default branch.
-  2. **Compiler publish workflow enabled** with the NPM token secret; the **owner publishes
-     `@zeix/le-truc-compiler@3.0.0-next.1`** (runtime already on the registry from LT-524's
-     prerequisite — runtime first, always, per the lockstep convention).
-  3. **CHANGELOG entries** handed to `writer` for both repositories' `[Unreleased]`: the split
-     (ADR 0049), the cutover, the pre-releases.
-  4. **Convention note**: the lockstep rule (runtime publishes first; compiler CI verifies the
-     floor against the registry) recorded in the compiler README's release section.
+  **Gates:** test:server, typecheck, check:corpus
+  **Area:** compiler
+  **Filed (Architect, 2026-10-08):** traces to REQUIREMENTS §4 Accessibility (the corpus's
+  server-rendered markup is valid HTML and passes the fragment-applicable axe-core rules; the
+  no-JS accessibility tree, ADR 0026). A probe run on 2026-10-08 rendered all 43 corpus tags and
+  found real defects (form-colorgraph's slider labelled by an id the render does not contain,
+  duplicate ids, `<meter>` without `value`), so the gate has something to catch.
+  **Re-scoped at planning (Architect, 2026-10-10, next-iteration ruling 5): consumer-side
+  placement, post-cutover.** The `CORPUS_RENDER_ARGS` helper lands under `server/tests/` here —
+  NOT `server/tests/compiler/`, which mirrors to the le-truc-compiler repository at LT-524 — and
+  the gate runs after LT-525, compiling the corpus through the linked/pinned package, so its
+  first green run doubles as an adoption proof. Update the smoke test's import path
+  accordingly (item 1's source table now lives in this repo, not the mirrored tree).
+  **Context:**
+  1. **Shared render args.** Move the `ARGS` table out of
+     `server/tests/compiler/server-render-smoke.test.ts` into
+     `server/tests/compiler/corpus-args.ts` as an exported `CORPUS_RENDER_ARGS`; the smoke gate
+     imports it. One table feeds both gates. A tag absent from the table renders from `{}`.
+  2. **The gate.** `scripts/check-html.ts`, wired as `check:html` in `package.json`. It compiles
+     the corpus with `compileCorpus` into a per-run temporary directory (never `config.outDir`,
+     the LT-140 posture) and removes it on exit. Then it calls each tag's `render<Name>()` with
+     its args and wraps the markup as
+     `<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><title>TAG</title></head><body><main>MARKUP</main></body></html>`.
+  3. **HTML conformance:** add `html-validate` as an exact-pinned devDependency and use its
+     programmatic API with the preset that checks conformance to the HTML standard only
+     (`html-validate:standard`; confirm the name against the pinned version). No stylistic rules.
+     Declare every registry tag as a custom element that accepts flow content, so a corpus tag
+     is never reported as unknown.
+  4. **Accessibility:** run axe-core (already a devDependency) inside a `jsdom` window
+     (`runScripts: 'outside-only'`, evaluate `node_modules/axe-core/axe.min.js`), with
+     `axe.run(document)`. Disable the rules that need real layout or a whole page:
+     `color-contrast`, `landmark-one-main`, `page-has-heading-one`, `region`. Count only
+     `violations`; `incomplete` is not a finding.
+  5. **Allowlist:** `scripts/check-html.allow.json`, an array of `{ tag, tool, rule, reason }`.
+     A finding the list doesn't match fails the gate, and so does an entry that matches no
+     finding (a stale allowance never lingers). Seed it with every finding HEAD produces, each
+     with the reason `untriaged at gate landing (LT-508)`. The Architect triages them at review
+     into corpus follow-ups.
+  6. **Output:** one line per finding, `TAG: <html-validate|axe>/<rule>: <message> (<selector>)`,
+     using html-validate's `selector` and axe's `node.target`. Exit non-zero on any failure.
+     Authored-source locations are LT-509's job.
 
-  **Not in scope:** pioneer-gated stable releases (ADR 0034 s6 stands), template emission.
-  **Channel/tier:** none.
-  **Verification:** protection rules live on both repos; the two packages install side by side
-  from the registry (`check:package` green against the published runtime); CHANGELOGs recorded.
+  Out of scope: the inert `<template data-arms|data-list>` content (LT-510) and hydrated or
+  interacted states (Playwright, the `runAxe()` fixture in `examples/test/fixtures/aria.ts`).
+  Not part of the compile step or `bun test`: like `check:corpus`, the gate stands alone.
+  **Check:** `bun run check:html` passes on HEAD with the seeded allowlist. A unit test under
+  `server/tests/` covers the allowlist matcher: an unmatched finding fails, a stale entry fails,
+  a matched finding passes. The handoff lists the seeded findings.
+  **Channel/tier:** none. A corpus gate over rendered output, not a runtime check. Its result
+  depends on render args the compiler never sees, so no `LTC` code.
+
+### R — examples riders
+
+- [ ] LT-511: Corpus — delete hand-written component sheets that no twin serves.
+  **Area:** compiler
+  **Gates:** test:server, check:corpus, test:variants, build:docs, check:links
+  **Area:** compiler
+  **Filed (Architect, 2026-10-08; LT-507 review):** ADR 0033 s10 serves a folder's hand-written
+  `.css` only with its `.ts` twin, and `examples/main.css` imports the compiler's emitted sheet for
+  every compiled folder. 22 folders keep a `.css` with no `.ts` twin beside it, sheets from before
+  their twins were retired: basic-button, basic-gauge, basic-hello, card-blogpost, card-callout,
+  card-collapsible, card-colorscale, form-checkbox, form-colorgraph, form-combobox,
+  form-inplace-edit, form-listbox, form-radiogroup, form-spinbutton, form-textbox, form-tokenbox,
+  module-blogarchive, module-demo, module-list, module-tabgroup, section-hero and section-menu's
+  `chapter-nav.css`. They drift from the authored sheets (LT-504 and LT-507 edited the sources,
+  not these), and a reader can mistake one for the component's CSS.
+  **Do:** for each file, confirm that nothing reads it: no `@import`, spec, build or corpus script,
+  docs page (a source listing or `{% demo %}`), or `le-truc.config.json` entry. Delete the files
+  nothing reads. Report any that are read, and by what.
+  **Check:** `build:docs` and `check:links` green; `test:variants` and the component specs pass;
+  the served `docs/assets/main.css` is byte-identical to `v3`'s.
+  **Channel/tier:** none. Corpus housekeeping.
+
+- [ ] LT-513: module-cem-list addresses its passed content through declared roles, not inline reach-ins.
+  **Area:** examples
+  **Needs:** LT-474
+  **Gates:** test:server, typecheck, check:corpus, test:variants, build:docs, check:links
+  **Area:** examples
+  **Needs:** LT-474
+  **Filed (Architect, 2026-10-08; owner ruling on LT-474's survey):** module-cem-list (`.tsrx` and
+  `.tsx`) reaches into the content the `{% cem-list %}` tag renders (`server/schema/cem-list.markdoc.ts`)
+  through inline calls: `on(first('form-textbox'), …)` and an `all('card-collapsible')` in a watch
+  thunk. LTC083 checks declared references only, so the reach-in compiles. The reference corpus
+  should model ADR 0048 s2's contract rather than its gap. Extending verification to inline
+  literal-selector calls is not part of this task; it waits for a second case.
+  **Do:**
+  1. Declare the roles on cem-list's `children` prop, `Children<{ filter: 'form-textbox'; item:
+     'card-collapsible' }>` or names that read better, on both surfaces, identical.
+  2. Give the matching elements in the `{% cem-list %}` output the role classes.
+  3. Address them through declared references: `const filter = first('.filter', …)` and the items
+     through `all('.item')`, so LTC083 sees them. Required or optional per LT-474's rework.
+  4. Check every other page that authors cem-list content and add the classes there too.
+  **Check:** `check:corpus` clean; the cem-list docs page and its spec behave as before
+  (`test:component module-cem-list`, and the filter narrows the list on the built docs page).
+  Variant sets stay byte-identical.
+  **Channel/tier:** none. Corpus authoring under the existing LTC083.

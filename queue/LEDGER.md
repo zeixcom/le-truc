@@ -14,6 +14,65 @@ into this prose.
 
 ---
 
+Pruned 2026-10-10, ninth pass (Architect, after the "first package and the P6 remainder"
+iteration closed; the `writer` recorded it in `CHANGELOG.md [Unreleased]` the same day,
+commit 9d3b88a2). Consumed: LT-254, LT-377, LT-480, LT-483, LT-484, LT-489, LT-492, LT-493,
+LT-494, LT-514, LT-516–LT-523. Where their rulings live: ADR 0049 (LT-523's eight split
+rulings); ADR 0043 as revised 2026-10-10 + `COMPILER_SPEC.md` §9.2 + D-28 Ratified (LT-516);
+ADR 0037 s3/s4 (LT-484's authority — the boundary-arm refusals were residue, not a ruling;
+LT-530 builds the parity in the new repository); ADR 0024 s10 amended (LT-492, the
+`truc:html` lift); `contract.ts`'s stability policy + ADRs 0036/0038 amended +
+`LE_TRUC_COMPILER.md` §2 + REQUIREMENTS M28's 2026-10-10 both-surfaces ruling +
+ARCHITECTURE's `compiler/` assembly line (LT-480, LT-254, LT-377); `HOST_PROFILE.md` §
+Handler args' worked example (LT-489); `skills/le-truc/references/errors.md` (LTC005's
+arm/branch faces — LT-492, LT-519; LTC007's compose faces and LTC081 — LT-518);
+`analysis/selectors.ts`'s `PRECISION` ranking + `LE_TRUC_COMPILER.md` §8 (LT-520);
+`probe-differential.test.ts`'s live composed leg (LT-517); `compiler/README.md` (LT-522).
+Open handoffs: LT-524–LT-530 carry what they need; LT-508 is re-scoped at the 2026-10-10
+planning (needs LT-525; `CORPUS_RENDER_ARGS` under `server/tests/` here, not the mirrored
+tree); LT-260 cites LT-254, LT-261 cites LT-529, LT-376 cites LT-480 — consumed IDs,
+restated there.
+
+**Rulings carried from the 2026-10-10 ninth pass** (recorded nowhere else; do not re-litigate):
+- **The LT-480 review rulings** (owner present): the internal registry sidecar keeps the
+  `internal` name — `Crypto.subtle`/`Signal.subtle` mark exposed members of a STABLE public
+  surface, while `registry.internal.json` is the compile's own off-contract record, and a
+  `.subtle.` name would advertise a supported escape hatch where none is offered (a `subtle`
+  namespace stays available for LT-376's adapter seam, decided there); the published
+  `compileCorpus` console-logs its progress — a `log` seam or `quiet` option is an additive
+  minor when a consumer asks.
+- **LT-483's probe finding:** `computeClientNeededNames`' walk DOES reach boundary positions
+  inside list items — the ok-arm construct and compose-root pass entries compiled clean AND
+  emitted coherent clients there before the alignment (the defect was consistency, not a
+  runtime failure). `plan.ts`'s old "walks no list-body position" rationale was false and is
+  reworded on the branch.
+- **`check:contract`'s declaration scan matches engine specifiers inside JSDoc by design**
+  (LT-377's review): a public type whose docs teach an engine import is itself engine
+  coupling — a loud false positive that forces a reword is the right failure for a gate;
+  comments are not excluded. The whole-tree scan (not just exports entries) is correct: every
+  file ships in the tarball.
+- **`check:peer`'s export list stays barrel-derived with the lockstep pin** (LT-254's doubt
+  (c), ratified): the committed barrel IS the floor version's export list pre-registry;
+  switch to registry-derived only if a release ever desyncs.
+- **LT-494's open design question (owner, deferred):** a composed child that renders selection
+  through `host.value` thunks cannot bake its initial selection server-side, so a composed
+  filter shows an unselected flash until client activation — inherent to the ruled
+  composition; whether a child should bake initial selection from a static `value` arg is a
+  separate design question left to the owner (wake it if a pioneer hits it).
+- **LT-514's translator note:** the German catalog additions ("Helligkeit", "Chroma",
+  "Farbton", "Was muss erledigt werden?") were contributor-written and review-accepted as
+  idiomatic; the ar/cy/lv placeholders stay on the LT-195 fallback semantics (LT-487 owns the
+  native-reviewer wake).
+- **The compile-warning baseline counts one warning** (LT-519's review): module-dialog's
+  LTC088. The css-probe LTC088 is a test-fixture warning, present at HEAD and uncounted.
+- **`i18n-catalog.ts:3`'s module doc still names `server/effects/i18n.ts` deliberately**
+  (LT-521): history reference, not provenance — do not "fix" it.
+- **ADR 0043's word budget:** the revised ADR sits ~1810 words, over the 1500 budget with the
+  owner's knowledge (flagged at the LT-516 session; splitting the boundary ruling out was
+  recommended against). Do not re-trim without an owner ask.
+
+---
+
 Pruned 2026-10-09, eighth pass (Architect, after the "P6 cleanup round and the composition
 batch" iteration closed; the `writer` recorded it in `CHANGELOG.md [Unreleased]` the same day).
 Consumed: LT-093, LT-136, LT-282, LT-437, LT-460–LT-467, LT-469–LT-472, LT-474, LT-476–LT-479,

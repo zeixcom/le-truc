@@ -7,176 +7,99 @@ in this file; contributors claim and annotate only through `bun run scripts/queu
 are unique by construction — the filename is the ID; the "Next free task ID" line below
 allocates the next one.
 
-**Iteration opened 2026-10-09: the first package and the P6 remainder.** The previous
-iteration (the P6 cleanup round and the composition batch, opened 2026-10-06) closed on
-2026-10-09. The `writer` recorded it in `CHANGELOG.md [Unreleased]`, and its 38 entries are
-pruned (`queue/LEDGER.md`, eighth pass).
+**Iteration opened 2026-10-10: the two-repo split and template emission.** The previous
+iteration ("the first package and the P6 remainder", opened 2026-10-09) closed on 2026-10-10:
+all 18 entries reviewed and integrated, both design gates ruled (LT-516 → ADR 0043 amended;
+LT-484 → full parity, LT-530 filed; LT-523 → ADR 0049), the `writer` recorded it in
+`CHANGELOG.md [Unreleased]`, and the entries are pruned (`queue/LEDGER.md`, ninth pass).
 
-**Why now (Architect, 2026-10-09).** The first publish waited for the P6 cleanup round (owner,
-2026-09-19). That round has closed apart from the conversions LT-463 left raw. D-32 is ruled
-(LT-471), so P1 opens unblocked: LT-480 reshapes the contract and LT-254 publishes it. The P6
-remainder runs beside it and empties the band, so the corpus a consumer meets in the first
-pre-release composes every site LT-463 named. Template emission (LT-257) cannot be built
-against ADR 0043 as written, so its design session runs now and the build follows next
-iteration.
+**Why now (Architect, 2026-10-10).** The package stands (`@zeix/le-truc-compiler`, LT-254) but
+still compiles from this repo's own sources, and template emission — v3.0's other requirement
+(M27) — has its ruled interface (ADR 0043 as amended) and no emitter. ADR 0049 directs the
+split first ("the third front end is born in its final home"), so the iteration opens with the
+split chain and builds the emitter in the new repository. This repo keeps the corpus healthy
+ahead of the pioneers: the accessibility gate and two examples riders.
 
-**Rulings taken at planning (Architect with the owner, 2026-10-09).**
-1. **Scope: P1's package track, the P6 remainder, two design sessions and two P2b items.**
-   LT-480 → LT-254 → LT-377 build the package. LT-489, LT-492 → LT-493, LT-494 and LT-517 are
-   P6, and so is LT-518, the writer copy pass the eighth prune found owed. LT-514 moves from P7 to P6 and joins: it is the last label-as-children conversion and
-   needs only P6 work. LT-516 (ADR 0043 amendment) and LT-484 (async-boundary arm roots) are
-   design sessions. LT-483 joins from P2b (owner).
-2. **LT-259 and the pioneers stay out (owner).** The codemod's drift-cost metric is unruled,
-   and its check runs over the pioneer-1 project. It pairs with LT-260, which needs both
-   LT-254 and LT-259. LT-257 and LT-261 wait for LT-516's split.
-3. **The package is built, not published.** LT-254's check is `npm pack` into an empty
-   project. The first pre-release to the registry is an outward-facing act and waits for the
-   owner, after this iteration.
-4. **One compiler track at a time through the analysis passes** (track X): LT-483 → LT-492.
-   LT-483 edits `handleAsyncBoundary` in `analysis/effects.ts`, and LT-492 changes the
-   composed-content refusal and its lowering. Run in parallel, they would conflict at
-   integration. If LT-484's session rules parity, its compiler task joins track X after
-   LT-492.
-5. **module-todo and BasicButton change in one order** (track B): LT-489 → LT-494 → LT-514.
-   LT-489 and LT-494 both edit module-todo's two surfaces, and LT-514 then moves the sites
-   they compose to passed children (LT-514's sequence note).
-6. **LT-480 runs alone in the contract files.** It moves `compileCorpus` into
-   `server/compiler/` and narrows `RegistryEntry` (ruling 4: every compose-validation field is
-   internal). Tracks X and B do not edit `contract.ts`, `registry.ts` or `corpus-compile.ts`.
-   A task that finds it must, stops and writes it in `NOTES.md`.
-7. **Standing rulings carried from the last iteration.** Acceptance criteria are goals, not
-   constraints to satisfy by workaround: a contributor who can meet one only by bending the
-   design annotates the task `blocked` and writes the impasse into `NOTES.md` (ruling 8 of
-   2026-10-06). An `examples` task that edits a compiled source gates `test:server` and
-   `typecheck` (ruling 13 of 2026-10-06). Corpus-level checks stay in P7 (ruling 15 of
-   2026-10-06).
+**Rulings taken at planning (Architect with the owner, 2026-10-10).**
+1. **Scope: the two-repo spine plus corpus riders.** S — the split: LT-524 → LT-525 → LT-526.
+   E — emission, new repo: LT-527 → LT-528 → LT-529 (all `needs: LT-524`). P — parity, new
+   repo: LT-530 (`needs: LT-524`). G — the accessibility gate: LT-508 (`needs: LT-525`).
+   R — riders: LT-511, LT-513 (beside everything).
+2. **Prerequisite owner act before LT-524:** publish `@zeix/le-truc@3.0.0-next.1` to the
+   registry (LT-523's ruling) — the new repository types its peer against it and proves
+   `check:package` from there.
+3. **No compiler-source front window.** LT-524 mirrors the tree on a quiet checkout; no task
+   touches `server/compiler/`, `server/tests/compiler/` or `server/runtimes/` in this repo
+   after the mirror lands (work there diverges and is lost at LT-525). At cutover (LT-525's
+   review), compiler-internals tasks are re-pointed — the setup-const cluster
+   LT-459 → LT-333 → LT-458, LT-363, LT-369, LT-497 and the corpus-gate follow-ons
+   LT-506/LT-509/LT-510 — internals to the new repository's tracker (ADR 0049 s7),
+   corpus-level gates stay here consuming the linked package.
+4. **The emission chain builds only in the new repository** (ADR 0049 sequencing, LT-516's
+   split). LT-527 owns LTC057/LTC058/LTC090; the boundary fixture lands with it (no corpus
+   component uses `Try` yet).
+5. **LT-508 re-scoped at planning to consumer-side placement:** `CORPUS_RENDER_ARGS` lives
+   under `server/tests/` here, never the mirrored `server/tests/compiler/`, and the gate runs
+   post-cutover so its first green run doubles as an adoption proof (the entry carries the
+   note).
+6. **LT-259, LT-260 and LT-261 stay out (owner, carried):** the codemod's drift-cost metric
+   is unruled, the pioneers are external engagements timed by the owner, and pioneer 2 needs
+   LT-529 regardless.
+7. **Standing rulings carried from the 2026-10-06/-09 plannings:** acceptance criteria are
+   goals, not constraints to satisfy by workaround (a contributor who can meet one only by
+   bending the design annotates `blocked` and writes the impasse into `NOTES.md`); an
+   `examples` task that edits a compiled source gates `test:server` and `typecheck`; the
+   corpus-level checks stay standalone, never part of the compile step or `bun test`.
 
 **The chain.**
-- **R — the package** — P1; the contract reshape runs alone in the contract files (ruling 6).
-  ~~LT-480~~ → ~~LT-254~~ → ~~LT-377~~ — the track is complete. (LT-480 reviewed ✓ and integrated
-  2026-10-10, b482d527; LT-254 reviewed ✓ and integrated 2026-10-10, 560d91e9 — the package
-  stands up, both surfaces, `./macros` + `./runtime`, the peer floor under `check:peer`;
-  LT-377 reviewed ✓ and integrated 2026-10-10, 5a62171e — `check:contract`'s second phase pins
-  D-33 on the emitted `.d.ts`.) ~~LT-521~~ — LT-480's generated-comment golden re-pin —
-  reviewed ✓ and integrated 2026-10-10, 5c3fc619 (the re-pin proved vacuous: no golden carries
-  the string; exactly one regenerated line moved). The track is closed with no residue.
-- **X — compiler, analysis passes** — one at a time (ruling 4). ~~LT-483~~ → ~~LT-492~~ →
-  ~~LT-493~~ → ~~LT-519~~ → ~~LT-520~~. (LT-519 joined by owner instruction, 2026-10-09: filed from
-  LT-492's review after the chain was written; P6 band remainder, needs satisfied. LT-520
-  filed 2026-10-10 from LT-514's review — the decorated-candidate precision gap; it follows
-  LT-519 by `needs:` so the track stays one-at-a-time, and it re-pins the module-todo
-  snapshots LT-519's legs sit beside. Both reviewed ✓ and integrated 2026-10-10, c999cb2 and
-  9fd470f6.)
-- **B — module-todo and BasicButton** — ruling 5. ~~LT-489~~ → ~~LT-494~~ → ~~LT-514~~
-  (integrated 2026-10-09/10; the band's conversions are done).
-- **D — test harness** — beside everything. ~~LT-517~~ (the probe differential's composed
-  leg, integrated 2026-10-09).
-- **W — writer copy** — beside everything; area `docs`, a `writer` session. ~~LT-518~~
-  (landed 2026-10-09). LT-522 (filed 2026-10-10 from LT-254's review: the compiler package's
-  user-facing copy — README, §2 install passage, one experimental-label wording).
-- **Design gates** — area `design`: the Architect with the owner, never picked by `start-task`.
-  ~~LT-516~~ (ADR 0043 amendment) ruled 2026-10-10 — D-28 closed: the `boundary` operation
-  with a three-state result arg, `loop` + `listTemplate` for reactive lists, capture-and-raw
-  children through the `composed-markup` context; LT-257 split into LT-527 → LT-528 → LT-529
-  (against the new repository, `needs: LT-524`). ~~LT-484~~ (boundary arm-root parity) ruled
-  2026-10-10 — full parity: the boundary's arms plan constructs like conditional arms
-  (ADR 0037 s3/s4 honored, the refusals were residue); **LT-530** builds it (new repo,
-  `needs: LT-524`, P2b; four refusal faces retire, none arrive, no ADR change). Both gates
-  have ruled: each ended in an amended ADR plus banded follow-up tasks. ~~LT-523~~ (the
-  compiler
-  repo split) ruled 2026-10-10 → ADR 0049; its chain LT-524 → LT-525 → LT-526 is staged as the
-  NEXT iteration's opening, after this one closes.
+- **S — the split** — P1; ADR 0049; this repo and the new one. LT-524 (bootstrap: fresh
+  history, the moved tree, mirrored fixture corpus, registry-typed peer, its own gates, public
+  from the first push) → LT-525 (cutover: consume `@zeix/le-truc-compiler`, delete the
+  in-tree compiler, re-point the docs build; goldens re-pin the harness import once, by
+  design) → LT-526 (publish and CI hardening: branch protection with required checks on both
+  repositories, the compiler's first pre-release — owner act, CHANGELOG entries).
+- **E — template emission** — P1; the new repository; `needs: LT-524`; ADR 0043 as amended.
+  LT-527 (the shared walk, operation layer, census routing, the boundary fixture, and the
+  test-only second target; LTC057/LTC058/LTC090) → LT-528 (the Twig target: syntax table,
+  exhaustive escaping map, one partial per component × locale, byte-equivalence on the real
+  engine) → LT-529 (the PHP CI job; coordinates with LT-526 if still open).
+- **P — boundary-arm parity** — P2b; the new repository; `needs: LT-524`; LT-484's ruling.
+  LT-530 (factor the conditional arm-content planner, thread it through
+  `handleAsyncBoundary`, retire `boundaryDeepConstructOf` and four refusal faces). Parallel to
+  E — it touches `analysis/effects.ts`, the emission chain adds new code.
+- **G — the accessibility gate** — needs LT-525 (post-cutover, consumer-side). LT-508
+  (`check:html`: html-validate + axe-core over every corpus component's server render, the
+  seeded allowlist triaged at review into corpus follow-ups).
+- **R — examples riders** — beside everything; this repo only. LT-511 (delete the 22 orphaned
+  hand-written sheets no twin serves), LT-513 (module-cem-list addresses its passed content
+  through declared roles).
 
-**Deliberately not here.** LT-259, LT-260, LT-527 → LT-528 → LT-529 (the emission chain,
-LT-257's split; ruling 2) and LT-261. The rest of P2b,
-including LT-381 (it changes the census by design and needs the owner's sign-off) and LT-246.
-LT-515 (lazy children in composed content) and the corpus-level checks stay in P7. P2–P5 stay
-where they are.
+**Deliberately not here.** LT-259, LT-260, LT-261 (ruling 6). The setup-const cluster,
+LT-363, LT-369, LT-497, LT-506, LT-509 and LT-510 (ruling 3 — re-pointed at cutover, not
+now). LT-381 (changes the census by design; owner sign-off when it enters). The design gates
+LT-310, LT-448, LT-450, LT-456 and LT-515 (need-gated, owner-timed). P2–P5 stay where they
+are.
 
-**Exit criterion.** Every chain task is reviewed and integrated, and both design sessions have
-ruled. `npm pack` of `@zeix/le-truc-compiler` installs into an empty project and builds a
-corpus through the published entry point — two `.tsx` components, one composing the other, plus one `.tsrx` component proving the experimental surface ships — with `@tsrx/core` only inside the compiler's own dependency closure
-(LT-254's check). `contract.test.ts` pins LT-480's set, and `registry.json` carries only the
-public projection. P6 is empty: module-splitview and module-todo compose every site LT-463
-named, and no corpus form component or BasicButton renders its visible label from a `string`
-arg where LT-514 moves it to children. The tier census and the warning baseline are unchanged
-from the opening measurement below, except where a task states a by-design change. `typecheck`,
-the server suite, `check:contract`, `check:corpus`, `test:variants`, `build:docs` and
-`check:links` are green on the closing commit. The net line count of `server/compiler/` is
-recorded against the opening measurement; LT-480 grows it by the code it moves in.
+**Exit criterion.** Every chain task is reviewed and integrated. Both repositories are real
+and green: `zeixcom/le-truc-compiler` is public with typecheck, suite, contract, package,
+peer and lint as required checks (ADR 0049 s7); le-truc consumes the compiler through `link:`
+in development and the pinned pre-release in CI, with no `server/compiler/` directory left.
+This repo's tier census (36/7/0), translation census (0 gaps) and compile-warning baseline
+(1 unique standing warning, module-dialog's LTC088) are unchanged from the opening
+measurement below, except where a task states a by-design change. In the new repository, the
+dump target's renders are byte-identical to SSG for every emittable fixture × locale, and the
+Twig equivalence corpus passes on the real engine. `check:html` is seeded and green in this
+repo. On this repo's closing commit: `typecheck`, `test:server`, `check:contract`,
+`check:corpus`, `test:variants`, `build:docs` and `check:links` are green.
 
-**Opening measurement (2b26f032):** `check:corpus` exits 0. The tier census has 43 entries:
+**Opening measurement (d7bcb68a):** `check:corpus` exits 0. The tier census has 43 entries:
 36 Folded, 7 Simulated, 0 Static. The compile-warning baseline is 1 unique standing warning,
-module-dialog's `body.scroll-lock` (LTC088), a deliberate component-bound page-wide rule that
-ruling 7 excepts. The translation census has 0 gaps across 6 locales. `server/compiler/` has
-83 modules and 41.4k lines (every `.ts` file except `*.test.ts`, the same net as the 2026-10-06
-measurement).
-
-**Status 2026-10-10, after LT-520's review (Architect).** Tracks B, D, W and all of X
-(LT-483 → LT-492 → LT-493 → LT-519 → LT-520) are integrated and reviewed. Track R is open:
-**LT-480** (already claimed ⚙), then LT-254, then LT-377. LT-516 and LT-484 are design
-sessions with the owner — a contributor session does not pick them; they are the only
-non-R work left. The writer changelog sweep runs when the iteration closes, not per task.
-
-**Status 2026-10-10, after LT-480's review (Architect).** LT-480 is reviewed ✓ and integrated
-(b482d527) — the contract is the D-32 shape: `compileCorpus` published, `RegistryEntry` the
-ten-field projection with the `registry.internal.json` sidecar, ADRs 0036 + 0038 amended.
-**Pickable now: LT-254** (publish the package — `npm pack` into an empty project; the contract
-set it builds on is pinned and green). LT-521 (the generated-comment golden re-pin, LT-480's
-residue) is pickable beside it — it touches no contract file. Then LT-377 closes track R.
-LT-516 and LT-484 remain design sessions with the owner, never `start-task` picks.
-
-**Status 2026-10-10, after LT-377's review (Architect).** Track R is complete: the contract
-reshape (LT-480), the package (LT-254) and the D-33 declaration pin (LT-377) are all
-reviewed ✓ and integrated. The iteration's remaining work is four items: **LT-521**
-(contributor pick — the golden re-pin above), **LT-522** (a `writer` session, the compiler
-package's user-facing copy), and the two design sessions with the owner, **LT-516** and
-**LT-484**. When the first two are integrated and both sessions have ruled, the iteration
-closes: the `writer` changelog sweep runs, and the exit criterion is verified on the closing
-commit. (`typecheck` reads green at HEAD again — the LT-480 pin-test TS2769 residue was fixed
-on v3 in LT-377's review session, a one-line assertion widening in
-`corpus-config.test.ts`.)
-
-**Status 2026-10-10, after LT-521's review (Architect).** Track R is closed with no residue
-(LT-521 reviewed ✓, integrated 5c3fc619). The iteration's remaining work is three items:
-**LT-522** (a `writer` session, the compiler package's user-facing copy) and the two design
-sessions with the owner, **LT-516** and **LT-484**. When LT-522 is integrated and both
-sessions have ruled, the iteration closes: the `writer` changelog sweep runs, and the exit
-criterion is verified on the closing commit. (`typecheck` reads green at HEAD — the LT-480
-pin-test TS2769 residue was fixed on v3 in LT-377's review session, and holds through
-LT-521's branch.)
-
-**Status 2026-10-10, after LT-522's review and the LT-523 session (Architect).** LT-522
-reviewed ✓ and integrated (409315c8) — the writer copy pass is in. LT-523 ruled the same day →
-ADR 0049: the compiler moves to its own repository (fresh history, `link:` dev loop, mirrored
-fixture corpus, public repo). The split chain LT-524 → LT-525 → LT-526 opens the NEXT
-iteration; LT-516's template-emission build tasks file against the new repository once the
-cutover lands. This iteration's remainder: the LT-516 and LT-484 sessions only — when both
-have ruled, the writer changelog sweep runs and the exit criterion is verified on the closing
-commit (typecheck is green at HEAD).
-
-**Status 2026-10-10, after the LT-516 session (Architect).** LT-516 ruled with the owner →
-ADR 0043 revised in place (D-28 closed: the `boundary` operation with a three-state result
-arg; `loop` + `listTemplate` for reactive lists; capture-and-raw children through the new
-`composed-markup` escaping context; key-alias confirmed as a census outcome). `COMPILER_SPEC`
-§9.2 carries the new mappings and D-28 is Ratified. LT-257 is pruned into LT-527 → LT-528 →
-LT-529 — the shared walk with the census folded in, the Twig target, the PHP CI job — all
-`needs: LT-524` and building in the new repository (ADR 0049 sequencing). The iteration's
-remainder: the LT-484 session only. When it has ruled, the writer changelog sweep runs and
-the exit criterion is verified on the closing commit.
-
-**Status 2026-10-10, after the LT-484 session (Architect) — both design gates have ruled.**
-LT-484 ruled with the owner → full parity: the async boundary's arms plan client constructs
-exactly like reactive-conditional arms (root constructs in every channel, nested elements
-through the arm scope's proved selectors, nested arm sets and lists through `planNested`);
-the value-channel disciplines stay; the refusals were residue of the channel-by-channel
-build-out, not a recorded decision — ADR 0037 s3/s4 already grant the vocabulary, so no ADR
-changes. **LT-530** builds it (new repo, `needs: LT-524`, P2b; four refusal faces retire,
-none arrive). Every chain task is integrated and both design sessions have ruled: the
-iteration is ready to close — the `writer` changelog sweep runs next (it consumes LT-516 and
-LT-484's records; LT-527 → LT-530 stay in the store for the next iteration, which opens with
-the split chain LT-524 → LT-525 → LT-526), then the exit criterion is verified on the closing
-commit.
+module-dialog's `body.scroll-lock` (LTC088), ruling-7-excepted (the css-probe LTC088 is a
+test-fixture warning, present at HEAD and uncounted — LT-519's review). The translation
+census has 0 gaps across 6 locales. `server/compiler/` has 87 modules and 43.5k lines (every
+`.ts` file except `*.test.ts`) — the last opening measurement of the in-tree compiler. All
+seven gates green at this commit (closing verification of the previous iteration:
+`test:server` 3743/0, `test:variants` 537, `check:links` 804).
 
 **Next free task ID: LT-531.** Next free diagnostic code: LTC091 (LTC090 is LT-527's; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is

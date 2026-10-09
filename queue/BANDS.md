@@ -87,14 +87,12 @@ handler-args design in P6 and carries only its tombstone.
 
 ## P6 — Cleanup round and the composition batch
 
-The cleanup round the first publish waits for (see P1). Its standing cleanup items and the
-composition batch (LT-463 on the compose enablers and ADR 0048's children contract) closed on
-2026-10-09. The remainder is the conversions LT-463 left raw, each on its own ruling:
-BasicButton's orthogonal server args (LT-489), `truc:html` in composed children and the
-splitview panes it unblocks (LT-492 → LT-493), FormRadiogroup's `.split-button` presentation
-(LT-494), and the label-as-children sweep over the form components and BasicButton (LT-514,
-after LT-489 and LT-494). LT-517 makes the probe differential's composed leg live. Ordering
-matters only where two tasks edit module-todo: LT-489 → LT-494 → LT-514.
+**Empty (2026-10-10).** The cleanup round the first publish waited for closed in two passes:
+the standing items and the composition batch (LT-463, ADR 0048) on 2026-10-09, and the
+remainder — LT-489, LT-492 → LT-493, LT-494, LT-514, LT-517, LT-518 — in the "first package
+and the P6 remainder" iteration (2026-10-10, ninth prune). The corpus a consumer meets in the
+first pre-release composes every site LT-463 named; no form component or BasicButton renders
+its visible label from a `string` arg.
 
 ## P7 — Backlog (not scheduled)
 
