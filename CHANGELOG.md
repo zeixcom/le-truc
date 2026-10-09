@@ -77,6 +77,7 @@
 - **`LTC085`**: a compose site fails the compile when the child declares `Children<…, 'non-interactive'>` and the passed content holds an interactive element (a link, button, form control, `[tabindex]`, …) or a composed child that renders one.
 - **`le-truc` skill `errors.md`**: rows for `LTC081`, `LTC083`, `LTC084` and `LTC085`.
 - **`form-checkbox` label content**: `FormCheckbox` takes non-interactive `children` as rich label content, beside a reactive `label` prop it exposes and accepts through `truc:pass`. Writing `label` replaces the content with text.
+- **The `@zeix/le-truc-compiler` package**: the compiler ships on its own, compiling `.tsx` (stable) and `.tsrx` (experimental) sources into server and client modules and scoped CSS. `@zeix/le-truc` is a peer; generated server modules import the runtime through the package by default.
 
 ### Changed
 
@@ -88,6 +89,9 @@
 - **`ElementFromSelector` ignores pseudo-class arguments**: the comma and spaces inside `:not(…)`/`:is(…)` no longer read as a selector list or combinator, so `first('button:not(x *)')` infers `HTMLButtonElement` instead of `Element`.
 - **`@zeix/cause-effect` is `^1.6.1`**, up from `^1.5.2`: `MutableList` and `DerivedList` gain `map()`/`forEach()` over item signals and keys, and per-item `deriveList` results compare deeply. `match()` fires `stale` through a Slot backed by a `Task`.
 - **`cause-effect` skill describes CE 1.6.x**: `SKILL.md` and `references/collections.md` cover the list `map()`/`forEach()` methods and deep-equal per-item `deriveList` results. The `stale` routing in both skills covers a list or store derived from an async computation.
+- **`BasicButton`'s modifiers are three orthogonal server args**: `variant` (weight), `kind` (color family) and `size`, each a closed literal union whose default emits no class token. **Migration**: `variant="constructive"` → `kind="constructive"`.
+- **Form components take their label as children**: `form-textbox`, `form-combobox`, `form-tokenbox`, `form-spinbutton` and `form-radiogroup` swap the `label`/`legend` arg for non-interactive `children`; `BasicButton` gains `children` beside its `label` prop. **Migration**: `label="…"` → children.
+- **`form-radiogroup`'s `.split-button` variant hides its own legend and radios**: the visually-hidden presentation moved into the component's sheet, so a composed usage like `module-todo`'s filter needs no page-level classes.
 
 ### Removed
 
@@ -116,6 +120,10 @@
 - **`LTC087` at nested compose sites**: Previously, a scoped rule that reached a grandchild's root through a class set at a nested compose site did not warn. Now `LTC087` reads the compose-site attributes at every level of nesting.
 - **A thunk-rendered signal with a setup-const initializer**: Previously, an initializer that read a setup const or an import routed the component to the Simulated tier (`LTC004`). Now the client reuses the initializer, and the component can fold.
 - **`module-todo` editing**: Previously, the in-place editor sat inside the checkbox's `<label>`, so the double-click that starts editing also toggled the item. Now the editor sits beside the checkbox.
+- **A setup-const or import read in an item-nested boundary's arm mounts**: Previously, it compiled clean and ran. Now it fails `LTC005`, the same arm-scope rule every other reactive-list position applies.
+- **`truc:html` in a composed child's content**: Previously, it failed `LTC011`. Now it is the parent's own sanitized binding — the server splices it through `sanitizeHtml`, a reactive thunk binds from the parent; a reactive form inside an arm, loop body or server-rendered branch fails `LTC005`.
+- **A `first()` into a compose site inside an arm, a loop body or a server-rendered branch**: Previously, it compiled to a dangling query and the client threw a `ReferenceError` at connect. Now it fails `LTC005`.
+- **Selector synthesis prefers precision among exclusion-decorated candidates**: Previously, the first unique candidate won even when a more precise base sat beside it, dropping a class discriminator (`form-combobox`'s clear button lost `button.clear`). Now the most precise base wins.
 
 ## 2.6.0
 
