@@ -4,6 +4,8 @@
 
 ✅ Accepted
 
+Amended 2026-10-10 (LT-480, D-32): the `locales` field; discovery moved into the compiler package, over the package's own file-system seam; `registry.json` narrowed to a public projection.
+
 ## Context
 
 The compiler compiled *this repo*. Its source scan was a literal `examples/**` glob and its output root a literal `server/generated/components/`. Less visibly, its emitted module specifiers encoded how deep that output root sat: `'../../../'` appeared as a constant in two emitter modules, and the render-harness specifier `'../../compiler/runtime'` was hard-coded in the pipeline. [ADR 0034](0034-distribution-tsx-only-compiler-package-and-template-emission.md) s1 commits the compiler to shipping as `@zeix/le-truc-compiler`, and [M28](../REQUIREMENTS.md#m28-distribution-and-dependency-weight) makes the installing developer a persona. A package whose scan and emit are shaped like one repo's layout cannot serve one. The ratio test ([COMPILER_REFLECTION.md](https://github.com/zeixcom/le-truc/blob/6d0544a6/COMPILER_REFLECTION.md) §1, §7) stays unanswered until something outside `examples/` compiles through it.
@@ -22,7 +24,7 @@ Every field is optional. The field table and worked example are documented for a
 
 ### 2. This repo's paths are the defaults, so the docs build is a consumer
 
-Every default is this repo's own path. `sources` defaults to **both** authored extensions (`examples/**/*.tsrx` and `examples/**/*.tsx`, per [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6), and `outDir` to `server/generated/components`. The one non-path field, `cssTargets` ([ADR 0033](0033-scope-component-styles-by-custom-element-name.md) s5), defaults to a fixed version set pinned at 3.0 — a build the same checkout compiles twice emits byte-identical CSS, whatever the platform shipped since. The docs build therefore carries **no config file at all** and reaches the generalized path through the same defaults a consumer overrides.
+Every default is this repo's own path. `sources` defaults to **both** authored extensions (`examples/**/*.tsrx` and `examples/**/*.tsx`, per [ADR 0032](0032-adopt-tsx-as-the-authored-component-surface.md) s6), and `outDir` to `server/generated/components`. The first non-path field, `cssTargets` ([ADR 0033](0033-scope-component-styles-by-custom-element-name.md) s5), defaults to a fixed version set pinned at 3.0 — a build the same checkout compiles twice emits byte-identical CSS, whatever the platform shipped since. The second, `locales` (amended 2026-10-10, LT-480), names the locales the corpus builds for, the first the default page locale — the list the generated `i18n` module enumerates (`I18N_LOCALES`). It needed a configuration home when the corpus pass moved into the compiler package (D-32): the site config that owned the list is repo-side and off-limits inside the package. Its default is this repo's site locales, like every default, and deliberately not derived from the catalogs on disk — the catalogs record every locale a translator has ever filed, while the site builds a chosen subset. The docs build therefore carries **no config file at all** and reaches the generalized path through the same defaults a consumer overrides.
 
 This is the load-bearing half. Defaults that reproduce the repo make the generalization *falsifiable*: the repo's own output must stay byte-identical through the configured path. Two consumers exercise the mechanism from the first commit, rather than one consumer that does not exist yet.
 
@@ -34,11 +36,11 @@ An `outDir` **outside** the project root (or equal to it) is therefore refused: 
 
 ### 4. The corpus, not the repo, is the registry's scope
 
-`registry.json` is a **project's** corpus index. Its `source` paths are relative to the configured project root. The duplicate-tag rule ([LTC048](../server/compiler/diagnostics.ts)) is corpus-scoped: two same-surface files, or two folders, declaring the same tag fail the compile naming both (folder-local variant sets excepted, ADR 0039), because the tag is the registry's key.
+`registry.json` is a **project's** corpus index. Its `source` paths are relative to the configured project root. The duplicate-tag rule ([LTC048](../server/compiler/diagnostics.ts)) is corpus-scoped: two same-surface files, or two folders, declaring the same tag fail the compile naming both (folder-local variant sets excepted, ADR 0039), because the tag is the registry's key. Since LT-480 (D-32) the file carries the **public projection** of the entry only — that projection is its schema; the compile's fuller record serializes to the `registry.internal.json` sidecar beside it, for the repo's own build passes.
 
 ### 5. Configuration is pure; discovery is IO
 
-Config resolution and path math live in `server/compiler/corpus-config.ts` and touch no disk and no runtime-specific API. Config reading and globbing live in `server/corpus-sources.ts`. The split exists because `server/compiler/` touches no IO and no runtime-specific API ([ADR 0038](0038-runtime-neutral-build-path.md) s2). The emitter-facing subset is a third leaf, `server/compiler/emit-paths.ts`, so the emitters depend on two path facts rather than on config resolution.
+Config resolution and path math live in `server/compiler/corpus-config.ts` and touch no disk and no runtime-specific API. Config reading and globbing moved into the package at LT-480 (D-32): `server/compiler/corpus-scan.ts` discovers sources over `server/compiler/fs.ts`, the package's own file-system seam — the ONE module under `server/compiler/` that touches a disk, through portable `node:` built-ins only ([ADR 0038](0038-runtime-neutral-build-path.md) s2, as amended). This repo's own facts (`REPO_ROOT`, `REPO_CONFIG`) stay in `server/corpus-sources.ts`, repo-side. The emitter-facing subset is a third leaf, `server/compiler/emit-paths.ts`, so the emitters depend on two path facts rather than on config resolution.
 
 The configuration reaches the emitters as one trailing optional argument threaded through both front ends, defaulting to this repo's layout. It is not module-scoped mutable state: that would put a hidden global under a compiler whose soundness claim is that it is a pure function of its inputs.
 
@@ -64,7 +66,7 @@ The configuration reaches the emitters as one trailing optional argument threade
 
 - **The config file is public API before publication.** Unknown keys and mistyped fields are rejected at startup rather than defaulted, but under sub-design 3's untiered channel the message text is the entire remedy.
 - `runtimeImport` has no good default until the compiler is published. Every installing project must set it by hand, the most visible "not published yet" seam in the surface. Publication flips it.
-- The upward config search has no project boundary, so a stray config file above a checkout captures that checkout's build.
+- The upward config search stops at the project boundary (the nearest `package.json` or `.git`, LT-273) — an earlier draft of this ADR shipped without one, and a stray config file above a checkout could capture that checkout's build.
 - Configuration flows through both front ends' signatures, adding a parameter to `compileComponent`/`compileComponentTsx` that most callers never pass.
 - Generalization is not complete: the *watch* path (`server/file-signals.ts`) and `scripts/i18n-sync.ts` still hard-code this repo's layout. This is deliberate — neither has a consumer before pioneer 1 — but the surface is configured, not the whole build.
 

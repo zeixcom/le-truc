@@ -367,3 +367,15 @@ Full entry text: `git log -p -- DONE.md`.
   `:not(<tag> *)` exclusion is accepted; its only miss is an own element inside a same-tag
   ancestor of the host, which no composition produces.
 - **Scrollarea's wall time at demo scale is noise** (LT-103).
+
+**Rulings from the 2026-10-10 LT-480 review** (owner present; recorded nowhere else):
+- **The internal registry sidecar keeps the `internal` name; the `subtle` convention does not
+  apply** (owner question, 2026-10-10). `Crypto.subtle` and the Signals proposal's `Signal.subtle`
+  mark deliberately exposed low-level members of a STABLE public surface; `registry.internal.json`
+  is the compile's own record, off-contract, changeable in any release. A `.subtle.` name would
+  advertise a supported escape hatch where none is offered. The convention has a future
+  application: if LT-376's adapter seam or LT-254's exports map ever publishes low-level per-file
+  compilation, a `subtle` namespace is the natural home — decide there, not here.
+- **The published `compileCorpus` console-logs its progress** (review observation, accepted for
+  3.0): the emoji lines moved with the pass and byte-identical behavior was the task's bar. A
+  `log` seam or `quiet` option is an additive minor when a consumer asks for one.

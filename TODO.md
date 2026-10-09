@@ -53,7 +53,9 @@ iteration.
 
 **The chain.**
 - **R — the package** — P1; the contract reshape runs alone in the contract files (ruling 6).
-  LT-480 → LT-254 → LT-377.
+  ~~LT-480~~ → LT-254 → LT-377. (LT-480 reviewed ✓ and integrated 2026-10-10, b482d527; its
+  golden re-pin residue is LT-521, which may run beside LT-254 — it touches only a generated
+  comment and the goldens, not the contract files.)
 - **X — compiler, analysis passes** — one at a time (ruling 4). ~~LT-483~~ → ~~LT-492~~ →
   ~~LT-493~~ → LT-519 → LT-520. (LT-519 joined by owner instruction, 2026-10-09: filed from
   LT-492's review after the chain was written; P6 band remainder, needs satisfied. LT-520
@@ -100,7 +102,15 @@ measurement).
 sessions with the owner — a contributor session does not pick them; they are the only
 non-R work left. The writer changelog sweep runs when the iteration closes, not per task.
 
-**Next free task ID: LT-521.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
+**Status 2026-10-10, after LT-480's review (Architect).** LT-480 is reviewed ✓ and integrated
+(b482d527) — the contract is the D-32 shape: `compileCorpus` published, `RegistryEntry` the
+ten-field projection with the `registry.internal.json` sidecar, ADRs 0036 + 0038 amended.
+**Pickable now: LT-254** (publish the package — `npm pack` into an empty project; the contract
+set it builds on is pinned and green). LT-521 (the generated-comment golden re-pin, LT-480's
+residue) is pickable beside it — it touches no contract file. Then LT-377 closes track R.
+LT-516 and LT-484 remain design sessions with the owner, never `start-task` picks.
+
+**Next free task ID: LT-522.** Next free diagnostic code: LTC090 (LTC090 was reserved for LT-506 and is released unused; LTC086, LTC089 are reserved for LT-501 and LTC087, LTC088 for LT-502; LTC070 is retired by LT-501; LTC083–LTC085 are reserved for LT-474, LT-476 and LT-477; LTC082 was reserved for LT-136
 and is released unused; LTC081 is reserved for LT-461; LTC080 is
 LT-453's; LTC079 is LT-447's, unused; LTC078 is LT-444's; LTC077 is LT-443's; LTC076 is LT-429's;
 LTC075 is LT-355's; LTC074 is LT-186's; LTC073 is LT-417's; LTC072 is LT-429's; LTC071 is

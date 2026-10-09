@@ -142,6 +142,25 @@ boundary, reactive lists and passed children, and splits LT-257 into buildable t
   **Check:** JavaScript disabled, a Craft-rendered page shows content-bearing folded markup from
   a compiler-emitted partial; enabling JavaScript corrects nothing that was already right.
 
+
+- [ ] LT-521: Regenerate the generated i18n module's embedded provenance comment — it still names `effects/i18n.ts`, the module LT-480 moved to `compiler/i18n-catalog.ts`.
+  **Area:** compiler
+  **Needs:** LT-480
+  **Gates:** typecheck, test:server
+  **Area:** compiler
+  **Filed (Architect, LT-480 review, 2026-10-10):** LT-480 moved the catalog pipeline from
+  `server/effects/i18n.ts` to `server/compiler/i18n-catalog.ts` but kept the generated module's
+  embedded comment — `/** Formatting configuration folded into every record (see effects/i18n.ts). */`
+  (`i18n-catalog.ts`, `writeI18nModule`) — byte-for-byte, because the task's verification bar was
+  byte-identity of every regenerated artifact and a golden re-pin is not a free edit.
+
+  **Task:** change the comment's provenance string to name `compiler/i18n-catalog.ts`, rebuild the
+  corpus, and re-pin the goldens the regenerated `i18n.ts` moves (`server.golden.test.ts` and any
+  snapshot carrying the module). No other byte changes: if the rebuild moves anything else, stop and
+  write it in `NOTES.md`.
+
+  **Channel/tier:** none — a comment inside a gitignored generated artifact.
+  **Verification:** full gates; the only diff in the regenerated tree is the comment line.
 ## P2 — Internationalization follow-ups (ADR 0030)
 
 Residue of the ICU MessageFormat switch: LT-352 pins the examples' hand-copied `i18n`

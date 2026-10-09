@@ -368,7 +368,19 @@ Full entry text: `git log -p -- DONE.md`.
   ancestor of the host, which no composition produces.
 - **Scrollarea's wall time at demo scale is noise** (LT-103).
 
-- [x] LT-480: Reshape the compiler's public contract to the D-32 ruling — the corpus entry point moves into the compiler, `RegistryEntry` narrows to a public projection, and the stability policy names the generated-module API. — done, pending review ⏳
+**Rulings from the 2026-10-10 LT-480 review** (owner present; recorded nowhere else):
+- **The internal registry sidecar keeps the `internal` name; the `subtle` convention does not
+  apply** (owner question, 2026-10-10). `Crypto.subtle` and the Signals proposal's `Signal.subtle`
+  mark deliberately exposed low-level members of a STABLE public surface; `registry.internal.json`
+  is the compile's own record, off-contract, changeable in any release. A `.subtle.` name would
+  advertise a supported escape hatch where none is offered. The convention has a future
+  application: if LT-376's adapter seam or LT-254's exports map ever publishes low-level per-file
+  compilation, a `subtle` namespace is the natural home — decide there, not here.
+- **The published `compileCorpus` console-logs its progress** (review observation, accepted for
+  3.0): the emoji lines moved with the pass and byte-identical behavior was the task's bar. A
+  `log` seam or `quiet` option is an additive minor when a consumer asks for one.
+
+- [x] LT-480: Reshape the compiler's public contract to the D-32 ruling — the corpus entry point moves into the compiler, `RegistryEntry` narrows to a public projection, and the stability policy names the generated-module API. — reviewed ✓
   **Area:** compiler
   **Needs:** LT-471
   **Gates:** typecheck, test:server, check:contract, check:corpus, build:docs
@@ -446,6 +458,8 @@ Full entry text: `git log -p -- DONE.md`.
   - **`check:contract` rewritten** to the published surface: a scratch corpus of four components through `compileCorpus(config)` — one per tier plus an LTC008 refusal — asserting the summary's tier census, the diagnostics (returned, not thrown), `registry.json`'s exact ten-field projection, and `render<Name>` in the generated server module.
 
   **Check:** Full gates green in the worktree: `typecheck`, `test:server` (3734 pass / 0 fail), `check:contract`, `check:corpus` (exit 0, baseline 1 standing warning), `build:docs` + `check:links` (776 links), `lint:server`, runtime-neutrality gate. Byte-identity verified by diffing the regenerated artifacts against the main checkout's pre-change build: `i18n.ts`, `tsrx-imports.d.ts`, spot-checked `.server.ts`/`.client.ts`/`.css` all identical (goldens unchanged, no snapshot regeneration); `registry.json` narrows by design. New regressions: the public-projection pin in `dual-corpus.test.ts`, `locales` validation in `corpus-config.test.ts`. Doubts the review should look at: (1) the `registry.internal.json` sidecar is my resolution of ruling 2's "move it to the internal type" for cross-process readers — not named in the ruling; if the Architect prefers threading in-memory or pruning the docs pipeline's needs, the seam to change is `simulate.ts`/`page-render.ts` defaults and the census scripts' file reads. (2) The `locales` config field (above). (3) The generated i18n module's embedded comment still says "see effects/i18n.ts" — byte-identity kept it; a follow-up that regenerates that string is a golden re-pin, not a free edit. (4) `server/config.ts`'s `LOCALES` and the corpus default `['en','de']` now duplicate a fact in two places — a drift hazard worth an owner call. (5) `loadCorpusConfig` stays off the contract (the task's set names "config… types" only); publishing it rides LT-254's exports map.
+
+  **Review (Architect, 2026-10-10, approved):** read in full against the four rulings and D-32; every flag accepted — (1) the `registry.internal.json` sidecar is the right home for the internal record's serialization (ruling recorded in `queue/LEDGER.md`, incl. the owner's `subtle`-naming question — declined); (2) `locales` accepted, ADR 0036 amended; (3) stale generated comment filed as LT-521; (4) resolved by a reviewer-nit pin test (`LOCALES` vs `DEFAULT_LOCALES`, `corpus-config.test.ts`); (5) correct per the entry. v3 (LT-519+LT-520) merged into the branch before integration (bac384a1) — one semantic break auto-merged clean (LT-519's `analysis.test.ts` cases referenced the renamed `RegistryEntry`); fixed on the branch. Review nits on `task/LT-480` (26e45bbe): the rename fix + the pin test. ADRs 0036 + 0038 amended at integration (0038 s2's "IO beside the compiler" superseded by the D-32 seam, recorded). Full gates green on the merged tip: 3743 pass / 0 fail, `check:contract` through the published surface, `check:corpus` exit 0 baseline 1, docs + 776 links.
 
 - [x] LT-483: '`handleAsyncBoundary` checks client positions against `badFreeNames` where every other arm-set handler uses `fx.scopeBadNames` — align it.' — reviewed ✓
   **Area:** compiler
